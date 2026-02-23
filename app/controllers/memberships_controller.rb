@@ -6,8 +6,14 @@ class MembershipsController < ApplicationController
   def update
     authorize @membership
 
+    role_attributes = membership_params
+    if role_attributes.blank?
+      redirect_to workspace_path(@workspace.slug), alert: "Role is invalid."
+      return
+    end
+
     previous_role = @membership.role
-    if @membership.update(membership_params)
+    if @membership.update(role_attributes)
       if previous_role != @membership.role
         AuditEventLogger.log!(
           workspace: @workspace,
@@ -39,6 +45,9 @@ class MembershipsController < ApplicationController
   end
 
   def membership_params
-    params.require(:membership).permit(:role)
+    requested_role = params.dig(:membership, :role).to_s
+    return {} unless Membership.roles.key?(requested_role)
+
+    { role: requested_role }
   end
 end

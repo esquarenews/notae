@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_24_043000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_24_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -109,6 +109,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_043000) do
     t.uuid "workspace_id", null: false
     t.index ["workspace_id", "name"], name: "index_databases_on_workspace_id_and_name"
     t.index ["workspace_id"], name: "index_databases_on_workspace_id"
+  end
+
+  create_table "db_cells", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "db_property_id", null: false
+    t.uuid "db_row_id", null: false
+    t.datetime "updated_at", null: false
+    t.text "value_text", default: "", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["db_property_id"], name: "index_db_cells_on_db_property_id"
+    t.index ["db_row_id", "db_property_id"], name: "index_db_cells_on_db_row_id_and_db_property_id", unique: true
+    t.index ["db_row_id"], name: "index_db_cells_on_db_row_id"
+    t.index ["workspace_id", "db_property_id"], name: "index_db_cells_on_workspace_id_and_db_property_id"
+    t.index ["workspace_id", "db_row_id"], name: "index_db_cells_on_workspace_id_and_db_row_id"
+    t.index ["workspace_id"], name: "index_db_cells_on_workspace_id"
+  end
+
+  create_table "db_properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "database_id", null: false
+    t.string "name", null: false
+    t.integer "position", default: 1024, null: false
+    t.integer "property_type", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["database_id", "name"], name: "index_db_properties_on_database_id_and_name", unique: true
+    t.index ["database_id", "position"], name: "index_db_properties_on_database_id_and_position"
+    t.index ["database_id"], name: "index_db_properties_on_database_id"
+    t.index ["workspace_id", "database_id"], name: "index_db_properties_on_workspace_id_and_database_id"
+    t.index ["workspace_id"], name: "index_db_properties_on_workspace_id"
+    t.check_constraint "\"position\" > 0", name: "check_db_properties_position_positive"
   end
 
   create_table "db_rows", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -264,6 +295,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_043000) do
   add_foreign_key "comments", "users", column: "resolved_by_id"
   add_foreign_key "comments", "workspaces"
   add_foreign_key "databases", "workspaces"
+  add_foreign_key "db_cells", "db_properties"
+  add_foreign_key "db_cells", "db_rows"
+  add_foreign_key "db_cells", "workspaces"
+  add_foreign_key "db_properties", "databases"
+  add_foreign_key "db_properties", "workspaces"
   add_foreign_key "db_rows", "databases"
   add_foreign_key "db_rows", "workspaces"
   add_foreign_key "invitations", "users", column: "accepted_by_id"

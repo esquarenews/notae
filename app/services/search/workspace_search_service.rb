@@ -66,7 +66,7 @@ module Search
           kind: "Row",
           title: row.title.presence || row.database.name,
           excerpt: highlighted_excerpt(row.search_text),
-          url: Rails.application.routes.url_helpers.workspace_path(workspace.slug),
+          url: Rails.application.routes.url_helpers.database_path(workspace_slug: workspace.slug, id: row.database_id, anchor: "row_#{row.id}"),
           score: 10
         )
       end

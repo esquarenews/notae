@@ -6,8 +6,10 @@ class WorkspaceHomeController < ApplicationController
     authorize @workspace, :show?
     @invitation = Invitation.new
     @new_page = Page.new
+    @new_database = Database.new
     @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
     @pages = policy_scope(Page).for_workspace(@workspace).active.order(:created_at).to_a
+    @databases = policy_scope(Database).for_workspace(@workspace).order(:created_at)
     @pages_by_parent = @pages.group_by(&:parent_page_id)
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_memberships = @memberships.any? { |membership| policy(membership).update? }

@@ -1,0 +1,126 @@
+<% content_for :title, @database.name %>
+
+<section class="space-y-6">
+  <header class="space-y-2">
+    <p class="text-sm text-slate-500">
+      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %>
+    </p>
+    <h1 class="text-3xl font-semibold tracking-tight"><%= @database.name %></h1>
+    <p class="text-sm text-slate-600">Table view</p>
+  </header>
+
+  <div class="grid gap-6 lg:grid-cols-[260px_1fr]">
+    <aside class="space-y-4 rounded border border-slate-200 bg-white p-4">
+      <h2 class="text-base font-medium">Databases</h2>
+      <ul class="space-y-2">
+        <% @databases.each do |database| %>
+          <li class="text-sm">
+            <%= link_to database.name,
+                        database_path(workspace_slug: @workspace.slug, id: database.id),
+                        class: "underline #{'font-semibold' if database.id == @database.id}" %>
+          </li>
+        <% end %>
+      </ul>
+
+      <% if policy(Database.new(workspace: @workspace)).create? %>
+        <%= form_with model: @new_database, url: databases_path(workspace_slug: @workspace.slug), class: "space-y-2 pt-2" do |form| %>
+          <%= form.text_field :name, placeholder: "New database", required: true, class: "w-full rounded border border-slate-300 px-2 py-1.5 text-sm" %>
+          <%= form.submit "Create", class: "w-full rounded border border-slate-300 px-2 py-1.5 text-sm" %>
+        <% end %>
+      <% end %>
+    </aside>
+
+    <div class="space-y-4 rounded border border-slate-200 bg-white p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-medium">Schema</h2>
+
+        <% if policy(DbProperty.new(database: @database, workspace: @workspace)).create? %>
+          <%= form_with model: @new_property,
+                        url: database_db_properties_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                        class: "inline-flex flex-wrap items-center gap-2" do |form| %>
+            <%= form.text_field :name, placeholder: "Column name", required: true, class: "rounded border border-slate-300 px-2 py-1.5 text-sm" %>
+            <%= form.select :property_type,
+                            DbProperty.property_types.keys.map { |value| [value.titleize, value] },
+                            {},
+                            class: "rounded border border-slate-300 px-2 py-1.5 text-sm" %>
+            <%= form.submit "Add column", class: "rounded border border-slate-300 px-2 py-1.5 text-sm" %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm text-slate-600"><%= pluralize(@rows.size, "row") %>, <%= pluralize(@db_properties.size, "column") %></p>
+        <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? %>
+          <%= form_with model: @new_row,
+                        url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                        class: "inline-flex items-center gap-2" do |form| %>
+            <%= form.text_field :title, placeholder: "Row title", class: "rounded border border-slate-300 px-2 py-1.5 text-sm" %>
+            <%= form.submit "Add row", class: "rounded border border-slate-300 px-2 py-1.5 text-sm" %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="overflow-x-auto rounded border border-slate-200">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="whitespace-nowrap border-b border-slate-200 px-3 py-2 text-left font-medium text-slate-700">Title</th>
+              <% @db_properties.each do |db_property| %>
+                <% property_is_sorted = @sort_property&.id == db_property.id %>
+                <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
+                <th class="whitespace-nowrap border-b border-slate-200 px-3 py-2 text-left font-medium text-slate-700">
+                  <div class="flex items-center gap-2">
+                    <%= link_to db_property.name,
+                                database_path(workspace_slug: @workspace.slug, id: @database.id, sort_property_id: db_property.id, sort_direction: next_direction),
+                                class: "underline" %>
+                    <% if property_is_sorted %>
+                      <span class="text-xs text-slate-500"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+                    <% end %>
+                    <% if policy(db_property).destroy? %>
+                      <%= button_to "Remove",
+                                    database_db_property_path(workspace_slug: @workspace.slug, database_id: @database.id, id: db_property.id),
+                                    method: :delete,
+                                    form: { data: { turbo_confirm: "Remove this column and all cell values?" } },
+                                    class: "rounded border border-slate-300 px-1.5 py-0.5 text-[10px]" %>
+                    <% end %>
+                  </div>
+                </th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @rows.each do |row| %>
+              <tr id="row_<%= row.id %>" class="odd:bg-white even:bg-slate-50/30">
+                <td class="whitespace-nowrap border-b border-slate-100 px-3 py-2 align-top text-slate-800"><%= row.title %></td>
+                <% @db_properties.each do |db_property| %>
+                  <% db_cell = @cells_by_key[[row.id, db_property.id]] %>
+                  <td class="border-b border-slate-100 px-3 py-2">
+                    <% if db_cell && policy(db_cell).update? %>
+                      <%= form_with model: db_cell,
+                                    url: database_db_cell_path(
+                                      workspace_slug: @workspace.slug,
+                                      database_id: @database.id,
+                                      id: db_cell.id,
+                                      sort_property_id: params[:sort_property_id],
+                                      sort_direction: params[:sort_direction]
+                                    ),
+                                    method: :patch do |form| %>
+                        <%= form.text_field :value_text,
+                                            value: db_cell.value_text,
+                                            id: "db_cell_#{db_cell.id}_value_text",
+                                            class: "w-full min-w-36 rounded border border-slate-300 px-2 py-1 text-sm",
+                                            onchange: "this.form.requestSubmit()" %>
+                      <% end %>
+                    <% else %>
+                      <span class="text-slate-400">-</span>
+                    <% end %>
+                  </td>
+                <% end %>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

@@ -17,6 +17,11 @@ Rails.application.routes.draw do
     patch "notifications/:id/read", to: "notifications#mark_read", as: :read_workspace_notification
     post "invitations", to: "invitations#create", as: :workspace_invitations
     resources :memberships, only: :update
+    resources :databases, only: %i[show create] do
+      resources :db_properties, only: %i[create destroy]
+      resources :db_rows, only: :create
+      resources :db_cells, only: :update
+    end
 
     resources :pages, only: %i[show create] do
       resources :comments, only: :create do

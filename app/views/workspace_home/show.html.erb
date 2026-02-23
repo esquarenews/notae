@@ -34,6 +34,31 @@
 
     <div class="space-y-6">
       <section class="space-y-3">
+        <h2 class="text-xl font-medium">Databases</h2>
+
+        <% if @databases.any? %>
+          <ul class="space-y-2">
+            <% @databases.each do |database| %>
+              <li class="rounded border border-slate-200 bg-white px-3 py-2 text-sm">
+                <%= link_to database.name,
+                            database_path(workspace_slug: @workspace.slug, id: database.id),
+                            class: "font-medium underline" %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="text-sm text-slate-600">No databases yet.</p>
+        <% end %>
+
+        <% if policy(Database.new(workspace: @workspace)).create? %>
+          <%= form_with model: @new_database, url: databases_path(workspace_slug: @workspace.slug), class: "grid gap-2 rounded border border-slate-200 bg-white p-3 md:grid-cols-[1fr_auto]" do |form| %>
+            <%= form.text_field :name, placeholder: "New database name", required: true, class: "rounded border border-slate-300 px-3 py-2 text-sm" %>
+            <%= form.submit "Create database", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
+          <% end %>
+        <% end %>
+      </section>
+
+      <section class="space-y-3">
         <h2 class="text-xl font-medium">Members</h2>
         <ul class="space-y-2">
           <% @memberships.each do |membership| %>

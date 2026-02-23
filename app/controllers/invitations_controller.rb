@@ -57,6 +57,9 @@ class InvitationsController < ApplicationController
   end
 
   def invitation_params
-    params.require(:invitation).permit(:email, :role)
+    permitted = params.require(:invitation).permit(:email)
+    requested_role = params.dig(:invitation, :role).to_s
+    permitted[:role] = requested_role if Invitation.roles.key?(requested_role)
+    permitted
   end
 end
