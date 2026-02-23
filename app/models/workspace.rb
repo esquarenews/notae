@@ -6,6 +6,14 @@ class Workspace < ApplicationRecord
   has_many :memberships, dependent: :destroy
   has_many :users, through: :memberships
   has_many :invitations, dependent: :destroy
+  has_many :pages, dependent: :destroy
+  has_many :blocks, dependent: :destroy
+  has_many :comments, dependent: :destroy
+  has_many :notifications, dependent: :destroy
+  has_many :databases, dependent: :destroy
+  has_many :db_rows, dependent: :destroy
+  has_many :page_links, dependent: :destroy
+  has_many :audit_events, dependent: :destroy
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true

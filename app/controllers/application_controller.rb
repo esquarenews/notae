@@ -8,6 +8,7 @@ class ApplicationController < ActionController::Base
   stale_when_importmap_changes
 
   before_action :set_paper_trail_whodunnit
+  before_action :set_unread_notifications_count
   after_action :verify_pundit_authorization, unless: :devise_controller?
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
@@ -20,5 +21,14 @@ class ApplicationController < ActionController::Base
 
   def handle_not_authorized
     redirect_back fallback_location: root_path, alert: "You are not authorized to perform this action."
+  end
+
+  def set_unread_notifications_count
+    @unread_notifications_count =
+      if user_signed_in?
+        policy_scope(Notification).unread.count
+      else
+        0
+      end
   end
 end

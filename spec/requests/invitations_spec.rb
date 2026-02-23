@@ -24,6 +24,7 @@ RSpec.describe "Invitations", type: :request do
 
     expect(response).to redirect_to(workspace_path(workspace.slug))
     expect(ActionMailer::Base.deliveries.last.to).to include("joiner@example.com")
+    expect(AuditEvent.recent_first.first.action).to eq("share")
   end
 
   it "creates membership when a valid invitation is accepted" do

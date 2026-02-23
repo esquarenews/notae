@@ -9,6 +9,18 @@ class InvitationsController < ApplicationController
     authorize @invitation
 
     if @invitation.save
+      AuditEventLogger.log!(
+        workspace: @workspace,
+        actor: current_user,
+        action: "share",
+        metadata: {
+          kind: "workspace_invitation_sent",
+          invitation_id: @invitation.id,
+          invitee_email: @invitation.email,
+          role: @invitation.role
+        },
+        auditable: @invitation
+      )
       InvitationMailer.with(invitation: @invitation).workspace_invitation.deliver_later
       redirect_to workspace_path(@workspace.slug), notice: "Invitation sent."
     else

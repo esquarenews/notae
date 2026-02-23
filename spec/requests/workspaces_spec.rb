@@ -24,6 +24,6 @@ RSpec.describe "Workspaces", type: :request do
     sign_in outsider
     get workspace_path(workspace.slug)
 
-    expect(response).to redirect_to(root_path)
+    expect(response).to have_http_status(:not_found)
   end
 end

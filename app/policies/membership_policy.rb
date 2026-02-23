@@ -12,18 +12,27 @@ class MembershipPolicy < ApplicationPolicy
   end
 
   def update?
-    create?
+    return false unless workspace_membership
+    return false if record.user_id == user.id
+
+    if workspace_membership.owner?
+      !record.owner?
+    elsif workspace_membership.admin?
+      record.member? || record.guest?
+    else
+      false
+    end
   end
 
   def destroy?
-    create? && !record.owner?
+    update?
   end
 
   class Scope < Scope
     def resolve
       return scope.none unless user
 
-      scope.joins(:workspace).merge(WorkspacePolicy::Scope.new(user, Workspace).resolve)
+      scope.where(workspace_id: WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id))
     end
   end
 

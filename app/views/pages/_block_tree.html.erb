@@ -1,0 +1,153 @@
+<% blocks = blocks_by_parent[parent_id] || [] %>
+
+<div class="space-y-2" data-controller="block-list" data-block-list-workspace-slug-value="<%= workspace.slug %>" data-block-list-page-id-value="<%= page.id %>" data-block-list-parent-id-value="<%= parent_id %>">
+  <% blocks.each_with_index do |block, index| %>
+    <% is_embed_block = block.block_type == "embed" %>
+    <% is_media_block = %w[image file].include?(block.block_type) %>
+    <% attach_url = attach_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id) %>
+    <article id="block_<%= block.id %>" class="rounded border border-slate-200 bg-slate-50 p-3" draggable="true" data-block-list-target="item" data-block-id="<%= block.id %>" data-block-index="<%= index %>">
+      <div class="mb-2 flex items-center gap-2">
+        <span class="cursor-grab text-xs text-slate-500">drag</span>
+        <span class="rounded bg-white px-2 py-0.5 text-xs uppercase text-slate-600"><%= block.block_type %></span>
+        <%= button_to "Archive",
+                      archive_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                      method: :patch,
+                      class: "ml-auto rounded border border-slate-300 px-2 py-1 text-xs" %>
+      </div>
+
+      <% if is_embed_block %>
+        <div class="space-y-2 rounded border border-slate-200 bg-white p-2">
+          <% if policy(block).update? %>
+            <%= form_with model: block,
+                          url: page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                          method: :patch,
+                          class: "flex flex-col gap-2 sm:flex-row sm:items-center" do |form| %>
+              <%= form.url_field :embed_url,
+                                 placeholder: "https://www.youtube.com/embed/...",
+                                 class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
+              <%= form.submit "Save embed", class: "rounded border border-slate-300 px-3 py-2 text-sm" %>
+            <% end %>
+          <% end %>
+
+          <% if block.embed_url.present? %>
+            <div class="overflow-hidden rounded border border-slate-200">
+              <iframe src="<%= block.embed_url %>"
+                      class="h-64 w-full"
+                      loading="lazy"
+                      referrerpolicy="no-referrer"
+                      allowfullscreen></iframe>
+            </div>
+          <% else %>
+            <p class="text-xs text-slate-600">Allowed embed domains: youtube, vimeo, figma, loom.</p>
+          <% end %>
+        </div>
+      <% elsif is_media_block %>
+        <div class="space-y-2 rounded border border-slate-200 bg-white p-2">
+          <% if policy(block).attach? %>
+            <div data-controller="block-upload" data-block-upload-url-value="<%= attach_url %>">
+              <div data-block-upload-target="dropzone"
+                   data-action="dragover->block-upload#dragover dragleave->block-upload#dragleave drop->block-upload#drop click->block-upload#openPicker"
+                   class="cursor-pointer rounded border border-dashed border-slate-300 bg-white px-3 py-4 text-center text-xs text-slate-600">
+                Drag and drop <%= block.block_type %> here
+              </div>
+              <%= tag.input type: "file",
+                            class: "hidden",
+                            data: { block_upload_target: "input", action: "change->block-upload#upload" },
+                            accept: (block.block_type == "image" ? "image/*" : nil) %>
+              <button type="button"
+                      data-action="block-upload#openPicker"
+                      class="mt-2 rounded border border-slate-300 px-2 py-1 text-xs">
+                Choose file
+              </button>
+            </div>
+          <% end %>
+
+          <% if block.asset.attached? %>
+            <% if block.asset.content_type.to_s.start_with?("image/") %>
+              <%= image_tag url_for(block.asset), class: "max-h-80 w-auto rounded border border-slate-200" %>
+            <% else %>
+              <p class="text-xs text-slate-700">Attached file: <%= block.asset.filename.to_s %></p>
+            <% end %>
+
+            <div class="flex items-center gap-2 text-xs">
+              <%= link_to "Download",
+                          download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                          class: "rounded border border-slate-300 px-2 py-1" %>
+              <% if block.asset.content_type.to_s.start_with?("image/") %>
+                <%= link_to "Open",
+                            download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, disposition: "inline"),
+                            class: "rounded border border-slate-300 px-2 py-1" %>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-xs text-slate-600">No file uploaded yet.</p>
+          <% end %>
+        </div>
+      <% else %>
+        <div data-controller="block-editor"
+             data-block-editor-url-value="<%= page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id) %>"
+             data-block-editor-initial-json-value="<%= block.content_json.to_json %>"
+             data-block-editor-block-type-value="<%= block.block_type %>">
+          <div data-block-editor-target="editor" class="min-h-10 rounded border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+        </div>
+      <% end %>
+
+      <div class="mt-2 rounded border border-slate-200 bg-white p-2">
+        <%= form_with model: new_block_comment,
+                      url: page_block_comments_path(workspace_slug: workspace.slug, page_id: page.id, block_id: block.id),
+                      class: "space-y-2" do |form| %>
+          <%= form.text_area :body, rows: 2, placeholder: "Comment on block", class: "w-full rounded border border-slate-300 px-2 py-1 text-xs" %>
+          <%= form.submit "Add block comment", class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
+        <% end %>
+
+        <% (comments_by_block[block.id] || []).each do |comment| %>
+          <div class="mt-2 rounded border border-slate-200 px-2 py-1 text-xs">
+            <div class="mb-1 flex items-center justify-between gap-2">
+              <span class="font-medium"><%= comment.author.email %></span>
+              <% if comment.resolved? %>
+                <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] text-emerald-700">Resolved</span>
+              <% end %>
+            </div>
+            <p class="whitespace-pre-wrap"><%= comment.body %></p>
+            <% if policy(comment).resolve? %>
+              <div class="mt-1">
+                <% if comment.resolved? %>
+                  <%= button_to "Unresolve",
+                                unresolve_page_block_comment_path(workspace_slug: workspace.slug, page_id: page.id, block_id: block.id, id: comment.id),
+                                method: :patch,
+                                class: "rounded border border-slate-300 px-1.5 py-0.5 text-[10px]" %>
+                <% else %>
+                  <%= button_to "Resolve",
+                                resolve_page_block_comment_path(workspace_slug: workspace.slug, page_id: page.id, block_id: block.id, id: comment.id),
+                                method: :patch,
+                                class: "rounded border border-slate-300 px-1.5 py-0.5 text-[10px]" %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-3 ml-4 border-l border-slate-200 pl-3">
+        <%= render partial: "pages/block_tree",
+                   locals: {
+                     workspace: workspace,
+                     page: page,
+                     blocks_by_parent: blocks_by_parent,
+                     comments_by_block: comments_by_block,
+                     new_block_comment: new_block_comment,
+                     parent_id: block.id
+                   } %>
+
+        <%= form_with model: Block.new, url: page_blocks_path(workspace_slug: workspace.slug, page_id: page.id), class: "mt-2 inline-flex items-center gap-2" do |form| %>
+          <%= form.hidden_field :parent_block_id, value: block.id %>
+          <%= form.select :block_type,
+                          [["Text", "paragraph"], ["Image", "image"], ["File", "file"], ["Embed", "embed"]],
+                          {},
+                          class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
+          <%= form.submit "Add nested block", class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
+        <% end %>
+      </div>
+    </article>
+  <% end %>
+</div>
