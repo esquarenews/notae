@@ -1,0 +1,30 @@
+<% content_for :title, "Workspace Invitation" %>
+
+<section class="mx-auto max-w-xl space-y-5">
+  <header class="space-y-1">
+    <h1 class="text-3xl font-semibold tracking-tight">Workspace Invitation</h1>
+    <p class="text-slate-600">You were invited to <strong><%= @invitation.workspace.name %></strong> as <%= @invitation.role %>.</p>
+  </header>
+
+  <% if @invitation.expired? %>
+    <p class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+      This invitation has expired.
+    </p>
+  <% elsif @invitation.accepted? %>
+    <p class="rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      This invitation has already been accepted.
+    </p>
+  <% elsif user_signed_in? %>
+    <% if current_user.email.casecmp(@invitation.email).zero? %>
+      <%= button_to "Accept invitation", accept_invitation_path(@invitation.token), method: :post, class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
+    <% else %>
+      <p class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+        Sign in as <%= @invitation.email %> to accept this invitation.
+      </p>
+    <% end %>
+  <% else %>
+    <p class="text-sm text-slate-700">
+      <%= link_to "Sign in", new_user_session_path, class: "font-medium underline" %> as <%= @invitation.email %> to accept.
+    </p>
+  <% end %>
+</section>
