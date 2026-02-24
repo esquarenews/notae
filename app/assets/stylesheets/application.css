@@ -8,3 +8,597 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+:root {
+  --notae-bg: #f5f5f4;
+  --notae-surface: #fcfcfb;
+  --notae-border: #e7e5e4;
+  --notae-text: #292524;
+  --notae-muted: #78716c;
+  --notae-accent: #2563eb;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body.notae-theme {
+  margin: 0;
+  min-height: 100vh;
+  background: #f7f7f5;
+  color: var(--notae-text);
+  font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.notae-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 246px minmax(0, 1fr) 320px;
+  min-height: 100vh;
+}
+
+.notae-sidebar {
+  border-right: 1px solid var(--notae-border);
+  background: #f4f3f2;
+  padding: 0.6rem 0.45rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.62rem;
+  z-index: 40;
+}
+
+.notae-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.notae-sidebar-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.notae-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.33rem;
+  min-width: 0;
+}
+
+.notae-user-avatar {
+  width: 1.42rem;
+  height: 1.42rem;
+  border-radius: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.73rem;
+  font-weight: 700;
+  background: #dbeafe;
+  color: #1e293b;
+}
+
+.notae-workspace-chip .notae-user-avatar {
+  background: #fde68a;
+  color: #7c2d12;
+}
+
+.notae-user-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #44403c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notae-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 0.35rem;
+  color: #44403c;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.notae-icon-link:hover {
+  background: #e7e5e4;
+}
+
+.notae-sidebar-close {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: #78716c;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 0.35rem;
+  font-size: 0.83rem;
+  cursor: pointer;
+}
+
+.notae-sidebar-close:hover {
+  background: #e7e5e4;
+}
+
+.notae-sidebar-nav,
+.notae-sidebar-list {
+  display: grid;
+  gap: 0.02rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notae-sidebar-section {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.notae-sidebar-label {
+  margin: 0;
+  font-size: 0.61rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a8a29e;
+  padding-left: 0.24rem;
+}
+
+.notae-sidebar-link,
+.notae-sidebar-link:visited,
+.notae-sidebar-link:active,
+.notae-sidebar-link:hover,
+.notae-sidebar-link:focus,
+.notae-sidebar-link:focus-visible,
+.notae-sidebar-link {
+  color: #44403c;
+}
+
+.notae-sidebar-link,
+.notae-sidebar-link.active,
+.notae-sidebar-link:hover {
+  text-decoration: none;
+}
+
+.notae-sidebar-link {
+  display: block;
+  border-radius: 0.35rem;
+  padding: 0.24rem 0.42rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.28;
+}
+
+.notae-sidebar-link:hover {
+  background: #e8e7e6;
+}
+
+.notae-sidebar-link.active {
+  background: #dfdddb;
+  color: #292524;
+  font-weight: 600;
+}
+
+.notae-sidebar-empty {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #a8a29e;
+  padding-left: 0.25rem;
+}
+
+.notae-sidebar-input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: #ebe9e7;
+  padding: 0.34rem 0.44rem;
+  font-size: 0.76rem;
+}
+
+.notae-sidebar-input:focus {
+  outline: none;
+  border-color: #93c5fd;
+  background: #fff;
+}
+
+.notae-sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--notae-border);
+  padding-top: 0.38rem;
+  display: grid;
+  gap: 0.06rem;
+}
+
+.notae-sidebar-signout {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notae-main {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+}
+
+.notae-topbar {
+  height: 2.45rem;
+  border-bottom: 1px solid var(--notae-border);
+  background: #f8f7f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0 0.8rem;
+}
+
+.notae-topbar-leading {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.notae-topbar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notae-topbar-page-icon {
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.notae-topbar-privacy {
+  font-size: 0.67rem;
+  color: #a8a29e;
+  font-weight: 600;
+}
+
+.notae-topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.notae-topbar-meta {
+  font-size: 0.7rem;
+  color: var(--notae-muted);
+}
+
+.notae-chip-button {
+  border: 1px solid var(--notae-border);
+  background: #fff;
+  border-radius: 0.4rem;
+  padding: 0.26rem 0.56rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #44403c;
+  cursor: pointer;
+}
+
+.notae-inline-icon-button {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.34rem;
+  background: transparent;
+  color: #78716c;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.notae-inline-icon-button:hover {
+  background: #efeeed;
+  border-color: #e7e5e4;
+}
+
+.notae-content {
+  padding: 1.2rem clamp(0.8rem, 3vw, 2.4rem) 1.9rem;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.notae-flash {
+  margin: 0 0 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid;
+  padding: 0.62rem 0.82rem;
+  font-size: 0.82rem;
+}
+
+.notae-flash.notice {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.notae-flash.alert {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.notae-ai-rail {
+  border-left: 1px solid var(--notae-border);
+  background: #f7f6f5;
+  padding: 0.5rem 0.56rem 0.58rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+}
+
+.notae-ai-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.notae-ai-kicker {
+  border: 1px solid var(--notae-border);
+  border-radius: 999px;
+  padding: 0.08rem 0.34rem;
+  font-size: 0.64rem;
+  color: var(--notae-muted);
+}
+
+.notae-ai-card {
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  padding: 0.42rem 0.35rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.notae-ai-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.notae-ai-copy {
+  margin: 0;
+  color: var(--notae-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.notae-ai-compose {
+  margin-top: auto;
+  border: 1px solid var(--notae-border);
+  background: #fff;
+  border-radius: 0.6rem;
+  padding: 0.45rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.notae-ai-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--notae-muted);
+}
+
+.notae-ai-compose textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.46rem;
+  resize: vertical;
+  padding: 0.46rem 0.52rem;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.notae-ai-compose button {
+  justify-self: end;
+  border: 0;
+  border-radius: 0.4rem;
+  background: var(--notae-accent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.34rem 0.66rem;
+  cursor: pointer;
+}
+
+.notae-ai-compose-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.notae-surface {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.1rem 0.1rem 0.8rem;
+  border-bottom: 1px solid #ebe9e6;
+}
+
+.notae-page-header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.notae-page-header h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3.4vw, 2.8rem);
+  line-height: 1.04;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.notae-page-subtle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--notae-muted);
+}
+
+.notae-stack-lg {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.notae-card-grid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.notae-card {
+  border: 1px solid #ecebea;
+  border-radius: 0.55rem;
+  background: #fff;
+  padding: 0.58rem;
+  display: grid;
+  gap: 0.22rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.notae-card:hover {
+  border-color: #d0cecc;
+}
+
+.notae-auth-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.2rem;
+}
+
+.notae-theme section a {
+  color: #1f2937;
+}
+
+.notae-theme input[type="text"],
+.notae-theme input[type="email"],
+.notae-theme input[type="url"],
+.notae-theme input[type="search"],
+.notae-theme textarea,
+.notae-theme select {
+  border-color: #d6d3d1;
+  border-radius: 0.55rem;
+}
+
+.notae-theme button,
+.notae-theme input[type="submit"] {
+  border-radius: 0.4rem;
+}
+
+@media (max-width: 1360px) {
+  .notae-shell {
+    grid-template-columns: 236px minmax(0, 1fr);
+  }
+
+  .notae-ai-rail {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  body.notae-sidebar-open {
+    overflow: hidden;
+  }
+
+  .notae-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(84vw, 272px);
+    transform: translateX(-100%);
+    transition: transform 160ms ease;
+    box-shadow: 2px 0 24px rgba(24, 24, 27, 0.16);
+  }
+
+  .notae-shell.sidebar-open .notae-sidebar {
+    transform: translateX(0);
+  }
+
+  .notae-main {
+    min-width: 0;
+  }
+
+  .notae-mobile-overlay {
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: rgba(28, 25, 23, 0.28);
+    transition: opacity 140ms ease;
+    z-index: 30;
+  }
+
+  .notae-shell.sidebar-open .notae-mobile-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .notae-mobile-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border: 1px solid var(--notae-border);
+    border-radius: 0.38rem;
+    background: #fff;
+    color: #57534e;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .notae-sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .notae-topbar-meta {
+    display: none;
+  }
+
+  .notae-inline-icon-button {
+    display: none;
+  }
+
+  .notae-topbar {
+    padding: 0 0.62rem;
+  }
+
+  .notae-content {
+    padding: 0.8rem 0.7rem 1.2rem;
+  }
+}
+
+@media (min-width: 961px) {
+  .notae-mobile-overlay,
+  .notae-mobile-toggle {
+    display: none;
+  }
+}

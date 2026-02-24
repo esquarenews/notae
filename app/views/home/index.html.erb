@@ -1,36 +1,37 @@
 <% content_for :title, "Notae" %>
 
-<section class="space-y-6">
-  <header class="space-y-1">
-    <h1 class="text-3xl font-semibold tracking-tight">Notae</h1>
-    <p class="text-slate-600">Permission-aware workspace foundation is ready.</p>
+<section class="notae-stack-lg">
+  <header class="notae-page-header">
+    <p class="notae-page-subtle">Workspace starter</p>
+    <h1>Welcome to Notae</h1>
+    <p class="notae-page-subtle">Capture ideas, keep docs nested, and manage tables in one calm workspace.</p>
   </header>
 
   <% if user_signed_in? %>
-    <div class="flex items-center gap-3">
-      <span class="text-sm text-slate-700">Signed in as <%= current_user.email %></span>
-      <%= link_to "New Workspace", new_workspace_path, class: "rounded bg-white px-3 py-2 text-sm font-medium text-slate-900 ring-1 ring-slate-300" %>
-      <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-    </div>
+    <section class="notae-surface">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h2 class="text-xl font-semibold">Your workspaces</h2>
+        <%= link_to "New Workspace", new_workspace_path, class: "notae-chip-button" %>
+      </div>
+      <p class="mb-3 text-sm text-stone-600">Signed in as <%= current_user.email %></p>
 
-    <section class="space-y-3">
-      <h2 class="text-xl font-medium">Your Workspaces</h2>
       <% if @workspaces.any? %>
-        <ul class="space-y-2">
+        <div class="notae-card-grid">
           <% @workspaces.each do |workspace| %>
-            <li>
-              <%= link_to workspace.name, workspace_path(workspace.slug), class: "block rounded border border-slate-200 bg-white px-3 py-2 hover:bg-slate-100" %>
-            </li>
+            <%= link_to workspace_path(workspace.slug), class: "notae-card" do %>
+              <strong><%= workspace.name %></strong>
+              <span class="text-xs text-stone-500"><%= workspace.slug %></span>
+            <% end %>
           <% end %>
-        </ul>
+        </div>
       <% else %>
-        <p class="text-sm text-slate-600">No workspaces yet.</p>
+        <p class="text-sm text-stone-500">No workspaces yet.</p>
       <% end %>
     </section>
   <% else %>
-    <div class="rounded border border-slate-200 bg-white p-4">
-      <p class="mb-3 text-slate-700">Sign in to access your workspace.</p>
-      <%= link_to "Sign in", new_user_session_path, class: "inline-flex rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-    </div>
+    <section class="notae-surface">
+      <p class="mb-3 text-stone-700">Sign in to access your workspace.</p>
+      <%= link_to "Sign in", new_user_session_path, class: "notae-chip-button" %>
+    </section>
   <% end %>
 </section>

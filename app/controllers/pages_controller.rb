@@ -27,6 +27,12 @@ class PagesController < ApplicationController
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_permissions = policy(@page).permissions?
     @shared_user_ids = @page.page_shares.pluck(:user_id)
+    @share_links =
+      if @can_manage_permissions
+        policy_scope(ShareLink).for_page(@page).recent_first.to_a
+      else
+        []
+      end
     @audit_events = policy_scope(AuditEvent).where(workspace_id: @workspace.id).recent_first.limit(15)
   end
 

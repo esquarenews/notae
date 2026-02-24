@@ -24,6 +24,8 @@ Rails.application.routes.draw do
     end
 
     resources :pages, only: %i[show create] do
+      resources :share_links, only: %i[create destroy]
+
       resources :comments, only: :create do
         member do
           patch :resolve
@@ -58,6 +60,7 @@ Rails.application.routes.draw do
 
   get "invitations/:token", to: "invitations#show", as: :invitation
   post "invitations/:token/accept", to: "invitations#accept", as: :accept_invitation
+  get "s/:token", to: "public/pages#show", as: :public_share
 
   mount Sidekiq::Web => "/sidekiq" if Rails.env.development?
 end

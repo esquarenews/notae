@@ -52,4 +52,17 @@ RSpec.describe Block, type: :model do
     expect(block).not_to be_valid
     expect(block.errors[:embed_url]).to include("is not in the allowlist")
   end
+
+  it "uses top-level page links sync service from the callback helper" do
+    owner = User.create!(email: "page-links-constant-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Link scope", slug: "link-scope")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Links")
+    block = described_class.new(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    stub_const("Block::PageLinks", Module.new)
+    allow(::PageLinks::SyncFromBlockService).to receive(:call)
+
+    block.send(:sync_page_links)
+
+    expect(::PageLinks::SyncFromBlockService).to have_received(:call).with(block: block)
+  end
 end

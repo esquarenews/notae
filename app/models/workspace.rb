@@ -14,6 +14,8 @@ class Workspace < ApplicationRecord
   has_many :db_rows, dependent: :destroy
   has_many :page_links, dependent: :destroy
   has_many :audit_events, dependent: :destroy
+  has_many :share_links, dependent: :destroy
+  has_many :share_link_views, dependent: :destroy
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true

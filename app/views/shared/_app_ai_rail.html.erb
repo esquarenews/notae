@@ -1,0 +1,20 @@
+<aside class="notae-ai-rail">
+  <div class="notae-ai-head">
+    <span>New AI chat</span>
+    <span class="notae-ai-kicker">Auto</span>
+  </div>
+
+  <div class="notae-ai-card">
+    <p class="notae-ai-title">Welcome <%= current_user.email.split("@").first %>!</p>
+    <p class="notae-ai-copy">I can help draft, summarize, and organize this page while you edit.</p>
+    <p class="notae-ai-copy">Current context: <strong><%= content_for(:title) || "Workspace" %></strong></p>
+  </div>
+
+  <form class="notae-ai-compose">
+    <label for="ai_prompt" class="notae-ai-label">Prompt</label>
+    <textarea id="ai_prompt" rows="5" placeholder="Create a simple daily planner for today with three priority tasks in a new page."></textarea>
+    <div class="notae-ai-compose-actions">
+      <button type="button">Send</button>
+    </div>
+  </form>
+</aside>

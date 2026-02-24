@@ -1,187 +1,213 @@
 <% content_for :title, @page.title %>
 
-<section class="space-y-6">
-  <header class="space-y-2">
-    <p class="text-sm text-slate-500">
+<section class="notae-stack-lg">
+  <header class="notae-page-header">
+    <p class="notae-page-subtle">
       <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %>
+      ·
+      <%= @page.permission_mode.humanize %>
     </p>
-    <h1 class="text-3xl font-semibold tracking-tight"><%= @page.title %></h1>
-    <p class="text-sm text-slate-600">Visibility: <%= @page.permission_mode.humanize %></p>
-    <% if policy(@page).archive? %>
-      <%= button_to "Archive page",
-                    archive_page_path(workspace_slug: @workspace.slug, id: @page.id),
-                    method: :patch,
-                    class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-    <% end %>
-    <p class="text-sm">
+    <h1><%= @page.title %></h1>
+    <div class="flex flex-wrap items-center gap-2">
+      <% if policy(@page).archive? %>
+        <%= button_to "Archive page",
+                      archive_page_path(workspace_slug: @workspace.slug, id: @page.id),
+                      method: :patch,
+                      class: "notae-chip-button" %>
+      <% end %>
       <%= link_to "Notifications (#{@unread_notifications_count})",
                   workspace_notifications_path(workspace_slug: @workspace.slug),
-                  class: "underline" %>
-    </p>
-
-    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "flex gap-2 pt-1" do |form| %>
-      <%= form.text_field :q, placeholder: "Search workspace", class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
-      <%= form.submit "Search", class: "rounded border border-slate-300 px-3 py-2 text-sm" %>
+                  class: "notae-chip-button" %>
+    </div>
+    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "flex max-w-xl gap-2 pt-1" do |form| %>
+      <%= form.text_field :q, placeholder: "Search workspace", class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
+      <%= form.submit "Search", class: "notae-chip-button" %>
     <% end %>
   </header>
 
-  <div class="grid gap-6 lg:grid-cols-[280px_1fr]">
-    <aside class="space-y-4 rounded border border-slate-200 bg-white p-4">
-      <h2 class="text-base font-medium">Pages</h2>
-      <%= render partial: "shared/page_tree", locals: { pages_by_parent: @pages_by_parent, parent_id: nil, workspace: @workspace } %>
+  <% if @can_manage_permissions %>
+    <section class="notae-surface space-y-3">
+      <h2 class="text-lg font-medium">Page Permissions</h2>
+      <%= form_with model: @page, url: permissions_page_path(workspace_slug: @workspace.slug, id: @page.id), method: :patch, class: "space-y-3" do |form| %>
+        <div>
+          <%= form.label :permission_mode, "Visibility", class: "block text-sm font-medium text-stone-800" %>
+          <%= form.select :permission_mode,
+                          [["Shared To Workspace", "shared_to_workspace"], ["Private", "private_page"], ["Specific Users", "specific_users"]],
+                          {},
+                          class: "mt-1 rounded border border-stone-300 px-2 py-1 text-sm" %>
+        </div>
 
-      <% if policy(Page.new(workspace: @workspace)).create? %>
-        <%= form_with model: @new_page, url: pages_path(workspace_slug: @workspace.slug), class: "space-y-2 pt-2" do |form| %>
-          <%= form.text_field :title, placeholder: "New child page", required: true, class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
-          <%= form.hidden_field :parent_page_id, value: @page.id %>
-          <%= form.submit "Create child page", class: "w-full rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-        <% end %>
-      <% end %>
-    </aside>
-
-    <div class="space-y-5">
-      <% if @can_manage_permissions %>
-        <section class="space-y-3 rounded border border-slate-200 bg-white p-4">
-          <h2 class="text-lg font-medium">Page Permissions</h2>
-          <%= form_with model: @page, url: permissions_page_path(workspace_slug: @workspace.slug, id: @page.id), method: :patch, class: "space-y-3" do |form| %>
-            <div>
-              <%= form.label :permission_mode, "Visibility", class: "block text-sm font-medium text-slate-800" %>
-              <%= form.select :permission_mode,
-                              [["Shared To Workspace", "shared_to_workspace"], ["Private", "private_page"], ["Specific Users", "specific_users"]],
-                              {},
-                              class: "mt-1 rounded border border-slate-300 px-2 py-1 text-sm" %>
-            </div>
-
-            <div class="space-y-1">
-              <p class="text-sm font-medium text-slate-800">Specific Users</p>
-              <% @memberships.each do |membership| %>
-                <label class="flex items-center gap-2 text-sm">
-                  <%= check_box_tag "page[shared_user_ids][]", membership.user_id, @shared_user_ids.include?(membership.user_id), class: "rounded border-slate-300" %>
-                  <span><%= membership.user.email %></span>
-                </label>
-              <% end %>
-            </div>
-
-            <%= form.submit "Save permissions", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-          <% end %>
-        </section>
-      <% end %>
-
-      <section class="space-y-3 rounded border border-slate-200 bg-white p-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-medium">Blocks</h2>
-          <%= form_with model: @new_root_block, url: page_blocks_path(workspace_slug: @workspace.slug, page_id: @page.id), class: "inline-flex items-center gap-2" do |form| %>
-            <%= form.hidden_field :parent_block_id %>
-            <%= form.select :block_type,
-                            [["Text", "paragraph"], ["Image", "image"], ["File", "file"], ["Embed", "embed"]],
-                            {},
-                            class: "rounded border border-slate-300 px-2 py-1.5 text-sm" %>
-            <%= form.submit "Add block", class: "rounded border border-slate-300 px-3 py-1.5 text-sm" %>
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-stone-800">Specific Users</p>
+          <% @memberships.each do |membership| %>
+            <label class="flex items-center gap-2 text-sm">
+              <%= check_box_tag "page[shared_user_ids][]", membership.user_id, @shared_user_ids.include?(membership.user_id), class: "rounded border-stone-300" %>
+              <span><%= membership.user.email %></span>
+            </label>
           <% end %>
         </div>
 
-        <%= render partial: "pages/block_tree",
-                   locals: {
-                     workspace: @workspace,
-                     page: @page,
-                     blocks_by_parent: @blocks_by_parent,
-                     comments_by_block: @comments_by_block,
-                     new_block_comment: @new_block_comment,
-                     parent_id: nil
-                   } %>
-      </section>
+        <%= form.submit "Save permissions", class: "notae-chip-button" %>
+      <% end %>
+    </section>
 
-      <section class="space-y-3 rounded border border-slate-200 bg-white p-4">
-        <h3 class="text-base font-medium">Page Comments</h3>
-
-        <%= form_with model: @new_page_comment,
-                      url: page_comments_path(workspace_slug: @workspace.slug, page_id: @page.id),
-                      class: "space-y-2" do |form| %>
-          <%= form.text_area :body, rows: 3, placeholder: "Comment or mention someone with @email", class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
-          <%= form.submit "Add comment", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-        <% end %>
-
-        <% if @page_comments.any? %>
-          <ul class="space-y-2">
-            <% @page_comments.each do |comment| %>
-              <li class="rounded border border-slate-200 px-3 py-2 text-sm">
-                <div class="mb-1 flex items-center justify-between gap-2">
-                  <span class="font-medium"><%= comment.author.email %></span>
-                  <% if comment.resolved? %>
-                    <span class="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">Resolved</span>
-                  <% end %>
-                </div>
-                <p class="mb-2 whitespace-pre-wrap"><%= comment.body %></p>
-                <% if policy(comment).resolve? %>
-                  <% if comment.resolved? %>
-                    <%= button_to "Unresolve",
-                                  unresolve_page_comment_path(workspace_slug: @workspace.slug, page_id: @page.id, id: comment.id),
-                                  method: :patch,
-                                  class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
-                  <% else %>
-                    <%= button_to "Resolve",
-                                  resolve_page_comment_path(workspace_slug: @workspace.slug, page_id: @page.id, id: comment.id),
-                                  method: :patch,
-                                  class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
-                  <% end %>
-                <% end %>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="text-sm text-slate-600">No page comments yet.</p>
-        <% end %>
-      </section>
-
-      <section id="backlinks" class="space-y-2 rounded border border-slate-200 bg-white p-4">
-        <h3 class="text-base font-medium">Backlinks</h3>
-        <% backlink_pages = @backlinks.map(&:source_page).uniq { |source_page| source_page.id } %>
-        <% if backlink_pages.any? %>
-          <ul class="space-y-1">
-            <% backlink_pages.each do |source_page| %>
-              <li>
-                <%= link_to source_page.title,
-                            page_path(workspace_slug: @workspace.slug, id: source_page.id),
-                            data: { backlink_source: source_page.id },
-                            class: "text-sm underline" %>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="text-sm text-slate-600">No backlinks yet.</p>
-        <% end %>
-      </section>
-
-      <% if @archived_blocks.any? %>
-        <section class="space-y-2 rounded border border-slate-200 bg-white p-4">
-          <h3 class="text-base font-medium">Archived Blocks</h3>
-          <ul class="space-y-2">
-            <% @archived_blocks.each do |block| %>
-              <li class="flex items-center justify-between rounded border border-slate-200 px-3 py-2 text-sm">
-                <span><%= block.block_type %> block</span>
-                <%= button_to "Restore",
-                              restore_page_block_path(workspace_slug: @workspace.slug, page_id: @page.id, id: block.id),
-                              method: :patch,
-                              class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
-              </li>
-            <% end %>
-          </ul>
-        </section>
+    <section class="notae-surface space-y-3">
+      <h2 class="text-lg font-medium">Public Share Links</h2>
+      <%= form_with model: ShareLink.new,
+                    url: page_share_links_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                    class: "flex flex-wrap items-end gap-3" do |form| %>
+        <div class="min-w-56">
+          <%= form.label :expires_at, "Optional expiration", class: "block text-sm font-medium text-stone-800" %>
+          <%= form.datetime_local_field :expires_at, class: "mt-1 w-full rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+        </div>
+        <%= form.submit "Create public link", class: "notae-chip-button" %>
       <% end %>
 
-      <% if @audit_events.any? %>
-        <section class="space-y-2 rounded border border-slate-200 bg-white p-4">
-          <h3 class="text-base font-medium">Recent Audit Events</h3>
-          <ul class="space-y-2">
-            <% @audit_events.each do |event| %>
-              <li class="rounded border border-slate-200 px-3 py-2 text-sm">
-                <div class="font-medium"><%= event.action.humanize %> by <%= event.actor.email %></div>
-                <div class="text-xs text-slate-600"><%= event.metadata.to_json %></div>
-              </li>
-            <% end %>
-          </ul>
-        </section>
+      <% active_share_links = @share_links.select(&:active?) %>
+      <% if active_share_links.any? %>
+        <ul class="space-y-2">
+          <% active_share_links.each do |share_link| %>
+            <li class="rounded border border-stone-200 px-3 py-2 text-sm">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <%= link_to public_share_url(token: share_link.token),
+                            public_share_path(token: share_link.token),
+                            class: "underline",
+                            target: "_blank",
+                            rel: "noopener" %>
+                <%= button_to "Revoke",
+                              page_share_link_path(workspace_slug: @workspace.slug, page_id: @page.id, id: share_link.id),
+                              method: :delete,
+                              class: "notae-chip-button" %>
+              </div>
+              <p class="pt-1 text-xs text-stone-500">
+                <% if share_link.expires_at.present? %>
+                  Expires <%= l(share_link.expires_at, format: :long) %>
+                <% else %>
+                  No expiration
+                <% end %>
+              </p>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-stone-500">No active public share links.</p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="notae-surface space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-lg font-medium">Blocks</h2>
+      <%= form_with model: @new_root_block, url: page_blocks_path(workspace_slug: @workspace.slug, page_id: @page.id), class: "inline-flex items-center gap-2" do |form| %>
+        <%= form.hidden_field :parent_block_id %>
+        <%= form.select :block_type,
+                        [["Text", "paragraph"], ["Image", "image"], ["File", "file"], ["Embed", "embed"]],
+                        {},
+                        class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+        <%= form.submit "Add block", class: "notae-chip-button" %>
       <% end %>
     </div>
-  </div>
+
+    <%= render partial: "pages/block_tree",
+               locals: {
+                 workspace: @workspace,
+                 page: @page,
+                 blocks_by_parent: @blocks_by_parent,
+                 comments_by_block: @comments_by_block,
+                 new_block_comment: @new_block_comment,
+                 parent_id: nil
+               } %>
+  </section>
+
+  <section class="notae-surface space-y-3">
+    <h3 class="text-base font-medium">Page Comments</h3>
+
+    <%= form_with model: @new_page_comment,
+                  url: page_comments_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                  class: "space-y-2" do |form| %>
+      <%= form.text_area :body, rows: 3, placeholder: "Comment or mention someone with @email", class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
+      <%= form.submit "Add comment", class: "notae-chip-button" %>
+    <% end %>
+
+    <% if @page_comments.any? %>
+      <ul class="space-y-2">
+        <% @page_comments.each do |comment| %>
+          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
+            <div class="mb-1 flex items-center justify-between gap-2">
+              <span class="font-medium"><%= comment.author.email %></span>
+              <% if comment.resolved? %>
+                <span class="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">Resolved</span>
+              <% end %>
+            </div>
+            <p class="mb-2 whitespace-pre-wrap"><%= comment.body %></p>
+            <% if policy(comment).resolve? %>
+              <% if comment.resolved? %>
+                <%= button_to "Unresolve",
+                              unresolve_page_comment_path(workspace_slug: @workspace.slug, page_id: @page.id, id: comment.id),
+                              method: :patch,
+                              class: "notae-chip-button" %>
+              <% else %>
+                <%= button_to "Resolve",
+                              resolve_page_comment_path(workspace_slug: @workspace.slug, page_id: @page.id, id: comment.id),
+                              method: :patch,
+                              class: "notae-chip-button" %>
+              <% end %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-stone-500">No page comments yet.</p>
+    <% end %>
+  </section>
+
+  <section id="backlinks" class="notae-surface space-y-2">
+    <h3 class="text-base font-medium">Backlinks</h3>
+    <% backlink_pages = @backlinks.map(&:source_page).uniq { |source_page| source_page.id } %>
+    <% if backlink_pages.any? %>
+      <ul class="space-y-1">
+        <% backlink_pages.each do |source_page| %>
+          <li>
+            <%= link_to source_page.title,
+                        page_path(workspace_slug: @workspace.slug, id: source_page.id),
+                        data: { backlink_source: source_page.id },
+                        class: "text-sm underline" %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-stone-500">No backlinks yet.</p>
+    <% end %>
+  </section>
+
+  <% if @archived_blocks.any? %>
+    <section class="notae-surface space-y-2">
+      <h3 class="text-base font-medium">Archived Blocks</h3>
+      <ul class="space-y-2">
+        <% @archived_blocks.each do |block| %>
+          <li class="flex items-center justify-between rounded border border-stone-200 px-3 py-2 text-sm">
+            <span><%= block.block_type %> block</span>
+            <%= button_to "Restore",
+                          restore_page_block_path(workspace_slug: @workspace.slug, page_id: @page.id, id: block.id),
+                          method: :patch,
+                          class: "notae-chip-button" %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @audit_events.any? %>
+    <section class="notae-surface space-y-2">
+      <h3 class="text-base font-medium">Recent Audit Events</h3>
+      <ul class="space-y-2">
+        <% @audit_events.each do |event| %>
+          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
+            <div class="font-medium"><%= event.action.humanize %> by <%= event.actor.email %></div>
+            <div class="text-xs text-stone-500"><%= event.metadata.to_json %></div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 </section>

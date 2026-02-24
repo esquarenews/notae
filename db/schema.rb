@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_24_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -253,6 +253,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_050000) do
     t.index ["workspace_id"], name: "index_pages_on_workspace_id"
   end
 
+  create_table "share_link_views", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "ip_address", null: false
+    t.uuid "page_id", null: false
+    t.uuid "share_link_id", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "viewed_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["page_id"], name: "index_share_link_views_on_page_id"
+    t.index ["share_link_id", "viewed_at"], name: "index_share_link_views_on_share_link_id_and_viewed_at"
+    t.index ["share_link_id"], name: "index_share_link_views_on_share_link_id"
+    t.index ["workspace_id", "viewed_at"], name: "index_share_link_views_on_workspace_id_and_viewed_at"
+    t.index ["workspace_id"], name: "index_share_link_views_on_workspace_id"
+  end
+
+  create_table "share_links", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.datetime "expires_at"
+    t.datetime "last_viewed_at"
+    t.uuid "page_id", null: false
+    t.datetime "revoked_at"
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_share_links_on_created_by_id"
+    t.index ["page_id", "revoked_at"], name: "index_share_links_on_page_id_and_revoked_at"
+    t.index ["page_id"], name: "index_share_links_on_page_id"
+    t.index ["token"], name: "index_share_links_on_token", unique: true
+    t.index ["workspace_id", "revoked_at"], name: "index_share_links_on_workspace_id_and_revoked_at"
+    t.index ["workspace_id"], name: "index_share_links_on_workspace_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", default: "", null: false
@@ -320,4 +353,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_050000) do
   add_foreign_key "pages", "pages", column: "parent_page_id"
   add_foreign_key "pages", "users", column: "created_by_id"
   add_foreign_key "pages", "workspaces"
+  add_foreign_key "share_link_views", "pages"
+  add_foreign_key "share_link_views", "share_links"
+  add_foreign_key "share_link_views", "workspaces"
+  add_foreign_key "share_links", "pages"
+  add_foreign_key "share_links", "users", column: "created_by_id"
+  add_foreign_key "share_links", "workspaces"
 end

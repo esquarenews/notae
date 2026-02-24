@@ -1,14 +1,19 @@
 <% pages = pages_by_parent[parent_id] || [] %>
 
 <% if pages.any? %>
-  <ul class="<%= parent_id.nil? ? "space-y-1" : "ml-4 mt-1 space-y-1 border-l border-slate-200 pl-3" %>">
+  <ul class="<%= parent_id.nil? ? "notae-sidebar-list" : "ml-3 mt-1 space-y-1 border-l border-stone-300/70 pl-2" %>">
     <% pages.each do |page| %>
       <li>
-        <%= link_to page.title, page_path(workspace_slug: workspace.slug, id: page.id), class: "block rounded px-2 py-1 text-sm hover:bg-slate-100" %>
+        <%= link_to page.title,
+                    page_path(workspace_slug: workspace.slug, id: page.id),
+                    class: notae_sidebar_link_classes(
+                      page_path(workspace_slug: workspace.slug, id: page.id)
+                    ),
+                    data: { action: "click->shell#close" } %>
         <%= render partial: "shared/page_tree", locals: { pages_by_parent: pages_by_parent, parent_id: page.id, workspace: workspace } %>
       </li>
     <% end %>
   </ul>
 <% elsif parent_id.nil? %>
-  <p class="text-sm text-slate-600">No pages yet.</p>
+  <p class="notae-sidebar-empty">No pages yet.</p>
 <% end %>

@@ -106,7 +106,8 @@ class Block < ApplicationRecord
   end
 
   def sync_page_links
-    PageLinks::SyncFromBlockService.call(block: self)
+    require_dependency "page_links/sync_from_block_service" unless defined?(::PageLinks::SyncFromBlockService)
+    ::PageLinks::SyncFromBlockService.call(block: self)
   end
 
   def embed_block?

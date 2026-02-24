@@ -20,17 +20,55 @@
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-slate-50 text-slate-900">
-    <main class="mx-auto max-w-5xl px-4 py-6">
-      <% flash.each do |type, message| %>
-        <% palette = type.to_s == "alert" ? "border-red-300 bg-red-50 text-red-800" : "border-emerald-300 bg-emerald-50 text-emerald-800" %>
-        <p class="mb-4 rounded border px-3 py-2 text-sm <%= palette %>"><%= message %></p>
-      <% end %>
+  <body class="notae-theme">
+    <% if user_signed_in? %>
+      <div class="notae-shell" data-controller="shell">
+        <button type="button" class="notae-mobile-overlay" data-action="click->shell#close" aria-label="Close sidebar"></button>
+        <%= render "shared/app_sidebar" %>
 
-      <%= yield %>
-    </main>
+        <div class="notae-main">
+          <header class="notae-topbar">
+            <div class="notae-topbar-leading">
+              <button type="button" class="notae-mobile-toggle" data-action="shell#toggle" aria-label="Toggle sidebar">☰</button>
+              <div class="notae-topbar-title">
+                <span class="notae-topbar-page-icon">📄</span>
+                <span><%= content_for(:title) || "New page" %></span>
+                <span class="notae-topbar-privacy">Private</span>
+              </div>
+            </div>
+            <div class="notae-topbar-actions">
+              <span class="notae-topbar-meta">Edited just now</span>
+              <button type="button" class="notae-chip-button">Share</button>
+              <button type="button" class="notae-inline-icon-button" aria-label="Favorite">☆</button>
+              <button type="button" class="notae-inline-icon-button" aria-label="More">⋯</button>
+            </div>
+          </header>
+
+          <main class="notae-content">
+            <% flash.each do |type, message| %>
+              <% palette = type.to_s == "alert" ? "notae-flash alert" : "notae-flash notice" %>
+              <p class="<%= palette %>"><%= message %></p>
+            <% end %>
+            <%= yield %>
+          </main>
+        </div>
+
+        <%= render "shared/app_ai_rail" %>
+      </div>
+    <% else %>
+      <main class="notae-auth-shell">
+        <% flash.each do |type, message| %>
+          <% palette = type.to_s == "alert" ? "notae-flash alert" : "notae-flash notice" %>
+          <p class="<%= palette %>"><%= message %></p>
+        <% end %>
+        <%= yield %>
+      </main>
+    <% end %>
   </body>
 </html>

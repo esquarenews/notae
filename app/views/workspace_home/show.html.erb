@@ -1,110 +1,122 @@
 <% content_for :title, @workspace.name %>
 
-<section class="space-y-6">
-  <header class="space-y-1">
-    <h1 class="text-3xl font-semibold tracking-tight"><%= @workspace.name %></h1>
-    <p class="text-sm text-slate-600">Slug: <%= @workspace.slug %></p>
-    <p class="text-sm">
-      <%= link_to "Notifications (#{@unread_notifications_count})",
-                  workspace_notifications_path(workspace_slug: @workspace.slug),
-                  class: "underline" %>
-    </p>
+<section class="notae-stack-lg">
+  <header class="notae-page-header">
+    <p class="notae-page-subtle">Workspace home</p>
+    <h1>Good morning</h1>
+    <p class="notae-page-subtle"><%= @workspace.name %> · <%= @workspace.slug %></p>
   </header>
 
-  <section class="rounded border border-slate-200 bg-white p-4">
-    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "flex gap-2" do |form| %>
-      <%= form.text_field :q, placeholder: "Search pages, blocks, and rows", class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
-      <%= form.submit "Search", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
+  <section class="notae-surface">
+    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "flex flex-wrap gap-2" do |form| %>
+      <%= form.text_field :q, placeholder: "Search pages, blocks, and rows", class: "min-w-[260px] flex-1 rounded border border-stone-300 px-3 py-2 text-sm" %>
+      <%= form.submit "Search", class: "notae-chip-button" %>
+      <%= link_to "Notifications (#{@unread_notifications_count})",
+                  workspace_notifications_path(workspace_slug: @workspace.slug),
+                  class: "notae-chip-button" %>
     <% end %>
   </section>
 
-  <div class="grid gap-6 lg:grid-cols-[280px_1fr]">
-    <aside class="space-y-4 rounded border border-slate-200 bg-white p-4">
-      <h2 class="text-base font-medium">Pages</h2>
-      <%= render partial: "shared/page_tree", locals: { pages_by_parent: @pages_by_parent, parent_id: nil, workspace: @workspace } %>
+  <section class="notae-surface">
+    <h2 class="mb-3 text-xl font-semibold">Recently visited</h2>
+    <% if @pages.any? %>
+      <div class="notae-card-grid">
+        <% @pages.first(6).each do |page| %>
+          <%= link_to page_path(workspace_slug: @workspace.slug, id: page.id), class: "notae-card" do %>
+            <strong><%= page.title %></strong>
+            <span class="text-xs text-stone-500">Page</span>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-sm text-stone-500">No pages yet.</p>
+    <% end %>
+  </section>
 
-      <% if policy(Page.new(workspace: @workspace)).create? %>
-        <%= form_with model: @new_page, url: pages_path(workspace_slug: @workspace.slug), class: "space-y-2 pt-2" do |form| %>
-          <%= form.text_field :title, placeholder: "New page title", required: true, class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
+  <section class="grid gap-4 lg:grid-cols-2">
+    <% if policy(Page.new(workspace: @workspace)).create? %>
+      <div class="notae-surface">
+        <h3 class="mb-2 text-base font-semibold">Create page</h3>
+        <%= form_with model: @new_page, url: pages_path(workspace_slug: @workspace.slug), class: "space-y-2" do |form| %>
+          <%= form.text_field :title, placeholder: "New page title", required: true, class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
           <%= form.hidden_field :parent_page_id %>
-          <%= form.submit "Create page", class: "w-full rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
+          <%= form.submit "Create page", class: "notae-chip-button" %>
         <% end %>
-      <% end %>
-    </aside>
+      </div>
+    <% end %>
 
-    <div class="space-y-6">
-      <section class="space-y-3">
-        <h2 class="text-xl font-medium">Databases</h2>
+    <% if policy(Database.new(workspace: @workspace)).create? %>
+      <div class="notae-surface">
+        <h3 class="mb-2 text-base font-semibold">Create database</h3>
+        <%= form_with model: @new_database, url: databases_path(workspace_slug: @workspace.slug), class: "space-y-2" do |form| %>
+          <%= form.text_field :name, placeholder: "New database name", required: true, class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
+          <%= form.submit "Create database", class: "notae-chip-button" %>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
 
-        <% if @databases.any? %>
-          <ul class="space-y-2">
-            <% @databases.each do |database| %>
-              <li class="rounded border border-slate-200 bg-white px-3 py-2 text-sm">
-                <%= link_to database.name,
-                            database_path(workspace_slug: @workspace.slug, id: database.id),
-                            class: "font-medium underline" %>
-              </li>
+  <section class="notae-surface">
+    <h2 class="mb-3 text-xl font-semibold">Databases</h2>
+    <% if @databases.any? %>
+      <div class="notae-card-grid">
+        <% @databases.each do |database| %>
+          <%= link_to database_path(workspace_slug: @workspace.slug, id: database.id), class: "notae-card" do %>
+            <strong><%= database.name %></strong>
+            <span class="text-xs text-stone-500">Table view</span>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-sm text-stone-500">No databases yet.</p>
+    <% end %>
+  </section>
+
+  <section class="notae-surface">
+    <h2 class="mb-3 text-xl font-semibold">Members</h2>
+    <ul class="space-y-2">
+      <% @memberships.each do |membership| %>
+        <li class="rounded border border-stone-200 bg-white px-3 py-2 text-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <strong><%= membership.user.email %></strong>
+              <span class="ml-2 rounded bg-stone-100 px-2 py-0.5 text-xs uppercase tracking-wide text-stone-600"><%= membership.role %></span>
+            </div>
+
+            <% if policy(membership).update? %>
+              <%= form_with model: membership, url: membership_path(workspace_slug: @workspace.slug, id: membership.id), method: :patch, class: "inline-flex items-center gap-2" do |form| %>
+                <%= form.select :role, Membership.roles.keys.map { |role| [role.titleize, role] }, {}, class: "rounded border border-stone-300 px-2 py-1 text-xs" %>
+                <%= form.submit "Change", class: "notae-chip-button" %>
+              <% end %>
             <% end %>
-          </ul>
-        <% else %>
-          <p class="text-sm text-slate-600">No databases yet.</p>
-        <% end %>
-
-        <% if policy(Database.new(workspace: @workspace)).create? %>
-          <%= form_with model: @new_database, url: databases_path(workspace_slug: @workspace.slug), class: "grid gap-2 rounded border border-slate-200 bg-white p-3 md:grid-cols-[1fr_auto]" do |form| %>
-            <%= form.text_field :name, placeholder: "New database name", required: true, class: "rounded border border-slate-300 px-3 py-2 text-sm" %>
-            <%= form.submit "Create database", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-          <% end %>
-        <% end %>
-      </section>
-
-      <section class="space-y-3">
-        <h2 class="text-xl font-medium">Members</h2>
-        <ul class="space-y-2">
-          <% @memberships.each do |membership| %>
-            <li class="rounded border border-slate-200 bg-white px-3 py-2 text-sm">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <strong><%= membership.user.email %></strong>
-                  <span class="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs uppercase tracking-wide text-slate-700"><%= membership.role %></span>
-                </div>
-
-                <% if policy(membership).update? %>
-                  <%= form_with model: membership, url: membership_path(workspace_slug: @workspace.slug, id: membership.id), method: :patch, class: "inline-flex items-center gap-2" do |form| %>
-                    <%= form.select :role, Membership.roles.keys.map { |role| [role.titleize, role] }, {}, class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
-                    <%= form.submit "Change", class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
-                  <% end %>
-                <% end %>
-              </div>
-            </li>
-          <% end %>
-        </ul>
-      </section>
-
-      <% if @can_invite %>
-        <section class="space-y-3">
-          <h2 class="text-xl font-medium">Invite People</h2>
-          <%= form_with model: @invitation, url: workspace_invitations_path(workspace_slug: @workspace.slug), class: "grid gap-3 rounded border border-slate-200 bg-white p-4 md:grid-cols-[1fr_auto_auto]" do |form| %>
-            <%= form.email_field :email, placeholder: "teammate@example.com", required: true, class: "rounded border border-slate-300 px-3 py-2 text-sm" %>
-            <%= form.select :role, Invitation.roles.keys.map { |role| [role.titleize, role] }, { selected: "guest" }, class: "rounded border border-slate-300 px-3 py-2 text-sm" %>
-            <%= form.submit "Send invite", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
-          <% end %>
-        </section>
+          </div>
+        </li>
       <% end %>
+    </ul>
+  </section>
 
-      <% if @audit_events.any? %>
-        <section class="space-y-3">
-          <h2 class="text-xl font-medium">Recent Audit Events</h2>
-          <ul class="space-y-2">
-            <% @audit_events.each do |event| %>
-              <li class="rounded border border-slate-200 bg-white px-3 py-2 text-sm">
-                <div class="font-medium"><%= event.action.humanize %> by <%= event.actor.email %></div>
-                <div class="text-xs text-slate-600"><%= event.metadata.to_json %></div>
-              </li>
-            <% end %>
-          </ul>
-        </section>
+  <% if @can_invite %>
+    <section class="notae-surface">
+      <h2 class="mb-3 text-xl font-semibold">Invite people</h2>
+      <%= form_with model: @invitation, url: workspace_invitations_path(workspace_slug: @workspace.slug), class: "grid gap-3 md:grid-cols-[1fr_auto_auto]" do |form| %>
+        <%= form.email_field :email, placeholder: "teammate@example.com", required: true, class: "rounded border border-stone-300 px-3 py-2 text-sm" %>
+        <%= form.select :role, Invitation.roles.keys.map { |role| [role.titleize, role] }, { selected: "guest" }, class: "rounded border border-stone-300 px-3 py-2 text-sm" %>
+        <%= form.submit "Send invite", class: "notae-chip-button" %>
       <% end %>
-    </div>
-  </div>
+    </section>
+  <% end %>
+
+  <% if @audit_events.any? %>
+    <section class="notae-surface">
+      <h2 class="mb-3 text-xl font-semibold">Recent audit events</h2>
+      <ul class="space-y-2">
+        <% @audit_events.each do |event| %>
+          <li class="rounded border border-stone-200 bg-white px-3 py-2 text-sm">
+            <div class="font-medium"><%= event.action.humanize %> by <%= event.actor.email %></div>
+            <div class="text-xs text-stone-500"><%= event.metadata.to_json %></div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 </section>

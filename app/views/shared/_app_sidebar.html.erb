@@ -1,0 +1,93 @@
+<aside class="notae-sidebar">
+  <% workspace = ui_current_workspace %>
+  <div class="notae-sidebar-header">
+    <div class="notae-user-chip notae-workspace-chip">
+      <span class="notae-user-avatar"><%= workspace ? "🏠" : current_user.email.first.upcase %></span>
+      <span class="notae-user-label"><%= workspace&.name || current_user.email %></span>
+    </div>
+    <div class="notae-sidebar-header-actions">
+      <%= link_to "＋", new_workspace_path, class: "notae-icon-link", title: "New workspace", data: { action: "click->shell#close" } %>
+      <button type="button" class="notae-sidebar-close" data-action="click->shell#close" aria-label="Close sidebar">✕</button>
+    </div>
+  </div>
+
+  <nav class="notae-sidebar-nav">
+    <%= link_to "Search",
+                (workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
+                class: notae_sidebar_link_classes(workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
+                data: { action: "click->shell#close" } %>
+    <%= link_to "Home",
+                (workspace ? workspace_path(workspace.slug) : root_path),
+                class: notae_sidebar_link_classes(workspace ? workspace_path(workspace.slug) : root_path),
+                data: { action: "click->shell#close" } %>
+    <% if workspace %>
+      <%= link_to "Notifications",
+                  workspace_notifications_path(workspace_slug: workspace.slug),
+                  class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: workspace.slug)),
+                  data: { action: "click->shell#close" } %>
+    <% end %>
+  </nav>
+
+  <section class="notae-sidebar-section">
+    <p class="notae-sidebar-label">Workspaces</p>
+    <% if ui_workspaces.any? %>
+      <ul class="notae-sidebar-list">
+        <% ui_workspaces.each do |item| %>
+          <li>
+            <%= link_to item.name,
+                        workspace_path(item.slug),
+                        class: notae_sidebar_link_classes(workspace_path(item.slug), active: workspace&.id == item.id),
+                        data: { action: "click->shell#close" } %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="notae-sidebar-empty">No workspaces yet.</p>
+    <% end %>
+  </section>
+
+  <% if workspace %>
+    <section class="notae-sidebar-section">
+      <p class="notae-sidebar-label">Private</p>
+      <%= render partial: "shared/page_tree",
+                 locals: {
+                   pages_by_parent: ui_sidebar_pages_by_parent,
+                   parent_id: nil,
+                   workspace: workspace
+                 } %>
+      <% if policy(Page.new(workspace: workspace)).create? %>
+        <%= form_with model: Page.new, url: pages_path(workspace_slug: workspace.slug), class: "mt-2" do |form| %>
+          <%= form.text_field :title, placeholder: "Add new page", class: "notae-sidebar-input" %>
+        <% end %>
+      <% end %>
+    </section>
+
+    <section class="notae-sidebar-section">
+      <p class="notae-sidebar-label">Databases</p>
+      <% if ui_sidebar_databases.any? %>
+        <ul class="notae-sidebar-list">
+          <% ui_sidebar_databases.each do |db| %>
+            <li>
+              <%= link_to db.name,
+                          database_path(workspace_slug: workspace.slug, id: db.id),
+                          class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: db.id)),
+                          data: { action: "click->shell#close" } %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-sidebar-empty">No databases yet.</p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <div class="notae-sidebar-footer">
+    <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Settings</a>
+    <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Marketplace</a>
+    <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Trash</a>
+    <%= button_to "Sign out",
+                  destroy_user_session_path,
+                  method: :delete,
+                  class: "notae-sidebar-link notae-sidebar-signout" %>
+  </div>
+</aside>

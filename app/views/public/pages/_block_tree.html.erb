@@ -1,0 +1,37 @@
+<% blocks = blocks_by_parent[parent_id] || [] %>
+<% if blocks.any? %>
+  <ul class="space-y-3">
+    <% blocks.each do |block| %>
+      <li class="rounded border border-stone-200 bg-white px-4 py-3">
+        <% if block.block_type == "embed" && block.embed_url.present? %>
+          <div class="space-y-2">
+            <p class="text-xs font-medium uppercase tracking-wide text-stone-500">Embed</p>
+            <iframe src="<%= block.embed_url %>"
+                    loading="lazy"
+                    class="h-72 w-full rounded border border-stone-200"
+                    allowfullscreen></iframe>
+          </div>
+        <% elsif %w[image file].include?(block.block_type) && block.asset.attached? %>
+          <div class="space-y-2">
+            <p class="text-xs font-medium uppercase tracking-wide text-stone-500"><%= block.block_type %></p>
+            <% if block.asset.content_type.to_s.start_with?("image/") %>
+              <%= image_tag url_for(block.asset), class: "max-h-96 w-auto rounded border border-stone-200" %>
+            <% else %>
+              <%= link_to block.asset.filename.to_s,
+                          rails_blob_path(block.asset, disposition: "attachment"),
+                          class: "underline" %>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="whitespace-pre-wrap text-sm leading-7 text-stone-800"><%= block_text(block).presence || " " %></p>
+        <% end %>
+
+        <%= render partial: "public/pages/block_tree",
+                   locals: {
+                     blocks_by_parent: blocks_by_parent,
+                     parent_id: block.id
+                   } %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
