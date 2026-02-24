@@ -1,6 +1,8 @@
 require "sidekiq/web" if Rails.env.development?
 
 Rails.application.routes.draw do
+  mount ActionCable.server => "/cable"
+
   devise_for :users
   root "home#index"
 
@@ -18,8 +20,14 @@ Rails.application.routes.draw do
     post "invitations", to: "invitations#create", as: :workspace_invitations
     resources :memberships, only: :update
     resources :databases, only: %i[show create] do
+      resources :database_views, only: %i[create update]
+      patch "database_views/:id/default", to: "database_views#set_default", as: :default_database_view
       resources :db_properties, only: %i[create destroy]
-      resources :db_rows, only: :create
+      resources :db_rows, only: :create do
+        member do
+          patch :move
+        end
+      end
       resources :db_cells, only: :update
     end
 
@@ -37,6 +45,9 @@ Rails.application.routes.draw do
         patch :archive
         patch :restore
         patch :permissions
+        get :export_markdown, to: "page_exports#markdown"
+        post :export_zip, to: "page_exports#create"
+        post :save_as_template, to: "page_templates#create"
       end
 
       resources :blocks, only: %i[create update] do
@@ -54,6 +65,25 @@ Rails.application.routes.draw do
           patch :archive
           patch :restore
         end
+      end
+    end
+
+    resources :page_templates, only: [] do
+      member do
+        post :instantiate
+      end
+    end
+
+    get "exports/:token", to: "page_exports#download", as: :workspace_export
+  end
+
+  namespace :api do
+    namespace :v1 do
+      scope "workspaces/:workspace_slug" do
+        resources :pages, only: %i[index show create update] do
+          resources :blocks, only: %i[index show create update]
+        end
+        resources :databases, only: %i[index show create update]
       end
     end
   end

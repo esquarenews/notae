@@ -3,13 +3,17 @@
 <section class="notae-stack-lg">
   <header class="notae-page-header">
     <p class="notae-page-subtle">
-      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %> · Table
+      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %> · <%= @view_type.titleize %>
     </p>
     <h1><%= @database.name %></h1>
+    <p class="text-sm text-stone-500">
+      Current view:
+      <strong><%= @current_view&.name || "Ad-hoc #{@view_type.titleize}" %></strong>
+    </p>
   </header>
 
-  <section class="notae-surface">
-    <div class="mb-3 flex flex-wrap gap-2">
+  <section class="notae-surface notae-stack-md">
+    <div class="flex flex-wrap gap-2">
       <% @databases.each do |database| %>
         <%= link_to database.name,
                     database_path(workspace_slug: @workspace.slug, id: database.id),
@@ -23,9 +27,108 @@
       <% end %>
     </div>
 
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-      <h2 class="text-lg font-medium">Schema</h2>
+    <div class="rounded border border-stone-200 p-3">
+      <div class="mb-2 flex flex-wrap items-center gap-2">
+        <% @database_views.each do |view| %>
+          <%= link_to "#{view.name} (#{view.view_type})",
+                      database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: view.id),
+                      class: "notae-chip-button #{'bg-stone-900 text-white' if @current_view&.id == view.id}" %>
+        <% end %>
+      </div>
 
+      <% if policy(DatabaseView.new(database: @database, workspace: @workspace, created_by: current_user)).create? %>
+        <%= form_with model: @new_database_view,
+                      url: database_database_views_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                      class: "grid gap-2 md:grid-cols-4" do |form| %>
+          <%= form.text_field :name, placeholder: "View name", required: true, class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :view_type,
+                          DatabaseView.view_types.keys.map { |value| [ value.titleize, value ] },
+                          {},
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :group_property_id,
+                          @db_properties.select(&:select?).map { |property| [property.name, property.id] },
+                          { include_blank: "Board column property" },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :date_property_id,
+                          @db_properties.select(&:date?).map { |property| [property.name, property.id] },
+                          { include_blank: "Calendar date property" },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :sort_property_id,
+                          @db_properties.map { |property| [property.name, property.id] },
+                          { include_blank: "Sort property" },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :sort_direction, [["Asc", "asc"], ["Desc", "desc"]], { include_blank: "Sort direction" }, class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :filter_property_id,
+                          @db_properties.map { |property| [property.name, property.id] },
+                          { include_blank: "Filter property" },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.text_field :filter_value, placeholder: "Filter equals value", class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <label class="inline-flex items-center gap-2 text-sm text-stone-700">
+            <%= form.check_box :default %>
+            Default
+          </label>
+          <%= form.submit "Save view", class: "notae-chip-button" %>
+        <% end %>
+      <% end %>
+
+      <% if @current_view && policy(@current_view).update? %>
+        <%= form_with model: @current_view,
+                      url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                      method: :patch,
+                      class: "mt-3 grid gap-2 md:grid-cols-4" do |form| %>
+          <%= form.text_field :name, required: true, class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :sort_property_id,
+                          @db_properties.map { |property| [property.name, property.id] },
+                          { include_blank: "Sort property", selected: @view_config["sort_property_id"] },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :sort_direction, [["Asc", "asc"], ["Desc", "desc"]], { include_blank: "Sort direction", selected: @view_config["sort_direction"] }, class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :filter_property_id,
+                          @db_properties.map { |property| [property.name, property.id] },
+                          { include_blank: "Filter property", selected: @view_config["filter_property_id"] },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.text_field :filter_value, value: @view_config["filter_value"], placeholder: "Filter equals value", class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :group_property_id,
+                          @db_properties.select(&:select?).map { |property| [property.name, property.id] },
+                          { include_blank: "Board column property", selected: @view_config["group_property_id"] },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.select :date_property_id,
+                          @db_properties.select(&:date?).map { |property| [property.name, property.id] },
+                          { include_blank: "Calendar date property", selected: @view_config["date_property_id"] },
+                          class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <label class="inline-flex items-center gap-2 text-sm text-stone-700">
+            <%= form.check_box :default, checked: @current_view.default? %>
+            Default
+          </label>
+          <%= form.submit "Update view", class: "notae-chip-button" %>
+        <% end %>
+
+        <% unless @current_view.default? %>
+          <%= button_to "Make default",
+                        database_default_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                        method: :patch,
+                        class: "mt-2 notae-chip-button" %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="text-sm text-stone-600"><%= pluralize(@rows.size, "row") %>, <%= pluralize(@db_properties.size, "column") %></div>
+      <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? %>
+        <%= form_with model: @new_row,
+                      url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                      class: "inline-flex items-center gap-2" do |form| %>
+          <%= form.hidden_field :view_id, value: @current_view&.id %>
+          <% if @view_type == "calendar" %>
+            <%= hidden_field_tag :month, @calendar_month&.to_s %>
+          <% end %>
+          <%= form.text_field :title, placeholder: "Row title", class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+          <%= form.submit "Add row", class: "notae-chip-button" %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-medium">Schema</h2>
       <% if policy(DbProperty.new(database: @database, workspace: @workspace)).create? %>
         <%= form_with model: @new_property,
                       url: database_db_properties_path(workspace_slug: @workspace.slug, database_id: @database.id),
@@ -40,78 +143,12 @@
       <% end %>
     </div>
 
-    <div class="mb-3 flex items-center justify-between gap-3">
-      <p class="text-sm text-stone-600"><%= pluralize(@rows.size, "row") %>, <%= pluralize(@db_properties.size, "column") %></p>
-      <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? %>
-        <%= form_with model: @new_row,
-                      url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                      class: "inline-flex items-center gap-2" do |form| %>
-          <%= form.text_field :title, placeholder: "Row title", class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
-          <%= form.submit "Add row", class: "notae-chip-button" %>
-        <% end %>
-      <% end %>
-    </div>
-
-    <div class="overflow-x-auto rounded border border-stone-200">
-      <table class="min-w-full text-sm">
-        <thead class="bg-stone-50">
-          <tr>
-            <th class="whitespace-nowrap border-b border-stone-200 px-3 py-2 text-left font-medium text-stone-700">Title</th>
-            <% @db_properties.each do |db_property| %>
-              <% property_is_sorted = @sort_property&.id == db_property.id %>
-              <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
-              <th class="whitespace-nowrap border-b border-stone-200 px-3 py-2 text-left font-medium text-stone-700">
-                <div class="flex items-center gap-2">
-                  <%= link_to db_property.name,
-                              database_path(workspace_slug: @workspace.slug, id: @database.id, sort_property_id: db_property.id, sort_direction: next_direction),
-                              class: "underline" %>
-                  <% if property_is_sorted %>
-                    <span class="text-xs text-stone-500"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
-                  <% end %>
-                  <% if policy(db_property).destroy? %>
-                    <%= button_to "Remove",
-                                  database_db_property_path(workspace_slug: @workspace.slug, database_id: @database.id, id: db_property.id),
-                                  method: :delete,
-                                  form: { data: { turbo_confirm: "Remove this column and all cell values?" } },
-                                  class: "notae-chip-button text-[10px]" %>
-                  <% end %>
-                </div>
-              </th>
-            <% end %>
-          </tr>
-        </thead>
-        <tbody>
-          <% @rows.each do |row| %>
-            <tr id="row_<%= row.id %>" class="odd:bg-white even:bg-stone-50/40">
-              <td class="whitespace-nowrap border-b border-stone-100 px-3 py-2 align-top text-stone-800"><%= row.title %></td>
-              <% @db_properties.each do |db_property| %>
-                <% db_cell = @cells_by_key[[row.id, db_property.id]] %>
-                <td class="border-b border-stone-100 px-3 py-2">
-                  <% if db_cell && policy(db_cell).update? %>
-                    <%= form_with model: db_cell,
-                                  url: database_db_cell_path(
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @database.id,
-                                    id: db_cell.id,
-                                    sort_property_id: params[:sort_property_id],
-                                    sort_direction: params[:sort_direction]
-                                  ),
-                                  method: :patch do |form| %>
-                      <%= form.text_field :value_text,
-                                          value: db_cell.value_text,
-                                          id: "db_cell_#{db_cell.id}_value_text",
-                                          class: "w-full min-w-36 rounded border border-stone-300 px-2 py-1 text-sm",
-                                          onchange: "this.form.requestSubmit()" %>
-                    <% end %>
-                  <% else %>
-                    <span class="text-stone-400">-</span>
-                  <% end %>
-                </td>
-              <% end %>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+    <% if @view_type == "board" %>
+      <%= render "databases/board_view" %>
+    <% elsif @view_type == "calendar" %>
+      <%= render "databases/calendar_view" %>
+    <% else %>
+      <%= render "databases/table_view" %>
+    <% end %>
   </section>
 </section>

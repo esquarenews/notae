@@ -1,6 +1,8 @@
 class DbRow < ApplicationRecord
   include PgSearch::Model
 
+  POSITION_GAP = 1024
+
   has_paper_trail
 
   belongs_to :workspace
@@ -8,8 +10,10 @@ class DbRow < ApplicationRecord
   has_many :db_cells, dependent: :destroy
 
   validates :title, presence: true
+  validates :position, numericality: { greater_than: 0, only_integer: true }
 
   scope :active, -> { where(archived_at: nil) }
+  scope :ordered, -> { order(:position, :created_at) }
   scope :for_database, ->(database) { where(database_id: database.id) }
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
 
@@ -21,6 +25,7 @@ class DbRow < ApplicationRecord
                   }
 
   before_validation :set_workspace_from_database
+  before_validation :set_initial_position, on: :create
   before_validation :set_search_text
 
   def sync_data_from_cells!
@@ -39,6 +44,14 @@ class DbRow < ApplicationRecord
 
   def set_workspace_from_database
     self.workspace = database.workspace if database.present?
+  end
+
+  def set_initial_position
+    return if database.blank?
+    return if position.present? && position != POSITION_GAP
+
+    sibling_max = self.class.for_database(database).maximum(:position) || 0
+    self.position = sibling_max + POSITION_GAP
   end
 
   def set_search_text

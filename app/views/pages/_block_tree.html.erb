@@ -14,6 +14,7 @@
                       method: :patch,
                       class: "ml-auto rounded border border-slate-300 px-2 py-1 text-xs" %>
       </div>
+      <p class="hidden pb-2 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>
 
       <% if is_embed_block %>
         <div class="space-y-2 rounded border border-slate-200 bg-white p-2">
@@ -87,7 +88,8 @@
         <div data-controller="block-editor"
              data-block-editor-url-value="<%= page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id) %>"
              data-block-editor-initial-json-value="<%= block.content_json.to_json %>"
-             data-block-editor-block-type-value="<%= block.block_type %>">
+             data-block-editor-block-type-value="<%= block.block_type %>"
+             data-block-editor-block-id-value="<%= block.id %>">
           <div data-block-editor-target="editor" class="min-h-10 rounded border border-slate-300 bg-white px-3 py-2 text-sm"></div>
         </div>
       <% end %>

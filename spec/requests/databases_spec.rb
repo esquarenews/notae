@@ -106,4 +106,241 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:not_found)
   end
+
+  it "groups board columns by select property and persists drag ordering" do
+    owner = User.create!(email: "database-board-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Board tables", slug: "board-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Kanban")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    todo_row = DbRow.create!(workspace: workspace, database: database, title: "Todo item")
+    moved_row = DbRow.create!(workspace: workspace, database: database, title: "Move me")
+    doing_row = DbRow.create!(workspace: workspace, database: database, title: "Doing item")
+    DbCell.create!(workspace: workspace, db_row: todo_row, db_property: status_property, value_text: "Todo")
+    DbCell.create!(workspace: workspace, db_row: moved_row, db_property: status_property, value_text: "Todo")
+    DbCell.create!(workspace: workspace, db_row: doing_row, db_property: status_property, value_text: "Doing")
+    board_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Board",
+      view_type: :board,
+      config_json: { "group_property_id" => status_property.id },
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Todo")
+    expect(response.body).to include("Doing")
+    expect(response.body).to include("Move me")
+
+    patch move_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: moved_row.id),
+          params: { property_id: status_property.id, target_value: "Doing", target_index: 0 },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(moved_row.db_cells.find_by!(db_property: status_property).reload.value_text).to eq("Doing")
+
+    doing_row_ids = DbCell.where(db_property: status_property, value_text: "Doing").pluck(:db_row_id)
+    ordered_doing_ids = DbRow.for_database(database).active.ordered.where(id: doing_row_ids).pluck(:id)
+    expect(ordered_doing_ids.first).to eq(moved_row.id)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index("Move me")).to be < response.body.index("Doing item")
+  end
+
+  it "renders board view with more than 500 rows" do
+    owner = User.create!(email: "database-board-scale-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Board scale tables", slug: "board-scale-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Scale board")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    board_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Scale board view",
+      view_type: :board,
+      config_json: { "group_property_id" => status_property.id },
+      default: true
+    )
+    510.times do |index|
+      row = DbRow.create!(workspace: workspace, database: database, title: "Row #{index}")
+      DbCell.create!(
+        workspace: workspace,
+        db_row: row,
+        db_property: status_property,
+        value_text: index.even? ? "Todo" : "Doing"
+      )
+    end
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("510 rows")
+    expect(response.body).to include("Todo")
+    expect(response.body).to include("Doing")
+  end
+
+  it "requires a date property for calendar views" do
+    owner = User.create!(email: "database-calendar-requires-date-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Calendar requires date", slug: "calendar-requires-date")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Calendar DB")
+    calendar_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Calendar",
+      view_type: :calendar,
+      config_json: {}
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: calendar_view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Calendar view requires a property with type")
+  end
+
+  it "renders month calendar and creates rows from a selected date" do
+    owner = User.create!(email: "database-calendar-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Calendar tables", slug: "calendar-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Calendar DB")
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    calendar_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Month",
+      view_type: :calendar,
+      config_json: { "date_property_id" => due_date_property.id },
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: calendar_view.id, month: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("March 2026")
+    expect(response.body).to include("Sun")
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: {
+           db_row: { title: "" },
+           view_id: calendar_view.id,
+           month: "2026-03-01",
+           date_property_id: due_date_property.id,
+           date_value: "2026-03-15"
+         }
+
+    expect(response).to redirect_to(
+      database_path(workspace_slug: workspace.slug, id: database.id, view_id: calendar_view.id.to_s, month: "2026-03-01")
+    )
+
+    created_row = database.db_rows.order(:created_at).last
+    created_cell = created_row.db_cells.find_by!(db_property: due_date_property)
+    expect(created_row.title).to eq("Untitled row")
+    expect(created_cell.value_text).to eq("2026-03-15")
+  end
+
+  it "updates the date property when rows are dragged between calendar days" do
+    owner = User.create!(email: "database-calendar-drag-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Calendar drag tables", slug: "calendar-drag-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Calendar Drag DB")
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Move date")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-03-10")
+    calendar_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Calendar",
+      view_type: :calendar,
+      config_json: { "date_property_id" => due_date_property.id },
+      default: true
+    )
+    sign_in owner
+
+    patch move_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: {
+            property_id: due_date_property.id,
+            target_value: "2026-03-20",
+            target_index: 0,
+            view_id: calendar_view.id,
+            month: "2026-03-01"
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(row.db_cells.find_by!(db_property: due_date_property).reload.value_text).to eq("2026-03-20")
+  end
+
+  it "saves view configs and supports switching and default selection" do
+    owner = User.create!(email: "database-view-config-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "View config tables", slug: "view-config-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "View config DB")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    sign_in owner
+
+    post database_database_views_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: {
+           database_view: {
+             name: "Filtered table",
+             view_type: "table",
+             sort_property_id: status_property.id,
+             sort_direction: "desc",
+             filter_property_id: status_property.id,
+             filter_value: "Done",
+             default: true
+           }
+         }
+
+    filtered_view = database.database_views.find_by!(name: "Filtered table")
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: filtered_view.id))
+    expect(filtered_view.default).to eq(true)
+    expect(filtered_view.config_json).to include(
+      "sort_property_id" => status_property.id,
+      "sort_direction" => "desc",
+      "filter_property_id" => status_property.id,
+      "filter_value" => "Done"
+    )
+
+    post database_database_views_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: {
+           database_view: {
+             name: "Board view",
+             view_type: "board",
+             group_property_id: status_property.id
+           }
+         }
+
+    board_view = database.database_views.find_by!(name: "Board view")
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id))
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Board view")
+
+    patch database_default_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: board_view.id)
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id))
+    expect(board_view.reload.default).to eq(true)
+    expect(filtered_view.reload.default).to eq(false)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Board view")
+  end
 end

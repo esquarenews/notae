@@ -21,8 +21,9 @@ class BlocksController < ApplicationController
     authorize @block
 
     if @block.update(block_update_params)
+      broadcast_block_update(@block)
       respond_to do |format|
-        format.json { render json: { id: @block.id, block_type: @block.block_type }, status: :ok }
+        format.json { render json: serialized_block(@block), status: :ok }
         format.html { redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Block updated." }
       end
     else
@@ -113,5 +114,25 @@ class BlocksController < ApplicationController
       permitted[:content_json] = raw_content.respond_to?(:to_unsafe_h) ? raw_content.to_unsafe_h : raw_content
     end
     permitted
+  end
+
+  def broadcast_block_update(block)
+    ActionCable.server.broadcast(
+      "page:#{@page.id}:collaboration",
+      {
+        type: "block_updated",
+        actor_id: current_user.id,
+        block: serialized_block(block)
+      }
+    )
+  end
+
+  def serialized_block(block)
+    {
+      id: block.id,
+      block_type: block.block_type,
+      content_json: block.content_json,
+      updated_at: block.updated_at&.iso8601(6)
+    }
   end
 end

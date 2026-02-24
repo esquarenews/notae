@@ -14,6 +14,9 @@ class Page < ApplicationRecord
   has_many :blocks, dependent: :destroy
   has_many :comments, as: :commentable, dependent: :destroy
   has_many :page_shares, dependent: :destroy
+  has_many :page_presences, dependent: :destroy
+  has_many :page_exports, dependent: :destroy
+  has_many :page_templates, dependent: :destroy
   has_many :share_links, dependent: :destroy
   has_many :shared_users, through: :page_shares, source: :user
   has_many :outgoing_page_links, class_name: "PageLink", foreign_key: :source_page_id, dependent: :destroy

@@ -1,0 +1,35 @@
+<% if @board_group_property.blank? %>
+  <p class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+    Board view requires a property with type <code>select</code>. Choose one in the view config.
+  </p>
+<% else %>
+  <div data-controller="database-drag"
+       data-database-drag-workspace-slug-value="<%= @workspace.slug %>"
+       data-database-drag-database-id-value="<%= @database.id %>"
+       data-database-drag-view-id-value="<%= @current_view&.id %>"
+       data-database-drag-property-id-value="<%= @board_group_property.id %>"
+       class="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+    <% @board_columns.each do |column| %>
+      <section class="rounded border border-stone-200 bg-stone-50">
+        <header class="border-b border-stone-200 px-3 py-2 text-sm font-medium text-stone-700">
+          <%= column[:label] %>
+          <span class="text-xs text-stone-500">(<%= column[:rows].size %>)</span>
+        </header>
+        <div class="min-h-40 space-y-2 p-2"
+             data-database-drag-target-value="<%= column[:value].to_s %>"
+             data-action="dragover->database-drag#dragover drop->database-drag#drop">
+          <% column[:rows].each do |row| %>
+            <article id="board_row_<%= row.id %>"
+                     class="cursor-grab rounded border border-stone-200 bg-white px-3 py-2 text-sm"
+                     draggable="true"
+                     data-database-drag-row-id="<%= row.id %>"
+                     data-action="dragstart->database-drag#dragstart">
+              <div class="font-medium text-stone-800"><%= row.title %></div>
+              <div class="text-xs text-stone-500">#<%= row.id.to_s.first(8) %></div>
+            </article>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+  </div>
+<% end %>

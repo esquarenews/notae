@@ -89,4 +89,19 @@ RSpec.describe "Pages", type: :request do
 
     expect(response).to have_http_status(:not_found)
   end
+
+  it "renders global shortcut UI containers on page view" do
+    owner = User.create!(email: "page-shortcuts-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Shortcuts", slug: "shortcuts")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Shortcuts page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Quick switcher")
+    expect(response.body).to include("Keyboard shortcuts")
+    expect(response.body).to include("Cmd/Ctrl + K")
+  end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_24_201500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -42,6 +42,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
     t.uuid "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "api_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.datetime "last_used_at"
+    t.string "name", default: "default", null: false
+    t.datetime "revoked_at"
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["token"], name: "index_api_tokens_on_token", unique: true
+    t.index ["user_id", "created_at"], name: "index_api_tokens_on_user_id_and_created_at"
+    t.index ["user_id", "revoked_at"], name: "index_api_tokens_on_user_id_and_revoked_at"
+    t.index ["user_id"], name: "index_api_tokens_on_user_id"
   end
 
   create_table "audit_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -102,6 +117,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
     t.index ["workspace_id"], name: "index_comments_on_workspace_id"
   end
 
+  create_table "database_views", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.jsonb "config_json", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.uuid "database_id", null: false
+    t.boolean "default", default: false, null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.integer "view_type", default: 0, null: false
+    t.uuid "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_database_views_on_created_by_id"
+    t.index ["database_id", "default"], name: "index_database_views_on_database_id_and_default", unique: true, where: "(\"default\" = true)"
+    t.index ["database_id", "name"], name: "index_database_views_on_database_id_and_name", unique: true
+    t.index ["database_id"], name: "index_database_views_on_database_id"
+    t.index ["workspace_id", "database_id"], name: "index_database_views_on_workspace_id_and_database_id"
+    t.index ["workspace_id"], name: "index_database_views_on_workspace_id"
+  end
+
   create_table "databases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -147,15 +180,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
     t.datetime "created_at", null: false
     t.jsonb "data_json", default: {}, null: false
     t.uuid "database_id", null: false
+    t.integer "position", default: 1024, null: false
     t.text "search_text", default: "", null: false
     t.string "title", default: "", null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
     t.index ["database_id", "archived_at"], name: "index_db_rows_on_database_id_and_archived_at"
+    t.index ["database_id", "position"], name: "index_db_rows_on_database_id_and_position"
     t.index ["database_id"], name: "index_db_rows_on_database_id"
     t.index ["search_text"], name: "index_db_rows_on_search_text", opclass: :gin_trgm_ops, using: :gin
     t.index ["workspace_id", "archived_at"], name: "index_db_rows_on_workspace_id_and_archived_at"
     t.index ["workspace_id"], name: "index_db_rows_on_workspace_id"
+    t.check_constraint "\"position\" > 0", name: "check_db_rows_position_positive"
   end
 
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -207,6 +243,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
     t.index ["workspace_id"], name: "index_notifications_on_workspace_id"
   end
 
+  create_table "page_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.text "error_message", default: "", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "failed_at"
+    t.uuid "page_id", null: false
+    t.uuid "requested_by_id", null: false
+    t.integer "status", default: 0, null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["page_id"], name: "index_page_exports_on_page_id"
+    t.index ["requested_by_id"], name: "index_page_exports_on_requested_by_id"
+    t.index ["token"], name: "index_page_exports_on_token", unique: true
+    t.index ["workspace_id", "expires_at"], name: "index_page_exports_on_workspace_id_and_expires_at"
+    t.index ["workspace_id", "page_id", "created_at"], name: "index_page_exports_on_workspace_page_created_at"
+    t.index ["workspace_id"], name: "index_page_exports_on_workspace_id"
+  end
+
   create_table "page_links", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.uuid "source_block_id"
@@ -223,6 +279,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
     t.index ["workspace_id"], name: "index_page_links_on_workspace_id"
   end
 
+  create_table "page_presences", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "editing_block_id"
+    t.datetime "editing_seen_at"
+    t.datetime "last_seen_at", null: false
+    t.uuid "page_id", null: false
+    t.string "session_token", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["page_id", "editing_seen_at"], name: "index_page_presences_on_page_id_and_editing_seen_at"
+    t.index ["page_id", "last_seen_at"], name: "index_page_presences_on_page_id_and_last_seen_at"
+    t.index ["page_id"], name: "index_page_presences_on_page_id"
+    t.index ["session_token"], name: "index_page_presences_on_session_token", unique: true
+    t.index ["user_id"], name: "index_page_presences_on_user_id"
+    t.index ["workspace_id"], name: "index_page_presences_on_workspace_id"
+  end
+
   create_table "page_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.uuid "created_by_id", null: false
@@ -233,6 +307,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
     t.index ["page_id", "user_id"], name: "index_page_shares_on_page_id_and_user_id", unique: true
     t.index ["page_id"], name: "index_page_shares_on_page_id"
     t.index ["user_id"], name: "index_page_shares_on_user_id"
+  end
+
+  create_table "page_templates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.string "name", null: false
+    t.uuid "page_id", null: false
+    t.jsonb "snapshot_json", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_page_templates_on_created_by_id"
+    t.index ["page_id"], name: "index_page_templates_on_page_id"
+    t.index ["workspace_id", "created_at"], name: "index_page_templates_on_workspace_id_and_created_at"
+    t.index ["workspace_id", "name"], name: "index_page_templates_on_workspace_id_and_name", unique: true
+    t.index ["workspace_id"], name: "index_page_templates_on_workspace_id"
   end
 
   create_table "pages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -318,6 +407,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "api_tokens", "users"
   add_foreign_key "audit_events", "users", column: "actor_id"
   add_foreign_key "audit_events", "workspaces"
   add_foreign_key "blocks", "blocks", column: "parent_block_id"
@@ -327,6 +417,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
   add_foreign_key "comments", "users", column: "author_id"
   add_foreign_key "comments", "users", column: "resolved_by_id"
   add_foreign_key "comments", "workspaces"
+  add_foreign_key "database_views", "databases"
+  add_foreign_key "database_views", "users", column: "created_by_id"
+  add_foreign_key "database_views", "workspaces"
   add_foreign_key "databases", "workspaces"
   add_foreign_key "db_cells", "db_properties"
   add_foreign_key "db_cells", "db_rows"
@@ -343,13 +436,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_113000) do
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "notifications", "workspaces"
+  add_foreign_key "page_exports", "pages"
+  add_foreign_key "page_exports", "users", column: "requested_by_id"
+  add_foreign_key "page_exports", "workspaces"
   add_foreign_key "page_links", "blocks", column: "source_block_id"
   add_foreign_key "page_links", "pages", column: "source_page_id"
   add_foreign_key "page_links", "pages", column: "target_page_id"
   add_foreign_key "page_links", "workspaces"
+  add_foreign_key "page_presences", "pages"
+  add_foreign_key "page_presences", "users"
+  add_foreign_key "page_presences", "workspaces"
   add_foreign_key "page_shares", "pages"
   add_foreign_key "page_shares", "users"
   add_foreign_key "page_shares", "users", column: "created_by_id"
+  add_foreign_key "page_templates", "pages"
+  add_foreign_key "page_templates", "users", column: "created_by_id"
+  add_foreign_key "page_templates", "workspaces"
   add_foreign_key "pages", "pages", column: "parent_page_id"
   add_foreign_key "pages", "users", column: "created_by_id"
   add_foreign_key "pages", "workspaces"

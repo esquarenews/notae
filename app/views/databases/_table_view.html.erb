@@ -1,0 +1,69 @@
+<div class="overflow-x-auto rounded border border-stone-200">
+  <table class="min-w-full text-sm">
+    <thead class="bg-stone-50">
+      <tr>
+        <th class="whitespace-nowrap border-b border-stone-200 px-3 py-2 text-left font-medium text-stone-700">Title</th>
+        <% @db_properties.each do |db_property| %>
+          <% property_is_sorted = @sort_property&.id == db_property.id %>
+          <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
+          <th class="whitespace-nowrap border-b border-stone-200 px-3 py-2 text-left font-medium text-stone-700">
+            <div class="flex items-center gap-2">
+              <%= link_to db_property.name,
+                          database_path(
+                            workspace_slug: @workspace.slug,
+                            id: @database.id,
+                            view_id: @current_view&.id,
+                            sort_property_id: db_property.id,
+                            sort_direction: next_direction,
+                            filter_property_id: params[:filter_property_id],
+                            filter_value: params[:filter_value]
+                          ),
+                          class: "underline" %>
+              <% if property_is_sorted %>
+                <span class="text-xs text-stone-500"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+              <% end %>
+              <% if policy(db_property).destroy? %>
+                <%= button_to "Remove",
+                              database_db_property_path(workspace_slug: @workspace.slug, database_id: @database.id, id: db_property.id),
+                              method: :delete,
+                              form: { data: { turbo_confirm: "Remove this column and all cell values?" } },
+                              class: "notae-chip-button text-[10px]" %>
+              <% end %>
+            </div>
+          </th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% @rows.each do |row| %>
+        <tr id="row_<%= row.id %>" class="odd:bg-white even:bg-stone-50/40">
+          <td class="whitespace-nowrap border-b border-stone-100 px-3 py-2 align-top text-stone-800"><%= row.title %></td>
+          <% @db_properties.each do |db_property| %>
+            <% db_cell = @cells_by_key[[row.id, db_property.id]] %>
+            <td class="border-b border-stone-100 px-3 py-2">
+              <% if db_cell && policy(db_cell).update? %>
+                <%= form_with model: db_cell,
+                              url: database_db_cell_path(
+                                workspace_slug: @workspace.slug,
+                                database_id: @database.id,
+                                id: db_cell.id,
+                                sort_property_id: params[:sort_property_id],
+                                sort_direction: params[:sort_direction]
+                              ),
+                              method: :patch do |form| %>
+                  <%= form.text_field :value_text,
+                                      value: db_cell.value_text,
+                                      id: "db_cell_#{db_cell.id}_value_text",
+                                      class: "w-full min-w-36 rounded border border-stone-300 px-2 py-1 text-sm",
+                                      onchange: "this.form.requestSubmit()" %>
+                <% end %>
+              <% else %>
+                <span class="text-stone-400">-</span>
+              <% end %>
+            </td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

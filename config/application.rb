@@ -15,7 +15,12 @@ module Notae
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_paths << Rails.root.join("app/services")
+    config.autoload_paths << Rails.root.join("app/channels")
     config.eager_load_paths << Rails.root.join("app/services")
+    config.eager_load_paths << Rails.root.join("app/channels")
+    config.x.api.rate_limit_per_minute = ENV.fetch("API_RATE_LIMIT_PER_MINUTE", "120").to_i
+    config.x.api.rate_limit_window_seconds = ENV.fetch("API_RATE_LIMIT_WINDOW_SECONDS", "60").to_i
 
     config.generators do |generate|
       generate.orm :active_record, primary_key_type: :uuid

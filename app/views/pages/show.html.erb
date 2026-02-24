@@ -1,6 +1,10 @@
 <% content_for :title, @page.title %>
 
-<section class="notae-stack-lg">
+<section class="notae-stack-lg"
+         data-controller="page-collaboration"
+         data-page-collaboration-workspace-slug-value="<%= @workspace.slug %>"
+         data-page-collaboration-page-id-value="<%= @page.id %>"
+         data-page-collaboration-current-user-id-value="<%= current_user.id %>">
   <header class="notae-page-header">
     <p class="notae-page-subtle">
       <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %>
@@ -9,6 +13,9 @@
     </p>
     <h1><%= @page.title %></h1>
     <div class="flex flex-wrap items-center gap-2">
+      <div class="inline-flex items-center gap-1 rounded-full border border-stone-200 px-2 py-1" data-page-collaboration-target="presence">
+        <span class="text-xs text-stone-500">Only you here</span>
+      </div>
       <% if policy(@page).archive? %>
         <%= button_to "Archive page",
                       archive_page_path(workspace_slug: @workspace.slug, id: @page.id),
@@ -94,6 +101,85 @@
       <% end %>
     </section>
   <% end %>
+
+  <section class="notae-surface space-y-3">
+    <h2 class="text-lg font-medium">Export & Portability</h2>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= link_to "Export Markdown",
+                  export_markdown_page_path(workspace_slug: @workspace.slug, id: @page.id),
+                  class: "notae-chip-button" %>
+      <%= button_to "Build ZIP (Markdown + attachments)",
+                    export_zip_page_path(workspace_slug: @workspace.slug, id: @page.id),
+                    method: :post,
+                    class: "notae-chip-button" %>
+    </div>
+
+    <% if @page_exports.any? %>
+      <ul class="space-y-2">
+        <% @page_exports.each do |page_export| %>
+          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-medium"><%= page_export.created_at.strftime("%Y-%m-%d %H:%M") %> export</span>
+              <% if page_export.downloadable? %>
+                <%= link_to "Download ZIP",
+                            workspace_export_path(workspace_slug: @workspace.slug, token: page_export.token),
+                            class: "notae-chip-button" %>
+              <% elsif page_export.pending? %>
+                <span class="text-stone-500">Preparing...</span>
+              <% elsif page_export.failed? %>
+                <span class="text-rose-600">Failed</span>
+              <% else %>
+                <span class="text-stone-500">Unavailable</span>
+              <% end %>
+            </div>
+            <p class="pt-1 text-xs text-stone-500">
+              Expires <%= l(page_export.expires_at, format: :long) %>
+              <% if page_export.failed? && page_export.error_message.present? %>
+                · <%= page_export.error_message %>
+              <% end %>
+            </p>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-stone-500">No exports yet.</p>
+    <% end %>
+  </section>
+
+  <section class="notae-surface space-y-3">
+    <h2 class="text-lg font-medium">Templates</h2>
+
+    <%= form_with model: @new_page_template,
+                  url: save_as_template_page_path(workspace_slug: @workspace.slug, id: @page.id),
+                  class: "flex flex-wrap items-end gap-3" do |form| %>
+      <div class="min-w-56">
+        <%= form.label :name, "Template name", class: "block text-sm font-medium text-stone-800" %>
+        <%= form.text_field :name, value: @page.title, required: true, class: "mt-1 w-full rounded border border-stone-300 px-2 py-1.5 text-sm" %>
+      </div>
+      <%= form.submit "Save page as template", class: "notae-chip-button" %>
+    <% end %>
+
+    <% if @page_templates.any? %>
+      <ul class="space-y-2">
+        <% @page_templates.each do |template| %>
+          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-medium"><%= template.name %></span>
+              <%= form_with url: instantiate_page_template_path(workspace_slug: @workspace.slug, id: template.id),
+                            method: :post,
+                            class: "inline-flex items-center gap-2" do %>
+                <%= text_field_tag "page_template[title]", "", placeholder: "New page title (optional)", class: "rounded border border-stone-300 px-2 py-1 text-xs" %>
+                <%= submit_tag "Use template", class: "notae-chip-button" %>
+              <% end %>
+            </div>
+            <p class="pt-1 text-xs text-stone-500">Created <%= l(template.created_at, format: :long) %></p>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-stone-500">No templates saved yet.</p>
+    <% end %>
+  </section>
 
   <section class="notae-surface space-y-3">
     <div class="flex flex-wrap items-center justify-between gap-2">

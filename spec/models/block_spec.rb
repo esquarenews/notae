@@ -65,4 +65,14 @@ RSpec.describe Block, type: :model do
 
     expect(::PageLinks::SyncFromBlockService).to have_received(:call).with(block: block)
   end
+
+  it "loads the page link sync service with an absolute path when constant is missing" do
+    owner = User.create!(email: "page-links-load-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Link load scope", slug: "link-load-scope")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Links")
+    block = described_class.new(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    hide_const("PageLinks")
+
+    expect { block.send(:sync_page_links) }.not_to raise_error
+  end
 end

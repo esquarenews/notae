@@ -4,7 +4,7 @@ class DbProperty < ApplicationRecord
   has_paper_trail
 
   attribute :property_type, :integer, default: 0
-  enum :property_type, { text: 0, number: 1, date: 2, checkbox: 3 }, default: :text
+  enum :property_type, { text: 0, number: 1, date: 2, checkbox: 3, select: 4 }, default: :text, scopes: false
 
   belongs_to :workspace
   belongs_to :database

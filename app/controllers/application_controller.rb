@@ -9,6 +9,7 @@ class ApplicationController < ActionController::Base
 
   before_action :set_paper_trail_whodunnit
   before_action :set_unread_notifications_count
+  before_action :ensure_realtime_channel_loaded
   after_action :verify_pundit_authorization, unless: :devise_controller?
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
@@ -30,5 +31,12 @@ class ApplicationController < ActionController::Base
       else
         0
       end
+  end
+
+  def ensure_realtime_channel_loaded
+    return if defined?(::PageChannel)
+
+    load Rails.root.join("app/channels/application_cable/channel.rb").to_s unless defined?(::ApplicationCable::Channel)
+    load Rails.root.join("app/channels/page_channel.rb").to_s
   end
 end

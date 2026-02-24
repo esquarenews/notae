@@ -106,7 +106,9 @@ class Block < ApplicationRecord
   end
 
   def sync_page_links
-    require_dependency "page_links/sync_from_block_service" unless defined?(::PageLinks::SyncFromBlockService)
+    unless defined?(::PageLinks::SyncFromBlockService)
+      load Rails.root.join("app/services/page_links/sync_from_block_service.rb").to_s
+    end
     ::PageLinks::SyncFromBlockService.call(block: self)
   end
 
