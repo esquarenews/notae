@@ -1,0 +1,47 @@
+<% content_for :title, "Library" %>
+<% content_for :topbar_page_icon, "📚" %>
+<% content_for :topbar_privacy, "Workspace" %>
+
+<section class="notae-workspace-home">
+  <header class="notae-workspace-home-hero">
+    <p class="notae-page-subtle">Workspace library</p>
+    <h1>Library</h1>
+    <p class="notae-page-subtle">Recent pages and databases in <%= @workspace.name %>.</p>
+  </header>
+
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Pages</h2>
+    </div>
+    <% if @recent_pages.any? %>
+      <div class="notae-workspace-home-link-grid">
+        <% @recent_pages.each do |page| %>
+          <%= link_to page_path(workspace_slug: @workspace.slug, id: page.id), class: "notae-home-workspace-item" do %>
+            <strong><%= page.icon.presence || "📄" %> <%= page.title %></strong>
+            <span><%= page.updated_at.in_time_zone.strftime("%b %-d, %Y") %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="notae-page-subtle">No pages yet.</p>
+    <% end %>
+  </section>
+
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Databases</h2>
+    </div>
+    <% if @recent_databases.any? %>
+      <div class="notae-workspace-home-link-grid">
+        <% @recent_databases.each do |database| %>
+          <%= link_to database_path(workspace_slug: @workspace.slug, id: database.id), class: "notae-home-workspace-item" do %>
+            <strong>🗃️ <%= database.name %></strong>
+            <span><%= database.updated_at.in_time_zone.strftime("%b %-d, %Y") %></span>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="notae-page-subtle">No databases yet.</p>
+    <% end %>
+  </section>
+</section>

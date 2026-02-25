@@ -1127,6 +1127,10 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 .notae-home-workspace-item strong {
   font-size: 0.88rem;
   color: #292524;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .notae-home-workspace-item span {
@@ -1236,6 +1240,11 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 .notae-workspace-page-card-text strong {
   font-size: 0.86rem;
   color: #292524;
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .notae-workspace-page-card-text span {
@@ -4070,4 +4079,19 @@ body.notae-theme-dark .notae-settings-nav-item.active em {
   body.notae-theme-system .notae-settings-nav-item.active em {
     color: var(--notae-text) !important;
   }
+}
+
+.notae-favorite-toggle {
+  min-width: 2rem;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.notae-favorite-toggle.is-favorited {
+  color: #ca8a04;
+}
+
+body.notae-theme-dark .notae-favorite-toggle.is-favorited,
+body.notae-theme-system .notae-favorite-toggle.is-favorited {
+  color: #facc15;
 }

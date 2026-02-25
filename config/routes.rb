@@ -15,6 +15,7 @@ Rails.application.routes.draw do
   scope "w/:workspace_slug" do
     get "/", to: "workspace_home#show", as: :workspace
     get "search", to: "searches#index", as: :workspace_search
+    get "library", to: "libraries#show", as: :workspace_library
     get "trash", to: "trash#show", as: :workspace_trash
     get "settings/general", to: "general_settings#show", as: :workspace_general_settings
     patch "settings/general", to: "general_settings#update"
@@ -34,6 +35,7 @@ Rails.application.routes.draw do
     post "invitations", to: "invitations#create", as: :workspace_invitations
     resources :memberships, only: :update
     resources :databases, only: %i[show create] do
+      resource :favorite, only: %i[create destroy], controller: "database_favorites"
       resources :database_views, only: %i[create update]
       patch "database_views/:id/default", to: "database_views#set_default", as: :default_database_view
       resources :db_properties, only: %i[create destroy]
@@ -46,6 +48,7 @@ Rails.application.routes.draw do
     end
 
     resources :pages, only: %i[show create update destroy] do
+      resource :favorite, only: %i[create destroy], controller: "page_favorites"
       resources :share_links, only: %i[create destroy]
 
       resources :comments, only: :create do

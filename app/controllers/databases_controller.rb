@@ -28,6 +28,7 @@ class DatabasesController < ApplicationController
     @new_property = DbProperty.new
     @new_row = DbRow.new
     @new_database_view = DatabaseView.new
+    @database_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @database)
   end
 
   def create

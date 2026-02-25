@@ -35,6 +35,7 @@ class Workspace < ApplicationRecord
   has_many :page_exports, dependent: :destroy
   has_many :page_templates, dependent: :destroy
   has_many :page_presences, dependent: :destroy
+  has_many :favorites, dependent: :destroy
 
   scope :active, -> { where(archived_at: nil) }
 

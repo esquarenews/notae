@@ -4,6 +4,23 @@
 <% content_for :content_class, "notae-content-page" %>
 <% content_for :topbar_actions do %>
   <span class="notae-topbar-meta">Edited <%= time_ago_in_words(@page.updated_at) %> ago</span>
+  <% if @page_favorite.present? %>
+    <%= button_to page_favorite_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                  method: :delete,
+                  class: "notae-inline-icon-button notae-favorite-toggle is-favorited",
+                  title: "Remove from favorites",
+                  aria: { label: "Remove from favorites" } do %>
+      ★
+    <% end %>
+  <% else %>
+    <%= button_to page_favorite_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                  method: :post,
+                  class: "notae-inline-icon-button notae-favorite-toggle",
+                  title: "Add to favorites",
+                  aria: { label: "Add to favorites" } do %>
+      ☆
+    <% end %>
+  <% end %>
   <%= render "pages/comments_menu",
              workspace: @workspace,
              page: @page,

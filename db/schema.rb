@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_25_213000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_25_233000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -192,6 +192,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_213000) do
     t.index ["workspace_id", "archived_at"], name: "index_db_rows_on_workspace_id_and_archived_at"
     t.index ["workspace_id"], name: "index_db_rows_on_workspace_id"
     t.check_constraint "\"position\" > 0", name: "check_db_rows_position_positive"
+  end
+
+  create_table "favorites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "favoritable_id", null: false
+    t.string "favoritable_type", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["favoritable_type", "favoritable_id"], name: "index_favorites_on_favoritable"
+    t.index ["user_id", "favoritable_type", "favoritable_id"], name: "index_favorites_on_user_and_favoritable", unique: true
+    t.index ["user_id"], name: "index_favorites_on_user_id"
+    t.index ["workspace_id", "user_id", "created_at"], name: "index_favorites_on_workspace_user_created_at"
+    t.index ["workspace_id"], name: "index_favorites_on_workspace_id"
   end
 
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -465,6 +479,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_213000) do
   add_foreign_key "db_properties", "workspaces"
   add_foreign_key "db_rows", "databases"
   add_foreign_key "db_rows", "workspaces"
+  add_foreign_key "favorites", "users"
+  add_foreign_key "favorites", "workspaces"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
   add_foreign_key "invitations", "workspaces"

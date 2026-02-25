@@ -50,6 +50,7 @@ class PagesController < ApplicationController
                        .to_a
     @page_plain_text = @active_blocks.filter_map { |block| block.search_text.to_s.strip.presence }.join("\n")
     @page_word_count = @page_plain_text.scan(/\b[\p{L}\p{N}'-]+\b/u).size
+    @page_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @page)
   end
 
   def update

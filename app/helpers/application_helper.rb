@@ -41,6 +41,70 @@ module ApplicationHelper
                               .to_a
   end
 
+  def ui_sidebar_recent_pages(limit: 6)
+    workspace = ui_current_workspace
+    return [] unless workspace
+
+    policy_scope(Page)
+      .for_workspace(workspace)
+      .active
+      .order(updated_at: :desc)
+      .limit(limit)
+      .to_a
+  end
+
+  def ui_sidebar_recent_databases(limit: 6)
+    workspace = ui_current_workspace
+    return [] unless workspace
+
+    policy_scope(Database)
+      .for_workspace(workspace)
+      .order(updated_at: :desc)
+      .limit(limit)
+      .to_a
+  end
+
+  def ui_sidebar_recent_meetings(limit: 6)
+    workspace = ui_current_workspace
+    return [] unless workspace
+
+    policy_scope(Page)
+      .for_workspace(workspace)
+      .active
+      .where("pages.title ILIKE ?", "%meeting%")
+      .order(updated_at: :desc)
+      .limit(limit)
+      .to_a
+  end
+
+  def ui_sidebar_recent_favorites(limit: 6)
+    workspace = ui_current_workspace
+    return [] unless workspace
+
+    policy_scope(Favorite)
+      .for_workspace(workspace)
+      .for_user(current_user)
+      .recent
+      .includes(:favoritable)
+      .limit(limit * 2)
+      .filter_map do |favorite|
+        record = favorite.favoritable
+        next if record.blank?
+
+        type =
+          case favorite.favoritable_type
+          when "Page"
+            :page
+          when "Database"
+            :database
+          end
+        next if type.blank?
+
+        { type: type, record: record, updated_at: favorite.created_at }
+      end
+      .first(limit)
+  end
+
   def notae_sidebar_link_classes(path = nil, active: false)
     is_active = active || (path.present? && current_page?(path))
     base = "notae-sidebar-link"

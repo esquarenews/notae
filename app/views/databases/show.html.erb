@@ -1,4 +1,26 @@
 <% content_for :title, @database.name %>
+<% content_for :topbar_page_icon, "🗃️" %>
+<% content_for :topbar_privacy, "Database" %>
+<% content_for :topbar_actions do %>
+  <span class="notae-topbar-meta">Edited <%= time_ago_in_words(@database.updated_at) %> ago</span>
+  <% if @database_favorite.present? %>
+    <%= button_to database_favorite_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                  method: :delete,
+                  class: "notae-inline-icon-button notae-favorite-toggle is-favorited",
+                  title: "Remove from favorites",
+                  aria: { label: "Remove from favorites" } do %>
+      ★
+    <% end %>
+  <% else %>
+    <%= button_to database_favorite_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                  method: :post,
+                  class: "notae-inline-icon-button notae-favorite-toggle",
+                  title: "Add to favorites",
+                  aria: { label: "Add to favorites" } do %>
+      ☆
+    <% end %>
+  <% end %>
+<% end %>
 
 <section class="notae-stack-lg">
   <header class="notae-page-header">

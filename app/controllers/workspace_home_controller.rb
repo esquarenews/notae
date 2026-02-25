@@ -11,14 +11,14 @@ class WorkspaceHomeController < ApplicationController
     @new_page = Page.new
     @new_database = Database.new
     @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
-    @pages = policy_scope(Page)
-               .for_workspace(@workspace)
-               .active
-               .includes(cover_image_attachment: :blob)
-               .order(:created_at)
-               .to_a
-    @databases = policy_scope(Database).for_workspace(@workspace).order(:created_at)
-    @pages_by_parent = @pages.group_by(&:parent_page_id)
+    @recent_pages = policy_scope(Page)
+                    .for_workspace(@workspace)
+                    .active
+                    .includes(cover_image_attachment: :blob)
+                    .order(updated_at: :desc)
+                    .limit(3)
+                    .to_a
+    @recent_databases = policy_scope(Database).for_workspace(@workspace).order(updated_at: :desc).limit(3).to_a
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_memberships = @memberships.any? { |membership| policy(membership).update? }
     @audit_events = policy_scope(AuditEvent).where(workspace_id: @workspace.id).recent_first.limit(15)
