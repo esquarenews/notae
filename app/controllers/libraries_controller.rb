@@ -4,6 +4,7 @@ class LibrariesController < ApplicationController
 
   COLUMN_OPTIONS = {
     "page_name" => "Page name",
+    "workspace" => "Workspace",
     "created_by" => "Created by",
     "source" => "Source",
     "created_time" => "Created time",
@@ -11,21 +12,19 @@ class LibrariesController < ApplicationController
     "last_edited_time" => "Last edited time",
     "last_visited_time" => "Last visited time"
   }.freeze
-  DEFAULT_VISIBLE_COLUMNS = %w[page_name created_by source last_edited_time last_visited_time].freeze
-  TAB_OPTIONS = %w[recents favorites shared private].freeze
-  SOURCE_OPTIONS = %w[all page meeting database workspace].freeze
+  DEFAULT_VISIBLE_COLUMNS = %w[page_name workspace created_by source last_edited_time last_visited_time].freeze
+  TAB_OPTIONS = %w[all_documents recents favorites shared private].freeze
+  SOURCE_OPTIONS = %w[all page meeting database].freeze
   VISIBILITY_OPTIONS = %w[all shared private].freeze
   SORT_OPTIONS = %w[last_edited_desc last_edited_asc created_desc created_asc page_name_asc page_name_desc].freeze
+  LIBRARY_PAGE_SIZE = 50
 
   def show
     authorize @workspace, :show?
 
     @workspace_options = policy_scope(Workspace).order(updated_at: :desc).to_a
-    @workspace_filter_options =
-      [
-        [ "Current workspace", "current" ],
-        [ "All workspaces", "all" ]
-      ] + @workspace_options.map { |workspace| [ workspace.name, workspace.slug ] }
+    @workspace_filter_options = [ [ "All workspaces", "all" ] ] +
+      @workspace_options.map { |workspace| [ workspace.name, workspace.slug ] }
 
     @workspace_filter = resolved_workspace_filter
     selected_workspaces = resolved_selected_workspaces
@@ -49,10 +48,10 @@ class LibrariesController < ApplicationController
     @library_rows = []
     @library_rows.concat(page_rows(selected_workspace_ids, owner_email_lookup, favorite_lookup, last_visited_ids))
     @library_rows.concat(database_rows(selected_workspace_ids, owner_email_lookup, favorite_lookup))
-    @library_rows.concat(workspace_rows(selected_workspaces, owner_email_lookup))
 
     apply_filters!
     apply_sort!
+    apply_pagination!
   end
 
   private
@@ -63,28 +62,26 @@ class LibrariesController < ApplicationController
 
   def resolved_workspace_filter
     requested = params[:workspace_filter].to_s
-    return "current" if requested.blank?
+    return "all" if requested.blank?
     return requested if requested == "all"
     return requested if @workspace_options.any? { |workspace| workspace.slug == requested }
 
-    "current"
+    "all"
   end
 
   def resolved_selected_workspaces
     case @workspace_filter
     when "all"
       @workspace_options
-    when "current"
-      [ @workspace ]
     else
       selected = @workspace_options.find { |workspace| workspace.slug == @workspace_filter }
-      selected ? [ selected ] : [ @workspace ]
+      selected ? [ selected ] : @workspace_options
     end
   end
 
   def resolved_tab
     requested = params[:tab].to_s
-    TAB_OPTIONS.include?(requested) ? requested : "recents"
+    TAB_OPTIONS.include?(requested) ? requested : "all_documents"
   end
 
   def resolved_source_filter
@@ -186,26 +183,6 @@ class LibrariesController < ApplicationController
       end
   end
 
-  def workspace_rows(workspaces, owner_email_lookup)
-    workspaces.map do |workspace|
-      creator_email = owner_email_lookup[workspace.id] || "—"
-      {
-        kind: "workspace",
-        title: workspace.name,
-        icon: workspace.display_icon,
-        created_by: creator_email,
-        created_time: workspace.created_at,
-        last_edited_by: creator_email,
-        last_edited_time: workspace.updated_at,
-        last_visited_time: nil,
-        visibility: workspace.join_link_enabled? ? "shared" : "private",
-        favorited: false,
-        workspace_name: workspace.name,
-        path: workspace_path(workspace.slug)
-      }
-    end
-  end
-
   def apply_filters!
     apply_tab_filter!
     apply_source_filter!
@@ -217,6 +194,9 @@ class LibrariesController < ApplicationController
 
   def apply_tab_filter!
     case @tab
+    when "recents"
+      recent_cutoff = 1.week.ago
+      @library_rows.select! { |row| row[:last_edited_time].present? && row[:last_edited_time] >= recent_cutoff }
     when "favorites"
       @library_rows.select! { |row| row[:favorited] }
     when "shared"
@@ -288,12 +268,32 @@ class LibrariesController < ApplicationController
     end
   end
 
+  def apply_pagination!
+    @per_page = LIBRARY_PAGE_SIZE
+    @current_page = resolved_page
+    @total_rows = @library_rows.length
+    @total_pages = [ (@total_rows.to_f / @per_page).ceil, 1 ].max
+    @current_page = @total_pages if @current_page > @total_pages
+
+    start_index = (@current_page - 1) * @per_page
+    @library_rows = @library_rows.slice(start_index, @per_page) || []
+    @page_start = @total_rows.zero? ? 0 : start_index + 1
+    @page_end = @total_rows.zero? ? 0 : start_index + @library_rows.length
+  end
+
+  def resolved_page
+    requested = params[:page].to_i
+    requested.positive? ? requested : 1
+  end
+
   def property_value_for(row, property_key)
     case property_key
     when "page_name"
       row[:title]
     when "created_by"
       row[:created_by]
+    when "workspace"
+      row[:workspace_name]
     when "source"
       row[:kind]
     when "created_time"

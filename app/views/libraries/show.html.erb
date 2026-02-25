@@ -1,8 +1,11 @@
 <% content_for :title, "Library" %>
 <% content_for :topbar_page_icon, "📚" %>
 <% content_for :topbar_privacy, "Workspace" %>
+<% content_for :content_class, "notae-content-wide" %>
 
 <% query = request.query_parameters.to_h.symbolize_keys %>
+<% tab_query = query.except(:page) %>
+<% pagination_query = query.except(:page) %>
 <% visible_columns = @visible_columns %>
 <% shown_columns = @column_options.select { |key, _label| visible_columns.include?(key) } %>
 <% hidden_columns = @column_options.reject { |key, _label| visible_columns.include?(key) } %>
@@ -20,12 +23,13 @@
 
   <nav class="notae-library-tabs">
     <% {
+      "all_documents" => "All documents",
       "recents" => "Recents",
       "favorites" => "Favorites",
       "shared" => "Shared",
       "private" => "Private"
     }.each do |tab_value, label| %>
-      <% tab_params = query.merge(tab: tab_value) %>
+      <% tab_params = tab_query.merge(tab: tab_value) %>
       <%= link_to label,
                   workspace_library_path(tab_params.merge(workspace_slug: @workspace.slug)),
                   class: [ "notae-library-tab", ("active" if @tab == tab_value) ].compact.join(" ") %>
@@ -42,21 +46,25 @@
       <%= text_field_tag :q, @search_query, placeholder: "Type to search...", class: "notae-library-search-input" %>
     </div>
 
+    <div class="notae-library-workspace-filter">
+      <%= label_tag :workspace_filter, "Workspace", class: "notae-library-inline-label" %>
+      <%= select_tag :workspace_filter,
+                     options_for_select(@workspace_filter_options, @workspace_filter),
+                     class: "notae-options-input",
+                     onchange: "this.form.requestSubmit()" %>
+    </div>
+
     <div class="notae-library-toolbar-actions">
       <details class="notae-library-popover">
-        <summary class="notae-inline-icon-button" title="Filters" aria-label="Filters">☰</summary>
+        <summary class="notae-chip-button notae-library-action-button">Filters</summary>
         <div class="notae-library-popover-panel">
           <p class="notae-library-popover-title">Filter by</p>
-          <%= select_tag :workspace_filter,
-                         options_for_select(@workspace_filter_options, @workspace_filter),
-                         class: "notae-options-input" %>
           <%= select_tag :source,
                          options_for_select([
                            ["All sources", "all"],
                            ["Pages", "page"],
                            ["Meetings", "meeting"],
-                           ["Databases", "database"],
-                           ["Workspaces", "workspace"]
+                           ["Databases", "database"]
                          ], @source_filter),
                          class: "notae-options-input" %>
           <%= select_tag :visibility,
@@ -89,7 +97,7 @@
       </details>
 
       <details class="notae-library-popover">
-        <summary class="notae-inline-icon-button" title="Property visibility" aria-label="Property visibility">⚙</summary>
+        <summary class="notae-chip-button notae-library-action-button">Columns</summary>
         <div class="notae-library-popover-panel">
           <p class="notae-library-popover-title">Property visibility</p>
           <input type="search" class="notae-options-input" placeholder="Search for a property..." disabled>
@@ -126,6 +134,9 @@
           <% if visible_columns.include?("page_name") %>
             <th>Page name</th>
           <% end %>
+          <% if visible_columns.include?("workspace") %>
+            <th>Workspace</th>
+          <% end %>
           <% if visible_columns.include?("created_by") %>
             <th>Created by</th>
           <% end %>
@@ -149,7 +160,7 @@
       <tbody>
         <% if @library_rows.any? %>
           <% @library_rows.each do |row| %>
-            <tr>
+            <tr class="notae-library-row">
               <% if visible_columns.include?("page_name") %>
                 <td>
                   <%= link_to row[:path], class: "notae-library-name-link" do %>
@@ -160,6 +171,9 @@
                     <% end %>
                   <% end %>
                 </td>
+              <% end %>
+              <% if visible_columns.include?("workspace") %>
+                <td><%= row[:workspace_name] %></td>
               <% end %>
               <% if visible_columns.include?("created_by") %>
                 <td><%= row[:created_by] %></td>
@@ -191,5 +205,26 @@
         <% end %>
       </tbody>
     </table>
+  </section>
+
+  <section class="notae-library-pagination" aria-label="Library pagination">
+    <p class="notae-library-pagination-meta">Showing <%= @page_start %>-<%= @page_end %> of <%= @total_rows %></p>
+    <div class="notae-library-pagination-actions">
+      <% if @current_page > 1 %>
+        <%= link_to "Previous",
+                    workspace_library_path(pagination_query.merge(workspace_slug: @workspace.slug, page: @current_page - 1)),
+                    class: "notae-chip-button notae-library-pagination-button" %>
+      <% else %>
+        <span class="notae-chip-button notae-library-pagination-button is-disabled" aria-disabled="true">Previous</span>
+      <% end %>
+      <span class="notae-library-pagination-page">Page <%= @current_page %> of <%= @total_pages %></span>
+      <% if @current_page < @total_pages %>
+        <%= link_to "Next",
+                    workspace_library_path(pagination_query.merge(workspace_slug: @workspace.slug, page: @current_page + 1)),
+                    class: "notae-chip-button notae-library-pagination-button" %>
+      <% else %>
+        <span class="notae-chip-button notae-library-pagination-button is-disabled" aria-disabled="true">Next</span>
+      <% end %>
+    </div>
   </section>
 </section>
