@@ -1,0 +1,49 @@
+<% content_for :title, "Trash" %>
+<% content_for :topbar_page_icon, "🗑️" %>
+<% content_for :topbar_privacy, "Workspace" %>
+
+<section class="notae-trash-shell">
+  <header class="notae-trash-header">
+    <%= form_with url: workspace_trash_path(workspace_slug: @workspace.slug), method: :get, class: "notae-trash-search-form" do |form| %>
+      <%= form.search_field :q, value: @query, placeholder: "Search pages in Trash", class: "notae-pref-select notae-trash-search" %>
+    <% end %>
+    <div class="notae-trash-filters">
+      <span class="notae-trash-chip">Last edited by</span>
+      <span class="notae-trash-chip">In</span>
+      <span class="notae-trash-chip">Teamspaces</span>
+    </div>
+  </header>
+
+  <% if @archived_pages.empty? %>
+    <div class="notae-trash-empty">
+      <p class="notae-trash-empty-icon">🗑️</p>
+      <p class="notae-pref-label">No results</p>
+    </div>
+  <% else %>
+    <ul class="notae-trash-list">
+      <% @archived_pages.each do |page| %>
+        <li class="notae-trash-item">
+          <div class="notae-trash-item-main">
+            <p class="notae-pref-label"><%= page.icon.presence || "📄" %> <%= page.title %></p>
+            <p class="notae-pref-description">Archived <%= time_ago_in_words(page.archived_at) %> ago</p>
+          </div>
+          <div class="notae-trash-item-actions">
+            <%= button_to "Restore",
+                          restore_page_path(workspace_slug: @workspace.slug, id: page.id),
+                          method: :patch,
+                          class: "notae-chip-button" %>
+            <%= button_to "Delete permanently",
+                          page_path(workspace_slug: @workspace.slug, id: page.id),
+                          method: :delete,
+                          class: "notae-chip-button notae-chip-danger",
+                          form: { data: { turbo_confirm: "Delete #{page.title} permanently?" } } %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <footer class="notae-trash-footer">
+    Pages in Trash for over 30 days will be automatically deleted.
+  </footer>
+</section>

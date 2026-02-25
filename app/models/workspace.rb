@@ -1,6 +1,21 @@
 class Workspace < ApplicationRecord
   include PgSearch::Model
 
+  DISCO_ICON_OPTIONS = [
+    "🪩",
+    "🎵",
+    "🎶",
+    "🕺",
+    "💃",
+    "🎧",
+    "🎤",
+    "✨",
+    "🌈",
+    "💜",
+    "🌟",
+    "🛸"
+  ].freeze
+
   has_paper_trail
 
   has_many :memberships, dependent: :destroy
@@ -21,15 +36,46 @@ class Workspace < ApplicationRecord
   has_many :page_templates, dependent: :destroy
   has_many :page_presences, dependent: :destroy
 
+  scope :active, -> { where(archived_at: nil) }
+
   validates :name, presence: true
+  validates :name, length: { maximum: 65 }
   validates :slug, presence: true, uniqueness: true
   validates :slug, format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/ }
+  validates :icon, inclusion: { in: DISCO_ICON_OPTIONS }, allow_blank: true
+  validates :join_link_enabled, inclusion: { in: [ true, false ] }
+  validates :join_link_token, uniqueness: true, allow_blank: true
 
   before_validation :normalize_slug
 
   pg_search_scope :search_by_name,
                   against: :name,
                   using: { tsearch: { prefix: true } }
+
+  def display_icon
+    icon.presence || "🏠"
+  end
+
+  def archived?
+    archived_at.present?
+  end
+
+  def ensure_join_link_token!
+    return if join_link_token.present?
+
+    update!(join_link_token: self.class.generate_join_link_token)
+  end
+
+  def rotate_join_link_token!
+    update!(join_link_token: self.class.generate_join_link_token)
+  end
+
+  def self.generate_join_link_token
+    loop do
+      candidate = SecureRandom.urlsafe_base64(32)
+      return candidate unless exists?(join_link_token: candidate)
+    end
+  end
 
   private
 

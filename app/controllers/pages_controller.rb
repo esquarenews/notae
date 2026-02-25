@@ -1,7 +1,7 @@
 class PagesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_page, only: %i[show update duplicate archive restore permissions]
+  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy]
   COVER_SHIFT_STEP = 10
 
   def show
@@ -126,6 +126,18 @@ class PagesController < ApplicationController
     authorize @page, :restore?
     @page.restore!
     redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Page restored."
+  end
+
+  def destroy
+    authorize @page, :destroy?
+
+    unless @page.archived?
+      redirect_to workspace_trash_path(workspace_slug: @workspace.slug), alert: "Archive the page before deleting it permanently."
+      return
+    end
+
+    @page.destroy!
+    redirect_to workspace_trash_path(workspace_slug: @workspace.slug), notice: "Page deleted permanently."
   end
 
   def permissions

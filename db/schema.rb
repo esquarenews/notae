@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_25_175000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_25_213000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -401,6 +401,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_175000) do
     t.boolean "meeting_notify_transcribed", default: true, null: false
     t.boolean "open_links_in_desktop_app", default: true, null: false
     t.string "open_on_start_preference", default: "workspace_home", null: false
+    t.string "openai_api_key"
     t.boolean "profile_discoverability", default: true, null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
@@ -427,10 +428,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_175000) do
   end
 
   create_table "workspaces", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "analytics_enabled", default: true, null: false
+    t.datetime "archived_at"
     t.datetime "created_at", null: false
+    t.string "icon"
+    t.boolean "join_link_enabled", default: false, null: false
+    t.string "join_link_token"
     t.string "name", null: false
     t.string "slug", null: false
     t.datetime "updated_at", null: false
+    t.index ["archived_at"], name: "index_workspaces_on_archived_at"
+    t.index ["join_link_token"], name: "index_workspaces_on_join_link_token", unique: true
     t.index ["slug"], name: "index_workspaces_on_slug", unique: true
   end
 

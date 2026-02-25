@@ -1,0 +1,118 @@
+<% content_for :title, "People settings" %>
+<% content_for :topbar_page_icon, "👥" %>
+<% content_for :topbar_privacy, "Workspace" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :people %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>People</h2>
+
+      <div class="notae-people-directory-row">
+        <%= link_to "View People Directory ↗", workspace_path(@workspace.slug), class: "notae-utility-workspace-link" %>
+      </div>
+
+      <div class="notae-people-header-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Add members via link</p>
+          <p class="notae-pref-description">
+            Only people with permission to invite members to this workspace can view this link.
+            <%= button_to "generate a new link",
+                          workspace_people_settings_path(workspace_slug: @workspace.slug),
+                          method: :patch,
+                          params: { workspace: { regenerate_join_link: "1" } },
+                          class: "notae-link-button" %>
+          </p>
+        </div>
+        <div class="notae-people-header-actions">
+          <button type="button"
+                  class="notae-chip-button"
+                  data-action="click->shell#copyFromDataset"
+                  data-copy-value="<%= @join_link %>">
+            Copy link
+          </button>
+          <%= form_with model: @workspace, url: workspace_people_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+            <label class="notae-pref-toggle">
+              <%= form.check_box :join_link_enabled,
+                                 { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                                 "1",
+                                 "0" %>
+              <span class="notae-pref-toggle-track"></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <p class="notae-people-link-preview"><%= @join_link %></p>
+
+      <div class="notae-people-toolbar">
+        <nav class="notae-people-tabs">
+          <%= link_to "Guests",
+                      workspace_people_settings_path(workspace_slug: @workspace.slug, tab: "guests"),
+                      class: [ "notae-people-tab", ("active" if @tab == "guests") ].compact.join(" ") %>
+          <%= link_to "Members #{@member_memberships.count}",
+                      workspace_people_settings_path(workspace_slug: @workspace.slug, tab: "members"),
+                      class: [ "notae-people-tab", ("active" if @tab == "members") ].compact.join(" ") %>
+          <%= link_to "Groups",
+                      workspace_people_settings_path(workspace_slug: @workspace.slug, tab: "groups"),
+                      class: [ "notae-people-tab", ("active" if @tab == "groups") ].compact.join(" ") %>
+          <%= link_to "Contacts",
+                      workspace_people_settings_path(workspace_slug: @workspace.slug, tab: "contacts"),
+                      class: [ "notae-people-tab", ("active" if @tab == "contacts") ].compact.join(" ") %>
+        </nav>
+
+        <% if @can_invite %>
+          <details class="notae-people-add-menu">
+            <summary class="notae-chip-button">Add members ▾</summary>
+            <div class="notae-people-add-panel">
+              <%= form_with model: @invitation,
+                            url: workspace_invitations_path(workspace_slug: @workspace.slug),
+                            class: "notae-people-add-form" do |form| %>
+                <%= form.email_field :email, required: true, placeholder: "teammate@example.com", class: "notae-pref-select" %>
+                <%= form.select :role,
+                                options_for_select(Invitation.roles.keys.map { |key| [ key.titleize, key ] }, "guest"),
+                                {},
+                                class: "notae-pref-select" %>
+                <%= form.submit "Send invite", class: "notae-chip-button" %>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+      </div>
+
+      <% if @tab == "groups" || @tab == "contacts" %>
+        <div class="notae-people-empty">
+          <p class="notae-pref-label"><%= @tab.titleize %> coming soon</p>
+          <p class="notae-pref-description">This section is planned for a future update.</p>
+        </div>
+      <% else %>
+        <% collection = @tab == "members" ? @member_memberships : @guest_memberships %>
+        <% if collection.empty? %>
+          <div class="notae-people-empty">
+            <p class="notae-people-empty-icon">🧑‍🤝‍🧑</p>
+            <p class="notae-pref-label">No <%= @tab %> yet</p>
+            <button type="button" class="notae-chip-button" disabled>Import contacts</button>
+          </div>
+        <% else %>
+          <ul class="notae-people-list">
+            <% collection.each do |membership| %>
+              <li class="notae-people-list-item">
+                <div class="notae-people-user">
+                  <span class="notae-settings-nav-avatar"><%= membership.user.email.first.upcase %></span>
+                  <div>
+                    <p class="notae-pref-label"><%= membership.user.email %></p>
+                    <p class="notae-pref-description"><%= membership.role.titleize %></p>
+                  </div>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </section>
+  </div>
+</section>

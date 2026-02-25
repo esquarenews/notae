@@ -113,6 +113,14 @@ export default class extends Controller {
     this.copyText(url.toString())
   }
 
+  copyFromDataset(event) {
+    event.preventDefault()
+    const value = event.currentTarget?.dataset?.copyValue
+    if (!value) return
+
+    this.copyText(value)
+  }
+
   copyPageContents(event) {
     event.preventDefault()
 

@@ -34,6 +34,10 @@ class PagePolicy < ApplicationPolicy
     archive?
   end
 
+  def destroy?
+    archive?
+  end
+
   def permissions?
     return false unless membership
 

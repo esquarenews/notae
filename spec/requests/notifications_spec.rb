@@ -32,6 +32,8 @@ RSpec.describe "Notifications", type: :request do
     expect(ActionMailer::Base.deliveries.size).to eq(1)
     mail = ActionMailer::Base.deliveries.last
     expect(mail.to).to eq([ mentioned.email ])
+    expect(mail.from).to include("noreply@notae.local")
+    expect(mail[:from].decoded).to include("Notae")
     expect(mail.subject).to include("mentioned you")
     expect(mail.body.encoded).to include("Please review this @mention-target@example.com")
 

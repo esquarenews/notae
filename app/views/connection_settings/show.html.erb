@@ -1,0 +1,55 @@
+<% content_for :title, "Connections settings" %>
+<% content_for :topbar_page_icon, "🔌" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :connections %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>Connections</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">OpenAI API key</p>
+          <p class="notae-pref-description">Add your OpenAI API key for AI-powered actions.</p>
+          <p class="notae-pref-description">Current status: <strong><%= @user.openai_api_key_configured? ? "Configured" : "Not configured" %></strong></p>
+          <% if @user.openai_api_key_configured? %>
+            <p class="notae-pref-description">Saved key: <code><%= @user.masked_openai_api_key %></code></p>
+          <% end %>
+        </div>
+        <%= form_with model: @user,
+                      url: workspace_connection_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form notae-connection-form" do |form| %>
+          <%= form.password_field :openai_api_key,
+                                  value: "",
+                                  class: "notae-pref-select",
+                                  autocomplete: "off",
+                                  spellcheck: "false",
+                                  placeholder: "sk-..." %>
+          <%= form.submit "Save key", class: "notae-chip-button" %>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Remove saved key</p>
+          <p class="notae-pref-description">Deletes the stored key from your account.</p>
+        </div>
+        <%= form_with model: @user,
+                      url: workspace_connection_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form" do |form| %>
+          <%= form.hidden_field :clear_openai_api_key, value: "1" %>
+          <%= form.submit "Remove key",
+                          class: "notae-chip-button",
+                          disabled: !@user.openai_api_key_configured? %>
+        <% end %>
+      </div>
+    </section>
+  </div>
+</section>

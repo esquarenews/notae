@@ -15,6 +15,12 @@ Rails.application.routes.draw do
   scope "w/:workspace_slug" do
     get "/", to: "workspace_home#show", as: :workspace
     get "search", to: "searches#index", as: :workspace_search
+    get "trash", to: "trash#show", as: :workspace_trash
+    get "settings/general", to: "general_settings#show", as: :workspace_general_settings
+    patch "settings/general", to: "general_settings#update"
+    delete "settings/general", to: "general_settings#destroy"
+    get "settings/people", to: "people_settings#show", as: :workspace_people_settings
+    patch "settings/people", to: "people_settings#update"
     get "settings/preferences", to: "preferences#show", as: :workspace_preferences
     patch "settings/preferences", to: "preferences#update"
     get "settings/connections", to: "connection_settings#show", as: :workspace_connection_settings
@@ -37,7 +43,7 @@ Rails.application.routes.draw do
       resources :db_cells, only: :update
     end
 
-    resources :pages, only: %i[show create update] do
+    resources :pages, only: %i[show create update destroy] do
       resources :share_links, only: %i[create destroy]
 
       resources :comments, only: :create do
@@ -83,6 +89,7 @@ Rails.application.routes.draw do
     end
 
     get "exports/:token", to: "page_exports#download", as: :workspace_export
+    get "join/:token", to: "workspace_join_links#show", as: :workspace_join_link
   end
 
   namespace :api do

@@ -1,0 +1,172 @@
+<% content_for :title, "General settings" %>
+<% content_for :topbar_page_icon, "🛠" %>
+<% content_for :topbar_privacy, "Workspace" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :general %>
+
+  <div class="notae-settings-content">
+    <% can_update = policy(@workspace).update? %>
+    <% can_destroy = policy(@workspace).destroy? %>
+
+    <section class="notae-settings-section">
+      <h2>Workspace settings</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Workspace name</p>
+          <p class="notae-pref-description">Your workspace name can be up to 65 characters.</p>
+        </div>
+        <%= form_with model: @workspace,
+                      url: workspace_general_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form notae-general-name-form" do |form| %>
+          <%= form.text_field :name,
+                              class: "notae-pref-select notae-general-name-input",
+                              maxlength: 65,
+                              required: true,
+                              disabled: !can_update,
+                              onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Icon</p>
+          <p class="notae-pref-description">Pick an icon for your workspace sidebar and notifications.</p>
+        </div>
+        <%= form_with model: @workspace,
+                      url: workspace_general_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form notae-general-icon-form" do |form| %>
+          <div class="notae-general-icon-grid">
+            <% Workspace::DISCO_ICON_OPTIONS.each do |icon| %>
+              <% selected = @workspace.icon == icon %>
+              <label class="notae-general-icon-option <%= "is-active" if selected %>">
+                <%= form.radio_button :icon,
+                                      icon,
+                                      checked: selected,
+                                      class: "notae-general-icon-radio",
+                                      disabled: !can_update,
+                                      onchange: "this.form.requestSubmit()" %>
+                <span class="notae-general-icon-glyph"><%= icon %></span>
+              </label>
+            <% end %>
+            <label class="notae-general-icon-option notae-general-icon-clear <%= "is-active" if @workspace.icon.blank? %>">
+              <%= form.radio_button :icon,
+                                    "",
+                                    checked: @workspace.icon.blank?,
+                                    class: "notae-general-icon-radio",
+                                    disabled: !can_update,
+                                    onchange: "this.form.requestSubmit()" %>
+              <span class="notae-general-icon-glyph">None</span>
+            </label>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Save and display page view analytics</p>
+          <p class="notae-pref-description">Collect page-view data for this workspace so trends can be shown later.</p>
+        </div>
+        <%= form_with model: @workspace,
+                      url: workspace_general_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :analytics_enabled,
+                               {
+                                 class: "notae-pref-toggle-input",
+                                 disabled: !can_update,
+                                 onchange: "this.form.requestSubmit()"
+                               },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Danger zone</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Delete workspace</p>
+          <p class="notae-pref-description">Archives this workspace (soft delete). Data is retained for possible restore.</p>
+        </div>
+        <% if can_destroy %>
+          <div class="notae-general-danger" data-controller="danger-confirm" data-danger-confirm-workspace-name-value="<%= @workspace.name %>">
+            <button type="button"
+                    class="notae-chip-button notae-chip-danger"
+                    data-action="danger-confirm#open">
+              Delete workspace
+            </button>
+
+            <dialog class="notae-danger-modal"
+                    data-danger-confirm-target="dialog"
+                    data-action="click->danger-confirm#backdropClose">
+              <div class="notae-danger-modal-panel">
+                <div class="notae-danger-modal-header">
+                  <h3>Final confirmation</h3>
+                  <button type="button"
+                          class="notae-inline-icon-button"
+                          aria-label="Close"
+                          data-action="danger-confirm#close">
+                    ✕
+                  </button>
+                </div>
+                <p class="notae-pref-description">
+                  Type <strong><%= @workspace.name %></strong> to confirm workspace archive.
+                </p>
+
+                <%= form_with url: workspace_general_settings_path(workspace_slug: @workspace.slug),
+                              method: :delete,
+                              scope: :workspace,
+                              class: "notae-danger-modal-form" do |form| %>
+                  <%= form.text_field :confirm_name,
+                                      class: "notae-pref-select notae-danger-input",
+                                      autocomplete: "off",
+                                      required: true,
+                                      data: {
+                                        danger_confirm_target: "nameInput",
+                                        action: "input->danger-confirm#sync"
+                                      } %>
+                  <div class="notae-danger-modal-actions">
+                    <button type="button"
+                            class="notae-chip-button"
+                            data-action="danger-confirm#close">
+                      Cancel
+                    </button>
+                    <%= form.submit "Archive workspace",
+                                    class: "notae-chip-button notae-chip-danger",
+                                    disabled: true,
+                                    data: { danger_confirm_target: "confirmButton" } %>
+                  </div>
+                <% end %>
+              </div>
+            </dialog>
+          </div>
+        <% else %>
+          <span class="notae-pref-description">Only workspace owners can delete this workspace.</span>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Workspace ID</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Workspace ID</p>
+        </div>
+        <code class="notae-pref-code"><%= @workspace.id %></code>
+      </div>
+    </section>
+  </div>
+</section>

@@ -83,6 +83,10 @@ class Page < ApplicationRecord
     cover_image.attached? || cover_preset_key.present?
   end
 
+  def archived?
+    archived_at.present?
+  end
+
   private
 
   def set_workspace_from_parent

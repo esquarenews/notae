@@ -2,7 +2,7 @@
   <% workspace = ui_current_workspace %>
   <div class="notae-sidebar-header">
     <div class="notae-user-chip notae-workspace-chip">
-      <span class="notae-user-avatar"><%= workspace ? "🏠" : current_user.email.first.upcase %></span>
+      <span class="notae-user-avatar"><%= workspace ? workspace.display_icon : current_user.email.first.upcase %></span>
       <span class="notae-user-label"><%= workspace&.name || current_user.email %></span>
     </div>
     <div class="notae-sidebar-header-actions">
@@ -150,8 +150,10 @@
                 (workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path),
                 class: "notae-sidebar-link",
                 data: { action: "click->shell#close" } %>
-    <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Marketplace</a>
-    <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Trash</a>
+    <%= link_to "Trash",
+                (workspace ? workspace_trash_path(workspace_slug: workspace.slug) : root_path),
+                class: notae_sidebar_link_classes(workspace ? workspace_trash_path(workspace_slug: workspace.slug) : root_path),
+                data: { action: "click->shell#close" } %>
     <%= button_to "Sign out",
                   destroy_user_session_path,
                   method: :delete,

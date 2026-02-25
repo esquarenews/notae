@@ -13,6 +13,11 @@
 - Keyboard shortcut expansion
 - Performance optimizations
 - API versioning for mobile
+- Workspace settings: export controls
+- Workspace settings: sidebar controls
+- Workspace settings: domain access controls
+- Workspace settings (People): groups tab behavior
+- Workspace settings (People): contacts import flow
 
 ---
 

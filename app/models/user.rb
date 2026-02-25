@@ -86,6 +86,7 @@ class User < ApplicationRecord
   validates :email_notify_workspace_digest, inclusion: { in: [ true, false ] }
   validates :slack_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
   validates :discord_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
+  validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
   validates :time_zone, presence: true
   validate :time_zone_supported
 
@@ -95,6 +96,16 @@ class User < ApplicationRecord
 
   def start_week_preference
     start_week_on_monday? ? "monday" : "sunday"
+  end
+
+  def openai_api_key_configured?
+    openai_api_key.present?
+  end
+
+  def masked_openai_api_key
+    return "Not configured" unless openai_api_key_configured?
+
+    "#{openai_api_key.first(6)}...#{openai_api_key.last(4)}"
   end
 
   private

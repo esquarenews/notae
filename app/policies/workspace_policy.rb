@@ -4,7 +4,7 @@ class WorkspacePolicy < ApplicationPolicy
   end
 
   def show?
-    membership.present?
+    membership.present? && !record.archived?
   end
 
   def create?
@@ -12,18 +12,22 @@ class WorkspacePolicy < ApplicationPolicy
   end
 
   def update?
-    membership&.admin? || membership&.owner?
+    !record.archived? && (membership&.admin? || membership&.owner?)
   end
 
   def destroy?
-    membership&.owner?
+    !record.archived? && membership&.owner?
+  end
+
+  def join_via_link?
+    user.present? && !record.archived? && record.join_link_enabled?
   end
 
   class Scope < Scope
     def resolve
       return scope.none unless user
 
-      scope.joins(:memberships).where(memberships: { user_id: user.id }).distinct
+      scope.active.joins(:memberships).where(memberships: { user_id: user.id }).distinct
     end
   end
 

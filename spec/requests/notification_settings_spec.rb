@@ -14,8 +14,10 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("Slack notifications")
     expect(response.body).to include("Discord notifications")
     expect(response.body).to include("Email notifications")
-    expect(response.body).to include(">Preferences</a>")
-    expect(response.body).to include(">Notifications</a>")
+    expect(response.body).to include(%(href="/w/#{workspace.slug}/settings/preferences"))
+    expect(response.body).to include("Preferences")
+    expect(response.body).to include(%(href="/w/#{workspace.slug}/settings/notifications"))
+    expect(response.body).to include("Notifications")
     expect(response.body).not_to include("Preferences <em>Future</em>")
     expect(response.body).not_to include("Notifications <em>Future</em>")
   end
