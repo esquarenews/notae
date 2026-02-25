@@ -26,6 +26,38 @@ RSpec.describe "Blocks", type: :request do
     expect(block.reload.block_type).to eq("heading_1")
   end
 
+  it "formats @date mentions using the user date preference" do
+    owner = User.create!(
+      email: "blocks-date-mention-owner@example.com",
+      password: "password123",
+      date_format_preference: "month_day_year",
+      auto_time_zone: false,
+      time_zone: "UTC"
+    )
+    workspace = Workspace.create!(name: "Date mentions", slug: "date-mentions")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Date mention page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    today = Time.zone.today.strftime("%m/%d/%Y")
+    patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+          params: {
+            block: {
+              block_type: "paragraph",
+              content_json: {
+                type: "doc",
+                content: [ { type: "paragraph", content: [ { type: "text", text: "Review @date" } ] } ]
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    saved_text = block.reload.content_json.dig("content", 0, "content", 0, "text")
+    expect(saved_text).to include("@#{today}")
+  end
+
   it "persists todo list content with checked state for task items" do
     owner = User.create!(email: "blocks-todo-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Todo blocks", slug: "todo-blocks")

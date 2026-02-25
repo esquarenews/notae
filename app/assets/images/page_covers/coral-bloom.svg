@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Coral bloom cover</title>
+  <desc id="desc">Warm coral and peach floral gradients with soft highlights.</desc>
+  <defs>
+    <radialGradient id="core" cx="28%" cy="38%" r="70%">
+      <stop offset="0%" stop-color="#ffd8bf"/>
+      <stop offset="40%" stop-color="#ff9f8a"/>
+      <stop offset="100%" stop-color="#e45d66"/>
+    </radialGradient>
+    <radialGradient id="petal" cx="70%" cy="55%" r="72%">
+      <stop offset="0%" stop-color="#ffe7d1" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f97360" stop-opacity="0.3"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="320" fill="#fce7dd"/>
+  <rect width="1600" height="320" fill="url(#core)"/>
+  <ellipse cx="430" cy="230" rx="360" ry="170" fill="#f67f79" opacity="0.4"/>
+  <ellipse cx="980" cy="130" rx="520" ry="180" fill="url(#petal)"/>
+  <ellipse cx="1340" cy="260" rx="300" ry="120" fill="#fca18d" opacity="0.42"/>
+  <circle cx="260" cy="100" r="86" fill="#fff2e5" opacity="0.2"/>
+  <circle cx="760" cy="220" r="52" fill="#fff2e5" opacity="0.2"/>
+  <circle cx="1220" cy="78" r="62" fill="#fff2e5" opacity="0.16"/>
+</svg>
+

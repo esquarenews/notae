@@ -1,0 +1,33 @@
+<aside class="notae-settings-nav">
+  <p class="notae-settings-nav-group">Account</p>
+  <div class="notae-settings-nav-user">
+    <span class="notae-settings-nav-avatar"><%= current_user.email.first.upcase %></span>
+    <span class="notae-settings-nav-name"><%= current_user.email %></span>
+  </div>
+  <%= link_to "Preferences",
+              workspace_preferences_path(workspace_slug: workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :preferences) ].compact.join(" ") %>
+  <%= link_to "Notifications",
+              workspace_notification_settings_path(workspace_slug: workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :notifications) ].compact.join(" ") %>
+  <span class="notae-settings-nav-item is-disabled">Connections <em>Future</em></span>
+
+  <p class="notae-settings-nav-group">Workspace</p>
+  <span class="notae-settings-nav-item is-disabled">General <em>Future</em></span>
+  <span class="notae-settings-nav-item is-disabled">People <em>Future</em></span>
+  <span class="notae-settings-nav-item is-disabled">Import <em>Future</em></span>
+
+  <p class="notae-settings-nav-group">Features</p>
+  <span class="notae-settings-nav-item is-disabled">Notae AI <em>Future</em></span>
+  <span class="notae-settings-nav-item is-disabled">Public pages <em>Future</em></span>
+  <span class="notae-settings-nav-item is-disabled">Emoji <em>Future</em></span>
+
+  <p class="notae-settings-nav-group">Integrations</p>
+  <span class="notae-settings-nav-item is-disabled">Connections <em>Future</em></span>
+
+  <p class="notae-settings-nav-group">Admin</p>
+  <span class="notae-settings-nav-item is-disabled">Teamspaces <em>Future</em></span>
+
+  <p class="notae-settings-nav-group">Access & billing</p>
+  <span class="notae-settings-nav-item is-disabled">Upgrade plan <em>Future</em></span>
+</aside>

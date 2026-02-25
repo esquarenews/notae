@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Mono mist cover</title>
+  <desc id="desc">Minimal grayscale gradients with soft layered haze.</desc>
+  <defs>
+    <linearGradient id="mono" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8e8e8"/>
+      <stop offset="100%" stop-color="#c9c9c9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="320" fill="url(#mono)"/>
+  <path d="M0 90C210 135 360 50 580 92C810 135 930 185 1180 140C1330 112 1450 82 1600 95V320H0Z" fill="#b6b6b6" opacity="0.35"/>
+  <path d="M0 160C190 112 460 190 740 170C980 154 1210 98 1600 148V320H0Z" fill="#9f9f9f" opacity="0.24"/>
+  <path d="M0 228C250 200 450 246 700 222C950 198 1230 218 1600 240V320H0Z" fill="#8c8c8c" opacity="0.18"/>
+  <circle cx="220" cy="58" r="46" fill="#ffffff" opacity="0.22"/>
+  <circle cx="1480" cy="72" r="56" fill="#ffffff" opacity="0.14"/>
+</svg>
+

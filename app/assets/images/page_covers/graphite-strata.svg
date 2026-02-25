@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Graphite strata cover</title>
+  <desc id="desc">Dark single-tone graphite layers with subtle texture bands.</desc>
+  <defs>
+    <linearGradient id="graphite" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2b2f36"/>
+      <stop offset="100%" stop-color="#3a3f46"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="320" fill="url(#graphite)"/>
+  <path d="M0 68C220 98 360 42 620 76C860 110 1100 124 1600 86V320H0Z" fill="#4a5059" opacity="0.5"/>
+  <path d="M0 128C260 152 420 106 700 134C950 160 1220 192 1600 170V320H0Z" fill="#606773" opacity="0.34"/>
+  <path d="M0 198C250 222 430 184 740 210C1020 232 1310 270 1600 246V320H0Z" fill="#767f8c" opacity="0.26"/>
+  <path d="M0 260C280 278 520 250 830 268C1120 286 1380 306 1600 294V320H0Z" fill="#9199a8" opacity="0.18"/>
+</svg>

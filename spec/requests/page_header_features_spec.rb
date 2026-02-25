@@ -38,9 +38,15 @@ RSpec.describe "Page header features", type: :request do
     patch page_path(workspace_slug: workspace.slug, id: page.id),
           params: { page: { cover_action: "random" } }
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    expect(Page::COVER_PRESET_KEYS.size).to eq(12)
+    Page::COVER_PRESET_KEYS.each do |key|
+      expect(Rails.root.join("app/assets/images/page_covers/#{key}.svg")).to exist
+    end
     expect(Page::COVER_PRESET_KEYS).to include(page.reload.cover_preset_key)
     get page_path(workspace_slug: workspace.slug, id: page.id)
     expect(response.body).to include("notae-cover-picker-grid")
+    expect(response.body).to include("notae-cover-picker-quick-actions")
+    expect(response.body).to include("notae-cover-picker-upload-form")
 
     chosen_preset = Page::COVER_PRESET_KEYS.first
     patch page_path(workspace_slug: workspace.slug, id: page.id),

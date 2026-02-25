@@ -1,0 +1,231 @@
+<% content_for :title, "Preferences" %>
+<% content_for :topbar_page_icon, "⚙" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell" data-controller="preferences">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :preferences %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>Appearance</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Theme</p>
+          <p class="notae-pref-description">Choose a theme for Notae on this device.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :theme_preference,
+                          options_for_select(User::THEME_OPTIONS, @user.theme_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Language & Time</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Language <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Choose the language you want to use in Notae.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :language_preference,
+                          options_for_select(User::LANGUAGE_OPTIONS, @user.language_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Always show text direction controls <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Show left-to-right and right-to-left controls in the editor.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :show_text_direction_controls,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Start week on</p>
+          <p class="notae-pref-description">Choose whether calendars start on Monday (default) or Sunday.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :start_week_preference,
+                          options_for_select(User::START_WEEK_OPTIONS, @user.start_week_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Date format</p>
+          <p class="notae-pref-description">Format used for <code>@date</code> mentions.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :date_format_preference,
+                          options_for_select(User::DATE_FORMAT_OPTIONS, @user.date_format_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Set time zone automatically using your location</p>
+          <p class="notae-pref-description">Uses your system time zone from the browser/OS.</p>
+        </div>
+        <%= form_with model: @user,
+                      url: workspace_preferences_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form",
+                      data: { preferences_target: "autoTimeZoneForm" } do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :auto_time_zone,
+                               {
+                                 class: "notae-pref-toggle-input",
+                                 data: {
+                                   preferences_target: "autoTimeZoneToggle",
+                                   action: "change->preferences#handleAutoTimeZoneChange"
+                                 }
+                               },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+          <%= form.hidden_field :time_zone, value: @user.time_zone, data: { preferences_target: "autoTimeZoneValue" } %>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Time zone</p>
+          <p class="notae-pref-description">Choose your time zone for timestamps and time-based greetings.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :time_zone,
+                          options_for_select(User.time_zone_options, @user.time_zone),
+                          {},
+                          class: "notae-pref-select",
+                          disabled: @user.auto_time_zone?,
+                          onchange: "this.form.requestSubmit()" %>
+          <% unless @user.auto_time_zone? %>
+            <%= form.hidden_field :auto_time_zone, value: "0" %>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Desktop app</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Open links in new browser window</p>
+          <p class="notae-pref-description">External links open in a new tab/window by default.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :open_links_in_desktop_app,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Open desktop app <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Directly opening the native app from web is not wired yet.</p>
+        </div>
+        <div class="notae-pref-control-form">
+          <button type="button" class="notae-pref-select" disabled>Open desktop app</button>
+        </div>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Open on start</p>
+          <p class="notae-pref-description">Choose whether to open Home page (default) or last page visited.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :open_on_start_preference,
+                          options_for_select(User::OPEN_ON_START_OPTIONS, @user.open_on_start_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Privacy</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Cookie settings <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Granular cookie controls will be connected to runtime consent gates later.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :cookie_settings_preference,
+                          options_for_select(User::COOKIE_SETTINGS_OPTIONS, @user.cookie_settings_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Show my view history <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Visibility of viewing history will be respected when view-tracking is fully enabled.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :show_view_history,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Profile discoverability <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Controls who can discover your profile when inviting collaborators.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :profile_discoverability,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+    </section>
+  </div>
+</section>

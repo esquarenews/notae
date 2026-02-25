@@ -1,35 +1,38 @@
 <% content_for :title, "Search #{@workspace.name}" %>
 
-<section class="space-y-5">
-  <header class="space-y-2">
-    <p class="text-sm text-slate-500">
-      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %>
+<section class="notae-workspace-home notae-utility-page">
+  <header class="notae-utility-header">
+    <p class="notae-utility-workspace">
+      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "notae-utility-workspace-link" %>
     </p>
-    <h1 class="text-3xl font-semibold tracking-tight">Search</h1>
+    <h1 class="notae-utility-title">Search</h1>
   </header>
 
-  <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "flex gap-2 rounded border border-slate-200 bg-white p-4" do |form| %>
-    <%= form.text_field :q, value: @query, placeholder: "Find pages, blocks, rows", class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
-    <%= form.submit "Search", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
+  <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search notae-utility-search-form" do |form| %>
+    <%= form.text_field :q,
+                        value: @query,
+                        placeholder: "Find pages, blocks, rows",
+                        class: "notae-auth-input notae-utility-input" %>
+    <%= form.submit "Search", class: "notae-auth-submit notae-utility-submit" %>
   <% end %>
 
   <% if @query.present? %>
-    <section class="space-y-2">
-      <p class="text-sm text-slate-600"><%= pluralize(@search_results.length, "result") %> for "<%= @query %>"</p>
+    <section class="notae-utility-section">
+      <p class="notae-utility-meta"><%= pluralize(@search_results.length, "result") %> for "<%= @query %>"</p>
       <% if @search_results.any? %>
-        <ul class="space-y-2">
+        <ul class="notae-workspace-home-list">
           <% @search_results.each do |result| %>
-            <li class="rounded border border-slate-200 bg-white px-3 py-2">
-              <div class="mb-1 flex items-center gap-2">
-                <span class="rounded bg-slate-100 px-2 py-0.5 text-xs uppercase tracking-wide text-slate-700"><%= result.kind %></span>
-                <%= link_to result.title, result.url, class: "text-sm font-medium underline" %>
+            <li class="notae-workspace-home-list-item notae-utility-result-item">
+              <div class="notae-utility-result-head">
+                <span class="notae-utility-kind"><%= result.kind %></span>
+                <%= link_to result.title, result.url, class: "notae-utility-link" %>
               </div>
-              <p class="text-sm text-slate-700"><%= result.excerpt %></p>
+              <p class="notae-utility-copy"><%= result.excerpt %></p>
             </li>
           <% end %>
         </ul>
       <% else %>
-        <p class="text-sm text-slate-600">No results found.</p>
+        <p class="notae-utility-empty">No results found.</p>
       <% end %>
     </section>
   <% end %>

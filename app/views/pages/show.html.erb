@@ -72,11 +72,26 @@
                   <% end %>
                 <% end %>
               </div>
-              <%= button_to "Random",
-                            page_path(workspace_slug: @workspace.slug, id: @page.id),
+              <div class="notae-cover-picker-quick-actions">
+                <%= button_to "Random",
+                              page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              method: :patch,
+                              params: { page: { cover_action: "random" } },
+                              class: "notae-cover-picker-action" %>
+                <%= button_to "Remove",
+                              page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              method: :patch,
+                              params: { page: { cover_action: "clear" } },
+                              class: "notae-cover-picker-action is-danger" %>
+              </div>
+              <%= form_with model: @page,
+                            url: page_path(workspace_slug: @workspace.slug, id: @page.id),
                             method: :patch,
-                            params: { page: { cover_action: "random" } },
-                            class: "notae-cover-picker-random" %>
+                            class: "notae-cover-picker-upload-form" do |form| %>
+                <%= hidden_field_tag "page[cover_action]", "upload" %>
+                <%= form.file_field :cover_image, accept: "image/*", class: "notae-cover-picker-upload-input" %>
+                <%= form.submit "Upload", class: "notae-cover-picker-action" %>
+              <% end %>
             </div>
           </details>
           <%= button_to "↑",

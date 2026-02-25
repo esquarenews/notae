@@ -73,78 +73,83 @@
     </div>
   </div>
 
-  <nav class="notae-sidebar-nav">
-    <%= link_to "Search",
-                (workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
-                class: notae_sidebar_link_classes(workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
-                data: { action: "click->shell#close" } %>
-    <%= link_to "Home",
-                (workspace ? workspace_path(workspace.slug) : root_path),
-                class: notae_sidebar_link_classes(workspace ? workspace_path(workspace.slug) : root_path),
-                data: { action: "click->shell#close" } %>
-    <% if workspace %>
-      <%= link_to "Notifications",
-                  workspace_notifications_path(workspace_slug: workspace.slug),
-                  class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: workspace.slug)),
+  <div class="notae-sidebar-scroll">
+    <nav class="notae-sidebar-nav">
+      <%= link_to "Search",
+                  (workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
+                  class: notae_sidebar_link_classes(workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
                   data: { action: "click->shell#close" } %>
-    <% end %>
-  </nav>
-
-  <section class="notae-sidebar-section">
-    <p class="notae-sidebar-label">Workspaces</p>
-    <% if ui_workspaces.any? %>
-      <ul class="notae-sidebar-list">
-        <% ui_workspaces.each do |item| %>
-          <li>
-            <%= link_to item.name,
-                        workspace_path(item.slug),
-                        class: notae_sidebar_link_classes(workspace_path(item.slug), active: workspace&.id == item.id),
-                        data: { action: "click->shell#close" } %>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="notae-sidebar-empty">No workspaces yet.</p>
-    <% end %>
-  </section>
-
-  <% if workspace %>
-    <section class="notae-sidebar-section">
-      <p class="notae-sidebar-label">Private</p>
-      <%= render partial: "shared/page_tree",
-                 locals: {
-                   pages_by_parent: ui_sidebar_pages_by_parent,
-                   parent_id: nil,
-                   workspace: workspace
-                 } %>
-      <% if policy(Page.new(workspace: workspace)).create? %>
-        <%= form_with model: Page.new, url: pages_path(workspace_slug: workspace.slug), class: "mt-2" do |form| %>
-          <%= form.text_field :title, placeholder: "Add new page", class: "notae-sidebar-input" %>
-        <% end %>
+      <%= link_to "Home",
+                  (workspace ? workspace_path(workspace.slug) : root_path),
+                  class: notae_sidebar_link_classes(workspace ? workspace_path(workspace.slug) : root_path),
+                  data: { action: "click->shell#close" } %>
+      <% if workspace %>
+        <%= link_to "Notifications",
+                    workspace_notifications_path(workspace_slug: workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: workspace.slug)),
+                    data: { action: "click->shell#close" } %>
       <% end %>
-    </section>
+    </nav>
 
     <section class="notae-sidebar-section">
-      <p class="notae-sidebar-label">Databases</p>
-      <% if ui_sidebar_databases.any? %>
+      <p class="notae-sidebar-label">Workspaces</p>
+      <% if ui_workspaces.any? %>
         <ul class="notae-sidebar-list">
-          <% ui_sidebar_databases.each do |db| %>
+          <% ui_workspaces.each do |item| %>
             <li>
-              <%= link_to db.name,
-                          database_path(workspace_slug: workspace.slug, id: db.id),
-                          class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: db.id)),
+              <%= link_to item.name,
+                          workspace_path(item.slug),
+                          class: notae_sidebar_link_classes(workspace_path(item.slug), active: workspace&.id == item.id),
                           data: { action: "click->shell#close" } %>
             </li>
           <% end %>
         </ul>
       <% else %>
-        <p class="notae-sidebar-empty">No databases yet.</p>
+        <p class="notae-sidebar-empty">No workspaces yet.</p>
       <% end %>
     </section>
-  <% end %>
+
+    <% if workspace %>
+      <section class="notae-sidebar-section">
+        <p class="notae-sidebar-label">Private</p>
+        <%= render partial: "shared/page_tree",
+                   locals: {
+                     pages_by_parent: ui_sidebar_pages_by_parent,
+                     parent_id: nil,
+                     workspace: workspace
+                   } %>
+        <% if policy(Page.new(workspace: workspace)).create? %>
+          <%= form_with model: Page.new, url: pages_path(workspace_slug: workspace.slug), class: "mt-2" do |form| %>
+            <%= form.text_field :title, placeholder: "Add new page", class: "notae-sidebar-input" %>
+          <% end %>
+        <% end %>
+      </section>
+
+      <section class="notae-sidebar-section">
+        <p class="notae-sidebar-label">Databases</p>
+        <% if ui_sidebar_databases.any? %>
+          <ul class="notae-sidebar-list">
+            <% ui_sidebar_databases.each do |db| %>
+              <li>
+                <%= link_to db.name,
+                            database_path(workspace_slug: workspace.slug, id: db.id),
+                            class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: db.id)),
+                            data: { action: "click->shell#close" } %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="notae-sidebar-empty">No databases yet.</p>
+        <% end %>
+      </section>
+    <% end %>
+  </div>
 
   <div class="notae-sidebar-footer">
-    <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Settings</a>
+    <%= link_to "Settings",
+                (workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path),
+                class: "notae-sidebar-link",
+                data: { action: "click->shell#close" } %>
     <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Marketplace</a>
     <a href="#" class="notae-sidebar-link" data-action="click->shell#close">Trash</a>
     <%= button_to "Sign out",

@@ -1,15 +1,15 @@
 <% content_for :title, @workspace.name %>
 
-<section class="notae-stack-lg">
-  <header class="notae-page-header">
+<section class="notae-workspace-home">
+  <header class="notae-workspace-home-hero">
     <p class="notae-page-subtle">Workspace home</p>
-    <h1>Good morning</h1>
+    <h1><%= @time_greeting %></h1>
     <p class="notae-page-subtle"><%= @workspace.name %> · <%= @workspace.slug %></p>
   </header>
 
-  <section class="notae-surface">
-    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "flex flex-wrap gap-2" do |form| %>
-      <%= form.text_field :q, placeholder: "Search pages, blocks, and rows", class: "min-w-[260px] flex-1 rounded border border-stone-300 px-3 py-2 text-sm" %>
+  <section class="notae-auth-card notae-home-card">
+    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search" do |form| %>
+      <%= form.text_field :q, placeholder: "Search pages, blocks, and rows", class: "notae-auth-input" %>
       <%= form.submit "Search", class: "notae-chip-button" %>
       <%= link_to "Notifications (#{@unread_notifications_count})",
                   workspace_notifications_path(workspace_slug: @workspace.slug),
@@ -17,28 +17,14 @@
     <% end %>
   </section>
 
-  <section class="notae-surface">
-    <h2 class="mb-3 text-xl font-semibold">Recently visited</h2>
-    <% if @pages.any? %>
-      <div class="notae-card-grid">
-        <% @pages.first(6).each do |page| %>
-          <%= link_to page_path(workspace_slug: @workspace.slug, id: page.id), class: "notae-card" do %>
-            <strong><%= page.title %></strong>
-            <span class="text-xs text-stone-500">Page</span>
-          <% end %>
-        <% end %>
-      </div>
-    <% else %>
-      <p class="text-sm text-stone-500">No pages yet.</p>
-    <% end %>
-  </section>
-
-  <section class="grid gap-4 lg:grid-cols-2">
+  <section class="notae-workspace-home-grid">
     <% if policy(Page.new(workspace: @workspace)).create? %>
-      <div class="notae-surface">
-        <h3 class="mb-2 text-base font-semibold">Create page</h3>
-        <%= form_with model: @new_page, url: pages_path(workspace_slug: @workspace.slug), class: "space-y-2" do |form| %>
-          <%= form.text_field :title, placeholder: "New page title", required: true, class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
+      <div class="notae-auth-card notae-home-card">
+        <div class="notae-home-card-head">
+          <h2>Create page</h2>
+        </div>
+        <%= form_with model: @new_page, url: pages_path(workspace_slug: @workspace.slug), class: "notae-workspace-home-stack" do |form| %>
+          <%= form.text_field :title, placeholder: "New page title", required: true, class: "notae-auth-input" %>
           <%= form.hidden_field :parent_page_id %>
           <%= form.submit "Create page", class: "notae-chip-button" %>
         <% end %>
@@ -46,46 +32,85 @@
     <% end %>
 
     <% if policy(Database.new(workspace: @workspace)).create? %>
-      <div class="notae-surface">
-        <h3 class="mb-2 text-base font-semibold">Create database</h3>
-        <%= form_with model: @new_database, url: databases_path(workspace_slug: @workspace.slug), class: "space-y-2" do |form| %>
-          <%= form.text_field :name, placeholder: "New database name", required: true, class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
+      <div class="notae-auth-card notae-home-card">
+        <div class="notae-home-card-head">
+          <h2>Create database</h2>
+        </div>
+        <%= form_with model: @new_database, url: databases_path(workspace_slug: @workspace.slug), class: "notae-workspace-home-stack" do |form| %>
+          <%= form.text_field :name, placeholder: "New database name", required: true, class: "notae-auth-input" %>
           <%= form.submit "Create database", class: "notae-chip-button" %>
         <% end %>
       </div>
     <% end %>
   </section>
 
-  <section class="notae-surface">
-    <h2 class="mb-3 text-xl font-semibold">Databases</h2>
-    <% if @databases.any? %>
-      <div class="notae-card-grid">
-        <% @databases.each do |database| %>
-          <%= link_to database_path(workspace_slug: @workspace.slug, id: database.id), class: "notae-card" do %>
-            <strong><%= database.name %></strong>
-            <span class="text-xs text-stone-500">Table view</span>
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Pages</h2>
+    </div>
+    <% if @pages.any? %>
+      <div class="notae-workspace-page-grid">
+        <% @pages.first(8).each do |page| %>
+          <%= link_to page_path(workspace_slug: @workspace.slug, id: page.id), class: "notae-workspace-page-card" do %>
+            <div class="notae-workspace-page-card-cover">
+              <% if page.cover_image.attached? %>
+                <%= image_tag page.cover_image, class: "notae-workspace-page-card-cover-image" %>
+              <% elsif (cover_asset = page_cover_asset_path(page.cover_preset_key)).present? %>
+                <div class="notae-workspace-page-card-cover-preset"
+                     style="background-image: url('<%= asset_path(cover_asset) %>');"></div>
+              <% else %>
+                <div class="notae-workspace-page-card-cover-fallback"></div>
+              <% end %>
+            </div>
+            <div class="notae-workspace-page-card-body">
+              <span class="notae-workspace-page-card-icon"><%= page.icon.presence || "📄" %></span>
+              <div class="notae-workspace-page-card-text">
+                <strong><%= page.title %></strong>
+                <span>Page</span>
+              </div>
+            </div>
           <% end %>
         <% end %>
       </div>
     <% else %>
-      <p class="text-sm text-stone-500">No databases yet.</p>
+      <p class="notae-page-subtle">No pages yet.</p>
     <% end %>
   </section>
 
-  <section class="notae-surface">
-    <h2 class="mb-3 text-xl font-semibold">Members</h2>
-    <ul class="space-y-2">
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Databases</h2>
+    </div>
+    <% if @databases.any? %>
+      <div class="notae-workspace-home-link-grid">
+        <% @databases.each do |database| %>
+          <%= link_to database_path(workspace_slug: @workspace.slug, id: database.id), class: "notae-home-workspace-item" do %>
+            <strong><%= database.name %></strong>
+            <span>Table view</span>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="notae-page-subtle">No databases yet.</p>
+    <% end %>
+  </section>
+
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Members</h2>
+    </div>
+    <ul class="notae-workspace-home-list">
       <% @memberships.each do |membership| %>
-        <li class="rounded border border-stone-200 bg-white px-3 py-2 text-sm">
-          <div class="flex flex-wrap items-center justify-between gap-3">
+        <li class="notae-workspace-home-list-item">
+          <div class="notae-workspace-home-list-row">
             <div>
               <strong><%= membership.user.email %></strong>
-              <span class="ml-2 rounded bg-stone-100 px-2 py-0.5 text-xs uppercase tracking-wide text-stone-600"><%= membership.role %></span>
+              <span class="notae-workspace-home-role-badge"><%= membership.role %></span>
             </div>
 
             <% if policy(membership).update? %>
-              <%= form_with model: membership, url: membership_path(workspace_slug: @workspace.slug, id: membership.id), method: :patch, class: "inline-flex items-center gap-2" do |form| %>
-                <%= form.select :role, Membership.roles.keys.map { |role| [role.titleize, role] }, {}, class: "rounded border border-stone-300 px-2 py-1 text-xs" %>
+              <%= form_with model: membership, url: membership_path(workspace_slug: @workspace.slug, id: membership.id), method: :patch, class: "notae-workspace-home-inline-form" do |form| %>
+                <%= form.select :role, Membership.roles.keys.map { |role| [role.titleize, role] }, {}, class: "notae-auth-input notae-workspace-home-select" %>
                 <%= form.submit "Change", class: "notae-chip-button" %>
               <% end %>
             <% end %>
@@ -96,24 +121,28 @@
   </section>
 
   <% if @can_invite %>
-    <section class="notae-surface">
-      <h2 class="mb-3 text-xl font-semibold">Invite people</h2>
-      <%= form_with model: @invitation, url: workspace_invitations_path(workspace_slug: @workspace.slug), class: "grid gap-3 md:grid-cols-[1fr_auto_auto]" do |form| %>
-        <%= form.email_field :email, placeholder: "teammate@example.com", required: true, class: "rounded border border-stone-300 px-3 py-2 text-sm" %>
-        <%= form.select :role, Invitation.roles.keys.map { |role| [role.titleize, role] }, { selected: "guest" }, class: "rounded border border-stone-300 px-3 py-2 text-sm" %>
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Invite people</h2>
+      </div>
+      <%= form_with model: @invitation, url: workspace_invitations_path(workspace_slug: @workspace.slug), class: "notae-workspace-home-invite-form" do |form| %>
+        <%= form.email_field :email, placeholder: "teammate@example.com", required: true, class: "notae-auth-input" %>
+        <%= form.select :role, Invitation.roles.keys.map { |role| [role.titleize, role] }, { selected: "guest" }, class: "notae-auth-input notae-workspace-home-select" %>
         <%= form.submit "Send invite", class: "notae-chip-button" %>
       <% end %>
     </section>
   <% end %>
 
   <% if @audit_events.any? %>
-    <section class="notae-surface">
-      <h2 class="mb-3 text-xl font-semibold">Recent audit events</h2>
-      <ul class="space-y-2">
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Recent audit events</h2>
+      </div>
+      <ul class="notae-workspace-home-list">
         <% @audit_events.each do |event| %>
-          <li class="rounded border border-stone-200 bg-white px-3 py-2 text-sm">
+          <li class="notae-workspace-home-list-item">
             <div class="font-medium"><%= event.action.humanize %> by <%= event.actor.email %></div>
-            <div class="text-xs text-stone-500"><%= event.metadata.to_json %></div>
+            <div class="notae-workspace-home-json"><%= event.metadata.to_json %></div>
           </li>
         <% end %>
       </ul>

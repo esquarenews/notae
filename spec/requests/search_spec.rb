@@ -29,6 +29,9 @@ RSpec.describe "Search", type: :request do
     get workspace_search_path(workspace_slug: workspace.slug), params: { q: "alpha" }
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-utility-page")
+    expect(response.body).to include("notae-utility-search-form")
+    expect(response.body).to include("notae-utility-result-item")
     expect(response.body).to include("Page")
     expect(response.body).to include("Block")
     expect(response.body).to include("Row")

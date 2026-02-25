@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Emerald fade cover</title>
+  <desc id="desc">Single-tone emerald layers with gentle curves.</desc>
+  <defs>
+    <linearGradient id="green-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f4d45"/>
+      <stop offset="100%" stop-color="#1e6b5f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="320" fill="url(#green-bg)"/>
+  <path d="M0 118C190 160 360 88 620 122C900 160 1040 208 1600 152V320H0Z" fill="#4f8f7e" opacity="0.35"/>
+  <path d="M0 182C250 146 420 230 700 204C990 176 1160 126 1600 188V320H0Z" fill="#78ad9c" opacity="0.28"/>
+  <path d="M0 250C220 220 430 266 710 238C980 210 1230 220 1600 250V320H0Z" fill="#a2c7bb" opacity="0.2"/>
+  <ellipse cx="300" cy="72" rx="120" ry="30" fill="#ddf3e9" opacity="0.14"/>
+</svg>
+

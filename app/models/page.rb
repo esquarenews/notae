@@ -7,6 +7,14 @@ class Page < ApplicationRecord
     basalt-ink
     citrus-wave
     dawn-grid
+    neon-tiles
+    coral-bloom
+    midnight-fog
+    mono-mist
+    sunset-ribbon
+    emerald-fade
+    prism-burst
+    graphite-strata
   ].freeze
   FONT_STYLES = %w[default serif mono].freeze
   ICON_SUGGESTIONS = %w[📄 ✨ 🧠 📝 📌 🧭 🚀 🗂️ 🌿 🌅].freeze

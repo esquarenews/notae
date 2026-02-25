@@ -1,54 +1,54 @@
 <% content_for :title, "Notifications #{@workspace.name}" %>
 
-<section class="space-y-5">
+<section class="notae-workspace-home notae-utility-page">
   <% unread_count = @notifications.count { |notification| notification.read_at.nil? } %>
-  <header class="space-y-1">
-    <p class="text-sm text-slate-500">
-      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %>
+  <header class="notae-utility-header">
+    <p class="notae-utility-workspace">
+      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "notae-utility-workspace-link" %>
     </p>
-    <h1 class="text-3xl font-semibold tracking-tight">Notifications</h1>
-    <p class="text-sm text-slate-600">Unread: <%= unread_count %></p>
+    <h1 class="notae-utility-title">Notifications</h1>
+    <p class="notae-utility-meta">Unread: <%= unread_count %></p>
   </header>
 
   <% if @notifications.any? %>
-    <ul class="space-y-2">
+    <ul class="notae-workspace-home-list">
       <% @notifications.each do |notification| %>
-        <li class="rounded border border-slate-200 bg-white px-3 py-2 text-sm">
-          <div class="mb-1 flex items-center justify-between gap-2">
-            <span class="font-medium">
+        <li class="notae-workspace-home-list-item notae-utility-notification-item">
+          <div class="notae-utility-result-head">
+            <span class="notae-utility-link">
               <%= notification.actor.email %> mentioned you
             </span>
             <% if notification.read_at.nil? %>
-              <span class="rounded bg-sky-100 px-2 py-0.5 text-xs text-sky-700">Unread</span>
+              <span class="notae-utility-kind">Unread</span>
             <% end %>
           </div>
 
           <% if notification.notifiable.is_a?(Comment) %>
-            <p class="mb-2 whitespace-pre-wrap text-slate-700"><%= notification.notifiable.body %></p>
+            <p class="notae-utility-copy"><%= notification.notifiable.body %></p>
             <% commentable = notification.notifiable.commentable %>
             <% if commentable.is_a?(Page) %>
               <%= link_to "Open page",
                           page_path(workspace_slug: @workspace.slug, id: commentable.id),
-                          class: "text-xs underline" %>
+                          class: "notae-utility-link notae-utility-mini-link" %>
             <% elsif commentable.is_a?(Block) %>
               <%= link_to "Open block",
                           page_path(workspace_slug: @workspace.slug, id: commentable.page_id, anchor: "block_#{commentable.id}"),
-                          class: "text-xs underline" %>
+                          class: "notae-utility-link notae-utility-mini-link" %>
             <% end %>
           <% end %>
 
           <% if notification.read_at.nil? %>
-            <div class="mt-2">
+            <div class="notae-utility-action-row">
               <%= button_to "Mark as read",
                             read_workspace_notification_path(workspace_slug: @workspace.slug, id: notification.id),
                             method: :patch,
-                            class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
+                            class: "notae-chip-button notae-utility-mini-button" %>
             </div>
           <% end %>
         </li>
       <% end %>
     </ul>
   <% else %>
-    <p class="text-sm text-slate-600">No notifications yet.</p>
+    <p class="notae-utility-empty">No notifications yet.</p>
   <% end %>
 </section>

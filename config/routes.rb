@@ -15,6 +15,12 @@ Rails.application.routes.draw do
   scope "w/:workspace_slug" do
     get "/", to: "workspace_home#show", as: :workspace
     get "search", to: "searches#index", as: :workspace_search
+    get "settings/preferences", to: "preferences#show", as: :workspace_preferences
+    patch "settings/preferences", to: "preferences#update"
+    get "settings/connections", to: "connection_settings#show", as: :workspace_connection_settings
+    patch "settings/connections", to: "connection_settings#update"
+    get "settings/notifications", to: "notification_settings#show", as: :workspace_notification_settings
+    patch "settings/notifications", to: "notification_settings#update"
     get "notifications", to: "notifications#index", as: :workspace_notifications
     patch "notifications/:id/read", to: "notifications#mark_read", as: :read_workspace_notification
     post "invitations", to: "invitations#create", as: :workspace_invitations

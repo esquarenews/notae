@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Prism burst cover</title>
+  <desc id="desc">High-saturation radial burst with layered rainbow polygons.</desc>
+  <defs>
+    <radialGradient id="burst" cx="54%" cy="44%" r="68%">
+      <stop offset="0%" stop-color="#fff5c4"/>
+      <stop offset="18%" stop-color="#ffd166"/>
+      <stop offset="38%" stop-color="#ff6b6b"/>
+      <stop offset="58%" stop-color="#8b5cf6"/>
+      <stop offset="78%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0b1022"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="320" fill="#10152d"/>
+  <rect width="1600" height="320" fill="url(#burst)" opacity="0.9"/>
+  <polygon points="220,320 600,40 900,320" fill="#f97316" opacity="0.22"/>
+  <polygon points="540,320 900,50 1240,320" fill="#3b82f6" opacity="0.2"/>
+  <polygon points="860,320 1200,70 1520,320" fill="#d946ef" opacity="0.18"/>
+  <circle cx="770" cy="120" r="88" fill="#ffffff" opacity="0.12"/>
+</svg>
+

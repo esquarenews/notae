@@ -53,4 +53,21 @@ module ApplicationHelper
 
     "page_covers/#{cover_preset_key}.svg"
   end
+
+  def notae_theme_body_class
+    return "notae-theme-light" unless user_signed_in?
+
+    case current_user.theme_preference
+    when "dark"
+      "notae-theme-dark"
+    when "system"
+      "notae-theme-system"
+    else
+      "notae-theme-light"
+    end
+  end
+
+  def format_date_mention(date:, preference:)
+    DateMentions::Formatter.format(date: date, preference: preference)
+  end
 end

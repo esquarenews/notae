@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Sunset ribbon cover</title>
+  <desc id="desc">Vivid magenta, orange, and violet ribbons sweeping across the cover.</desc>
+  <defs>
+    <linearGradient id="sunset-bg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a124b"/>
+      <stop offset="50%" stop-color="#4b1f64"/>
+      <stop offset="100%" stop-color="#1f2a66"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="320" fill="url(#sunset-bg)"/>
+  <path d="M0 98C200 46 360 160 590 116C830 70 970 24 1180 78C1340 118 1460 136 1600 112V0H0Z" fill="#ff7b54" opacity="0.72"/>
+  <path d="M0 170C220 120 420 214 690 180C980 142 1200 86 1600 168V320H0Z" fill="#ff4fa3" opacity="0.56"/>
+  <path d="M0 248C260 220 510 284 780 248C1030 214 1310 230 1600 262V320H0Z" fill="#7c5cff" opacity="0.5"/>
+  <circle cx="1240" cy="78" r="60" fill="#ffd5a8" opacity="0.2"/>
+</svg>
+

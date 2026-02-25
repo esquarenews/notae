@@ -26,7 +26,9 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="notae-theme">
+  <body class="notae-theme <%= notae_theme_body_class %>"
+        data-controller="<%= "link-preferences" if user_signed_in? %>"
+        data-link-preferences-open-links-in-new-window-value="<%= user_signed_in? ? current_user.open_links_in_desktop_app? : false %>">
     <% if user_signed_in? %>
       <div class="notae-shell" data-controller="shell global-shortcuts">
         <button type="button" class="notae-mobile-overlay" data-action="click->shell#close" aria-label="Close sidebar"></button>
@@ -54,7 +56,7 @@
             </div>
           </header>
 
-          <main class="notae-content <%= content_for?(:content_class) ? yield(:content_class) : "" %>">
+          <main class="notae-content notae-content-scroll <%= content_for?(:content_class) ? yield(:content_class) : "" %>">
             <% flash.each do |type, message| %>
               <% palette = type.to_s == "alert" ? "notae-flash alert" : "notae-flash notice" %>
               <p class="<%= palette %>"><%= message %></p>

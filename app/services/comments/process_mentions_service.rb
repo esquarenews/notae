@@ -16,7 +16,7 @@ module Comments
         next unless user
         next if user.id == comment.author_id
 
-        Notification.find_or_create_by!(
+        notification = Notification.find_or_create_by!(
           workspace_id: comment.workspace_id,
           recipient_id: user.id,
           actor_id: comment.author_id,
@@ -30,12 +30,21 @@ module Comments
             commentable_id: comment.commentable_id
           }
         end
+
+        deliver_mention_email(user: user, notification: notification)
       end
     end
 
     private
 
     attr_reader :comment
+
+    def deliver_mention_email(user:, notification:)
+      return unless notification.previously_new_record?
+      return unless user.email_notify_activity?
+
+      NotificationMailer.with(notification: notification).mention_notification.deliver_later
+    end
 
     def mention_emails
       comment.body.to_s.scan(MENTION_PATTERN).flatten.uniq

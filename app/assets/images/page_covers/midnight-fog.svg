@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Midnight fog cover</title>
+  <desc id="desc">Single-tone navy gradients with atmospheric haze bands.</desc>
+  <defs>
+    <linearGradient id="night" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f1f3a"/>
+      <stop offset="100%" stop-color="#162847"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="320" fill="url(#night)"/>
+  <path d="M0 110C170 70 320 145 520 125C760 100 980 40 1600 95V320H0Z" fill="#2a436a" opacity="0.45"/>
+  <path d="M0 160C200 128 430 210 700 176C1010 138 1200 122 1600 168V320H0Z" fill="#375982" opacity="0.32"/>
+  <path d="M0 215C230 178 390 246 670 218C970 188 1250 206 1600 230V320H0Z" fill="#4d6d93" opacity="0.25"/>
+  <ellipse cx="260" cy="78" rx="160" ry="40" fill="#cdd6e4" opacity="0.08"/>
+  <ellipse cx="1080" cy="56" rx="210" ry="45" fill="#cdd6e4" opacity="0.06"/>
+</svg>
+

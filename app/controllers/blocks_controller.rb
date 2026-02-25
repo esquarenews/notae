@@ -145,7 +145,11 @@ class BlocksController < ApplicationController
     permitted = params.require(:block).permit(:block_type, :embed_url)
     if params[:block].key?(:content_json)
       raw_content = params[:block][:content_json]
-      permitted[:content_json] = raw_content.respond_to?(:to_unsafe_h) ? raw_content.to_unsafe_h : raw_content
+      content_json = raw_content.respond_to?(:to_unsafe_h) ? raw_content.to_unsafe_h : raw_content
+      permitted[:content_json] = DateMentions::Formatter.replace_in_content_json(
+        content_json: content_json,
+        preference: current_user.date_format_preference
+      )
     end
     permitted
   end

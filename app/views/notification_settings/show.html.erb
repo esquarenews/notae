@@ -1,0 +1,168 @@
+<% content_for :title, "Notifications settings" %>
+<% content_for :topbar_page_icon, "🔔" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :notifications %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>In-app notifications</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Join video conferencing and start transcribing <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Planned for meeting integrations. Preference is saved now.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :meeting_notify_join_transcribing,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Meeting is being transcribed <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Planned in-app meeting status events. Preference is saved now.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :meeting_notify_transcribed,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Meeting is being summarized <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Planned in-app summary lifecycle notifications. Preference is saved now.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :meeting_notify_summarized,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Slack notifications</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Slack notifications <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Slack delivery is planned; your preference is persisted now.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :slack_notification_preference,
+                          options_for_select(User::CHANNEL_NOTIFICATION_OPTIONS, @user.slack_notification_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Discord notifications</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Discord notifications <span class="notae-pref-future">Future implementation</span></p>
+          <p class="notae-pref-description">Discord delivery is planned; your preference is persisted now.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <%= form.select :discord_notification_preference,
+                          options_for_select(User::CHANNEL_NOTIFICATION_OPTIONS, @user.discord_notification_preference),
+                          {},
+                          class: "notae-pref-select",
+                          onchange: "this.form.requestSubmit()" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Email notifications</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Activity in my workspace</p>
+          <p class="notae-pref-description">Email notices for comments, mentions, invites, reminders, and access requests.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :email_notify_activity,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Always send email notifications</p>
+          <p class="notae-pref-description">Send workspace emails even while active in Notae.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :email_notify_always_send,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Page updates</p>
+          <p class="notae-pref-description">Digest emails for followed and owned pages.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :email_notify_page_updates,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Workspace digest</p>
+          <p class="notae-pref-description">Digest emails about workspace activity summaries.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :email_notify_workspace_digest,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+    </section>
+  </div>
+</section>

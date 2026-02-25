@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_25_143000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_25_175000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -384,12 +384,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_143000) do
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "auto_time_zone", default: true, null: false
+    t.string "cookie_settings_preference", default: "customize", null: false
     t.datetime "created_at", null: false
+    t.string "date_format_preference", default: "relative", null: false
+    t.string "discord_notification_preference", default: "off", null: false
     t.string "email", default: "", null: false
+    t.boolean "email_notify_activity", default: true, null: false
+    t.boolean "email_notify_always_send", default: false, null: false
+    t.boolean "email_notify_page_updates", default: true, null: false
+    t.boolean "email_notify_workspace_digest", default: true, null: false
     t.string "encrypted_password", default: "", null: false
+    t.string "language_preference", default: "en-US", null: false
+    t.boolean "meeting_notify_join_transcribing", default: false, null: false
+    t.boolean "meeting_notify_summarized", default: false, null: false
+    t.boolean "meeting_notify_transcribed", default: true, null: false
+    t.boolean "open_links_in_desktop_app", default: true, null: false
+    t.string "open_on_start_preference", default: "workspace_home", null: false
+    t.boolean "profile_discoverability", default: true, null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
+    t.boolean "show_text_direction_controls", default: false, null: false
+    t.boolean "show_view_history", default: true, null: false
+    t.string "slack_notification_preference", default: "off", null: false
+    t.boolean "start_week_on_monday", default: true, null: false
+    t.string "theme_preference", default: "light", null: false
+    t.string "time_zone", default: "UTC", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true

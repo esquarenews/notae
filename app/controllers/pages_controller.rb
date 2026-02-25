@@ -6,6 +6,7 @@ class PagesController < ApplicationController
 
   def show
     authorize @page
+    remember_last_page_visit!
 
     @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
     @pages = policy_scope(Page).for_workspace(@workspace).active.order(:created_at).to_a
@@ -253,5 +254,12 @@ class PagesController < ApplicationController
     query[:actions_menu] = "open" if params[:actions_menu].to_s == "open"
     query[:options_menu] = "open" if params[:options_menu].to_s == "open"
     query
+  end
+
+  def remember_last_page_visit!
+    store = session["notae_last_page_visits"]
+    store = {} unless store.is_a?(Hash)
+    store[@workspace.id.to_s] = @page.id.to_s
+    session["notae_last_page_visits"] = store
   end
 end

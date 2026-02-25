@@ -10,6 +10,7 @@ class ApplicationController < ActionController::Base
   before_action :set_paper_trail_whodunnit
   before_action :set_unread_notifications_count
   before_action :ensure_realtime_channel_loaded
+  around_action :use_user_time_zone
   after_action :verify_pundit_authorization, unless: :devise_controller?
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
@@ -38,5 +39,15 @@ class ApplicationController < ActionController::Base
 
     load Rails.root.join("app/channels/application_cable/channel.rb").to_s unless defined?(::ApplicationCable::Channel)
     load Rails.root.join("app/channels/page_channel.rb").to_s
+  end
+
+  def use_user_time_zone(&block)
+    return yield unless user_signed_in?
+
+    zone_name = current_user.time_zone.presence
+    zone = zone_name && ActiveSupport::TimeZone[zone_name]
+    return yield unless zone
+
+    Time.use_zone(zone, &block)
   end
 end

@@ -100,6 +100,9 @@ RSpec.describe "Pages", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-sidebar-scroll")
+    expect(response.body).to include("notae-content-scroll")
+    expect(response.body).to include("notae-ai-rail")
     expect(response.body).to include("Quick switcher")
     expect(response.body).to include("Keyboard shortcuts")
     expect(response.body).to include("Cmd/Ctrl + K")

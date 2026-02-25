@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" role="img" aria-labelledby="title desc">
+  <title id="title">Neon tiles cover</title>
+  <desc id="desc">Bright geometric tiles in pink, cyan, orange, and violet.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#151527"/>
+      <stop offset="100%" stop-color="#0a0a14"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="320" fill="url(#bg)"/>
+  <rect x="0" y="0" width="220" height="160" fill="#6ee7ff" opacity="0.9"/>
+  <rect x="220" y="0" width="260" height="160" fill="#ff4fa3" opacity="0.88"/>
+  <rect x="480" y="0" width="180" height="160" fill="#ffd166" opacity="0.9"/>
+  <rect x="660" y="0" width="260" height="160" fill="#8b5cf6" opacity="0.85"/>
+  <rect x="920" y="0" width="300" height="160" fill="#00d4ff" opacity="0.84"/>
+  <rect x="1220" y="0" width="380" height="160" fill="#ff8c42" opacity="0.8"/>
+  <rect x="0" y="160" width="300" height="160" fill="#f43f5e" opacity="0.7"/>
+  <rect x="300" y="160" width="220" height="160" fill="#22c55e" opacity="0.7"/>
+  <rect x="520" y="160" width="280" height="160" fill="#3b82f6" opacity="0.68"/>
+  <rect x="800" y="160" width="200" height="160" fill="#f97316" opacity="0.72"/>
+  <rect x="1000" y="160" width="240" height="160" fill="#e879f9" opacity="0.68"/>
+  <rect x="1240" y="160" width="360" height="160" fill="#14b8a6" opacity="0.66"/>
+  <circle cx="240" cy="78" r="54" fill="#ffffff" opacity="0.12"/>
+  <circle cx="1010" cy="242" r="74" fill="#ffffff" opacity="0.1"/>
+  <circle cx="1430" cy="102" r="48" fill="#ffffff" opacity="0.09"/>
+</svg>

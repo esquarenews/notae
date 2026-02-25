@@ -1,37 +1,47 @@
 <% content_for :title, "Notae" %>
 
-<section class="notae-stack-lg">
-  <header class="notae-page-header">
-    <p class="notae-page-subtle">Workspace starter</p>
-    <h1>Welcome to Notae</h1>
-    <p class="notae-page-subtle">Capture ideas, keep docs nested, and manage tables in one calm workspace.</p>
-  </header>
-
-  <% if user_signed_in? %>
-    <section class="notae-surface">
-      <div class="mb-4 flex items-center justify-between gap-3">
-        <h2 class="text-xl font-semibold">Your workspaces</h2>
-        <%= link_to "New Workspace", new_workspace_path, class: "notae-chip-button" %>
+<% if user_signed_in? %>
+  <section class="notae-home-page">
+    <header class="notae-auth-brand notae-home-brand">
+      <%= image_tag "/icon.svg", alt: "Notae icon", class: "notae-auth-brand-icon" %>
+      <div>
+        <h1>Notae</h1>
+        <p>Welcome back, <%= current_user.email %>.</p>
       </div>
-      <p class="mb-3 text-sm text-stone-600">Signed in as <%= current_user.email %></p>
+    </header>
+
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Your workspaces</h2>
+        <%= link_to "New workspace", new_workspace_path, class: "notae-chip-button" %>
+      </div>
 
       <% if @workspaces.any? %>
-        <div class="notae-card-grid">
+        <div class="notae-home-workspace-list">
           <% @workspaces.each do |workspace| %>
-            <%= link_to workspace_path(workspace.slug), class: "notae-card" do %>
+            <%= link_to workspace_path(workspace.slug), class: "notae-home-workspace-item" do %>
               <strong><%= workspace.name %></strong>
-              <span class="text-xs text-stone-500"><%= workspace.slug %></span>
+              <span><%= workspace.slug %></span>
             <% end %>
           <% end %>
         </div>
       <% else %>
-        <p class="text-sm text-stone-500">No workspaces yet.</p>
+        <p class="notae-page-subtle">No workspaces yet.</p>
       <% end %>
     </section>
-  <% else %>
-    <section class="notae-surface">
-      <p class="mb-3 text-stone-700">Sign in to access your workspace.</p>
-      <%= link_to "Sign in", new_user_session_path, class: "notae-chip-button" %>
+  </section>
+<% else %>
+  <section class="notae-home-page">
+    <header class="notae-auth-brand notae-home-brand">
+      <%= image_tag "/icon.svg", alt: "Notae icon", class: "notae-auth-brand-icon" %>
+      <div>
+        <h1>Notae</h1>
+        <p>Sign in to continue to your workspace.</p>
+      </div>
+    </header>
+    <section class="notae-auth-card notae-home-card">
+      <p class="notae-page-subtle">Capture ideas, keep docs nested, and manage tables in one calm workspace.</p>
+      <%= link_to "Sign in", new_user_session_path, class: "notae-chip-button notae-auth-submit" %>
     </section>
-  <% end %>
-</section>
+  </section>
+<% end %>
