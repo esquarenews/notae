@@ -1,0 +1,82 @@
+require "rails_helper"
+
+RSpec.describe "Import settings", type: :request do
+  def uploaded_file(name, content)
+    file = Tempfile.new([ File.basename(name, ".*"), File.extname(name) ])
+    file.binmode
+    file.write(content)
+    file.rewind
+    Rack::Test::UploadedFile.new(file.path, "application/octet-stream", original_filename: name)
+  end
+
+  it "renders import settings with warning note about potential formatting loss" do
+    owner = User.create!(email: "import-settings-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Import settings", slug: "import-settings")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    get workspace_import_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Import")
+    expect(response.body).to include("Format warning")
+    expect(response.body).to include("some structure, styling")
+  end
+
+  it "imports uploaded files into pages" do
+    owner = User.create!(email: "import-settings-upload@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Import upload", slug: "import-upload")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    markdown = uploaded_file("notes.md", "# Sprint plan\n- Ship import flow\n- Add tests")
+    text = uploaded_file("summary.txt", "Plain summary paragraph")
+
+    expect do
+      post workspace_import_settings_path(workspace_slug: workspace.slug),
+           params: { import: { files: [ markdown, text ] } }
+    end.to change(Page, :count).by(2)
+
+    expect(response).to redirect_to(workspace_import_settings_path(workspace_slug: workspace.slug))
+    expect(workspace.pages.where(title: "notes")).to exist
+    expect(workspace.pages.where(title: "summary")).to exist
+  end
+
+  it "imports html and csv uploads into pages" do
+    owner = User.create!(email: "import-settings-html-csv@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Import html csv", slug: "import-html-csv")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    html = uploaded_file("overview.html", "<h1>Overview</h1><p>Content section</p>")
+    csv = uploaded_file("table.csv", "name,value\nalpha,1\nbeta,2\n")
+
+    expect do
+      post workspace_import_settings_path(workspace_slug: workspace.slug),
+           params: { import: { files: [ html, csv ] } }
+    end.to change(Page, :count).by(2)
+
+    expect(response).to redirect_to(workspace_import_settings_path(workspace_slug: workspace.slug))
+    expect(workspace.pages.where(title: "overview")).to exist
+    expect(workspace.pages.where(title: "table")).to exist
+  end
+
+  it "imports malformed pdf without crashing and creates a fallback page" do
+    owner = User.create!(email: "import-settings-pdf-fallback@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Import pdf fallback", slug: "import-pdf-fallback")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    pdf = uploaded_file("broken.pdf", "%PDF-not-really-a-valid-document")
+
+    expect do
+      post workspace_import_settings_path(workspace_slug: workspace.slug),
+           params: { import: { files: [ pdf ] } }
+    end.to change(Page, :count).by(1)
+
+    expect(response).to redirect_to(workspace_import_settings_path(workspace_slug: workspace.slug))
+    page = workspace.pages.order(created_at: :desc).first
+    expect(page.title).to eq("broken")
+    expect(page.blocks.first.content_json.to_s).to include("PDF")
+  end
+end

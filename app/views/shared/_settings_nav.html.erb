@@ -41,13 +41,13 @@
       <span>People</span>
     </span>
   <% end %>
-  <span class="notae-settings-nav-item is-disabled">
+  <%= link_to workspace_import_settings_path(workspace_slug: workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :import) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><rect x="4" y="17" width="16" height="4" rx="1"/></svg>
       <span>Import</span>
     </span>
-    <em>Future</em>
-  </span>
+  <% end %>
 
   <p class="notae-settings-nav-group">Features</p>
   <span class="notae-settings-nav-item is-disabled">

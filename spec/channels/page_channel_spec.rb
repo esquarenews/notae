@@ -52,4 +52,53 @@ RSpec.describe PageChannel, type: :channel do
     perform :editing_stop, { block_id: block.id }
     expect(presence.reload.editing_block_id).to be_nil
   end
+
+  it "does not broadcast snapshots on heartbeat when nothing changed" do
+    owner = User.create!(email: "channel-heartbeat-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Realtime heartbeat", slug: "realtime-heartbeat")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Realtime heartbeat page")
+
+    stub_connection current_user: owner
+    allow(ActionCable.server).to receive(:broadcast)
+
+    subscribe(workspace_slug: workspace.slug, page_id: page.id)
+    perform :heartbeat
+
+    expect(ActionCable.server).to have_received(:broadcast).exactly(2).times
+  end
+
+  it "broadcasts editing snapshot only for editing events" do
+    owner = User.create!(email: "channel-edit-broadcast-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Realtime edit broadcast", slug: "realtime-edit-broadcast")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Realtime edit broadcast page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+
+    stub_connection current_user: owner
+    allow(ActionCable.server).to receive(:broadcast)
+
+    subscribe(workspace_slug: workspace.slug, page_id: page.id)
+    perform :editing_start, { block_id: block.id }
+    perform :editing_stop, { block_id: block.id }
+
+    expect(ActionCable.server).to have_received(:broadcast).exactly(4).times
+  end
+
+  it "throttles rapid heartbeat events" do
+    owner = User.create!(email: "channel-heartbeat-throttle-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Realtime heartbeat throttle", slug: "realtime-heartbeat-throttle")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Realtime heartbeat throttle page")
+
+    stub_connection current_user: owner
+    subscribe(workspace_slug: workspace.slug, page_id: page.id)
+
+    allow(subscription).to receive(:touch_presence!).and_call_original
+
+    perform :heartbeat
+    perform :heartbeat
+
+    expect(subscription).to have_received(:touch_presence!).once
+  end
 end

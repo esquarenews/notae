@@ -23,6 +23,9 @@ gem "pundit"
 gem "pg_search"
 gem "paper_trail"
 gem "sidekiq"
+gem "csv"
+gem "pdf-reader"
+gem "rubyzip"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"

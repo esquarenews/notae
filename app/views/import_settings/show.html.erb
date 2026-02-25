@@ -1,0 +1,66 @@
+<% content_for :title, "Import" %>
+<% content_for :topbar_page_icon, "📥" %>
+<% content_for :topbar_privacy, "Workspace" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :import %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>Import</h2>
+
+      <div class="notae-import-intro">
+        <p class="notae-pref-description">Import data from your files or other apps into Notae.</p>
+        <p class="notae-import-warning">
+          Format warning: some structure, styling, embedded media, comments, and advanced layouts may be simplified or lost during import.
+        </p>
+      </div>
+
+      <%= form_with url: workspace_import_settings_path(workspace_slug: @workspace.slug),
+                    method: :post,
+                    class: "notae-import-dropzone-form",
+                    multipart: true do |form| %>
+        <div class="notae-import-dropzone">
+          <p class="notae-import-dropzone-title">Import your content to Notae</p>
+          <p class="notae-pref-description">Drag and drop ZIP, CSV, PDF, text, markdown, HTML, DOCX, or EPUB files.</p>
+          <%= form.file_field :files,
+                              multiple: true,
+                              accept: ".zip,.csv,.pdf,.txt,.md,.markdown,.html,.htm,.docx,.epub",
+                              class: "notae-import-file-input",
+                              name: "import[files][]" %>
+          <%= form.submit "Import files", class: "notae-chip-button" %>
+        </div>
+      <% end %>
+
+      <div class="notae-import-cards">
+        <article class="notae-import-card">
+          <h3>CSV</h3>
+          <p class="notae-pref-description">Structured data from spreadsheets.</p>
+        </article>
+        <article class="notae-import-card">
+          <h3>PDF</h3>
+          <p class="notae-pref-description">Extracted text from PDF documents.</p>
+        </article>
+        <article class="notae-import-card">
+          <h3>Text & Markdown</h3>
+          <p class="notae-pref-description">Plain and formatted notes.</p>
+        </article>
+        <article class="notae-import-card">
+          <h3>HTML</h3>
+          <p class="notae-pref-description">Web pages and structured content.</p>
+        </article>
+        <article class="notae-import-card">
+          <h3>Word (DOCX)</h3>
+          <p class="notae-pref-description">Document import with basic formatting.</p>
+        </article>
+        <article class="notae-import-card">
+          <h3>EPUB & ZIP</h3>
+          <p class="notae-pref-description">Books and archives converted into pages.</p>
+        </article>
+      </div>
+    </section>
+  </div>
+</section>

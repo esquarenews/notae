@@ -2,8 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { createConsumer } from "@rails/actioncable"
 
 const consumer = createConsumer()
-const HEARTBEAT_MS = 15000
-const EDITING_THROTTLE_MS = 1200
+const HEARTBEAT_MS = 30000
 
 export default class extends Controller {
   static targets = ["presence"]
@@ -15,7 +14,6 @@ export default class extends Controller {
 
   connect() {
     this.heartbeatTimer = null
-    this.lastEditingSentAt = 0
     this.lastEditingBlockId = null
     this.handleBlockEditingEvent = this.handleBlockEditingEvent.bind(this)
 
@@ -52,7 +50,7 @@ export default class extends Controller {
   startHeartbeat() {
     this.stopHeartbeat()
     this.heartbeatTimer = setInterval(() => {
-      if (this.subscription) {
+      if (this.subscription && !document.hidden) {
         this.subscription.perform("heartbeat")
       }
     }, HEARTBEAT_MS)
@@ -89,13 +87,9 @@ export default class extends Controller {
     if (!blockId) return
 
     if (active) {
-      const now = Date.now()
-      if (this.lastEditingBlockId === blockId && now - this.lastEditingSentAt < EDITING_THROTTLE_MS) {
-        return
-      }
+      if (this.lastEditingBlockId === blockId) return
 
       this.lastEditingBlockId = blockId
-      this.lastEditingSentAt = now
       this.subscription.perform("editing_start", { block_id: blockId })
       return
     }

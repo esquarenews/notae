@@ -21,6 +21,8 @@ Rails.application.routes.draw do
     delete "settings/general", to: "general_settings#destroy"
     get "settings/people", to: "people_settings#show", as: :workspace_people_settings
     patch "settings/people", to: "people_settings#update"
+    get "settings/import", to: "import_settings#show", as: :workspace_import_settings
+    post "settings/import", to: "import_settings#create"
     get "settings/preferences", to: "preferences#show", as: :workspace_preferences
     patch "settings/preferences", to: "preferences#update"
     get "settings/connections", to: "connection_settings#show", as: :workspace_connection_settings
