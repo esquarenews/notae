@@ -4,7 +4,7 @@
     <span>Actions</span>
   </summary>
 
-  <div class="notae-actions-panel" data-shell-actions-panel>
+  <div class="notae-actions-panel <%= "is-page-locked" if page.locked? %>" data-shell-actions-panel>
     <input type="search"
            class="notae-options-input notae-actions-search"
            placeholder="Search actions..."
@@ -12,6 +12,35 @@
            data-action="input->shell#filterActionsMenu">
 
     <textarea class="notae-actions-copy-buffer" data-shell-page-content><%= page_plain_text.presence || page.title %></textarea>
+
+    <section class="notae-actions-section is-lock-controls">
+      <% if page.locked? %>
+        <p class="notae-actions-locked-note">Page is locked. Other actions are unavailable.</p>
+      <% end %>
+      <div class="notae-actions-row <%= "is-disabled" unless can_manage_permissions %>"
+           data-shell-action-item
+           data-shell-action-terms="lock page unlock">
+        <% if can_manage_permissions %>
+          <%= form_with model: page,
+                        url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
+                        method: :patch,
+                        class: "notae-actions-inline-form" do |form| %>
+            <%= form.hidden_field :locked, value: (!page.locked?).to_s %>
+            <button type="submit" class="notae-actions-row-button">
+              <span class="notae-actions-row-icon"><%= page.locked? ? "🔓" : "🔒" %></span>
+              <span class="notae-actions-row-label"><%= page.locked? ? "Unlock page" : "Lock page" %></span>
+              <span class="notae-actions-switch <%= "is-on" if page.locked? %>"><span></span></span>
+            </button>
+          <% end %>
+        <% else %>
+          <button type="button" class="notae-actions-row-button" disabled>
+            <span class="notae-actions-row-icon"><%= page.locked? ? "🔓" : "🔒" %></span>
+            <span class="notae-actions-row-label"><%= page.locked? ? "Unlock page" : "Lock page" %></span>
+            <span class="notae-actions-switch <%= "is-on" if page.locked? %>"><span></span></span>
+          </button>
+        <% end %>
+      </div>
+    </section>
 
     <section class="notae-actions-section" data-shell-actions-section>
       <div class="notae-actions-font-grid">
@@ -134,35 +163,25 @@
         <% end %>
       </div>
 
+      <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="hide blocks reader mode">
+        <%= form_with model: page,
+                      url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
+                      method: :patch,
+                      class: "notae-actions-inline-form" do |form| %>
+          <%= form.hidden_field :remove_blocks, value: (!page.remove_blocks?).to_s %>
+          <button type="submit" class="notae-actions-row-button">
+            <span class="notae-actions-row-icon">◫</span>
+            <span class="notae-actions-row-label">Hide blocks</span>
+            <span class="notae-actions-switch <%= "is-on" if page.remove_blocks? || page.locked? %>"><span></span></span>
+          </button>
+        <% end %>
+      </div>
+
       <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="customize page options">
         <button type="button" class="notae-actions-row-button" data-action="click->shell#openOptionsMenu">
           <span class="notae-actions-row-icon">⚙</span>
           <span class="notae-actions-row-label">Customize page</span>
         </button>
-      </div>
-
-      <div class="notae-actions-row <%= "is-disabled" unless can_manage_permissions %>"
-           data-shell-action-item
-           data-shell-action-terms="lock page">
-        <% if can_manage_permissions %>
-          <%= form_with model: page,
-                        url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
-                        method: :patch,
-                        class: "notae-actions-inline-form" do |form| %>
-            <%= form.hidden_field :locked, value: (!page.locked?).to_s %>
-            <button type="submit" class="notae-actions-row-button">
-              <span class="notae-actions-row-icon">🔒</span>
-              <span class="notae-actions-row-label">Lock page</span>
-              <span class="notae-actions-switch <%= "is-on" if page.locked? %>"><span></span></span>
-            </button>
-          <% end %>
-        <% else %>
-          <button type="button" class="notae-actions-row-button" disabled>
-            <span class="notae-actions-row-icon">🔒</span>
-            <span class="notae-actions-row-label">Lock page</span>
-            <span class="notae-actions-switch <%= "is-on" if page.locked? %>"><span></span></span>
-          </button>
-        <% end %>
       </div>
 
       <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="suggest edits">

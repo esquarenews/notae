@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_25_233000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_26_001000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -350,6 +350,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_233000) do
     t.boolean "locked", default: false, null: false
     t.uuid "parent_page_id"
     t.integer "permission_mode", default: 0, null: false
+    t.boolean "remove_blocks", default: false, null: false
     t.boolean "small_text", default: false, null: false
     t.boolean "suggest_edits", default: false, null: false
     t.string "title", null: false

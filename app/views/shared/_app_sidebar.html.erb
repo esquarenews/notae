@@ -4,6 +4,7 @@
   <% recent_databases = workspace ? ui_sidebar_recent_databases : [] %>
   <% recent_meetings = workspace ? ui_sidebar_recent_meetings : [] %>
   <% recent_favorites = workspace ? ui_sidebar_recent_favorites : [] %>
+  <% recent_workspaces = ui_sidebar_recent_workspaces(limit: 6) %>
   <div class="notae-sidebar-header">
     <div class="notae-user-chip notae-workspace-chip">
       <span class="notae-user-avatar"><%= workspace ? workspace.display_icon : current_user.email.first.upcase %></span>
@@ -101,9 +102,28 @@
 
     <% if workspace %>
       <section class="notae-sidebar-section">
+        <p class="notae-sidebar-label">Workspaces</p>
+        <% if recent_workspaces.any? %>
+          <ul class="notae-sidebar-list is-indented">
+            <% recent_workspaces.each do |sidebar_workspace| %>
+              <li>
+                <%= link_to workspace_path(sidebar_workspace.slug),
+                            class: notae_sidebar_link_classes(workspace_path(sidebar_workspace.slug)),
+                            data: { action: "click->shell#close" } do %>
+                  <span class="notae-sidebar-page-title"><%= sidebar_workspace.display_icon %> <%= sidebar_workspace.name %></span>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="notae-sidebar-empty">No workspaces yet.</p>
+        <% end %>
+      </section>
+
+      <section class="notae-sidebar-section">
         <p class="notae-sidebar-label">Pages</p>
         <% if recent_pages.any? %>
-          <ul class="notae-sidebar-list">
+          <ul class="notae-sidebar-list is-indented">
             <% recent_pages.each do |page| %>
               <li>
                 <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
@@ -122,7 +142,7 @@
       <section class="notae-sidebar-section">
         <p class="notae-sidebar-label">Databases</p>
         <% if recent_databases.any? %>
-          <ul class="notae-sidebar-list">
+          <ul class="notae-sidebar-list is-indented">
             <% recent_databases.each do |db| %>
               <li>
                 <%= link_to db.name,
@@ -140,7 +160,7 @@
       <section class="notae-sidebar-section">
         <p class="notae-sidebar-label">Meetings</p>
         <% if recent_meetings.any? %>
-          <ul class="notae-sidebar-list">
+          <ul class="notae-sidebar-list is-indented">
             <% recent_meetings.each do |page| %>
               <li>
                 <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
@@ -159,7 +179,7 @@
       <section class="notae-sidebar-section">
         <p class="notae-sidebar-label">Favorites</p>
         <% if recent_favorites.any? %>
-          <ul class="notae-sidebar-list">
+          <ul class="notae-sidebar-list is-indented">
             <% recent_favorites.each do |item| %>
               <li>
                 <% if item[:type] == :page %>

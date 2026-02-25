@@ -47,6 +47,7 @@ class Page < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validates :small_text, inclusion: { in: [ true, false ] }
   validates :full_width, inclusion: { in: [ true, false ] }
+  validates :remove_blocks, inclusion: { in: [ true, false ] }
   validates :locked, inclusion: { in: [ true, false ] }
   validates :suggest_edits, inclusion: { in: [ true, false ] }
   validate :parent_page_workspace_matches

@@ -77,6 +77,15 @@ module ApplicationHelper
       .to_a
   end
 
+  def ui_sidebar_recent_workspaces(limit: 6)
+    return [] unless user_signed_in?
+
+    policy_scope(Workspace)
+      .order(updated_at: :desc)
+      .limit(limit)
+      .to_a
+  end
+
   def ui_sidebar_recent_favorites(limit: 6)
     workspace = ui_current_workspace
     return [] unless workspace

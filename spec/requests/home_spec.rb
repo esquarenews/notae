@@ -24,6 +24,6 @@ RSpec.describe "Home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Visible")
     expect(response.body).not_to include("Hidden")
-    expect(response.body).to include("New Workspace")
+    expect(response.body).to include("New workspace")
   end
 end

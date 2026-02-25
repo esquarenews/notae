@@ -51,6 +51,7 @@ class PagesController < ApplicationController
     @page_plain_text = @active_blocks.filter_map { |block| block.search_text.to_s.strip.presence }.join("\n")
     @page_word_count = @page_plain_text.scan(/\b[\p{L}\p{N}'-]+\b/u).size
     @page_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @page)
+    @page_reader_mode = @page.remove_blocks? || @page.locked?
   end
 
   def update
@@ -198,7 +199,7 @@ class PagesController < ApplicationController
 
   def page_update_params
     permitted = params.fetch(:page, ActionController::Parameters.new)
-                      .permit(:title, :parent_page_id, :font_style, :small_text, :full_width, :locked, :suggest_edits)
+                      .permit(:title, :parent_page_id, :font_style, :small_text, :full_width, :remove_blocks, :locked, :suggest_edits)
 
     permitted[:parent_page_id] = nil if permitted[:parent_page_id].blank?
     permitted.delete(:locked) unless policy(@page).permissions?

@@ -1,4 +1,5 @@
 <% blocks = blocks_by_parent[parent_id] || [] %>
+<% reader_mode = local_assigns.fetch(:reader_mode, false) %>
 <% turn_into_items = [
   ["T", "Text", "text"],
   ["H1", "Heading 1", "heading_1"],
@@ -57,7 +58,7 @@
   ["Red", "red"]
 ] %>
 
-<div class="notae-doc-tree"
+<div class="notae-doc-tree <%= "is-reader-mode" if reader_mode %>"
      data-controller="block-list"
      data-block-list-workspace-slug-value="<%= workspace.slug %>"
      data-block-list-page-id-value="<%= page.id %>"
@@ -77,17 +78,18 @@
              data-controller="block-tools"
              data-block-tools-block-id-value="<%= block.id %>"
              data-block-tools-page-title-value="<%= page.title %>">
-      <div class="notae-doc-block-row">
-        <span class="notae-doc-handle"
-              title="Drag block"
-              draggable="true"
-              data-action="dragstart->block-list#handleDragStart dragend->block-list#handleDragEnd">
-          ⋮⋮
-        </span>
-        <p class="hidden pb-1 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>
-        <details class="notae-block-menu" data-action="toggle->block-tools#positionMenu">
-          <summary class="notae-block-menu-trigger" aria-label="Block options">⋯</summary>
-          <div class="notae-block-menu-panel">
+      <% unless reader_mode %>
+        <div class="notae-doc-block-row">
+          <span class="notae-doc-handle"
+                title="Drag block"
+                draggable="true"
+                data-action="dragstart->block-list#handleDragStart dragend->block-list#handleDragEnd">
+            ⋮⋮
+          </span>
+          <p class="hidden pb-1 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>
+          <details class="notae-block-menu" data-action="toggle->block-tools#positionMenu">
+            <summary class="notae-block-menu-trigger" aria-label="Block options">⋯</summary>
+            <div class="notae-block-menu-panel">
             <section class="notae-block-menu-section">
               <h4>Turn into</h4>
               <div class="notae-block-menu-grid">
@@ -177,9 +179,10 @@
                 </button>
               </div>
             </section>
-          </div>
-        </details>
-      </div>
+            </div>
+          </details>
+        </div>
+      <% end %>
 
       <% if is_embed_block %>
         <div class="notae-doc-embed">
@@ -247,15 +250,18 @@
                      page: page,
                      blocks_by_parent: blocks_by_parent,
                      parent_id: block.id,
-                     all_pages: all_pages
+                     all_pages: all_pages,
+                     reader_mode: reader_mode
                    } %>
 
-        <%= form_with model: Block.new,
-                      url: page_blocks_path(workspace_slug: workspace.slug, page_id: page.id),
-                      class: "notae-doc-add-form is-child" do |form| %>
-          <%= form.hidden_field :parent_block_id, value: block.id %>
-          <%= form.hidden_field :block_type, value: "paragraph" %>
-          <%= form.submit "+", class: "notae-doc-add-button" %>
+        <% unless reader_mode %>
+          <%= form_with model: Block.new,
+                        url: page_blocks_path(workspace_slug: workspace.slug, page_id: page.id),
+                        class: "notae-doc-add-form is-child" do |form| %>
+            <%= form.hidden_field :parent_block_id, value: block.id %>
+            <%= form.hidden_field :block_type, value: "paragraph" %>
+            <%= form.submit "+", class: "notae-doc-add-button" %>
+          <% end %>
         <% end %>
       </div>
     </article>

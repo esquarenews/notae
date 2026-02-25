@@ -2,46 +2,194 @@
 <% content_for :topbar_page_icon, "📚" %>
 <% content_for :topbar_privacy, "Workspace" %>
 
-<section class="notae-workspace-home">
-  <header class="notae-workspace-home-hero">
-    <p class="notae-page-subtle">Workspace library</p>
+<% query = request.query_parameters.to_h.symbolize_keys %>
+<% visible_columns = @visible_columns %>
+<% shown_columns = @column_options.select { |key, _label| visible_columns.include?(key) } %>
+<% hidden_columns = @column_options.reject { |key, _label| visible_columns.include?(key) } %>
+
+<section class="notae-library-shell">
+  <header class="notae-library-header">
     <h1>Library</h1>
-    <p class="notae-page-subtle">Recent pages and databases in <%= @workspace.name %>.</p>
+    <% if policy(Page.new(workspace: @workspace)).create? %>
+      <%= form_with model: Page.new, url: pages_path(workspace_slug: @workspace.slug), class: "notae-library-new-page-form" do |form| %>
+        <%= form.hidden_field :title, value: "New page" %>
+        <%= form.submit "New page", class: "notae-chip-button" %>
+      <% end %>
+    <% end %>
   </header>
 
-  <section class="notae-auth-card notae-home-card">
-    <div class="notae-home-card-head">
-      <h2>Pages</h2>
-    </div>
-    <% if @recent_pages.any? %>
-      <div class="notae-workspace-home-link-grid">
-        <% @recent_pages.each do |page| %>
-          <%= link_to page_path(workspace_slug: @workspace.slug, id: page.id), class: "notae-home-workspace-item" do %>
-            <strong><%= page.icon.presence || "📄" %> <%= page.title %></strong>
-            <span><%= page.updated_at.in_time_zone.strftime("%b %-d, %Y") %></span>
-          <% end %>
-        <% end %>
-      </div>
-    <% else %>
-      <p class="notae-page-subtle">No pages yet.</p>
+  <nav class="notae-library-tabs">
+    <% {
+      "recents" => "Recents",
+      "favorites" => "Favorites",
+      "shared" => "Shared",
+      "private" => "Private"
+    }.each do |tab_value, label| %>
+      <% tab_params = query.merge(tab: tab_value) %>
+      <%= link_to label,
+                  workspace_library_path(tab_params.merge(workspace_slug: @workspace.slug)),
+                  class: [ "notae-library-tab", ("active" if @tab == tab_value) ].compact.join(" ") %>
     <% end %>
-  </section>
+  </nav>
 
-  <section class="notae-auth-card notae-home-card">
-    <div class="notae-home-card-head">
-      <h2>Databases</h2>
+  <%= form_with url: workspace_library_path(workspace_slug: @workspace.slug),
+                method: :get,
+                class: "notae-library-toolbar" do %>
+    <%= hidden_field_tag :tab, @tab %>
+
+    <div class="notae-library-search-wrap">
+      <span class="notae-library-search-icon" aria-hidden="true">⌕</span>
+      <%= text_field_tag :q, @search_query, placeholder: "Type to search...", class: "notae-library-search-input" %>
     </div>
-    <% if @recent_databases.any? %>
-      <div class="notae-workspace-home-link-grid">
-        <% @recent_databases.each do |database| %>
-          <%= link_to database_path(workspace_slug: @workspace.slug, id: database.id), class: "notae-home-workspace-item" do %>
-            <strong>🗃️ <%= database.name %></strong>
-            <span><%= database.updated_at.in_time_zone.strftime("%b %-d, %Y") %></span>
+
+    <div class="notae-library-toolbar-actions">
+      <details class="notae-library-popover">
+        <summary class="notae-inline-icon-button" title="Filters" aria-label="Filters">☰</summary>
+        <div class="notae-library-popover-panel">
+          <p class="notae-library-popover-title">Filter by</p>
+          <%= select_tag :workspace_filter,
+                         options_for_select(@workspace_filter_options, @workspace_filter),
+                         class: "notae-options-input" %>
+          <%= select_tag :source,
+                         options_for_select([
+                           ["All sources", "all"],
+                           ["Pages", "page"],
+                           ["Meetings", "meeting"],
+                           ["Databases", "database"],
+                           ["Workspaces", "workspace"]
+                         ], @source_filter),
+                         class: "notae-options-input" %>
+          <%= select_tag :visibility,
+                         options_for_select([
+                           ["All visibility", "all"],
+                           ["Shared", "shared"],
+                           ["Private", "private"]
+                         ], @visibility_filter),
+                         class: "notae-options-input" %>
+          <%= select_tag :sort,
+                         options_for_select([
+                           ["Last edited (newest first)", "last_edited_desc"],
+                           ["Last edited (oldest first)", "last_edited_asc"],
+                           ["Created (newest first)", "created_desc"],
+                           ["Created (oldest first)", "created_asc"],
+                           ["Page name (A-Z)", "page_name_asc"],
+                           ["Page name (Z-A)", "page_name_desc"]
+                         ], @sort),
+                         class: "notae-options-input" %>
+          <%= select_tag :filter_property,
+                         options_for_select([["Property filter", ""]] + @column_options.map { |key, label| [label, key] }, @property_filter),
+                         class: "notae-options-input" %>
+          <%= text_field_tag :filter_value, @property_filter_value, placeholder: "Property value...", class: "notae-options-input" %>
+          <label class="notae-options-checkbox">
+            <%= check_box_tag :favorites_only, "1", @favorites_only %>
+            <span>Favorites only</span>
+          </label>
+          <p class="notae-library-advanced-filter">+ Add advanced filter</p>
+        </div>
+      </details>
+
+      <details class="notae-library-popover">
+        <summary class="notae-inline-icon-button" title="Property visibility" aria-label="Property visibility">⚙</summary>
+        <div class="notae-library-popover-panel">
+          <p class="notae-library-popover-title">Property visibility</p>
+          <input type="search" class="notae-options-input" placeholder="Search for a property..." disabled>
+          <%= hidden_field_tag "visible_columns[]", "page_name" %>
+          <div class="notae-library-property-group">
+            <p>Shown in table</p>
+            <% shown_columns.each do |key, label| %>
+              <label class="notae-options-checkbox">
+                <%= check_box_tag "visible_columns[]", key, true, disabled: key == "page_name" %>
+                <span><%= label %></span>
+              </label>
+            <% end %>
+          </div>
+          <div class="notae-library-property-group">
+            <p>Hidden in table</p>
+            <% hidden_columns.each do |key, label| %>
+              <label class="notae-options-checkbox">
+                <%= check_box_tag "visible_columns[]", key, false %>
+                <span><%= label %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+      </details>
+
+      <%= submit_tag "Apply", class: "notae-chip-button" %>
+    </div>
+  <% end %>
+
+  <section class="notae-library-table-wrap">
+    <table class="notae-library-table">
+      <thead>
+        <tr>
+          <% if visible_columns.include?("page_name") %>
+            <th>Page name</th>
           <% end %>
+          <% if visible_columns.include?("created_by") %>
+            <th>Created by</th>
+          <% end %>
+          <% if visible_columns.include?("source") %>
+            <th>Source</th>
+          <% end %>
+          <% if visible_columns.include?("created_time") %>
+            <th>Created time</th>
+          <% end %>
+          <% if visible_columns.include?("last_edited_by") %>
+            <th>Last edited by</th>
+          <% end %>
+          <% if visible_columns.include?("last_edited_time") %>
+            <th>Last edited time</th>
+          <% end %>
+          <% if visible_columns.include?("last_visited_time") %>
+            <th>Last visited time</th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% if @library_rows.any? %>
+          <% @library_rows.each do |row| %>
+            <tr>
+              <% if visible_columns.include?("page_name") %>
+                <td>
+                  <%= link_to row[:path], class: "notae-library-name-link" do %>
+                    <span class="notae-library-row-icon"><%= row[:icon] %></span>
+                    <span class="notae-library-row-title"><%= row[:title] %></span>
+                    <% if row[:favorited] %>
+                      <span class="notae-library-row-favorite" aria-label="Favorited">★</span>
+                    <% end %>
+                  <% end %>
+                </td>
+              <% end %>
+              <% if visible_columns.include?("created_by") %>
+                <td><%= row[:created_by] %></td>
+              <% end %>
+              <% if visible_columns.include?("source") %>
+                <td>
+                  <span class="notae-library-source-pill is-<%= row[:visibility] %>"><%= row[:visibility].titleize %></span>
+                  <span class="notae-library-source-label"><%= row[:kind].titleize %></span>
+                </td>
+              <% end %>
+              <% if visible_columns.include?("created_time") %>
+                <td><%= row[:created_time].present? ? time_ago_in_words(row[:created_time]) + " ago" : "—" %></td>
+              <% end %>
+              <% if visible_columns.include?("last_edited_by") %>
+                <td><%= row[:last_edited_by] %></td>
+              <% end %>
+              <% if visible_columns.include?("last_edited_time") %>
+                <td><%= row[:last_edited_time].present? ? time_ago_in_words(row[:last_edited_time]) + " ago" : "—" %></td>
+              <% end %>
+              <% if visible_columns.include?("last_visited_time") %>
+                <td><%= row[:last_visited_time].present? ? time_ago_in_words(row[:last_visited_time]) + " ago" : "—" %></td>
+              <% end %>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td class="notae-library-empty" colspan="<%= visible_columns.count %>">No results.</td>
+          </tr>
         <% end %>
-      </div>
-    <% else %>
-      <p class="notae-page-subtle">No databases yet.</p>
-    <% end %>
+      </tbody>
+    </table>
   </section>
 </section>

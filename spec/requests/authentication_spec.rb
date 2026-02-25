@@ -9,7 +9,7 @@ RSpec.describe "Authentication", type: :request do
     get new_user_session_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Log in")
+    expect(response.body).to include("Sign in")
   end
 
   it "allows sign up, login, and logout" do
@@ -43,7 +43,7 @@ RSpec.describe "Authentication", type: :request do
     get root_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Signed in as #{user.email}")
+    expect(response.body).to include("Welcome back, #{user.email}.")
   end
 
   it "sends password reset instructions" do

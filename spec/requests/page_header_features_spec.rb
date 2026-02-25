@@ -20,8 +20,7 @@ RSpec.describe "Page header features", type: :request do
     expect(response.body).to include("<span class=\"notae-topbar-page-icon\">🧠</span>")
 
     get workspace_path(workspace.slug)
-    expect(response.body).to include("notae-sidebar-page-icon")
-    expect(response.body).to include("🧠")
+    expect(response.body).to include("🧠 Icon page")
 
     patch page_path(workspace_slug: workspace.slug, id: page.id),
           params: { page: { icon_action: "clear" } }

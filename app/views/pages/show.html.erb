@@ -4,29 +4,31 @@
 <% content_for :content_class, "notae-content-page" %>
 <% content_for :topbar_actions do %>
   <span class="notae-topbar-meta">Edited <%= time_ago_in_words(@page.updated_at) %> ago</span>
-  <% if @page_favorite.present? %>
-    <%= button_to page_favorite_path(workspace_slug: @workspace.slug, page_id: @page.id),
-                  method: :delete,
-                  class: "notae-inline-icon-button notae-favorite-toggle is-favorited",
-                  title: "Remove from favorites",
-                  aria: { label: "Remove from favorites" } do %>
-      ★
+  <% unless @page.locked? %>
+    <% if @page_favorite.present? %>
+      <%= button_to page_favorite_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                    method: :delete,
+                    class: "notae-inline-icon-button notae-favorite-toggle is-favorited",
+                    title: "Remove from favorites",
+                    aria: { label: "Remove from favorites" } do %>
+        ★
+      <% end %>
+    <% else %>
+      <%= button_to page_favorite_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                    method: :post,
+                    class: "notae-inline-icon-button notae-favorite-toggle",
+                    title: "Add to favorites",
+                    aria: { label: "Add to favorites" } do %>
+        ☆
+      <% end %>
     <% end %>
-  <% else %>
-    <%= button_to page_favorite_path(workspace_slug: @workspace.slug, page_id: @page.id),
-                  method: :post,
-                  class: "notae-inline-icon-button notae-favorite-toggle",
-                  title: "Add to favorites",
-                  aria: { label: "Add to favorites" } do %>
-      ☆
-    <% end %>
+    <%= render "pages/comments_menu",
+               workspace: @workspace,
+               page: @page,
+               can_comment_on_page: @can_comment_on_page,
+               new_page_comment: @new_page_comment,
+               page_comments: @page_comments %>
   <% end %>
-  <%= render "pages/comments_menu",
-             workspace: @workspace,
-             page: @page,
-             can_comment_on_page: @can_comment_on_page,
-             new_page_comment: @new_page_comment,
-             page_comments: @page_comments %>
   <%= render "pages/actions_menu",
              workspace: @workspace,
              page: @page,
@@ -37,17 +39,19 @@
              page_word_count: @page_word_count,
              page_versions: @page_versions,
              recent_audit_events: @recent_audit_events %>
-  <%= render "pages/options_menu",
-             workspace: @workspace,
-             page: @page,
-             can_manage_permissions: @can_manage_permissions,
-             memberships: @memberships,
-             shared_user_ids: @shared_user_ids,
-             share_links: @share_links,
-             page_exports: @page_exports,
-             new_page_template: @new_page_template,
-             page_templates: @page_templates,
-             archived_blocks: @archived_blocks %>
+  <% unless @page.locked? %>
+    <%= render "pages/options_menu",
+               workspace: @workspace,
+               page: @page,
+               can_manage_permissions: @can_manage_permissions,
+               memberships: @memberships,
+               shared_user_ids: @shared_user_ids,
+               share_links: @share_links,
+               page_exports: @page_exports,
+               new_page_template: @new_page_template,
+               page_templates: @page_templates,
+               archived_blocks: @archived_blocks %>
+  <% end %>
 <% end %>
 
 <% has_cover = @page.cover? %>
@@ -56,6 +60,7 @@
 <% doc_layout_classes << "is-small-text" if @page.small_text? %>
 <% doc_layout_classes << "is-font-serif" if @page.font_style == "serif" %>
 <% doc_layout_classes << "is-font-mono" if @page.font_style == "mono" %>
+<% doc_layout_classes << "is-reader-mode" if @page_reader_mode %>
 <% if has_cover %>
   <section class="notae-page-cover">
     <div class="notae-page-cover-frame">
@@ -143,7 +148,7 @@
         <div class="notae-page-icon-display"><%= @page.icon %></div>
       <% end %>
 
-      <% if @can_update_page || @can_comment_on_page %>
+      <% if !@page.locked? && (@can_update_page || @can_comment_on_page) %>
         <div class="notae-page-header-tools">
           <% if @can_update_page %>
             <details class="notae-page-header-action">
@@ -257,10 +262,11 @@
                  page: @page,
                  blocks_by_parent: @blocks_by_parent,
                  parent_id: nil,
-                 all_pages: @move_target_pages
+                 all_pages: @move_target_pages,
+                 reader_mode: @page_reader_mode
                } %>
 
-    <% if policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create? %>
+    <% if !@page_reader_mode && policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create? %>
       <%= form_with model: Block.new,
                     url: page_blocks_path(workspace_slug: @workspace.slug, page_id: @page.id),
                     class: "notae-doc-add-form" do |form| %>
