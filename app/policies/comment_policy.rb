@@ -20,13 +20,14 @@ class CommentPolicy < ApplicationPolicy
       return scope.none unless user
 
       workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-      visible_page_ids = PagePolicy::Scope.new(user, Page).resolve.select(:id)
-      visible_block_ids = BlockPolicy::Scope.new(user, Block).resolve.select(:id)
+      visible_page_ids = PagePolicy::Scope.new(user, Page).resolve.pluck(:id)
+      visible_block_ids = BlockPolicy::Scope.new(user, Block).resolve.pluck(:id)
 
-      scope.where(workspace_id: workspace_ids).where(
-        Comment.arel_table[:commentable_type].eq("Page").and(Comment.arel_table[:commentable_id].in(visible_page_ids))
-          .or(Comment.arel_table[:commentable_type].eq("Block").and(Comment.arel_table[:commentable_id].in(visible_block_ids)))
-      )
+      scoped = scope.where(workspace_id: workspace_ids)
+      page_visible = scoped.where(commentable_type: "Page", commentable_id: visible_page_ids)
+      block_visible = scoped.where(commentable_type: "Block", commentable_id: visible_block_ids)
+
+      page_visible.or(block_visible)
     end
   end
 

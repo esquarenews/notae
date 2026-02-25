@@ -1,0 +1,55 @@
+<details id="page-comments-menu" class="notae-comments-menu" data-shell-comments-menu>
+  <summary class="notae-comments-trigger" aria-label="Page comments">💬</summary>
+  <div class="notae-comments-panel">
+    <section class="notae-options-section">
+      <h3>Page comments</h3>
+
+      <% if can_comment_on_page %>
+        <%= form_with model: new_page_comment,
+                      url: page_comments_path(workspace_slug: workspace.slug, page_id: page.id),
+                      class: "notae-page-comment-form" do |form| %>
+          <span class="notae-page-comment-avatar"><%= current_user.email.first.upcase %></span>
+          <%= form.text_field :body,
+                              placeholder: "Add a comment...",
+                              class: "notae-page-comment-input",
+                              autocomplete: "off" %>
+          <%= form.submit "↗", class: "notae-page-comment-submit", aria: { label: "Submit comment" } %>
+        <% end %>
+      <% end %>
+
+      <% if page_comments.any? %>
+        <ul class="notae-page-comment-list">
+          <% page_comments.each do |comment| %>
+            <li class="notae-page-comment-item <%= "is-resolved" if comment.resolved? %>">
+              <div class="notae-page-comment-meta">
+                <strong><%= comment.author.email %></strong>
+                <span><%= time_ago_in_words(comment.created_at) %> ago</span>
+                <% if comment.resolved? %>
+                  <span>Resolved</span>
+                <% end %>
+              </div>
+              <p><%= comment.body %></p>
+              <% if policy(comment).resolve? %>
+                <div class="notae-page-comment-actions">
+                  <% if comment.resolved? %>
+                    <%= button_to "Reopen",
+                                  unresolve_page_comment_path(workspace_slug: workspace.slug, page_id: page.id, id: comment.id),
+                                  method: :patch,
+                                  class: "notae-chip-button" %>
+                  <% else %>
+                    <%= button_to "Resolve",
+                                  resolve_page_comment_path(workspace_slug: workspace.slug, page_id: page.id, id: comment.id),
+                                  method: :patch,
+                                  class: "notae-chip-button" %>
+                  <% end %>
+                </div>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-options-empty">No comments yet.</p>
+      <% end %>
+    </section>
+  </div>
+</details>

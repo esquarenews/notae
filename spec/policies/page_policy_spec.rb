@@ -40,4 +40,21 @@ RSpec.describe PagePolicy do
     expect(described_class.new(member, specific_page).show?).to be(true)
     expect(described_class.new(other, specific_page).show?).to be(false)
   end
+
+  it "blocks member updates on locked pages while still allowing admin and owner" do
+    workspace = Workspace.create!(name: "Locked policy", slug: "locked-policy")
+    owner = User.create!(email: "locked-owner@example.com", password: "password123")
+    admin = User.create!(email: "locked-admin@example.com", password: "password123")
+    member = User.create!(email: "locked-member@example.com", password: "password123")
+
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: admin, role: :admin)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+
+    locked_page = Page.create!(workspace: workspace, created_by: owner, title: "Locked", locked: true)
+
+    expect(described_class.new(member, locked_page).update?).to be(false)
+    expect(described_class.new(admin, locked_page).update?).to be(true)
+    expect(described_class.new(owner, locked_page).update?).to be(true)
+  end
 end

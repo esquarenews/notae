@@ -26,6 +26,75 @@ RSpec.describe "Blocks", type: :request do
     expect(block.reload.block_type).to eq("heading_1")
   end
 
+  it "persists todo list content with checked state for task items" do
+    owner = User.create!(email: "blocks-todo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Todo blocks", slug: "todo-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Todos")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+          params: {
+            block: {
+              block_type: "todo_list",
+              content_json: {
+                type: "doc",
+                content: [
+                  {
+                    type: "taskList",
+                    content: [
+                      {
+                        type: "taskItem",
+                        attrs: { checked: false },
+                        content: [
+                          { type: "paragraph", content: [ { type: "text", text: "Unchecked item" } ] }
+                        ]
+                      },
+                      {
+                        type: "taskItem",
+                        attrs: { checked: true },
+                        content: [
+                          { type: "paragraph", content: [ { type: "text", text: "Checked item" } ] }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(block.reload.block_type).to eq("todo_list")
+    task_items = block.content_json.dig("content", 0, "content")
+    expect(task_items.length).to eq(2)
+    expect(task_items.first.dig("attrs", "checked")).to eq(false)
+    expect(task_items.last.dig("attrs", "checked")).to eq(true)
+  end
+
+  it "creates sibling child blocks with unique positions via add-block flow" do
+    owner = User.create!(email: "blocks-child-create-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Child create", slug: "child-create")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Child create page")
+    parent = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    2.times do
+      post page_blocks_path(workspace_slug: workspace.slug, page_id: page.id),
+           params: { block: { parent_block_id: parent.id, block_type: "paragraph" } }
+      expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    end
+
+    sibling_positions = page.blocks.active.where(parent_block_id: parent.id).order(:position).pluck(:position)
+
+    expect(sibling_positions.length).to eq(2)
+    expect(sibling_positions.uniq.length).to eq(2)
+    expect(sibling_positions.last).to be > sibling_positions.first
+  end
+
   it "reorders blocks with a drag-drop style request" do
     owner = User.create!(email: "blocks-reorder-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Reorder", slug: "reorder")
@@ -41,6 +110,28 @@ RSpec.describe "Blocks", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(page.blocks.active.roots.ordered.first.id).to eq(second.id)
+  end
+
+  it "renders drag-and-drop action bindings for block items" do
+    owner = User.create!(email: "blocks-reorder-binding-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Reorder bindings", slug: "reorder-bindings")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Reorder binding page")
+    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("dragstart->block-list#handleDragStart")
+    expect(response.body).to include("dragenter->block-list#handleDragEnter")
+    expect(response.body).to include("dragleave->block-list#handleDragLeave")
+    expect(response.body).to include("dragover->block-list#handleDragOver")
+    expect(response.body).to include("drop->block-list#handleDrop")
+    expect(response.body).to include("dragend->block-list#handleDragEnd")
+    expect(response.body).to include("class=\"notae-doc-handle\"")
+    expect(response.body).to include("title=\"Drag block\"")
+    expect(response.body).to include("draggable=\"true\"")
   end
 
   it "archives and restores blocks while preserving original position priority" do
@@ -154,5 +245,132 @@ RSpec.describe "Blocks", type: :request do
 
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
     expect(block.reload.embed_url).to be_nil
+  end
+
+  it "supports all turn-into menu command targets including page creation and synced blocks" do
+    owner = User.create!(email: "blocks-turn-into-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Turn into", slug: "turn-into")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Turn Into Page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    targets = {
+      "text" => "paragraph",
+      "heading_1" => "heading_1",
+      "heading_2" => "heading_2",
+      "heading_3" => "heading_3",
+      "bulleted_list" => "bullet_list",
+      "numbered_list" => "ordered_list",
+      "todo_list" => "todo_list",
+      "toggle_list" => "toggle_list",
+      "code" => "code_block",
+      "quote" => "blockquote",
+      "callout" => "callout",
+      "block_equation" => "equation",
+      "toggle_heading_1" => "toggle_heading_1",
+      "toggle_heading_2" => "toggle_heading_2",
+      "toggle_heading_3" => "toggle_heading_3",
+      "columns_2" => "columns_2",
+      "columns_3" => "columns_3",
+      "columns_4" => "columns_4",
+      "columns_5" => "columns_5"
+    }
+
+    targets.each do |target, expected_type|
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+           params: { block_command: { command: "turn_into", target: target } }
+
+      expect(response).to have_http_status(:redirect)
+      expect(block.reload.block_type).to eq(expected_type)
+    end
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+           params: { block_command: { command: "turn_into", target: "page" } }
+    end.to change(Page, :count).by(1)
+
+    child_page = nil
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+           params: { block_command: { command: "turn_into", target: "page_in" } }
+      child_page = Page.order(:created_at).last
+    end.to change(Page, :count).by(1)
+    expect(child_page.parent_page_id).to eq(page.id)
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+           params: { block_command: { command: "turn_into", target: "synced_block" } }
+    end.to change(Block, :count).by(1)
+    synced_copy = Block.order(:created_at).last
+    expect(synced_copy.content_json["notae_synced_source_id"]).to eq(block.id.to_s)
+  end
+
+  it "toggles applied turn-into styles off when selected again" do
+    owner = User.create!(email: "blocks-turn-toggle-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Turn toggle", slug: "turn-toggle")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Turn toggle page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "heading_1" } }
+    expect(block.reload.block_type).to eq("heading_1")
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "heading_1" } }
+    expect(block.reload.block_type).to eq("paragraph")
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "bulleted_list" } }
+    expect(block.reload.block_type).to eq("bullet_list")
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "bulleted_list" } }
+    expect(block.reload.block_type).to eq("paragraph")
+  end
+
+  it "supports color, duplicate, move, delete, and suggest edits commands" do
+    owner = User.create!(email: "blocks-command-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Command blocks", slug: "command-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Command page")
+    destination_page = Page.create!(workspace: workspace, created_by: owner, title: "Destination page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    %w[default gray brown orange yellow green blue purple pink red].each do |color|
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+           params: { block_command: { command: "color", color: color } }
+      expect(response).to have_http_status(:redirect)
+      expect(block.reload.content_json["notae_color"]).to eq(color)
+    end
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "color", color: "red" } }
+    expect(response).to have_http_status(:redirect)
+    expect(block.reload.content_json["notae_color"]).to eq("default")
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+           params: { block_command: { command: "duplicate" } }
+    end.to change(Block, :count).by(1)
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "move_to", target_page_id: destination_page.id } }
+    expect(response).to have_http_status(:redirect)
+    expect(block.reload.page_id).to eq(destination_page.id)
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: destination_page.id, id: block.id),
+           params: { block_command: { command: "suggest_edits", note: "Please tighten this copy." } }
+    end.to change(Comment, :count).by(1)
+    expect(Comment.order(:created_at).last.body).to include("tighten this copy")
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: destination_page.id, id: block.id),
+         params: { block_command: { command: "delete" } }
+    expect(response).to have_http_status(:redirect)
+    expect(block.reload.archived_at).to be_present
   end
 end

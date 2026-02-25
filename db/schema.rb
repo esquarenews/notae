@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_24_201500) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_25_143000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -326,10 +326,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_24_201500) do
 
   create_table "pages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "archived_at"
+    t.integer "cover_focal_y", default: 50, null: false
+    t.string "cover_preset_key"
     t.datetime "created_at", null: false
     t.uuid "created_by_id", null: false
+    t.string "font_style", default: "default", null: false
+    t.boolean "full_width", default: false, null: false
+    t.string "icon"
+    t.boolean "locked", default: false, null: false
     t.uuid "parent_page_id"
     t.integer "permission_mode", default: 0, null: false
+    t.boolean "small_text", default: false, null: false
+    t.boolean "suggest_edits", default: false, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false

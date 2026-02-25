@@ -46,4 +46,11 @@ module ApplicationHelper
     base = "notae-sidebar-link"
     is_active ? "#{base} active" : base
   end
+
+  def page_cover_asset_path(cover_preset_key)
+    return nil if cover_preset_key.blank?
+    return nil unless Page::COVER_PRESET_KEYS.include?(cover_preset_key.to_s)
+
+    "page_covers/#{cover_preset_key}.svg"
+  end
 end

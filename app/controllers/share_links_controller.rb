@@ -15,9 +15,9 @@ class ShareLinksController < ApplicationController
         share_link_id: @share_link.id,
         expires_at: @share_link.expires_at
       )
-      redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Public share link created."
+      redirect_to page_redirect_path, notice: "Public share link created."
     else
-      redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), alert: @share_link.errors.full_messages.to_sentence
+      redirect_to page_redirect_path, alert: @share_link.errors.full_messages.to_sentence
     end
   end
 
@@ -28,7 +28,7 @@ class ShareLinksController < ApplicationController
       kind: "public_share_link_revoked",
       share_link_id: @share_link.id
     )
-    redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Public share link revoked."
+    redirect_to page_redirect_path, notice: "Public share link revoked."
   end
 
   private
@@ -62,5 +62,11 @@ class ShareLinksController < ApplicationController
       },
       auditable: @page
     )
+  end
+
+  def page_redirect_path
+    route_params = { workspace_slug: @workspace.slug, id: @page.id }
+    route_params[:options_menu] = "open" if params[:options_menu].to_s == "open"
+    page_path(route_params)
   end
 end

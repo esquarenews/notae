@@ -66,6 +66,22 @@ class Block < ApplicationRecord
     ids
   end
 
+  def metadata
+    content_json.is_a?(Hash) ? content_json : {}
+  end
+
+  def color
+    metadata["notae_color"].presence
+  end
+
+  def synced_source_block_id
+    metadata["notae_synced_source_id"].presence
+  end
+
+  def synced_copy?
+    synced_source_block_id.present? && synced_source_block_id.to_s != id.to_s
+  end
+
   private
 
   def set_workspace_from_page
@@ -83,7 +99,7 @@ class Block < ApplicationRecord
   end
 
   def set_initial_position
-    return if position.present?
+    return if will_save_change_to_position?
 
     sibling_max = self.class.active.where(page_id: page_id, parent_block_id: parent_block_id).maximum(:position) || 0
     self.position = sibling_max + POSITION_GAP
@@ -93,7 +109,11 @@ class Block < ApplicationRecord
     case node
     when Hash
       collector << node["text"] if node["text"].is_a?(String)
-      node.each_value { |child| extract_text_nodes(child, collector) }
+      node.each do |key, child|
+        next if key.to_s.start_with?("notae_")
+
+        extract_text_nodes(child, collector)
+      end
     when Array
       node.each { |child| extract_text_nodes(child, collector) }
     end

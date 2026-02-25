@@ -13,22 +13,22 @@ class CommentsController < ApplicationController
 
     if @comment.save
       Comments::ProcessMentionsService.call(comment: @comment)
-      redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Comment added."
+      redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id, anchor: "page-comments-menu"), notice: "Comment added."
     else
-      redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), alert: @comment.errors.full_messages.to_sentence
+      redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id, anchor: "page-comments-menu"), alert: @comment.errors.full_messages.to_sentence
     end
   end
 
   def resolve
     authorize @comment, :resolve?
     @comment.resolve!(by: current_user)
-    redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Comment resolved."
+    redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id, anchor: "page-comments-menu"), notice: "Comment resolved."
   end
 
   def unresolve
     authorize @comment, :unresolve?
     @comment.unresolve!
-    redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Comment reopened."
+    redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id, anchor: "page-comments-menu"), notice: "Comment reopened."
   end
 
   private

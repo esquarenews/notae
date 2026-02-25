@@ -20,9 +20,9 @@ class PageTemplatesController < ApplicationController
       name: template_name
     )
 
-    redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Template saved."
+    redirect_to page_redirect_path(@page.id), notice: "Template saved."
   rescue ActiveRecord::RecordInvalid => error
-    redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), alert: error.record.errors.full_messages.to_sentence
+    redirect_to page_redirect_path(@page.id), alert: error.record.errors.full_messages.to_sentence
   end
 
   def instantiate
@@ -35,7 +35,7 @@ class PageTemplatesController < ApplicationController
       title: params.dig(:page_template, :title)
     )
 
-    redirect_to page_path(workspace_slug: @workspace.slug, id: page.id), notice: "Page created from template."
+    redirect_to page_redirect_path(page.id), notice: "Page created from template."
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_path(@workspace.slug), alert: error.record.errors.full_messages.to_sentence
   end
@@ -57,5 +57,11 @@ class PageTemplatesController < ApplicationController
 
   def template_name
     params.dig(:page_template, :name).to_s
+  end
+
+  def page_redirect_path(page_id)
+    route_params = { workspace_slug: @workspace.slug, id: page_id }
+    route_params[:options_menu] = "open" if params[:options_menu].to_s == "open"
+    page_path(route_params)
   end
 end

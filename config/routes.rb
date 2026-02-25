@@ -31,7 +31,7 @@ Rails.application.routes.draw do
       resources :db_cells, only: :update
     end
 
-    resources :pages, only: %i[show create] do
+    resources :pages, only: %i[show create update] do
       resources :share_links, only: %i[create destroy]
 
       resources :comments, only: :create do
@@ -42,6 +42,7 @@ Rails.application.routes.draw do
       end
 
       member do
+        post :duplicate
         patch :archive
         patch :restore
         patch :permissions
@@ -64,6 +65,7 @@ Rails.application.routes.draw do
           patch :reorder
           patch :archive
           patch :restore
+          post :command
         end
       end
     end

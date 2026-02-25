@@ -1,87 +1,231 @@
 <% blocks = blocks_by_parent[parent_id] || [] %>
+<% turn_into_items = [
+  ["T", "Text", "text"],
+  ["H1", "Heading 1", "heading_1"],
+  ["H2", "Heading 2", "heading_2"],
+  ["H3", "Heading 3", "heading_3"],
+  ["Pg", "Page", "page"],
+  ["P+", "Page in", "page_in"],
+  ["ul", "Bulleted list", "bulleted_list"],
+  ["1.", "Numbered list", "numbered_list"],
+  ["[]", "To-do list", "todo_list"],
+  [">", "Toggle list", "toggle_list"],
+  ["<>", "Code", "code"],
+  ["\"\"", "Quote", "quote"],
+  ["!", "Callout", "callout"],
+  ["fx", "Block equation", "block_equation"],
+  ["S", "Synced block", "synced_block"],
+  ["T1", "Toggle heading 1", "toggle_heading_1"],
+  ["T2", "Toggle heading 2", "toggle_heading_2"],
+  ["T3", "Toggle heading 3", "toggle_heading_3"],
+  ["||", "2 columns", "columns_2"],
+  ["|||", "3 columns", "columns_3"],
+  ["||||", "4 columns", "columns_4"],
+  ["|||||", "5 columns", "columns_5"]
+] %>
+<% turn_into_block_type_map = {
+  "text" => "paragraph",
+  "heading_1" => "heading_1",
+  "heading_2" => "heading_2",
+  "heading_3" => "heading_3",
+  "bulleted_list" => "bullet_list",
+  "numbered_list" => "ordered_list",
+  "todo_list" => "todo_list",
+  "toggle_list" => "toggle_list",
+  "code" => "code_block",
+  "quote" => "blockquote",
+  "callout" => "callout",
+  "block_equation" => "equation",
+  "toggle_heading_1" => "toggle_heading_1",
+  "toggle_heading_2" => "toggle_heading_2",
+  "toggle_heading_3" => "toggle_heading_3",
+  "columns_2" => "columns_2",
+  "columns_3" => "columns_3",
+  "columns_4" => "columns_4",
+  "columns_5" => "columns_5"
+} %>
+<% color_items = [
+  ["Default", "default"],
+  ["Gray", "gray"],
+  ["Brown", "brown"],
+  ["Orange", "orange"],
+  ["Yellow", "yellow"],
+  ["Green", "green"],
+  ["Blue", "blue"],
+  ["Purple", "purple"],
+  ["Pink", "pink"],
+  ["Red", "red"]
+] %>
 
-<div class="space-y-2" data-controller="block-list" data-block-list-workspace-slug-value="<%= workspace.slug %>" data-block-list-page-id-value="<%= page.id %>" data-block-list-parent-id-value="<%= parent_id %>">
+<div class="notae-doc-tree"
+     data-controller="block-list"
+     data-block-list-workspace-slug-value="<%= workspace.slug %>"
+     data-block-list-page-id-value="<%= page.id %>"
+     data-block-list-parent-id-value="<%= parent_id %>">
   <% blocks.each_with_index do |block, index| %>
     <% is_embed_block = block.block_type == "embed" %>
     <% is_media_block = %w[image file].include?(block.block_type) %>
+    <% block_color = block.color.to_s %>
+    <% active_color = block_color.presence || "default" %>
     <% attach_url = attach_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id) %>
-    <article id="block_<%= block.id %>" class="rounded border border-slate-200 bg-slate-50 p-3" draggable="true" data-block-list-target="item" data-block-id="<%= block.id %>" data-block-index="<%= index %>">
-      <div class="mb-2 flex items-center gap-2">
-        <span class="cursor-grab text-xs text-slate-500">drag</span>
-        <span class="rounded bg-white px-2 py-0.5 text-xs uppercase text-slate-600"><%= block.block_type %></span>
-        <%= button_to "Archive",
-                      archive_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
-                      method: :patch,
-                      class: "ml-auto rounded border border-slate-300 px-2 py-1 text-xs" %>
+    <article id="block_<%= block.id %>"
+             class="notae-doc-block is-type-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-columns" if block.block_type.start_with?("columns_") %>"
+             data-block-list-target="item"
+             data-action="dragenter->block-list#handleDragEnter dragleave->block-list#handleDragLeave dragover->block-list#handleDragOver drop->block-list#handleDrop"
+             data-block-id="<%= block.id %>"
+             data-block-index="<%= index %>"
+             data-controller="block-tools"
+             data-block-tools-block-id-value="<%= block.id %>"
+             data-block-tools-page-title-value="<%= page.title %>">
+      <div class="notae-doc-block-row">
+        <span class="notae-doc-handle"
+              title="Drag block"
+              draggable="true"
+              data-action="dragstart->block-list#handleDragStart dragend->block-list#handleDragEnd">
+          ⋮⋮
+        </span>
+        <p class="hidden pb-1 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>
+        <details class="notae-block-menu" data-action="toggle->block-tools#positionMenu">
+          <summary class="notae-block-menu-trigger" aria-label="Block options">⋯</summary>
+          <div class="notae-block-menu-panel">
+            <section class="notae-block-menu-section">
+              <h4>Turn into</h4>
+              <div class="notae-block-menu-grid">
+                <% turn_into_items.each do |icon, label, key| %>
+                  <% turn_into_classes = ["notae-block-menu-item"] %>
+                  <% turn_into_classes << "is-active" if turn_into_block_type_map[key] == block.block_type %>
+                  <%= button_to command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                                method: :post,
+                                params: { block_command: { command: "turn_into", target: key } },
+                                form_class: "notae-block-menu-inline-form",
+                                class: turn_into_classes.join(" ") do %>
+                    <span class="notae-menu-item-icon"><%= icon %></span>
+                    <span class="notae-menu-item-label"><%= label %></span>
+                  <% end %>
+                <% end %>
+              </div>
+            </section>
+
+            <section class="notae-block-menu-section">
+              <h4>Color</h4>
+              <div class="notae-block-menu-grid is-color-grid">
+                <% color_items.each do |label, key| %>
+                  <% color_classes = ["notae-block-menu-item"] %>
+                  <% color_classes << "is-active" if key == active_color %>
+                  <%= button_to command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                                method: :post,
+                                params: { block_command: { command: "color", color: key } },
+                                form_class: "notae-block-menu-inline-form",
+                                class: color_classes.join(" ") do %>
+                    <span class="notae-menu-color-dot is-<%= key %>"></span>
+                    <span class="notae-menu-item-label"><%= label %></span>
+                  <% end %>
+                <% end %>
+              </div>
+            </section>
+
+            <section class="notae-block-menu-section">
+              <h4>Actions</h4>
+              <div class="notae-block-menu-grid">
+                <button type="button" class="notae-block-menu-item" data-action="block-tools#copyLink">
+                  <span class="notae-menu-item-icon">#</span>
+                  <span class="notae-menu-item-label">Copy link to block</span>
+                </button>
+                <%= button_to command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                              method: :post,
+                              params: { block_command: { command: "duplicate" } },
+                              form_class: "notae-block-menu-inline-form",
+                              class: "notae-block-menu-item" do %>
+                  <span class="notae-menu-item-icon">+</span>
+                  <span class="notae-menu-item-label">Duplicate</span>
+                <% end %>
+                <%= form_with url: command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                              method: :post,
+                              class: "notae-block-menu-move-form" do %>
+                  <%= hidden_field_tag "block_command[command]", "move_to" %>
+                  <%= select_tag "block_command[target_page_id]",
+                                 options_from_collection_for_select(all_pages, :id, :title),
+                                 include_blank: "Move to page...",
+                                 class: "notae-block-menu-select" %>
+                  <%= button_tag type: "submit", class: "notae-block-menu-item" do %>
+                    <span class="notae-menu-item-icon">></span>
+                    <span class="notae-menu-item-label">Move to</span>
+                  <% end %>
+                <% end %>
+                <%= button_to command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                              method: :post,
+                              params: { block_command: { command: "delete" } },
+                              form_class: "notae-block-menu-inline-form",
+                              class: "notae-block-menu-item is-danger" do %>
+                  <span class="notae-menu-item-icon">x</span>
+                  <span class="notae-menu-item-label">Delete</span>
+                <% end %>
+                <%= button_to command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                              method: :post,
+                              params: { block_command: { command: "suggest_edits" } },
+                              form_class: "notae-block-menu-inline-form",
+                              class: "notae-block-menu-item" do %>
+                  <span class="notae-menu-item-icon">~</span>
+                  <span class="notae-menu-item-label">Suggest edits</span>
+                <% end %>
+                <button type="button"
+                        class="notae-block-menu-item"
+                        data-prompt-template="Improve this block on <%= page.title %>."
+                        data-action="block-tools#askAi">
+                  <span class="notae-menu-item-icon">*</span>
+                  <span class="notae-menu-item-label">Ask AI</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        </details>
       </div>
-      <p class="hidden pb-2 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>
 
       <% if is_embed_block %>
-        <div class="space-y-2 rounded border border-slate-200 bg-white p-2">
-          <% if policy(block).update? %>
-            <%= form_with model: block,
-                          url: page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
-                          method: :patch,
-                          class: "flex flex-col gap-2 sm:flex-row sm:items-center" do |form| %>
-              <%= form.url_field :embed_url,
-                                 placeholder: "https://www.youtube.com/embed/...",
-                                 class: "w-full rounded border border-slate-300 px-3 py-2 text-sm" %>
-              <%= form.submit "Save embed", class: "rounded border border-slate-300 px-3 py-2 text-sm" %>
-            <% end %>
+        <div class="notae-doc-embed">
+          <%= form_with model: block,
+                        url: page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                        method: :patch,
+                        class: "notae-doc-inline-form" do |form| %>
+            <%= form.url_field :embed_url, placeholder: "https://www.youtube.com/embed/...", class: "notae-doc-input" %>
+            <%= form.submit "Save", class: "notae-chip-button" %>
           <% end %>
-
           <% if block.embed_url.present? %>
-            <div class="overflow-hidden rounded border border-slate-200">
-              <iframe src="<%= block.embed_url %>"
-                      class="h-64 w-full"
-                      loading="lazy"
-                      referrerpolicy="no-referrer"
-                      allowfullscreen></iframe>
-            </div>
+            <iframe src="<%= block.embed_url %>" class="notae-doc-embed-frame" loading="lazy" allowfullscreen></iframe>
           <% else %>
-            <p class="text-xs text-slate-600">Allowed embed domains: youtube, vimeo, figma, loom.</p>
+            <p class="notae-doc-muted">Allowed embed domains: youtube, vimeo, figma, loom.</p>
           <% end %>
         </div>
       <% elsif is_media_block %>
-        <div class="space-y-2 rounded border border-slate-200 bg-white p-2">
-          <% if policy(block).attach? %>
-            <div data-controller="block-upload" data-block-upload-url-value="<%= attach_url %>">
-              <div data-block-upload-target="dropzone"
-                   data-action="dragover->block-upload#dragover dragleave->block-upload#dragleave drop->block-upload#drop click->block-upload#openPicker"
-                   class="cursor-pointer rounded border border-dashed border-slate-300 bg-white px-3 py-4 text-center text-xs text-slate-600">
-                Drag and drop <%= block.block_type %> here
-              </div>
-              <%= tag.input type: "file",
-                            class: "hidden",
-                            data: { block_upload_target: "input", action: "change->block-upload#upload" },
-                            accept: (block.block_type == "image" ? "image/*" : nil) %>
-              <button type="button"
-                      data-action="block-upload#openPicker"
-                      class="mt-2 rounded border border-slate-300 px-2 py-1 text-xs">
-                Choose file
-              </button>
+        <div class="notae-doc-media">
+          <div data-controller="block-upload" data-block-upload-url-value="<%= attach_url %>">
+            <div data-block-upload-target="dropzone"
+                 data-action="dragover->block-upload#dragover dragleave->block-upload#dragleave drop->block-upload#drop click->block-upload#openPicker"
+                 class="notae-doc-dropzone">
+              Drag and drop <%= block.block_type %>
             </div>
-          <% end %>
+            <%= tag.input type: "file",
+                          class: "hidden",
+                          data: { block_upload_target: "input", action: "change->block-upload#upload" },
+                          accept: (block.block_type == "image" ? "image/*" : nil) %>
+          </div>
 
           <% if block.asset.attached? %>
             <% if block.asset.content_type.to_s.start_with?("image/") %>
-              <%= image_tag url_for(block.asset), class: "max-h-80 w-auto rounded border border-slate-200" %>
+              <%= image_tag url_for(block.asset), class: "notae-doc-image" %>
             <% else %>
-              <p class="text-xs text-slate-700">Attached file: <%= block.asset.filename.to_s %></p>
+              <p class="notae-doc-muted"><%= block.asset.filename.to_s %></p>
             <% end %>
-
-            <div class="flex items-center gap-2 text-xs">
+            <div class="notae-doc-inline-actions">
               <%= link_to "Download",
                           download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
-                          class: "rounded border border-slate-300 px-2 py-1" %>
+                          class: "notae-chip-button" %>
               <% if block.asset.content_type.to_s.start_with?("image/") %>
                 <%= link_to "Open",
                             download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, disposition: "inline"),
-                            class: "rounded border border-slate-300 px-2 py-1" %>
+                            class: "notae-chip-button" %>
               <% end %>
             </div>
-          <% else %>
-            <p class="text-xs text-slate-600">No file uploaded yet.</p>
           <% end %>
         </div>
       <% else %>
@@ -90,64 +234,28 @@
              data-block-editor-initial-json-value="<%= block.content_json.to_json %>"
              data-block-editor-block-type-value="<%= block.block_type %>"
              data-block-editor-block-id-value="<%= block.id %>">
-          <div data-block-editor-target="editor" class="min-h-10 rounded border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+          <div data-block-editor-target="editor"
+               class="notae-doc-editor is-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %>">
+          </div>
         </div>
       <% end %>
 
-      <div class="mt-2 rounded border border-slate-200 bg-white p-2">
-        <%= form_with model: new_block_comment,
-                      url: page_block_comments_path(workspace_slug: workspace.slug, page_id: page.id, block_id: block.id),
-                      class: "space-y-2" do |form| %>
-          <%= form.text_area :body, rows: 2, placeholder: "Comment on block", class: "w-full rounded border border-slate-300 px-2 py-1 text-xs" %>
-          <%= form.submit "Add block comment", class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
-        <% end %>
-
-        <% (comments_by_block[block.id] || []).each do |comment| %>
-          <div class="mt-2 rounded border border-slate-200 px-2 py-1 text-xs">
-            <div class="mb-1 flex items-center justify-between gap-2">
-              <span class="font-medium"><%= comment.author.email %></span>
-              <% if comment.resolved? %>
-                <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] text-emerald-700">Resolved</span>
-              <% end %>
-            </div>
-            <p class="whitespace-pre-wrap"><%= comment.body %></p>
-            <% if policy(comment).resolve? %>
-              <div class="mt-1">
-                <% if comment.resolved? %>
-                  <%= button_to "Unresolve",
-                                unresolve_page_block_comment_path(workspace_slug: workspace.slug, page_id: page.id, block_id: block.id, id: comment.id),
-                                method: :patch,
-                                class: "rounded border border-slate-300 px-1.5 py-0.5 text-[10px]" %>
-                <% else %>
-                  <%= button_to "Resolve",
-                                resolve_page_block_comment_path(workspace_slug: workspace.slug, page_id: page.id, block_id: block.id, id: comment.id),
-                                method: :patch,
-                                class: "rounded border border-slate-300 px-1.5 py-0.5 text-[10px]" %>
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-
-      <div class="mt-3 ml-4 border-l border-slate-200 pl-3">
+      <div class="notae-doc-children">
         <%= render partial: "pages/block_tree",
                    locals: {
                      workspace: workspace,
                      page: page,
                      blocks_by_parent: blocks_by_parent,
-                     comments_by_block: comments_by_block,
-                     new_block_comment: new_block_comment,
-                     parent_id: block.id
+                     parent_id: block.id,
+                     all_pages: all_pages
                    } %>
 
-        <%= form_with model: Block.new, url: page_blocks_path(workspace_slug: workspace.slug, page_id: page.id), class: "mt-2 inline-flex items-center gap-2" do |form| %>
+        <%= form_with model: Block.new,
+                      url: page_blocks_path(workspace_slug: workspace.slug, page_id: page.id),
+                      class: "notae-doc-add-form is-child" do |form| %>
           <%= form.hidden_field :parent_block_id, value: block.id %>
-          <%= form.select :block_type,
-                          [["Text", "paragraph"], ["Image", "image"], ["File", "file"], ["Embed", "embed"]],
-                          {},
-                          class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
-          <%= form.submit "Add nested block", class: "rounded border border-slate-300 px-2 py-1 text-xs" %>
+          <%= form.hidden_field :block_type, value: "paragraph" %>
+          <%= form.submit "+", class: "notae-doc-add-button" %>
         <% end %>
       </div>
     </article>

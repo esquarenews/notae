@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" role="img" aria-labelledby="title desc">
+  <title id="title">Citrus wave</title>
+  <desc id="desc">Warm citrus gradients with layered soft wave forms.</desc>
+  <defs>
+    <linearGradient id="base" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="35%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="72%" cy="24%" r="42%">
+      <stop offset="0%" stop-color="#fff7ed" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#fff7ed" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="520" fill="url(#base)"/>
+  <rect width="1600" height="520" fill="url(#sun)"/>
+  <path d="M0 300 C240 260 420 354 670 320 C920 286 1060 204 1320 232 C1460 246 1548 292 1600 280 L1600 520 L0 520 Z"
+        fill="#fff7ed" fill-opacity="0.33"/>
+  <path d="M0 360 C210 326 368 406 624 390 C872 374 1012 326 1270 338 C1430 346 1544 374 1600 366 L1600 520 L0 520 Z"
+        fill="#7c2d12" fill-opacity="0.2"/>
+  <g fill="#fff7ed" fill-opacity="0.16">
+    <ellipse cx="270" cy="108" rx="70" ry="26"/>
+    <ellipse cx="520" cy="78" rx="58" ry="20"/>
+    <ellipse cx="1180" cy="126" rx="86" ry="28"/>
+  </g>
+</svg>

@@ -31,6 +31,10 @@ class BlockPolicy < ApplicationPolicy
     create?
   end
 
+  def command?
+    update?
+  end
+
   class Scope < Scope
     def resolve
       return scope.none unless user

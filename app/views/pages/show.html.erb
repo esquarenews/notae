@@ -1,299 +1,259 @@
-<% content_for :title, @page.title %>
+<% content_for :title, @page.title.presence || "New page" %>
+<% content_for :topbar_page_icon, @page.icon.presence || "📄" %>
+<% content_for :topbar_privacy, @page.permission_mode.humanize %>
+<% content_for :content_class, "notae-content-page" %>
+<% content_for :topbar_actions do %>
+  <span class="notae-topbar-meta">Edited <%= time_ago_in_words(@page.updated_at) %> ago</span>
+  <%= render "pages/comments_menu",
+             workspace: @workspace,
+             page: @page,
+             can_comment_on_page: @can_comment_on_page,
+             new_page_comment: @new_page_comment,
+             page_comments: @page_comments %>
+  <%= render "pages/actions_menu",
+             workspace: @workspace,
+             page: @page,
+             move_target_pages: @move_target_pages,
+             can_manage_permissions: @can_manage_permissions,
+             can_archive_page: @can_archive_page,
+             page_plain_text: @page_plain_text,
+             page_word_count: @page_word_count,
+             page_versions: @page_versions,
+             recent_audit_events: @recent_audit_events %>
+  <%= render "pages/options_menu",
+             workspace: @workspace,
+             page: @page,
+             can_manage_permissions: @can_manage_permissions,
+             memberships: @memberships,
+             shared_user_ids: @shared_user_ids,
+             share_links: @share_links,
+             page_exports: @page_exports,
+             new_page_template: @new_page_template,
+             page_templates: @page_templates,
+             archived_blocks: @archived_blocks %>
+<% end %>
 
-<section class="notae-stack-lg"
+<% has_cover = @page.cover? %>
+<% doc_layout_classes = [ "notae-doc-layout" ] %>
+<% doc_layout_classes << "is-full-width" if @page.full_width? %>
+<% doc_layout_classes << "is-small-text" if @page.small_text? %>
+<% doc_layout_classes << "is-font-serif" if @page.font_style == "serif" %>
+<% doc_layout_classes << "is-font-mono" if @page.font_style == "mono" %>
+<% if has_cover %>
+  <section class="notae-page-cover">
+    <div class="notae-page-cover-frame">
+      <% if @page.cover_image.attached? %>
+        <%= image_tag @page.cover_image,
+                      class: "notae-page-cover-image",
+                      style: "object-position: center #{@page.cover_focal_y}%" %>
+      <% elsif (cover_asset = page_cover_asset_path(@page.cover_preset_key)).present? %>
+        <div class="notae-page-cover-preset"
+             style="background-image: url('<%= asset_path(cover_asset) %>'); background-position: center <%= @page.cover_focal_y %>%;">
+        </div>
+      <% end %>
+
+      <% if @can_update_page %>
+        <div class="notae-page-cover-controls">
+          <details class="notae-cover-picker">
+            <summary class="notae-chip-button notae-cover-chip">Change</summary>
+            <div class="notae-cover-picker-panel">
+              <div class="notae-cover-picker-grid">
+                <% Page::COVER_PRESET_KEYS.each do |preset_key| %>
+                  <% preset_asset = page_cover_asset_path(preset_key) %>
+                  <% next if preset_asset.blank? %>
+                  <%= button_to page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                method: :patch,
+                                params: { page: { cover_action: "preset", cover_preset_key: preset_key } },
+                                class: [ "notae-cover-picker-tile-button", ("is-active" if @page.cover_preset_key == preset_key) ].compact.join(" "),
+                                title: preset_key.humanize,
+                                aria: { label: "Use #{preset_key.humanize} cover" } do %>
+                    <span class="notae-cover-picker-tile"
+                          style="background-image: url('<%= asset_path(preset_asset) %>');"></span>
+                  <% end %>
+                <% end %>
+              </div>
+              <%= button_to "Random",
+                            page_path(workspace_slug: @workspace.slug, id: @page.id),
+                            method: :patch,
+                            params: { page: { cover_action: "random" } },
+                            class: "notae-cover-picker-random" %>
+            </div>
+          </details>
+          <%= button_to "↑",
+                        page_path(workspace_slug: @workspace.slug, id: @page.id),
+                        method: :patch,
+                        params: { page: { cover_shift: "up" } },
+                        class: "notae-chip-button notae-cover-chip",
+                        title: "Move cover up",
+                        aria: { label: "Move cover up" } %>
+          <%= button_to "↓",
+                        page_path(workspace_slug: @workspace.slug, id: @page.id),
+                        method: :patch,
+                        params: { page: { cover_shift: "down" } },
+                        class: "notae-chip-button notae-cover-chip",
+                        title: "Move cover down",
+                        aria: { label: "Move cover down" } %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<section class="<%= doc_layout_classes.join(" ") %>"
          data-controller="page-collaboration"
          data-page-collaboration-workspace-slug-value="<%= @workspace.slug %>"
          data-page-collaboration-page-id-value="<%= @page.id %>"
          data-page-collaboration-current-user-id-value="<%= current_user.id %>">
-  <header class="notae-page-header">
-    <p class="notae-page-subtle">
-      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %>
-      ·
-      <%= @page.permission_mode.humanize %>
-    </p>
-    <h1><%= @page.title %></h1>
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="inline-flex items-center gap-1 rounded-full border border-stone-200 px-2 py-1" data-page-collaboration-target="presence">
-        <span class="text-xs text-stone-500">Only you here</span>
-      </div>
-      <% if policy(@page).archive? %>
-        <%= button_to "Archive page",
-                      archive_page_path(workspace_slug: @workspace.slug, id: @page.id),
-                      method: :patch,
-                      class: "notae-chip-button" %>
+
+  <header class="notae-doc-header">
+    <div class="notae-page-header-main">
+      <% if @page.icon.present? %>
+        <div class="notae-page-icon-display"><%= @page.icon %></div>
       <% end %>
-      <%= link_to "Notifications (#{@unread_notifications_count})",
-                  workspace_notifications_path(workspace_slug: @workspace.slug),
-                  class: "notae-chip-button" %>
+
+      <% if @can_update_page || @can_comment_on_page %>
+        <div class="notae-page-header-tools">
+          <% if @can_update_page %>
+            <details class="notae-page-header-action">
+              <summary><span class="notae-page-header-action-icon">◌</span> <%= @page.icon.present? ? "Change icon" : "Add icon" %></summary>
+              <div class="notae-page-header-panel">
+                <%= form_with model: @page,
+                              url: page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              method: :patch,
+                              class: "notae-page-header-panel-form" do |form| %>
+                  <%= hidden_field_tag "page[icon_action]", "set" %>
+                  <%= form.text_field :icon,
+                                      maxlength: 8,
+                                      placeholder: "😀",
+                                      class: "notae-options-input",
+                                      value: @page.icon %>
+                  <%= form.submit(@page.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
+                <% end %>
+                <div class="notae-page-emoji-grid">
+                  <% Page::ICON_SUGGESTIONS.each do |emoji| %>
+                    <%= button_to page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                  method: :patch,
+                                  params: { page: { icon_action: "set", icon: emoji } },
+                                  class: "notae-page-emoji-button",
+                                  title: "Use #{emoji}" do %>
+                      <%= emoji %>
+                    <% end %>
+                  <% end %>
+                </div>
+                <% if @page.icon.present? %>
+                  <%= button_to "Remove icon",
+                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                method: :patch,
+                                params: { page: { icon_action: "clear" } },
+                                class: "notae-page-header-link-button" %>
+                <% end %>
+              </div>
+            </details>
+
+            <details class="notae-page-header-action">
+              <summary><span class="notae-page-header-action-icon">▭</span> <%= has_cover ? "Change cover" : "Add cover" %></summary>
+              <div class="notae-page-header-panel">
+                <div class="notae-page-cover-panel-actions">
+                  <%= button_to "Random cover",
+                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                method: :patch,
+                                params: { page: { cover_action: "random" } },
+                                class: "notae-chip-button" %>
+                  <%= button_to "Move up",
+                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                method: :patch,
+                                params: { page: { cover_shift: "up" } },
+                                class: "notae-chip-button" %>
+                  <%= button_to "Move down",
+                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                method: :patch,
+                                params: { page: { cover_shift: "down" } },
+                                class: "notae-chip-button" %>
+                </div>
+                <%= form_with model: @page,
+                              url: page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              method: :patch,
+                              class: "notae-page-header-panel-form" do |form| %>
+                  <%= hidden_field_tag "page[cover_action]", "upload" %>
+                  <%= form.file_field :cover_image, accept: "image/*", class: "notae-options-input" %>
+                  <%= form.submit "Upload cover", class: "notae-chip-button" %>
+                <% end %>
+                <% if has_cover %>
+                  <%= button_to "Remove cover",
+                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                method: :patch,
+                                params: { page: { cover_action: "clear" } },
+                                class: "notae-page-header-link-button" %>
+                <% end %>
+              </div>
+            </details>
+          <% end %>
+
+          <% if @can_comment_on_page %>
+            <button type="button" class="notae-page-header-link" data-action="click->shell#openCommentsMenu">
+              <span class="notae-page-header-action-icon">💬</span> Add comment
+            </button>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%= form_with model: @page,
+                    url: page_path(workspace_slug: @workspace.slug, id: @page.id),
+                    method: :patch,
+                    class: "notae-page-title-form",
+                    data: {
+                      controller: "page-title",
+                      page_title_url_value: page_path(workspace_slug: @workspace.slug, id: @page.id)
+                    } do |form| %>
+        <%= form.text_field :title,
+                            placeholder: "New page",
+                            class: "notae-page-title-input",
+                            data: {
+                              page_title_target: "input",
+                              action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
+                            },
+                            aria: { label: "Page title" } %>
+        <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
+      <% end %>
     </div>
-    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "flex max-w-xl gap-2 pt-1" do |form| %>
-      <%= form.text_field :q, placeholder: "Search workspace", class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
-      <%= form.submit "Search", class: "notae-chip-button" %>
-    <% end %>
   </header>
 
-  <% if @can_manage_permissions %>
-    <section class="notae-surface space-y-3">
-      <h2 class="text-lg font-medium">Page Permissions</h2>
-      <%= form_with model: @page, url: permissions_page_path(workspace_slug: @workspace.slug, id: @page.id), method: :patch, class: "space-y-3" do |form| %>
-        <div>
-          <%= form.label :permission_mode, "Visibility", class: "block text-sm font-medium text-stone-800" %>
-          <%= form.select :permission_mode,
-                          [["Shared To Workspace", "shared_to_workspace"], ["Private", "private_page"], ["Specific Users", "specific_users"]],
-                          {},
-                          class: "mt-1 rounded border border-stone-300 px-2 py-1 text-sm" %>
-        </div>
-
-        <div class="space-y-1">
-          <p class="text-sm font-medium text-stone-800">Specific Users</p>
-          <% @memberships.each do |membership| %>
-            <label class="flex items-center gap-2 text-sm">
-              <%= check_box_tag "page[shared_user_ids][]", membership.user_id, @shared_user_ids.include?(membership.user_id), class: "rounded border-stone-300" %>
-              <span><%= membership.user.email %></span>
-            </label>
-          <% end %>
-        </div>
-
-        <%= form.submit "Save permissions", class: "notae-chip-button" %>
-      <% end %>
-    </section>
-
-    <section class="notae-surface space-y-3">
-      <h2 class="text-lg font-medium">Public Share Links</h2>
-      <%= form_with model: ShareLink.new,
-                    url: page_share_links_path(workspace_slug: @workspace.slug, page_id: @page.id),
-                    class: "flex flex-wrap items-end gap-3" do |form| %>
-        <div class="min-w-56">
-          <%= form.label :expires_at, "Optional expiration", class: "block text-sm font-medium text-stone-800" %>
-          <%= form.datetime_local_field :expires_at, class: "mt-1 w-full rounded border border-stone-300 px-2 py-1.5 text-sm" %>
-        </div>
-        <%= form.submit "Create public link", class: "notae-chip-button" %>
-      <% end %>
-
-      <% active_share_links = @share_links.select(&:active?) %>
-      <% if active_share_links.any? %>
-        <ul class="space-y-2">
-          <% active_share_links.each do |share_link| %>
-            <li class="rounded border border-stone-200 px-3 py-2 text-sm">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <%= link_to public_share_url(token: share_link.token),
-                            public_share_path(token: share_link.token),
-                            class: "underline",
-                            target: "_blank",
-                            rel: "noopener" %>
-                <%= button_to "Revoke",
-                              page_share_link_path(workspace_slug: @workspace.slug, page_id: @page.id, id: share_link.id),
-                              method: :delete,
-                              class: "notae-chip-button" %>
-              </div>
-              <p class="pt-1 text-xs text-stone-500">
-                <% if share_link.expires_at.present? %>
-                  Expires <%= l(share_link.expires_at, format: :long) %>
-                <% else %>
-                  No expiration
-                <% end %>
-              </p>
-            </li>
-          <% end %>
-        </ul>
-      <% else %>
-        <p class="text-sm text-stone-500">No active public share links.</p>
-      <% end %>
-    </section>
-  <% end %>
-
-  <section class="notae-surface space-y-3">
-    <h2 class="text-lg font-medium">Export & Portability</h2>
-    <div class="flex flex-wrap items-center gap-2">
-      <%= link_to "Export Markdown",
-                  export_markdown_page_path(workspace_slug: @workspace.slug, id: @page.id),
-                  class: "notae-chip-button" %>
-      <%= button_to "Build ZIP (Markdown + attachments)",
-                    export_zip_page_path(workspace_slug: @workspace.slug, id: @page.id),
-                    method: :post,
-                    class: "notae-chip-button" %>
-    </div>
-
-    <% if @page_exports.any? %>
-      <ul class="space-y-2">
-        <% @page_exports.each do |page_export| %>
-          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-medium"><%= page_export.created_at.strftime("%Y-%m-%d %H:%M") %> export</span>
-              <% if page_export.downloadable? %>
-                <%= link_to "Download ZIP",
-                            workspace_export_path(workspace_slug: @workspace.slug, token: page_export.token),
-                            class: "notae-chip-button" %>
-              <% elsif page_export.pending? %>
-                <span class="text-stone-500">Preparing...</span>
-              <% elsif page_export.failed? %>
-                <span class="text-rose-600">Failed</span>
-              <% else %>
-                <span class="text-stone-500">Unavailable</span>
-              <% end %>
-            </div>
-            <p class="pt-1 text-xs text-stone-500">
-              Expires <%= l(page_export.expires_at, format: :long) %>
-              <% if page_export.failed? && page_export.error_message.present? %>
-                · <%= page_export.error_message %>
-              <% end %>
-            </p>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="text-sm text-stone-500">No exports yet.</p>
-    <% end %>
-  </section>
-
-  <section class="notae-surface space-y-3">
-    <h2 class="text-lg font-medium">Templates</h2>
-
-    <%= form_with model: @new_page_template,
-                  url: save_as_template_page_path(workspace_slug: @workspace.slug, id: @page.id),
-                  class: "flex flex-wrap items-end gap-3" do |form| %>
-      <div class="min-w-56">
-        <%= form.label :name, "Template name", class: "block text-sm font-medium text-stone-800" %>
-        <%= form.text_field :name, value: @page.title, required: true, class: "mt-1 w-full rounded border border-stone-300 px-2 py-1.5 text-sm" %>
-      </div>
-      <%= form.submit "Save page as template", class: "notae-chip-button" %>
-    <% end %>
-
-    <% if @page_templates.any? %>
-      <ul class="space-y-2">
-        <% @page_templates.each do |template| %>
-          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-medium"><%= template.name %></span>
-              <%= form_with url: instantiate_page_template_path(workspace_slug: @workspace.slug, id: template.id),
-                            method: :post,
-                            class: "inline-flex items-center gap-2" do %>
-                <%= text_field_tag "page_template[title]", "", placeholder: "New page title (optional)", class: "rounded border border-stone-300 px-2 py-1 text-xs" %>
-                <%= submit_tag "Use template", class: "notae-chip-button" %>
-              <% end %>
-            </div>
-            <p class="pt-1 text-xs text-stone-500">Created <%= l(template.created_at, format: :long) %></p>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="text-sm text-stone-500">No templates saved yet.</p>
-    <% end %>
-  </section>
-
-  <section class="notae-surface space-y-3">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h2 class="text-lg font-medium">Blocks</h2>
-      <%= form_with model: @new_root_block, url: page_blocks_path(workspace_slug: @workspace.slug, page_id: @page.id), class: "inline-flex items-center gap-2" do |form| %>
-        <%= form.hidden_field :parent_block_id %>
-        <%= form.select :block_type,
-                        [["Text", "paragraph"], ["Image", "image"], ["File", "file"], ["Embed", "embed"]],
-                        {},
-                        class: "rounded border border-stone-300 px-2 py-1.5 text-sm" %>
-        <%= form.submit "Add block", class: "notae-chip-button" %>
-      <% end %>
-    </div>
-
+  <div class="notae-doc-canvas">
     <%= render partial: "pages/block_tree",
                locals: {
                  workspace: @workspace,
                  page: @page,
                  blocks_by_parent: @blocks_by_parent,
-                 comments_by_block: @comments_by_block,
-                 new_block_comment: @new_block_comment,
-                 parent_id: nil
+                 parent_id: nil,
+                 all_pages: @move_target_pages
                } %>
-  </section>
 
-  <section class="notae-surface space-y-3">
-    <h3 class="text-base font-medium">Page Comments</h3>
-
-    <%= form_with model: @new_page_comment,
-                  url: page_comments_path(workspace_slug: @workspace.slug, page_id: @page.id),
-                  class: "space-y-2" do |form| %>
-      <%= form.text_area :body, rows: 3, placeholder: "Comment or mention someone with @email", class: "w-full rounded border border-stone-300 px-3 py-2 text-sm" %>
-      <%= form.submit "Add comment", class: "notae-chip-button" %>
+    <% if policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create? %>
+      <%= form_with model: Block.new,
+                    url: page_blocks_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                    class: "notae-doc-add-form" do |form| %>
+        <%= form.hidden_field :parent_block_id %>
+        <%= form.hidden_field :block_type, value: "paragraph" %>
+        <%= form.submit "+ Add block", class: "notae-doc-add-button" %>
+      <% end %>
     <% end %>
+  </div>
 
-    <% if @page_comments.any? %>
-      <ul class="space-y-2">
-        <% @page_comments.each do |comment| %>
-          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
-            <div class="mb-1 flex items-center justify-between gap-2">
-              <span class="font-medium"><%= comment.author.email %></span>
-              <% if comment.resolved? %>
-                <span class="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">Resolved</span>
-              <% end %>
-            </div>
-            <p class="mb-2 whitespace-pre-wrap"><%= comment.body %></p>
-            <% if policy(comment).resolve? %>
-              <% if comment.resolved? %>
-                <%= button_to "Unresolve",
-                              unresolve_page_comment_path(workspace_slug: @workspace.slug, page_id: @page.id, id: comment.id),
-                              method: :patch,
-                              class: "notae-chip-button" %>
-              <% else %>
-                <%= button_to "Resolve",
-                              resolve_page_comment_path(workspace_slug: @workspace.slug, page_id: @page.id, id: comment.id),
-                              method: :patch,
-                              class: "notae-chip-button" %>
-              <% end %>
-            <% end %>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="text-sm text-stone-500">No page comments yet.</p>
-    <% end %>
-  </section>
-
-  <section id="backlinks" class="notae-surface space-y-2">
-    <h3 class="text-base font-medium">Backlinks</h3>
+  <section class="notae-doc-backlinks">
+    <h2>Backlinks</h2>
     <% backlink_pages = @backlinks.map(&:source_page).uniq { |source_page| source_page.id } %>
     <% if backlink_pages.any? %>
-      <ul class="space-y-1">
+      <ul>
         <% backlink_pages.each do |source_page| %>
           <li>
             <%= link_to source_page.title,
                         page_path(workspace_slug: @workspace.slug, id: source_page.id),
-                        data: { backlink_source: source_page.id },
-                        class: "text-sm underline" %>
+                        data: { backlink_source: source_page.id } %>
           </li>
         <% end %>
       </ul>
     <% else %>
-      <p class="text-sm text-stone-500">No backlinks yet.</p>
+      <p>No backlinks yet.</p>
     <% end %>
   </section>
-
-  <% if @archived_blocks.any? %>
-    <section class="notae-surface space-y-2">
-      <h3 class="text-base font-medium">Archived Blocks</h3>
-      <ul class="space-y-2">
-        <% @archived_blocks.each do |block| %>
-          <li class="flex items-center justify-between rounded border border-stone-200 px-3 py-2 text-sm">
-            <span><%= block.block_type %> block</span>
-            <%= button_to "Restore",
-                          restore_page_block_path(workspace_slug: @workspace.slug, page_id: @page.id, id: block.id),
-                          method: :patch,
-                          class: "notae-chip-button" %>
-          </li>
-        <% end %>
-      </ul>
-    </section>
-  <% end %>
-
-  <% if @audit_events.any? %>
-    <section class="notae-surface space-y-2">
-      <h3 class="text-base font-medium">Recent Audit Events</h3>
-      <ul class="space-y-2">
-        <% @audit_events.each do |event| %>
-          <li class="rounded border border-stone-200 px-3 py-2 text-sm">
-            <div class="font-medium"><%= event.action.humanize %> by <%= event.actor.email %></div>
-            <div class="text-xs text-stone-500"><%= event.metadata.to_json %></div>
-          </li>
-        <% end %>
-      </ul>
-    </section>
-  <% end %>
 </section>

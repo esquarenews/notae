@@ -11,12 +11,15 @@ RSpec.describe "Comments", type: :request do
     expect do
       post page_comments_path(workspace_slug: workspace.slug, page_id: page.id), params: { comment: { body: "Needs review" } }
     end.to change(Comment, :count).by(1)
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "page-comments-menu"))
     comment = Comment.last
 
     patch resolve_page_comment_path(workspace_slug: workspace.slug, page_id: page.id, id: comment.id)
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "page-comments-menu"))
     expect(comment.reload).to be_resolved
 
     patch unresolve_page_comment_path(workspace_slug: workspace.slug, page_id: page.id, id: comment.id)
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "page-comments-menu"))
     expect(comment.reload).not_to be_resolved
   end
 

@@ -20,7 +20,10 @@ class PagePolicy < ApplicationPolicy
   end
 
   def update?
-    create?
+    return false unless create?
+    return true unless record.respond_to?(:locked?) && record.locked?
+
+    membership&.admin_or_owner?
   end
 
   def archive?

@@ -21,13 +21,13 @@ class PageExportsController < ApplicationController
     if @page_export.save
       begin
         PageExports::BuildZipJob.perform_later(@page_export.id)
-        redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Export queued."
+        redirect_to page_redirect_path, notice: "Export queued."
       rescue StandardError => error
         @page_export.mark_failed!("Queue unavailable: #{error.class}: #{error.message}")
-        redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), alert: "Export queue unavailable. Start Redis/Sidekiq and retry."
+        redirect_to page_redirect_path, alert: "Export queue unavailable. Start Redis/Sidekiq and retry."
       end
     else
-      redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), alert: @page_export.errors.full_messages.to_sentence
+      redirect_to page_redirect_path, alert: @page_export.errors.full_messages.to_sentence
     end
   end
 
@@ -57,5 +57,11 @@ class PageExportsController < ApplicationController
 
   def sanitize_filename(value)
     value.to_s.parameterize.presence || "page-export"
+  end
+
+  def page_redirect_path
+    route_params = { workspace_slug: @workspace.slug, id: @page.id }
+    route_params[:options_menu] = "open" if params[:options_menu].to_s == "open"
+    page_path(route_params)
   end
 end

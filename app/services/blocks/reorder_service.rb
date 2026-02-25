@@ -13,12 +13,17 @@ module Blocks
     def call
       Block.transaction do
         target_parent = load_target_parent!
-        siblings = load_siblings(target_parent).where.not(id: block.id).lock.order(:position).to_a
+        siblings = ordered_siblings(target_parent).where.not(id: block.id).lock.to_a
+        if needs_normalization?(siblings)
+          normalize_positions!(siblings)
+          siblings = ordered_siblings(target_parent).where.not(id: block.id).lock.to_a
+        end
+
         new_position = midpoint_position(siblings, target_index)
 
         if new_position.nil?
           normalize_positions!(siblings)
-          siblings = load_siblings(target_parent).where.not(id: block.id).lock.order(:position).to_a
+          siblings = ordered_siblings(target_parent).where.not(id: block.id).lock.to_a
           new_position = midpoint_position(siblings, target_index) || ((siblings.last&.position || 0) + Block::POSITION_GAP)
         end
 
@@ -45,15 +50,24 @@ module Blocks
       block.page.blocks.active.where(parent_block_id: parent&.id)
     end
 
+    def ordered_siblings(parent)
+      load_siblings(parent).order(Arel.sql("position ASC NULLS LAST"))
+    end
+
     def midpoint_position(siblings, index)
       bounded_index = index.clamp(0, siblings.length)
       prev_position = bounded_index.zero? ? 0 : siblings[bounded_index - 1].position
       next_position = bounded_index >= siblings.length ? nil : siblings[bounded_index].position
 
-      return prev_position + Block::POSITION_GAP if next_position.nil?
+      return (prev_position || 0) + Block::POSITION_GAP if next_position.nil?
+      return nil if prev_position.nil?
       return nil if next_position - prev_position <= 1
 
       prev_position + ((next_position - prev_position) / 2)
+    end
+
+    def needs_normalization?(siblings)
+      siblings.any? { |sibling| sibling.position.blank? }
     end
 
     def normalize_positions!(siblings)

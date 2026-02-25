@@ -1,0 +1,41 @@
+<section class="notae-auth-page">
+  <div class="notae-auth-brand">
+    <%= image_tag "/icon.svg", alt: "Notae icon", class: "notae-auth-brand-icon" %>
+    <div>
+      <h1>Notae</h1>
+      <p>Sign in to continue to your workspace.</p>
+    </div>
+  </div>
+
+  <section class="notae-auth-card">
+    <h2>Sign in</h2>
+
+    <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "notae-auth-form" }) do |form| %>
+      <div class="notae-auth-field">
+        <%= form.label :email %>
+        <%= form.email_field :email, autofocus: true, autocomplete: "email", class: "notae-auth-input" %>
+      </div>
+
+      <div class="notae-auth-field">
+        <%= form.label :password %>
+        <%= form.password_field :password, autocomplete: "current-password", class: "notae-auth-input" %>
+      </div>
+
+      <% if devise_mapping.rememberable? %>
+        <label class="notae-auth-remember">
+          <%= form.check_box :remember_me %>
+          <span>Remember me</span>
+        </label>
+      <% end %>
+
+      <%= form.submit "Sign in", class: "notae-chip-button notae-auth-submit" %>
+    <% end %>
+
+    <div class="notae-auth-links">
+      <%= link_to "Forgot your password?", new_password_path(resource_name) %>
+      <% if devise_mapping.registerable? %>
+        <%= link_to "Create account", new_registration_path(resource_name) %>
+      <% end %>
+    </div>
+  </section>
+</section>

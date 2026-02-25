@@ -37,20 +37,24 @@
             <div class="notae-topbar-leading">
               <button type="button" class="notae-mobile-toggle" data-action="shell#toggle" aria-label="Toggle sidebar">☰</button>
               <div class="notae-topbar-title">
-                <span class="notae-topbar-page-icon">📄</span>
+                <span class="notae-topbar-page-icon"><%= content_for?(:topbar_page_icon) ? yield(:topbar_page_icon) : "📄" %></span>
                 <span><%= content_for(:title) || "New page" %></span>
-                <span class="notae-topbar-privacy">Private</span>
+                <span class="notae-topbar-privacy"><%= content_for?(:topbar_privacy) ? yield(:topbar_privacy) : "Private" %></span>
               </div>
             </div>
             <div class="notae-topbar-actions">
-              <span class="notae-topbar-meta">Edited just now</span>
-              <button type="button" class="notae-chip-button">Share</button>
-              <button type="button" class="notae-inline-icon-button" aria-label="Favorite">☆</button>
-              <button type="button" class="notae-inline-icon-button" aria-label="More">⋯</button>
+              <% if content_for?(:topbar_actions) %>
+                <%= yield :topbar_actions %>
+              <% else %>
+                <span class="notae-topbar-meta">Edited just now</span>
+                <button type="button" class="notae-chip-button">Share</button>
+                <button type="button" class="notae-inline-icon-button" aria-label="Favorite">☆</button>
+                <button type="button" class="notae-inline-icon-button" aria-label="More">⋯</button>
+              <% end %>
             </div>
           </header>
 
-          <main class="notae-content">
+          <main class="notae-content <%= content_for?(:content_class) ? yield(:content_class) : "" %>">
             <% flash.each do |type, message| %>
               <% palette = type.to_s == "alert" ? "notae-flash alert" : "notae-flash notice" %>
               <p class="<%= palette %>"><%= message %></p>
