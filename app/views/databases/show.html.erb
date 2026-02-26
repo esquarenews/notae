@@ -1,7 +1,8 @@
 <% content_for :title, @database.name %>
-<% content_for :topbar_page_icon, "🗃️" %>
-<% content_for :topbar_privacy, "Database" %>
-<% content_for :content_class, "notae-content-wide" %>
+<% content_for :topbar_page_icon, @database.icon.presence || "🗃️" %>
+<% content_for :topbar_privacy, "Private" %>
+<% content_for :content_class, "notae-content-page" %>
+<% can_update_database = policy(@database).update? %>
 <% content_for :topbar_actions do %>
   <span class="notae-topbar-meta">Edited <%= time_ago_in_words(@database.updated_at) %> ago</span>
   <% if @database_favorite.present? %>
@@ -23,179 +24,343 @@
   <% end %>
 <% end %>
 
-<section class="notae-db-canvas">
-  <p class="notae-db-context">
-    <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "underline" %> · <%= @view_type.titleize %>
-  </p>
-  <h1 class="notae-db-title"><%= @database.name %></h1>
+<% view_link = database_path(
+  workspace_slug: @workspace.slug,
+  id: @database.id,
+  view_id: @current_view&.id,
+  month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+  sort_property_id: params[:sort_property_id],
+  sort_direction: params[:sort_direction],
+  filter_property_id: params[:filter_property_id],
+  filter_value: params[:filter_value]
+) %>
 
-  <div class="notae-db-viewbar">
-    <% @database_views.each do |view| %>
-      <%= link_to view.name,
-                  database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: view.id),
-                  class: [ "notae-db-view-pill", ("is-active" if @current_view&.id == view.id) ].compact.join(" ") %>
+<section class="notae-db-canvas">
+  <% if @database.cover? %>
+    <section class="notae-page-cover">
+      <div class="notae-page-cover-frame">
+        <% if @database.cover_image.attached? %>
+          <%= image_tag @database.cover_image,
+                        class: "notae-page-cover-image",
+                        style: "object-position: center #{@database.cover_focal_y}%" %>
+        <% elsif (cover_asset = page_cover_asset_path(@database.cover_preset_key)).present? %>
+          <div class="notae-page-cover-preset"
+               style="background-image: url('<%= asset_path(cover_asset) %>'); background-position: center <%= @database.cover_focal_y %>%;">
+          </div>
+        <% end %>
+
+        <% if can_update_database %>
+          <div class="notae-page-cover-controls">
+            <details class="notae-cover-picker">
+              <summary class="notae-chip-button notae-cover-chip">Change</summary>
+              <div class="notae-cover-picker-panel">
+                <div class="notae-cover-picker-grid">
+                  <% Database::COVER_PRESET_KEYS.each do |preset_key| %>
+                    <% preset_asset = page_cover_asset_path(preset_key) %>
+                    <% next if preset_asset.blank? %>
+
+                    <%= button_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                                  method: :patch,
+                                  params: { database: { cover_action: "preset", cover_preset_key: preset_key } },
+                                  class: [ "notae-cover-picker-tile-button", ("is-active" if @database.cover_preset_key == preset_key) ].compact.join(" "),
+                                  title: preset_key.humanize,
+                                  aria: { label: "Use #{preset_key.humanize} cover" } do %>
+                      <span class="notae-cover-picker-tile"
+                            style="background-image: url('<%= asset_path(preset_asset) %>');"></span>
+                    <% end %>
+                  <% end %>
+                </div>
+
+                <div class="notae-cover-picker-quick-actions">
+                  <%= button_to "Random",
+                                database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                                method: :patch,
+                                params: { database: { cover_action: "random" } },
+                                class: "notae-cover-picker-action" %>
+                  <%= button_to "Remove",
+                                database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                                method: :patch,
+                                params: { database: { cover_action: "clear" } },
+                                class: "notae-cover-picker-action is-danger" %>
+                </div>
+
+                <%= form_with model: @database,
+                              url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                              method: :patch,
+                              class: "notae-cover-picker-upload-form" do |form| %>
+                  <%= hidden_field_tag "database[cover_action]", "upload" %>
+                  <%= form.file_field :cover_image, accept: "image/*", class: "notae-cover-picker-upload-input" %>
+                  <%= form.submit "Upload", class: "notae-cover-picker-action" %>
+                <% end %>
+              </div>
+            </details>
+
+            <%= button_to "↑",
+                          database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                          method: :patch,
+                          params: { database: { cover_shift: "up" } },
+                          class: "notae-chip-button notae-cover-chip",
+                          title: "Move cover up",
+                          aria: { label: "Move cover up" } %>
+            <%= button_to "↓",
+                          database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                          method: :patch,
+                          params: { database: { cover_shift: "down" } },
+                          class: "notae-chip-button notae-cover-chip",
+                          title: "Move cover down",
+                          aria: { label: "Move cover down" } %>
+          </div>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <header class="notae-db-header">
+    <% if @database.icon.present? %>
+      <div class="notae-page-icon-display"><%= @database.icon %></div>
     <% end %>
 
-    <% if policy(DatabaseView.new(database: @database, workspace: @workspace, created_by: current_user)).create? %>
-      <details class="notae-db-inline-details">
-        <summary class="notae-db-view-pill">+ View</summary>
-        <div class="notae-db-inline-panel">
-          <%= form_with model: @new_database_view,
-                        url: database_database_views_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                        class: "notae-db-inline-form-grid" do |form| %>
-            <%= form.text_field :name, placeholder: "View name", required: true, class: "notae-options-input" %>
-            <%= form.select :view_type,
-                            DatabaseView.view_types.keys.map { |value| [ value.titleize, value ] },
-                            {},
-                            class: "notae-options-input" %>
-            <%= form.select :group_property_id,
-                            @db_properties.select(&:select?).map { |property| [property.name, property.id] },
-                            { include_blank: "Board property" },
-                            class: "notae-options-input" %>
-            <%= form.select :date_property_id,
-                            @db_properties.select(&:date?).map { |property| [property.name, property.id] },
-                            { include_blank: "Calendar date property" },
-                            class: "notae-options-input" %>
-            <%= form.select :sort_property_id,
-                            @db_properties.map { |property| [property.name, property.id] },
-                            { include_blank: "Sort property" },
-                            class: "notae-options-input" %>
-            <%= form.select :sort_direction,
-                            [["Asc", "asc"], ["Desc", "desc"]],
-                            { include_blank: "Sort direction" },
-                            class: "notae-options-input" %>
-            <%= form.select :filter_property_id,
-                            @db_properties.map { |property| [property.name, property.id] },
-                            { include_blank: "Filter property" },
-                            class: "notae-options-input" %>
-            <%= form.text_field :filter_value, placeholder: "Filter equals value", class: "notae-options-input" %>
-            <label class="notae-options-checkbox">
-              <%= form.check_box :default %>
-              <span>Default</span>
-            </label>
-            <%= form.submit "Save view", class: "notae-chip-button" %>
-          <% end %>
+    <% if can_update_database %>
+      <div class="notae-db-header-tools">
+        <details class="notae-page-header-action">
+          <summary><span class="notae-page-header-action-icon">◌</span> <%= @database.icon.present? ? "Change icon" : "Add icon" %></summary>
+          <div class="notae-page-header-panel">
+            <%= form_with model: @database,
+                          url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                          method: :patch,
+                          class: "notae-page-header-panel-form" do |form| %>
+              <%= hidden_field_tag "database[icon_action]", "set" %>
+              <%= form.text_field :icon, maxlength: 8, placeholder: "🗃️", class: "notae-options-input", value: @database.icon %>
+              <%= form.submit(@database.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
+            <% end %>
+            <div class="notae-page-emoji-grid">
+              <% Database::ICON_SUGGESTIONS.each do |emoji| %>
+                <%= button_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                              method: :patch,
+                              params: { database: { icon_action: "set", icon: emoji } },
+                              class: "notae-page-emoji-button",
+                              title: "Use #{emoji}" do %>
+                  <%= emoji %>
+                <% end %>
+              <% end %>
+            </div>
+            <% if @database.icon.present? %>
+              <%= button_to "Remove icon",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { icon_action: "clear" } },
+                            class: "notae-page-header-link-button" %>
+            <% end %>
+          </div>
+        </details>
+
+        <details class="notae-page-header-action">
+          <summary><span class="notae-page-header-action-icon">▭</span> <%= @database.cover? ? "Change cover" : "Add cover" %></summary>
+          <div class="notae-page-header-panel">
+            <div class="notae-page-cover-panel-actions">
+              <%= button_to "Random cover",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { cover_action: "random" } },
+                            class: "notae-chip-button" %>
+              <%= button_to "Move up",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { cover_shift: "up" } },
+                            class: "notae-chip-button" %>
+              <%= button_to "Move down",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { cover_shift: "down" } },
+                            class: "notae-chip-button" %>
+            </div>
+            <%= form_with model: @database,
+                          url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                          method: :patch,
+                          class: "notae-page-header-panel-form" do |form| %>
+              <%= hidden_field_tag "database[cover_action]", "upload" %>
+              <%= form.file_field :cover_image, accept: "image/*", class: "notae-options-input" %>
+              <%= form.submit "Upload cover", class: "notae-chip-button" %>
+            <% end %>
+            <% if @database.cover? %>
+              <%= button_to "Remove cover",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { cover_action: "clear" } },
+                            class: "notae-page-header-link-button" %>
+            <% end %>
+          </div>
+        </details>
+
+        <details class="notae-page-header-action">
+          <summary><span class="notae-page-header-action-icon">ℹ</span> <%= @database.description.present? ? "Edit description" : "Add description" %></summary>
+          <div class="notae-page-header-panel">
+            <%= form_with model: @database,
+                          url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                          method: :patch,
+                          class: "notae-page-header-panel-form" do |form| %>
+              <%= hidden_field_tag "database[description_action]", "set" %>
+              <%= form.text_area :description, rows: 3, class: "notae-options-input", placeholder: "Describe this grid..." %>
+              <%= form.submit "Save description", class: "notae-chip-button" %>
+            <% end %>
+            <% if @database.description.present? %>
+              <%= button_to "Remove description",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { description_action: "clear" } },
+                            class: "notae-page-header-link-button" %>
+            <% end %>
+          </div>
+        </details>
+      </div>
+      <% end %>
+
+    <h1 class="notae-db-title"><%= @database.name %></h1>
+    <% if @database.description.present? %>
+      <p class="notae-db-description"><%= @database.description %></p>
+    <% end %>
+  </header>
+
+  <div class="notae-db-viewbar">
+    <% if @database_views.empty? %>
+      <span class="notae-db-view-pill is-active"><span class="notae-db-view-pill-icon">⊞</span> Table</span>
+    <% else %>
+      <% @database_views.each do |view| %>
+        <%= link_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: view.id),
+                    class: [ "notae-db-view-pill", ("is-active" if @current_view&.id == view.id) ].compact.join(" ") do %>
+          <span class="notae-db-view-pill-icon">⊞</span> <%= view.name %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if @current_view && policy(@current_view).update? %>
+      <details class="notae-db-view-menu" data-controller="copy-text">
+        <summary class="notae-db-view-plus">+</summary>
+        <div class="notae-db-view-menu-panel">
+          <div class="notae-db-view-menu-row">
+            <details class="notae-db-view-submenu">
+              <summary class="notae-db-view-menu-button">
+                <span class="notae-db-view-menu-icon">✎</span>
+                <span>Rename</span>
+              </summary>
+              <div class="notae-db-view-submenu-panel">
+                <%= form_with model: @current_view,
+                              url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                              method: :patch,
+                              class: "notae-db-view-submenu-form" do |form| %>
+                  <label class="notae-db-view-submenu-label" for="database_view_name_<%= @current_view.id %>">View name</label>
+                  <%= form.text_field :name,
+                                      id: "database_view_name_#{@current_view.id}",
+                                      value: @current_view.name,
+                                      class: "notae-options-input",
+                                      required: true %>
+                  <%= form.hidden_field :sort_property_id, value: @view_config["sort_property_id"] %>
+                  <%= form.hidden_field :sort_direction, value: @view_config["sort_direction"] %>
+                  <%= form.hidden_field :filter_property_id, value: @view_config["filter_property_id"] %>
+                  <%= form.hidden_field :filter_value, value: @view_config["filter_value"] %>
+                  <%= form.hidden_field :group_property_id, value: @view_config["group_property_id"] %>
+                  <%= form.hidden_field :date_property_id, value: @view_config["date_property_id"] %>
+                  <%= form.hidden_field :default, value: @current_view.default? ? "1" : "0" %>
+                  <%= form.submit "Save", class: "notae-chip-button" %>
+                <% end %>
+              </div>
+            </details>
+          </div>
+
+          <div class="notae-db-view-menu-row">
+            <details class="notae-db-view-submenu">
+              <summary class="notae-db-view-menu-button">
+                <span class="notae-db-view-menu-icon">⚙</span>
+                <span>Edit view</span>
+              </summary>
+              <div class="notae-db-view-submenu-panel">
+                <%= form_with model: @current_view,
+                              url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                              method: :patch,
+                              class: "notae-db-view-submenu-form" do |form| %>
+                  <%= form.hidden_field :name, value: @current_view.name %>
+                  <label class="notae-db-view-submenu-label" for="database_view_type_<%= @current_view.id %>">View type</label>
+                  <%= form.select :view_type,
+                                  DatabaseView.view_types.keys.map { |value| [value.titleize, value] },
+                                  {},
+                                  id: "database_view_type_#{@current_view.id}",
+                                  class: "notae-options-input" %>
+                  <label class="notae-db-view-submenu-label" for="database_view_sort_property_<%= @current_view.id %>">Sort</label>
+                  <%= form.select :sort_property_id,
+                                  @db_properties.map { |property| [property.name, property.id] },
+                                  { include_blank: "No sort", selected: @view_config["sort_property_id"] },
+                                  id: "database_view_sort_property_#{@current_view.id}",
+                                  class: "notae-options-input" %>
+                  <%= form.select :sort_direction,
+                                  [["Asc", "asc"], ["Desc", "desc"]],
+                                  { selected: @view_config["sort_direction"] },
+                                  class: "notae-options-input" %>
+                  <label class="notae-db-view-submenu-label" for="database_view_filter_property_<%= @current_view.id %>">Filter</label>
+                  <%= form.select :filter_property_id,
+                                  @db_properties.map { |property| [property.name, property.id] },
+                                  { include_blank: "No filter", selected: @view_config["filter_property_id"] },
+                                  id: "database_view_filter_property_#{@current_view.id}",
+                                  class: "notae-options-input" %>
+                  <%= form.text_field :filter_value,
+                                      value: @view_config["filter_value"],
+                                      placeholder: "Equals value",
+                                      class: "notae-options-input" %>
+                  <%= form.hidden_field :group_property_id, value: @view_config["group_property_id"] %>
+                  <%= form.hidden_field :date_property_id, value: @view_config["date_property_id"] %>
+                  <label class="notae-options-checkbox">
+                    <%= form.check_box :default, checked: @current_view.default? %>
+                    <span>Default view</span>
+                  </label>
+                  <%= form.submit "Save view", class: "notae-chip-button" %>
+                <% end %>
+              </div>
+            </details>
+          </div>
+
+          <div class="notae-db-view-menu-divider" role="presentation"></div>
+
+          <div class="notae-db-view-menu-row is-disabled">
+            <span class="notae-db-view-menu-icon">⇄</span>
+            <span>Source</span>
+            <span class="notae-db-view-menu-meta"><%= @database.icon.presence || "🗃️" %> <%= @database.name %></span>
+          </div>
+
+          <div class="notae-db-view-menu-divider" role="presentation"></div>
+
+          <div class="notae-db-view-menu-row">
+            <button type="button"
+                    class="notae-db-view-menu-button"
+                    data-action="click->copy-text#copy"
+                    data-copy-text-value="<%= view_link %>">
+              <span class="notae-db-view-menu-icon">🔗</span>
+              <span>Copy link to view</span>
+            </button>
+          </div>
+
+          <div class="notae-db-view-menu-row">
+            <%= form_with model: @new_database_view,
+                          url: database_database_views_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                          class: "notae-db-view-menu-action-form" do |form| %>
+              <%= form.hidden_field :name, value: "#{@current_view.name} copy" %>
+              <%= form.hidden_field :view_type, value: @current_view.view_type %>
+              <%= form.hidden_field :sort_property_id, value: @view_config["sort_property_id"] %>
+              <%= form.hidden_field :sort_direction, value: @view_config["sort_direction"] %>
+              <%= form.hidden_field :filter_property_id, value: @view_config["filter_property_id"] %>
+              <%= form.hidden_field :filter_value, value: @view_config["filter_value"] %>
+              <%= form.hidden_field :group_property_id, value: @view_config["group_property_id"] %>
+              <%= form.hidden_field :date_property_id, value: @view_config["date_property_id"] %>
+              <button type="submit" class="notae-db-view-menu-button">
+                <span class="notae-db-view-menu-icon">⧉</span>
+                <span>Duplicate view</span>
+              </button>
+            <% end %>
+          </div>
         </div>
       </details>
     <% end %>
   </div>
 
-  <p class="notae-db-meta"><%= pluralize(@rows.size, "row") %>, <%= pluralize(@db_properties.size, "property") %></p>
-
-  <details class="notae-db-advanced-controls">
-    <summary>Database controls</summary>
-    <div class="notae-db-advanced-grid">
-      <div class="notae-db-advanced-block">
-        <p class="notae-db-advanced-title">Databases</p>
-        <div class="notae-database-switcher">
-          <% @databases.each do |database| %>
-            <%= link_to database.name,
-                        database_path(workspace_slug: @workspace.slug, id: database.id),
-                        class: "notae-chip-button #{'bg-stone-200 font-semibold' if database.id == @database.id}" %>
-          <% end %>
-        </div>
-        <% if policy(Database.new(workspace: @workspace)).create? %>
-          <%= form_with model: @new_database,
-                        url: databases_path(workspace_slug: @workspace.slug),
-                        class: "notae-db-inline-form" do |form| %>
-            <%= form.text_field :name, placeholder: "New database", required: true, class: "notae-options-input" %>
-            <%= form.submit "Create", class: "notae-chip-button" %>
-          <% end %>
-        <% end %>
-      </div>
-
-      <div class="notae-db-advanced-block">
-        <p class="notae-db-advanced-title">Filter</p>
-        <%= form_with url: database_path(workspace_slug: @workspace.slug, id: @database.id),
-                      method: :get,
-                      class: "notae-db-inline-form" do %>
-          <%= hidden_field_tag :view_id, @current_view&.id %>
-          <% if @view_type == "calendar" %>
-            <%= hidden_field_tag :month, @calendar_month&.to_s %>
-          <% end %>
-          <% if @sort_property.present? %>
-            <%= hidden_field_tag :sort_property_id, @sort_property.id %>
-            <%= hidden_field_tag :sort_direction, @sort_direction %>
-          <% end %>
-          <%= select_tag :filter_property_id,
-                         options_for_select([["Filter property", ""]] + @db_properties.map { |property| [property.name, property.id] }, @filter_property&.id),
-                         class: "notae-options-input" %>
-          <%= text_field_tag :filter_value, @filter_value, placeholder: "Equals value", class: "notae-options-input" %>
-          <%= submit_tag "Apply", class: "notae-chip-button" %>
-          <%= link_to "Clear",
-                      database_path(
-                        workspace_slug: @workspace.slug,
-                        id: @database.id,
-                        view_id: @current_view&.id,
-                        month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
-                        sort_property_id: @sort_property&.id,
-                        sort_direction: @sort_direction
-                      ),
-                      class: "notae-chip-button" %>
-        <% end %>
-      </div>
-
-      <div class="notae-db-advanced-block">
-        <p class="notae-db-advanced-title">Schema</p>
-        <% if policy(DbProperty.new(database: @database, workspace: @workspace)).create? %>
-          <%= form_with model: @new_property,
-                        url: database_db_properties_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                        class: "notae-db-inline-form" do |form| %>
-            <%= form.text_field :name, placeholder: "Property name", required: true, class: "notae-options-input" %>
-            <%= form.select :property_type,
-                            DbProperty.property_types.keys.map { |value| [value.titleize, value] },
-                            {},
-                            class: "notae-options-input" %>
-            <%= form.submit "Add property", class: "notae-chip-button" %>
-          <% end %>
-        <% end %>
-      </div>
-
-      <% if @current_view && policy(@current_view).update? %>
-        <div class="notae-db-advanced-block">
-          <p class="notae-db-advanced-title">Edit current view</p>
-          <%= form_with model: @current_view,
-                        url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
-                        method: :patch,
-                        class: "notae-db-inline-form" do |form| %>
-            <%= form.text_field :name, required: true, class: "notae-options-input" %>
-            <%= form.select :sort_property_id,
-                            @db_properties.map { |property| [property.name, property.id] },
-                            { include_blank: "Sort property", selected: @view_config["sort_property_id"] },
-                            class: "notae-options-input" %>
-            <%= form.select :sort_direction,
-                            [["Asc", "asc"], ["Desc", "desc"]],
-                            { include_blank: "Sort direction", selected: @view_config["sort_direction"] },
-                            class: "notae-options-input" %>
-            <%= form.select :filter_property_id,
-                            @db_properties.map { |property| [property.name, property.id] },
-                            { include_blank: "Filter property", selected: @view_config["filter_property_id"] },
-                            class: "notae-options-input" %>
-            <%= form.text_field :filter_value, value: @view_config["filter_value"], placeholder: "Filter equals value", class: "notae-options-input" %>
-            <%= form.select :group_property_id,
-                            @db_properties.select(&:select?).map { |property| [property.name, property.id] },
-                            { include_blank: "Board property", selected: @view_config["group_property_id"] },
-                            class: "notae-options-input" %>
-            <%= form.select :date_property_id,
-                            @db_properties.select(&:date?).map { |property| [property.name, property.id] },
-                            { include_blank: "Calendar date property", selected: @view_config["date_property_id"] },
-                            class: "notae-options-input" %>
-            <label class="notae-options-checkbox">
-              <%= form.check_box :default, checked: @current_view.default? %>
-              <span>Default</span>
-            </label>
-            <%= form.submit "Update view", class: "notae-chip-button" %>
-          <% end %>
-          <% unless @current_view.default? %>
-            <%= button_to "Make default",
-                          database_default_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
-                          method: :patch,
-                          class: "notae-chip-button" %>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-  </details>
+  <p class="notae-db-meta"><%= pluralize(@rows.size, "row") %></p>
 
   <% if @view_type == "board" %>
     <%= render "databases/board_view" %>

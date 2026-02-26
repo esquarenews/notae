@@ -36,7 +36,7 @@ RSpec.describe "Workspace home styling", type: :request do
     search_index = body.index("Search pages, blocks, and rows")
     create_page_index = body.index("<h2>Create page</h2>")
     pages_index = body.index("<h2>Pages</h2>")
-    databases_index = body.index("<h2>Databases</h2>")
+    databases_index = body.index("<h2>Grids</h2>")
     members_index = body.index("<h2>Members</h2>")
     invite_index = body.index("<h2>Invite people</h2>")
     audit_index = body.index("<h2>Recent audit events</h2>")

@@ -12,6 +12,7 @@ RSpec.describe "Databases", type: :request do
 
     database = Database.find_by!(name: "Tasks")
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.database_views.where(name: "Table", view_type: :table, default: true)).to exist
 
     post database_db_properties_path(workspace_slug: workspace.slug, database_id: database.id),
          params: { db_property: { name: "Status", property_type: "text" } }
@@ -434,7 +435,59 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Name")
     expect(response.body).to include("+ Add property")
     expect(response.body).to include("New page")
-    expect(response.body).to include("Database controls")
+    expect(response.body).to include("Add icon")
+    expect(response.body).to include("Add cover")
+    expect(response.body).to include("Add description")
+    expect(response.body).to include("Rename")
+    expect(response.body).to include("Edit view")
+    expect(response.body).to include("Copy link to view")
+    expect(response.body).to include("Duplicate view")
+    expect(response.body).to include("Random cover")
+    expect(response.body).to include("Move up")
+    expect(response.body).to include("Move down")
+    expect(response.body).to include("🧠")
+    expect(response.body).not_to include("db-edit-view-panel")
+  end
+
+  it "updates database header controls (icon, description, and cover)" do
+    owner = User.create!(email: "database-header-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Header tables", slug: "header-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Header DB")
+    sign_in owner
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { icon_action: "set", icon: "🚀" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.icon).to eq("🚀")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { cover_action: "random" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.cover_preset_key).to be_present
+    expect(Database::COVER_PRESET_KEYS).to include(database.cover_preset_key)
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { cover_shift: "up" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.cover_focal_y).to eq(40)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("🚀")
+    expect(response.body).to include("notae-page-cover")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { description_action: "set", description: "Tracks launch tasks" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.description).to eq("Tracks launch tasks")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { icon_action: "clear", description_action: "clear", cover_action: "clear" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.icon).to be_nil
+    expect(database.reload.description).to be_nil
+    expect(database.reload.cover_preset_key).to be_nil
   end
 
   it "updates row titles inline and normalizes blank titles" do

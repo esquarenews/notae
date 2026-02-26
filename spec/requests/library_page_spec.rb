@@ -31,26 +31,26 @@ RSpec.describe "Library page", type: :request do
     expect(workspace_filter_options(response.body)).to include([ "All workspaces", "all" ], [ "Library Main", "library-main" ], [ "Library Other", "library-other" ])
     expect(workspace_filter_options(response.body)).not_to include([ "Current workspace", "current" ])
     expect(workspace_filter_onchange(response.body)).to eq("this.form.requestSubmit()")
-    expect(source_filter_options(response.body)).to include([ "All sources", "all" ], [ "Pages", "page" ], [ "Meetings", "meeting" ], [ "Databases", "database" ])
+    expect(source_filter_options(response.body)).to include([ "All sources", "all" ], [ "Pages", "page" ], [ "Meetings", "meeting" ], [ "Grids", "database" ])
     expect(source_filter_options(response.body)).not_to include([ "Workspaces", "workspace" ])
     expect(library_row_classes(response.body).all? { |klass| klass.include?("notae-library-row") }).to be(true)
     expect(response.body).to include("Filters")
     expect(response.body).to include("Columns")
 
     default_titles = library_titles(response.body)
-    expect(default_titles).to include("Product brief", "Quarterly archive", "Weekly meeting notes", "Roadmap DB")
+    expect(default_titles).to include("Product brief", "Quarterly archive", "Weekly meeting notes", "🗃️ Roadmap DB")
     expect(default_titles).to include("Other workspace page")
     expect(default_titles).not_to include(workspace.name)
     expect(library_row_text(response.body, "Other workspace page")).to include("Library Other")
 
     get workspace_library_path(workspace_slug: workspace.slug), params: { workspace_filter: workspace.slug }
     single_workspace_titles = library_titles(response.body)
-    expect(single_workspace_titles).to include("Product brief", "Quarterly archive", "Weekly meeting notes", "Roadmap DB")
+    expect(single_workspace_titles).to include("Product brief", "Quarterly archive", "Weekly meeting notes", "🗃️ Roadmap DB")
     expect(single_workspace_titles).not_to include("Other workspace page")
 
     get workspace_library_path(workspace_slug: workspace.slug), params: { tab: "recents", workspace_filter: "all" }
     recents_titles = library_titles(response.body)
-    expect(recents_titles).to include("Product brief", "Weekly meeting notes", "Roadmap DB", "Other workspace page")
+    expect(recents_titles).to include("Product brief", "Weekly meeting notes", "🗃️ Roadmap DB", "Other workspace page")
     expect(recents_titles).not_to include("Quarterly archive")
 
     get workspace_library_path(workspace_slug: workspace.slug), params: { workspace_filter: "all", source: "meeting" }
@@ -60,7 +60,7 @@ RSpec.describe "Library page", type: :request do
 
     get workspace_library_path(workspace_slug: workspace.slug), params: { tab: "favorites" }
     favorite_titles = library_titles(response.body)
-    expect(favorite_titles).to include("Weekly meeting notes", "Roadmap DB")
+    expect(favorite_titles).to include("Weekly meeting notes", "🗃️ Roadmap DB")
     expect(favorite_titles).not_to include("Product brief")
 
     get workspace_library_path(workspace_slug: workspace.slug), params: { workspace_filter: "all", q: "Other workspace page" }

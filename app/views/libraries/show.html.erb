@@ -64,7 +64,7 @@
                            ["All sources", "all"],
                            ["Pages", "page"],
                            ["Meetings", "meeting"],
-                           ["Databases", "database"]
+                           ["Grids", "database"]
                          ], @source_filter),
                          class: "notae-options-input" %>
           <%= select_tag :visibility,
@@ -164,8 +164,12 @@
               <% if visible_columns.include?("page_name") %>
                 <td>
                   <%= link_to row[:path], class: "notae-library-name-link" do %>
-                    <span class="notae-library-row-icon"><%= row[:icon] %></span>
-                    <span class="notae-library-row-title"><%= row[:title] %></span>
+                    <% if row[:kind] == "database" %>
+                      <span class="notae-library-row-title"><%= "#{row[:icon]} #{row[:title]}" %></span>
+                    <% else %>
+                      <span class="notae-library-row-icon"><%= row[:icon] %></span>
+                      <span class="notae-library-row-title"><%= row[:title] %></span>
+                    <% end %>
                     <% if row[:favorited] %>
                       <span class="notae-library-row-favorite" aria-label="Favorited">★</span>
                     <% end %>
@@ -181,7 +185,7 @@
               <% if visible_columns.include?("source") %>
                 <td>
                   <span class="notae-library-source-pill is-<%= row[:visibility] %>"><%= row[:visibility].titleize %></span>
-                  <span class="notae-library-source-label"><%= row[:kind].titleize %></span>
+                  <span class="notae-library-source-label"><%= row[:kind] == "database" ? "Grid" : row[:kind].titleize %></span>
                 </td>
               <% end %>
               <% if visible_columns.include?("created_time") %>

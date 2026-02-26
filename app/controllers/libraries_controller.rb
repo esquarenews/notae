@@ -169,7 +169,7 @@ class LibrariesController < ApplicationController
         {
           kind: "database",
           title: database.name,
-          icon: "🗃️",
+          icon: database.icon.presence || "🗃️",
           created_by: creator_email,
           created_time: database.created_at,
           last_edited_by: creator_email,

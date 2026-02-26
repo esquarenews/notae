@@ -34,11 +34,11 @@
     <% if policy(Database.new(workspace: @workspace)).create? %>
       <div class="notae-auth-card notae-home-card">
         <div class="notae-home-card-head">
-          <h2>Create database</h2>
+          <h2>Create grid</h2>
         </div>
         <%= form_with model: @new_database, url: databases_path(workspace_slug: @workspace.slug), class: "notae-workspace-home-stack" do |form| %>
-          <%= form.text_field :name, placeholder: "New database name", required: true, class: "notae-auth-input" %>
-          <%= form.submit "Create database", class: "notae-chip-button" %>
+          <%= form.text_field :name, placeholder: "New grid name", required: true, class: "notae-auth-input" %>
+          <%= form.submit "Create grid", class: "notae-chip-button" %>
         <% end %>
       </div>
     <% end %>
@@ -79,19 +79,19 @@
 
   <section class="notae-auth-card notae-home-card">
     <div class="notae-home-card-head">
-      <h2>Databases</h2>
+      <h2>Grids</h2>
     </div>
     <% if @recent_databases.any? %>
       <div class="notae-workspace-home-link-grid">
         <% @recent_databases.each do |database| %>
           <%= link_to database_path(workspace_slug: @workspace.slug, id: database.id), class: "notae-home-workspace-item" do %>
-            <strong><%= database.name %></strong>
-            <span>Table view</span>
+            <strong><%= database.icon.presence || "🗃️" %> <%= database.name %></strong>
+            <span>Grid view</span>
           <% end %>
         <% end %>
       </div>
     <% else %>
-      <p class="notae-page-subtle">No databases yet.</p>
+      <p class="notae-page-subtle">No grids yet.</p>
     <% end %>
   </section>
 

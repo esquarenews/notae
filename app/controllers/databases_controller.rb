@@ -1,12 +1,14 @@
 class DatabasesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: :show
+  before_action :set_database, only: %i[show update]
+  COVER_SHIFT_STEP = 10
 
   helper_method :cell_value_for, :select_options_for
 
   def show
     authorize @database
+    ensure_default_view!
 
     @databases = policy_scope(Database).for_workspace(@workspace).order(:created_at)
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
@@ -37,9 +39,33 @@ class DatabasesController < ApplicationController
     authorize @database
 
     if @database.save
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Database created."
+      @database.database_views.create!(
+        workspace: @workspace,
+        created_by: current_user,
+        name: "Table",
+        view_type: :table,
+        default: true
+      )
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Grid created."
     else
       redirect_to workspace_path(@workspace.slug), alert: @database.errors.full_messages.to_sentence
+    end
+  end
+
+  def update
+    authorize @database, :update?
+
+    @database.assign_attributes(database_update_params)
+    apply_header_customizations!
+
+    if @database.changed? || @database.attachment_changes.present?
+      @database.save
+    end
+
+    if @database.errors.empty?
+      redirect_to database_redirect_path, notice: "Grid updated."
+    else
+      redirect_to database_redirect_path, alert: @database.errors.full_messages.to_sentence
     end
   end
 
@@ -55,6 +81,71 @@ class DatabasesController < ApplicationController
 
   def database_params
     params.require(:database).permit(:name)
+  end
+
+  def database_update_params
+    params.fetch(:database, ActionController::Parameters.new).permit(:name, :description)
+  end
+
+  def database_header_params
+    params.fetch(:database, ActionController::Parameters.new)
+          .permit(:icon, :icon_action, :cover_action, :cover_shift, :cover_focal_y, :cover_image, :cover_preset_key, :description_action, :description)
+  end
+
+  def apply_header_customizations!
+    payload = database_header_params
+    apply_icon_update!(payload)
+    apply_cover_update!(payload)
+    apply_description_update!(payload)
+  end
+
+  def apply_icon_update!(payload)
+    case payload[:icon_action]
+    when "set"
+      emoji = payload[:icon].to_s.strip
+      @database.icon = emoji.presence
+    when "clear"
+      @database.icon = nil
+    end
+  end
+
+  def apply_cover_update!(payload)
+    case payload[:cover_action]
+    when "random"
+      @database.cover_preset_key = Database::COVER_PRESET_KEYS.sample
+      @database.cover_image.purge if @database.cover_image.attached?
+    when "preset"
+      requested_key = payload[:cover_preset_key].to_s
+      if Database::COVER_PRESET_KEYS.include?(requested_key)
+        @database.cover_preset_key = requested_key
+        @database.cover_image.purge if @database.cover_image.attached?
+      end
+    when "upload"
+      if payload[:cover_image].present?
+        @database.cover_image.attach(payload[:cover_image])
+        @database.cover_preset_key = nil
+      end
+    when "clear"
+      @database.cover_preset_key = nil
+      @database.cover_image.purge if @database.cover_image.attached?
+    end
+
+    shift_delta = { "up" => -COVER_SHIFT_STEP, "down" => COVER_SHIFT_STEP }[payload[:cover_shift].to_s]
+    if shift_delta
+      base = @database.cover_focal_y || 50
+      @database.cover_focal_y = (base + shift_delta).clamp(0, 100)
+    elsif payload[:cover_focal_y].present?
+      @database.cover_focal_y = payload[:cover_focal_y].to_i.clamp(0, 100)
+    end
+  end
+
+  def apply_description_update!(payload)
+    case payload[:description_action]
+    when "set"
+      @database.description = payload[:description].to_s.strip.presence
+    when "clear"
+      @database.description = nil
+    end
   end
 
   def sort_rows!
@@ -227,5 +318,31 @@ class DatabasesController < ApplicationController
     return false if DbCell::FALSY_VALUES.include?(normalized)
 
     nil
+  end
+
+  def database_redirect_path
+    database_path(
+      workspace_slug: @workspace.slug,
+      id: @database.id,
+      view_id: params[:view_id].presence,
+      month: params[:month].presence,
+      sort_property_id: params[:sort_property_id].presence,
+      sort_direction: params[:sort_direction].presence,
+      filter_property_id: params[:filter_property_id].presence,
+      filter_value: params[:filter_value].presence
+    )
+  end
+
+  def ensure_default_view!
+    return if @database.database_views.exists?
+    return unless policy(DatabaseView.new(database: @database, workspace: @workspace, created_by: current_user)).create?
+
+    @database.database_views.create!(
+      workspace: @workspace,
+      created_by: current_user,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
   end
 end

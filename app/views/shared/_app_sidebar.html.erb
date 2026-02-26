@@ -55,7 +55,7 @@
               <% if policy(Database.new(workspace: workspace)).create? %>
                 <li class="notae-create-menu-item">
                   <%= form_with model: Database.new, url: databases_path(workspace_slug: workspace.slug), class: "notae-create-menu-form" do |form| %>
-                    <%= form.hidden_field :name, value: "Untitled database" %>
+                    <%= form.hidden_field :name, value: "Untitled grid" %>
                     <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
                       <span class="notae-create-menu-icon notae-create-menu-icon-database" aria-hidden="true">
                         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -63,7 +63,7 @@
                           <path d="M2.8 6h10.4M2.8 9.3h10.4M6 2.8v10.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
                         </svg>
                       </span>
-                      <span>New database</span>
+                      <span>New grid</span>
                     </button>
                   <% end %>
                 </li>
@@ -144,20 +144,21 @@
       </section>
 
       <section class="notae-sidebar-section">
-        <p class="notae-sidebar-label">Databases</p>
+        <p class="notae-sidebar-label">Grids</p>
         <% if recent_databases.any? %>
           <ul class="notae-sidebar-list is-indented">
             <% recent_databases.each do |db| %>
               <li>
-                <%= link_to db.name,
-                            database_path(workspace_slug: workspace.slug, id: db.id),
+                <%= link_to database_path(workspace_slug: workspace.slug, id: db.id),
                             class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: db.id)),
-                            data: { action: "click->shell#close" } %>
+                            data: { action: "click->shell#close" } do %>
+                  <span class="notae-sidebar-page-title"><%= db.icon.presence || "🗃️" %> <%= db.name %></span>
+                <% end %>
               </li>
             <% end %>
           </ul>
         <% else %>
-          <p class="notae-sidebar-empty">No databases yet.</p>
+          <p class="notae-sidebar-empty">No grids yet.</p>
         <% end %>
       </section>
 
@@ -198,7 +199,7 @@
                   <%= link_to database_path(workspace_slug: workspace.slug, id: database.id),
                               class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: database.id)),
                               data: { action: "click->shell#close" } do %>
-                    <span class="notae-sidebar-page-title">⭐ <%= database.name %></span>
+                    <span class="notae-sidebar-page-title">⭐ <%= database.icon.presence || "🗃️" %> <%= database.name %></span>
                   <% end %>
                 <% end %>
               </li>

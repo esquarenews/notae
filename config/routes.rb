@@ -38,7 +38,7 @@ Rails.application.routes.draw do
     patch "notifications/:id/read", to: "notifications#mark_read", as: :read_workspace_notification
     post "invitations", to: "invitations#create", as: :workspace_invitations
     resources :memberships, only: :update
-      resources :databases, only: %i[show create] do
+    resources :databases, only: %i[show create update] do
         resource :favorite, only: %i[create destroy], controller: "database_favorites"
         resources :database_views, only: %i[create update]
         patch "database_views/:id/default", to: "database_views#set_default", as: :default_database_view

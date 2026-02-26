@@ -108,7 +108,24 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Cmd/Ctrl + K")
   end
 
-  it "renders sidebar create menu with page, database, and meeting options plus icons" do
+  it "includes tailwind stylesheet in the shared app layout" do
+    tailwind_entrypoint = Rails.root.join("app/assets/tailwind/application.css")
+    expect(tailwind_entrypoint).to exist
+    expect(tailwind_entrypoint.read).to include('@import "tailwindcss";')
+
+    owner = User.create!(email: "page-tailwind-layout-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tailwind layout", slug: "tailwind-layout")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Page.create!(workspace: workspace, created_by: owner, title: "Tailwind page")
+    sign_in owner
+
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to match(%r{href="[^"]*/assets/tailwind[^"]*\.css"})
+  end
+
+  it "renders sidebar create menu with page, grid, and meeting options plus icons" do
     owner = User.create!(email: "page-sidebar-create-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Sidebar create", slug: "sidebar-create")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -119,11 +136,25 @@ RSpec.describe "Pages", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("New page")
-    expect(response.body).to include("New database")
+    expect(response.body).to include("New grid")
     expect(response.body).to include("New meeting")
     expect(response.body).to include("notae-create-menu-icon-page")
     expect(response.body).to include("notae-create-menu-icon-database")
     expect(response.body).to include("notae-create-menu-icon-meeting")
+  end
+
+  it "renders grids in the sidebar with each grid icon appended to the title" do
+    owner = User.create!(email: "page-sidebar-grid-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Sidebar grids", slug: "sidebar-grids")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Database.create!(workspace: workspace, name: "Campaign grid", icon: "🧠")
+    sign_in owner
+
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Grids")
+    expect(response.body).to include("🧠 Campaign grid")
   end
 
   it "renders a document-first page canvas with topbar options menu" do
