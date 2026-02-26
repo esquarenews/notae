@@ -130,6 +130,11 @@ body.notae-theme-dark .notae-utility-subtitle {
   color: #93c5fd;
 }
 
+body.notae-theme-dark .notae-utility-ai-notice {
+  border-color: #8b6c00;
+  background: #2d260d;
+}
+
 body.notae-theme-dark .notae-pref-row,
 body.notae-theme-dark .notae-settings-section h2 {
   border-color: var(--notae-border);
@@ -273,6 +278,11 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 
   body.notae-theme-system .notae-utility-subtitle {
     color: #93c5fd;
+  }
+
+  body.notae-theme-system .notae-utility-ai-notice {
+    border-color: #8b6c00;
+    background: #2d260d;
   }
 
   body.notae-theme-system .notae-pref-row,
@@ -2762,6 +2772,13 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   align-items: center;
   gap: 0.42rem;
   flex-wrap: wrap;
+}
+
+.notae-utility-ai-notice {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.6rem;
 }
 
 .notae-utility-meta {

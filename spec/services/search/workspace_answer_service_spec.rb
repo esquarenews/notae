@@ -75,8 +75,10 @@ RSpec.describe Search::WorkspaceAnswerService do
       workspace: workspace,
       query: "What changed?",
       results: results
-    ).call
+    )
+    result = answer.call
 
-    expect(answer).to be_nil
+    expect(result).to be_nil
+    expect(answer.unavailable_reason).to eq(:rate_limited)
   end
 end

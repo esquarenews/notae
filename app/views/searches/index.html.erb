@@ -32,6 +32,8 @@
             <% end %>
           </ol>
         </article>
+      <% elsif @ai_answer_notice.present? %>
+        <p class="notae-utility-meta notae-utility-ai-notice"><%= @ai_answer_notice %></p>
       <% end %>
 
       <p class="notae-utility-meta"><%= pluralize(@search_results.length, "result") %> for "<%= @query %>"</p>

@@ -5,20 +5,24 @@ module Search
     MODEL = "gpt-4o-mini"
     CONTEXT_RESULT_LIMIT = 8
 
+    attr_reader :unavailable_reason
+
     def initialize(user:, workspace:, query:, results:)
       @user = user
       @workspace = workspace
       @query = query.to_s.strip
       @results = Array(results)
+      @unavailable_reason = nil
     end
 
     def call
-      return nil if query.blank?
-      return nil unless user.openai_api_key_configured?
-      return nil unless answer_ai_allowed?
+      return unavailable(:blank_query) if query.blank?
+      return unavailable(:missing_api_key) unless user.openai_api_key_configured?
+      return unavailable(:budget_exceeded) unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
+      return unavailable(:rate_limited) unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
 
       context_results = results.first(CONTEXT_RESULT_LIMIT)
-      return nil if context_results.empty?
+      return unavailable(:no_context) if context_results.empty?
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: prompt_for(context_results),
@@ -26,7 +30,7 @@ module Search
         model: MODEL
       )
       response_text = response[:text].to_s.strip
-      return nil if response_text.blank?
+      return unavailable(:empty_response) if response_text.blank?
 
       Search::AiUsageLogger.log!(
         user: user,
@@ -50,7 +54,7 @@ module Search
       )
     rescue Openai::ResponsesClient::Error => e
       Rails.logger.warn("AI workspace answer disabled for workspace=#{workspace.id}: #{e.message}")
-      nil
+      unavailable(:provider_error)
     end
 
     private
@@ -77,11 +81,9 @@ module Search
       PROMPT
     end
 
-    def answer_ai_allowed?
-      return false unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
-      return false unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
-
-      true
+    def unavailable(reason)
+      @unavailable_reason = reason
+      nil
     end
   end
 end

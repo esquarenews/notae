@@ -73,4 +73,24 @@ RSpec.describe "Search", type: :request do
     expect(response.body).to include("Launch brief summary")
     expect(response.body).to include("Sources")
   end
+
+  it "shows a clear notice when AI summary is rate-limited" do
+    user = User.create!(email: "search-ai-rate-limited@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Search Rate Limited", slug: "ai-search-rate-limited")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Page.create!(workspace: workspace, created_by: user, title: "Launch Brief")
+
+    allow(Search::AiRateLimiter).to receive(:allowed?)
+      .with(user: user, workspace: workspace, operation: "semantic_search")
+      .and_return(false)
+    allow(Search::AiRateLimiter).to receive(:allowed?)
+      .with(user: user, workspace: workspace, operation: "answer_generation")
+      .and_return(false)
+
+    sign_in user
+    get workspace_search_path(workspace_slug: workspace.slug), params: { q: "launch" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("AI summary is temporarily rate-limited")
+  end
 end
