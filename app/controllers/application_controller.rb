@@ -9,6 +9,7 @@ class ApplicationController < ActionController::Base
 
   before_action :set_paper_trail_whodunnit
   before_action :set_unread_notifications_count
+  before_action :set_ai_rail_context
   before_action :ensure_realtime_channel_loaded
   around_action :use_user_time_zone
   after_action :verify_pundit_authorization, unless: :devise_controller?
@@ -32,6 +33,16 @@ class ApplicationController < ActionController::Base
       else
         0
       end
+  end
+
+  def set_ai_rail_context
+    return unless user_signed_in?
+
+    @ai_rail_workspace = if params[:workspace_slug].present?
+      policy_scope(Workspace).find_by(slug: params[:workspace_slug])
+    end
+    @ai_rail_workspace ||= policy_scope(Workspace).order(updated_at: :desc).first
+    @ai_rail_current_page_id = params[:controller] == "pages" && params[:action] == "show" ? params[:id] : nil
   end
 
   def ensure_realtime_channel_loaded

@@ -14,6 +14,7 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response.body).to include("Static state")
     expect(response.body).to include("Loading state")
     expect(response.body).to include("Style library")
+    expect(response.body).to include("AI guardrails")
     expect(response.body).to include("Disco Orbit")
     expect(response.body).to include("Neural Network")
     expect(response.body).to include("Luminous Pulse Sphere")
@@ -21,6 +22,9 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response.body).to include("notae-ai-loader")
     expect(response.body).to include("p-24")
     expect(response.body).to include("notae-ai-loader-options-grid is-two-column")
+    expect(response.body).to include("This document only")
+    expect(response.body).to include("This workspace only")
+    expect(response.body).to include("Whole account")
     expect(response.body).to include("notae-settings-nav-item active")
   end
 
@@ -69,5 +73,27 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response.body).to include("left")
   ensure
     Rails.application.config.x.ai_search.daily_budget_usd = original_budget
+  end
+
+  it "updates AI guardrail controls for the current user" do
+    user = User.create!(email: "notae-ai-settings-guardrails@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notae AI guardrails update", slug: "notae-ai-guardrails-update")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_notae_ai_settings_path(workspace_slug: workspace.slug),
+          params: {
+            user: {
+              ai_search_daily_budget_usd: "2.25",
+              ai_search_semantic_rate_limit_per_minute: "15",
+              ai_search_answer_rate_limit_per_minute: "8"
+            }
+          }
+
+    expect(response).to redirect_to(workspace_notae_ai_settings_path(workspace_slug: workspace.slug))
+    user.reload
+    expect(user.ai_search_daily_budget_usd.to_f).to eq(2.25)
+    expect(user.ai_search_semantic_rate_limit_per_minute).to eq(15)
+    expect(user.ai_search_answer_rate_limit_per_minute).to eq(8)
   end
 end

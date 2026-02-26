@@ -32,7 +32,7 @@ RSpec.describe Search::WorkspaceSearchService do
     expect(usage).to exist
   end
 
-  it "backfills missing chunk embeddings before semantic ranking" do
+  it "schedules missing chunk embeddings for async backfill" do
     user = User.create!(email: "semantic-backfill@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Semantic Backfill", slug: "semantic-backfill")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -54,16 +54,13 @@ RSpec.describe Search::WorkspaceSearchService do
     allow(Openai::EmbeddingsClient).to receive(:embed_with_usage).and_return(
       { embedding: [ 1.0, 0.0 ], usage: { prompt_tokens: 8, completion_tokens: 0, total_tokens: 8 } }
     )
-    allow(Openai::EmbeddingsClient).to receive(:embed_many_with_usage).and_return(
-      { embeddings: [ [ 1.0, 0.0 ] ], usage: { prompt_tokens: 14, completion_tokens: 0, total_tokens: 14 } }
-    )
+    expect(Search::BackfillChunkEmbeddingsJob).to receive(:perform_later)
+      .with(user.id, workspace.id, [ chunk.id ])
 
     described_class.new(user: user, workspace: workspace, query: "roadmap").call
 
-    expect(chunk.reload.embedding).to eq([ 1.0, 0.0 ])
-    expect(chunk.embedding_model).to eq(SearchChunk::EMBEDDING_MODEL)
-    usage = AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_SEMANTIC_BACKFILL)
-    expect(usage).to exist
+    expect(chunk.reload.embedding).to eq([])
+    expect(chunk.embedding_model).to be_nil
   end
 
   it "skips semantic lookup when OpenAI key is not configured" do
@@ -89,5 +86,28 @@ RSpec.describe Search::WorkspaceSearchService do
 
     results = described_class.new(user: user, workspace: workspace, query: "anything").call
     expect(results).to eq([])
+  end
+
+  it "reranks exact title matches above weaker lexical matches" do
+    user = User.create!(email: "semantic-rerank@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Semantic Rerank", slug: "semantic-rerank")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    strong_page = Page.create!(workspace: workspace, created_by: user, title: "Mac")
+    weaker_page = Page.create!(workspace: workspace, created_by: user, title: "General Notes")
+    Block.create!(
+      workspace: workspace,
+      page: weaker_page,
+      created_by: user,
+      block_type: "paragraph",
+      content_json: {
+        type: "doc",
+        content: [ { type: "paragraph", content: [ { type: "text", text: "mac appears in body text once" } ] } ]
+      }
+    )
+
+    results = described_class.new(user: user, workspace: workspace, query: "mac").call
+
+    expect(results.first.title).to eq(strong_page.title)
   end
 end

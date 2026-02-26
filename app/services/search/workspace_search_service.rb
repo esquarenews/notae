@@ -86,9 +86,11 @@ module Search
       chunks = semantic_candidates
       return [] if chunks.empty?
 
-      backfill_chunk_embeddings!(chunks)
+      schedule_chunk_embedding_backfill!(chunks)
+      rankable_chunks = chunks.select(&:has_embedding?)
+      return [] if rankable_chunks.empty?
 
-      chunks.filter_map do |chunk|
+      rankable_chunks.filter_map do |chunk|
         similarity = cosine_similarity(query_embedding, chunk.embedding_vector)
         next if similarity.nil? || similarity <= 0.2
 
@@ -140,34 +142,16 @@ module Search
       response[:embedding]
     end
 
-    def backfill_chunk_embeddings!(chunks)
+    def schedule_chunk_embedding_backfill!(chunks)
       missing_chunks = chunks.select { |chunk| !chunk.has_embedding? }
                              .first(SEMANTIC_EMBEDDING_BATCH_LIMIT)
       return if missing_chunks.empty?
 
-      response = Openai::EmbeddingsClient.embed_many_with_usage(
-        texts: missing_chunks.map(&:text),
-        api_key: user.openai_api_key,
-        model: SearchChunk::EMBEDDING_MODEL
+      Search::BackfillChunkEmbeddingsJob.perform_later(
+        user.id,
+        workspace.id,
+        missing_chunks.map(&:id)
       )
-      vectors = response[:embeddings]
-      log_embedding_usage!(
-        usage: response[:usage],
-        operation: AiUsageLog::OP_SEMANTIC_BACKFILL,
-        metadata: { chunk_count: missing_chunks.length }
-      )
-
-      missing_chunks.zip(vectors).each do |chunk, vector|
-        next if vector.blank?
-
-        chunk.update_columns(
-          embedding: vector,
-          embedding_model: SearchChunk::EMBEDDING_MODEL,
-          updated_at: Time.current
-        )
-        chunk.embedding = vector
-        chunk.embedding_model = SearchChunk::EMBEDDING_MODEL
-      end
     end
 
     def build_semantic_result(chunk, similarity)
@@ -222,7 +206,22 @@ module Search
         best_by_target[key] = result if current.nil? || result.score.to_f > current.score.to_f
       end
 
-      best_by_target.values.sort_by { |result| -result.score.to_f }
+      best_by_target.values.sort_by { |result| -reranked_score(result) }
+    end
+
+    def reranked_score(result)
+      score = result.score.to_f
+      title = result.title.to_s.downcase
+      excerpt = ActionView::Base.full_sanitizer.sanitize(result.excerpt.to_s).downcase
+
+      query_terms.each do |term|
+        token = term.downcase
+        score += 1.8 if title.include?(token)
+        score += 0.8 if excerpt.include?(token)
+      end
+
+      score += 2.4 if title == query.downcase
+      score
     end
 
     def highlighted_excerpt(text)

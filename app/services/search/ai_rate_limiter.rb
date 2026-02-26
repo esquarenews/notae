@@ -69,9 +69,9 @@ module Search
 
     def limit
       if operation == "answer_generation"
-        [ Rails.application.config.x.ai_search.answer_rate_limit_per_minute.to_i, 1 ].max
+        [ user.resolved_ai_search_answer_rate_limit_per_minute, 1 ].max
       else
-        [ Rails.application.config.x.ai_search.semantic_rate_limit_per_minute.to_i, 1 ].max
+        [ user.resolved_ai_search_semantic_rate_limit_per_minute, 1 ].max
       end
     end
 

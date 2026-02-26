@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_26_153000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_26_174000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -445,6 +445,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_153000) do
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "ai_loader_style", default: "disco_orbit", null: false
+    t.integer "ai_search_answer_rate_limit_per_minute", default: 12, null: false
+    t.decimal "ai_search_daily_budget_usd", precision: 12, scale: 4, default: "1.5", null: false
+    t.integer "ai_search_semantic_rate_limit_per_minute", default: 24, null: false
     t.boolean "auto_time_zone", default: true, null: false
     t.string "cookie_settings_preference", default: "customize", null: false
     t.datetime "created_at", null: false

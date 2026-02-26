@@ -32,6 +32,9 @@ module Search
       response_text = response[:text].to_s.strip
       return unavailable(:empty_response) if response_text.blank?
 
+      normalized_text, used_indices = normalize_citations(response_text, context_results.length)
+      return unavailable(:empty_response) if normalized_text.blank?
+
       Search::AiUsageLogger.log!(
         user: user,
         workspace: workspace,
@@ -42,10 +45,12 @@ module Search
       )
 
       Answer.new(
-        summary: response_text,
-        sources: context_results.map.with_index do |result, index|
+        summary: normalized_text,
+        sources: used_indices.map do |source_index|
+          result = context_results[source_index - 1]
+
           {
-            index: index + 1,
+            index: source_index,
             title: result.title,
             kind: result.kind,
             url: result.url
@@ -79,6 +84,22 @@ module Search
         Context:
         #{lines.join("\n")}
       PROMPT
+    end
+
+    def normalize_citations(response_text, max_index)
+      sanitized = response_text.gsub(/\[(\d+)\]/) do |_match|
+        index = Regexp.last_match(1).to_i
+        index.between?(1, max_index) ? "[#{index}]" : ""
+      end
+      sanitized = sanitized.gsub(/[ \t]+\n/, "\n").gsub(/[ \t]{2,}/, " ").strip
+
+      used_indices = sanitized.scan(/\[(\d+)\]/).flatten.map(&:to_i).uniq
+      if used_indices.empty?
+        used_indices = [ 1 ]
+        sanitized = "#{sanitized} [1]".strip
+      end
+
+      [ sanitized, used_indices ]
     end
 
     def unavailable(reason)

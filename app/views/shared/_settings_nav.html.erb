@@ -81,6 +81,13 @@
       <span>Notae AI</span>
     </span>
   <% end %>
+  <%= link_to workspace_ai_analytics_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :ai_analytics) ].compact.join(" ") do %>
+    <span class="notae-settings-nav-item-label">
+      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M6 16v-5"/><path d="M10 16V8"/><path d="M14 16v-2"/><path d="M18 16V5"/></svg>
+      <span>AI Analytics</span>
+    </span>
+  <% end %>
   <span class="notae-settings-nav-item is-disabled">
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>

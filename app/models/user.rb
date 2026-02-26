@@ -113,6 +113,9 @@ class User < ApplicationRecord
   validates :slack_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
   validates :discord_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
   validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
+  validates :ai_search_daily_budget_usd, numericality: { greater_than_or_equal_to: 0 }
+  validates :ai_search_semantic_rate_limit_per_minute, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
+  validates :ai_search_answer_rate_limit_per_minute, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
   validates :time_zone, presence: true
   validate :time_zone_supported
 
@@ -136,6 +139,18 @@ class User < ApplicationRecord
 
   def self.ai_loader_label_for(value)
     AI_LOADER_STYLE_OPTIONS.find { |(_label, option_value)| option_value == value }&.first || AI_LOADER_STYLE_OPTIONS.first.first
+  end
+
+  def resolved_ai_search_daily_budget_usd
+    ai_search_daily_budget_usd.to_f
+  end
+
+  def resolved_ai_search_semantic_rate_limit_per_minute
+    ai_search_semantic_rate_limit_per_minute.to_i
+  end
+
+  def resolved_ai_search_answer_rate_limit_per_minute
+    ai_search_answer_rate_limit_per_minute.to_i
   end
 
   private

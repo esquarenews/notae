@@ -1,23 +1,23 @@
 require "rails_helper"
 
 RSpec.describe Search::AiBudgetGuard do
-  around do |example|
-    original_budget = Rails.application.config.x.ai_search.daily_budget_usd
-    Rails.application.config.x.ai_search.daily_budget_usd = 0.01
-    example.run
-  ensure
-    Rails.application.config.x.ai_search.daily_budget_usd = original_budget
-  end
-
   it "allows operations when spend is below budget" do
-    user = User.create!(email: "ai-budget-ok@example.com", password: "password123")
+    user = User.create!(
+      email: "ai-budget-ok@example.com",
+      password: "password123",
+      ai_search_daily_budget_usd: 0.05
+    )
     workspace = Workspace.create!(name: "AI Budget Ok", slug: "ai-budget-ok")
 
     expect(described_class.within_daily_budget?(user: user, workspace: workspace)).to eq(true)
   end
 
   it "blocks operations when spend reaches budget" do
-    user = User.create!(email: "ai-budget-block@example.com", password: "password123")
+    user = User.create!(
+      email: "ai-budget-block@example.com",
+      password: "password123",
+      ai_search_daily_budget_usd: 0.01
+    )
     workspace = Workspace.create!(name: "AI Budget Block", slug: "ai-budget-block")
     AiUsageLog.create!(
       user: user,

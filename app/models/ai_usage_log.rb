@@ -2,10 +2,12 @@ class AiUsageLog < ApplicationRecord
   OP_SEMANTIC_QUERY = "semantic_query_embedding"
   OP_SEMANTIC_BACKFILL = "semantic_chunk_backfill"
   OP_SEARCH_ANSWER = "search_answer_generation"
+  OP_ASSISTANT_QUERY = "assistant_query_generation"
   OPERATIONS = [
     OP_SEMANTIC_QUERY,
     OP_SEMANTIC_BACKFILL,
-    OP_SEARCH_ANSWER
+    OP_SEARCH_ANSWER,
+    OP_ASSISTANT_QUERY
   ].freeze
 
   belongs_to :user

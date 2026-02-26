@@ -28,6 +28,7 @@ Rails.application.routes.draw do
     patch "settings/preferences", to: "preferences#update"
     get "settings/notae-ai", to: "notae_ai_settings#show", as: :workspace_notae_ai_settings
     patch "settings/notae-ai", to: "notae_ai_settings#update"
+    get "settings/ai-analytics", to: "ai_analytics_settings#show", as: :workspace_ai_analytics_settings
     get "settings/connections", to: "connection_settings#show", as: :workspace_connection_settings
     patch "settings/connections", to: "connection_settings#update"
     get "settings/notifications", to: "notification_settings#show", as: :workspace_notification_settings
@@ -97,6 +98,7 @@ Rails.application.routes.draw do
 
     get "exports/:token", to: "page_exports#download", as: :workspace_export
     get "join/:token", to: "workspace_join_links#show", as: :workspace_join_link
+    post "ai-assistant", to: "ai_assistant#create", as: :workspace_ai_assistant
   end
 
   namespace :api do

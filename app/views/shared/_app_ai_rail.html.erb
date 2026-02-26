@@ -1,7 +1,19 @@
-<aside class="notae-ai-rail">
+<% ai_rail_workspace = @ai_rail_workspace || (defined?(@workspace) ? @workspace : nil) %>
+<% ai_scope_options = Search::AssistantQueryService::SCOPE_OPTIONS %>
+<% ai_scope_value = @ai_assistant_scope.presence || Search::AssistantQueryService::SCOPE_AUTO %>
+<% ai_prompt_value = @ai_assistant_prompt.to_s %>
+
+<aside class="notae-ai-rail" data-controller="ai-rail">
   <div class="notae-ai-head">
     <span>New AI chat</span>
-    <span class="notae-ai-kicker">Auto</span>
+    <% if ai_rail_workspace.present? %>
+      <%= select_tag "ai_assistant[scope]",
+                     options_for_select(ai_scope_options, ai_scope_value),
+                     class: "notae-ai-scope-select",
+                     form: "notae_ai_assistant_form" %>
+    <% else %>
+      <span class="notae-ai-kicker">Auto</span>
+    <% end %>
   </div>
 
   <div class="notae-ai-card">
@@ -55,11 +67,52 @@
     </div>
   <% end %>
 
-  <form class="notae-ai-compose">
-    <label for="ai_prompt" class="notae-ai-label">Prompt</label>
-    <textarea id="ai_prompt" rows="5" placeholder="Create a simple daily planner for today with three priority tasks in a new page."></textarea>
-    <div class="notae-ai-compose-actions">
-      <button type="button">Send</button>
+  <% if @ai_assistant_notice.present? %>
+    <p class="notae-ai-copy notae-ai-assistant-notice"><%= @ai_assistant_notice %></p>
+  <% end %>
+
+  <% if @ai_assistant_response.present? %>
+    <article class="notae-ai-card notae-ai-assistant-result">
+      <p class="notae-ai-title">Result</p>
+      <p class="notae-ai-copy"><strong>Scope:</strong> <%= @ai_assistant_response.scope.to_s.humanize %></p>
+      <p class="notae-ai-result-text" data-ai-rail-target="resultText"><%= @ai_assistant_response.answer %></p>
+      <% if @ai_assistant_response.sources.any? %>
+        <ul class="notae-ai-assistant-sources">
+          <% @ai_assistant_response.sources.each do |source| %>
+            <li>
+              <%= link_to "[#{source[:index]}] #{source[:title]}", source[:url], class: "notae-utility-link" %>
+              <span class="notae-ai-copy"><%= source[:workspace_name] %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+      <div class="notae-ai-compose-actions">
+        <button type="button" class="notae-chip-button" data-action="click->ai-rail#copyResult">Copy result</button>
+      </div>
+    </article>
+  <% end %>
+
+  <% if ai_rail_workspace.present? %>
+    <%= form_with scope: :ai_assistant,
+                  url: workspace_ai_assistant_path(workspace_slug: ai_rail_workspace.slug),
+                  method: :post,
+                  id: "notae_ai_assistant_form",
+                  class: "notae-ai-compose",
+                  data: { turbo_frame: "ai_rail_panel" } do |form| %>
+      <%= form.hidden_field :current_page_id, value: @ai_rail_current_page_id %>
+      <label for="ai_prompt" class="notae-ai-label">Prompt</label>
+      <%= form.text_area :prompt,
+                         value: ai_prompt_value,
+                         id: "ai_prompt",
+                         rows: 5,
+                         placeholder: "Ask search questions (for example: Is Mac mentioned in this document?) or request a summary." %>
+      <div class="notae-ai-compose-actions">
+        <button type="submit">Send</button>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="notae-ai-compose">
+      <p class="notae-ai-copy">Join a workspace to use Notae AI assistant prompts.</p>
     </div>
-  </form>
+  <% end %>
 </aside>

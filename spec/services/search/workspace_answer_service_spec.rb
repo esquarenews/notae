@@ -81,4 +81,27 @@ RSpec.describe Search::WorkspaceAnswerService do
     expect(result).to be_nil
     expect(answer.unavailable_reason).to eq(:rate_limited)
   end
+
+  it "removes invalid citation markers and keeps mapped sources only" do
+    user = User.create!(email: "answer-citations@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Answer Citations", slug: "answer-citations")
+    results = [
+      Search::WorkspaceSearchService::Result.new(kind: "Page", title: "Doc one", excerpt: "first", url: "/doc-one", score: 10),
+      Search::WorkspaceSearchService::Result.new(kind: "Page", title: "Doc two", excerpt: "second", url: "/doc-two", score: 8)
+    ]
+
+    allow(Openai::ResponsesClient).to receive(:generate_text_with_usage).and_return(
+      {
+        text: "Summary [99] and valid note [2].",
+        usage: { prompt_tokens: 50, completion_tokens: 12, total_tokens: 62 }
+      }
+    )
+
+    answer = described_class.new(user: user, workspace: workspace, query: "summarize", results: results).call
+
+    expect(answer).to be_present
+    expect(answer.summary).not_to include("[99]")
+    expect(answer.summary).to include("[2]")
+    expect(answer.sources.map { |source| source[:index] }).to eq([ 2 ])
+  end
 end

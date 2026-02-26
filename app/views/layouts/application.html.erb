@@ -65,7 +65,9 @@
           </main>
         </div>
 
-        <%= render "shared/app_ai_rail" %>
+        <%= turbo_frame_tag "ai_rail_panel" do %>
+          <%= render "shared/app_ai_rail" %>
+        <% end %>
 
         <div class="notae-modal is-hidden" data-global-shortcuts-target="quickSwitcher" data-action="click->global-shortcuts#closeAll">
           <div class="notae-modal-panel" data-action="click->global-shortcuts#noop">

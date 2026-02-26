@@ -31,7 +31,12 @@ class NotaeAiSettingsController < ApplicationController
   end
 
   def notae_ai_setting_params
-    params.fetch(:user, {}).permit(:ai_loader_style)
+    params.fetch(:user, {}).permit(
+      :ai_loader_style,
+      :ai_search_daily_budget_usd,
+      :ai_search_semantic_rate_limit_per_minute,
+      :ai_search_answer_rate_limit_per_minute
+    )
   end
 
   def set_ai_usage_panel
@@ -47,7 +52,7 @@ class NotaeAiSettingsController < ApplicationController
       Arel.sql("COUNT(*)")
     )
 
-    daily_budget_usd = Rails.application.config.x.ai_search.daily_budget_usd.to_f
+    daily_budget_usd = @user.resolved_ai_search_daily_budget_usd
     spent_today = estimated_cost_usd.to_f
     budget_remaining = [ daily_budget_usd - spent_today, 0.0 ].max
 
@@ -59,10 +64,10 @@ class NotaeAiSettingsController < ApplicationController
       estimated_cost_usd: spent_today,
       request_count: request_count.to_i,
       budget_status: Search::AiBudgetGuard.within_daily_budget?(user: @user, workspace: @workspace),
-      daily_budget_usd: daily_budget_usd,
+      daily_budget_usd: @user.resolved_ai_search_daily_budget_usd,
       budget_remaining_usd: budget_remaining,
-      semantic_rate_limit_per_minute: Rails.application.config.x.ai_search.semantic_rate_limit_per_minute.to_i,
-      answer_rate_limit_per_minute: Rails.application.config.x.ai_search.answer_rate_limit_per_minute.to_i,
+      semantic_rate_limit_per_minute: @user.resolved_ai_search_semantic_rate_limit_per_minute,
+      answer_rate_limit_per_minute: @user.resolved_ai_search_answer_rate_limit_per_minute,
       rate_limit_window_seconds: Rails.application.config.x.ai_search.rate_limit_window_seconds.to_i
     }
   end

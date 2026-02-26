@@ -22,7 +22,7 @@ module Search
     attr_reader :user, :workspace
 
     def daily_budget_usd
-      Rails.application.config.x.ai_search.daily_budget_usd.to_f
+      user.resolved_ai_search_daily_budget_usd
     end
 
     def spent_today
