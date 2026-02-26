@@ -18,6 +18,22 @@
 
   <% if @query.present? %>
     <section class="notae-utility-section">
+      <% if @ai_answer.present? %>
+        <article class="notae-utility-ai-answer">
+          <h2 class="notae-utility-subtitle">AI summary</h2>
+          <p class="notae-utility-copy"><%= simple_format(h(@ai_answer.summary)) %></p>
+          <p class="notae-utility-meta">Sources</p>
+          <ol class="notae-utility-ai-sources">
+            <% @ai_answer.sources.each do |source| %>
+              <li>
+                <%= link_to "[#{source[:index]}] #{source[:title]}", source[:url], class: "notae-utility-link" %>
+                <span class="notae-utility-kind"><%= source[:kind] %></span>
+              </li>
+            <% end %>
+          </ol>
+        </article>
+      <% end %>
+
       <p class="notae-utility-meta"><%= pluralize(@search_results.length, "result") %> for "<%= @query %>"</p>
       <% if @search_results.any? %>
         <ul class="notae-workspace-home-list">

@@ -50,4 +50,23 @@ RSpec.describe "Search", type: :request do
 
     expect(response).to have_http_status(:not_found)
   end
+
+  it "renders an AI summary when OpenAI key is configured" do
+    user = User.create!(email: "search-ai@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Searchable", slug: "ai-searchable")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    Page.create!(workspace: workspace, created_by: user, title: "Launch Brief")
+
+    allow(Openai::EmbeddingsClient).to receive(:embed).and_return([])
+    allow(Openai::ResponsesClient).to receive(:generate_text).and_return("Launch brief summary [1].")
+
+    sign_in user
+    get workspace_search_path(workspace_slug: workspace.slug), params: { q: "launch" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("AI summary")
+    expect(response.body).to include("Launch brief summary")
+    expect(response.body).to include("Sources")
+  end
 end

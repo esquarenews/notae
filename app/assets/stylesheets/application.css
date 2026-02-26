@@ -81,6 +81,7 @@ body.notae-theme-dark .notae-page-header-panel,
 body.notae-theme-dark .notae-settings-shell,
 body.notae-theme-dark .notae-settings-nav,
 body.notae-theme-dark .notae-settings-content,
+body.notae-theme-dark .notae-utility-ai-answer,
 body.notae-theme-dark .notae-workspace-home-list-item,
 body.notae-theme-dark .notae-workspace-page-card,
 body.notae-theme-dark .notae-workspace-home-link-grid a,
@@ -117,11 +118,16 @@ body.notae-theme-dark .notae-doc-muted {
 
 body.notae-theme-dark .notae-pref-description,
 body.notae-theme-dark .notae-utility-meta,
+body.notae-theme-dark .notae-utility-copy,
 body.notae-theme-dark .notae-doc-muted,
 body.notae-theme-dark .notae-sidebar-label,
 body.notae-theme-dark .notae-sidebar-empty,
 body.notae-theme-dark .notae-topbar-meta {
   color: var(--notae-muted);
+}
+
+body.notae-theme-dark .notae-utility-subtitle {
+  color: #93c5fd;
 }
 
 body.notae-theme-dark .notae-pref-row,
@@ -220,6 +226,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   body.notae-theme-system .notae-settings-shell,
   body.notae-theme-system .notae-settings-nav,
   body.notae-theme-system .notae-settings-content,
+  body.notae-theme-system .notae-utility-ai-answer,
   body.notae-theme-system .notae-workspace-home-list-item,
   body.notae-theme-system .notae-workspace-page-card,
   body.notae-theme-system .notae-workspace-home-link-grid a,
@@ -256,11 +263,16 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 
   body.notae-theme-system .notae-pref-description,
   body.notae-theme-system .notae-utility-meta,
+  body.notae-theme-system .notae-utility-copy,
   body.notae-theme-system .notae-doc-muted,
   body.notae-theme-system .notae-sidebar-label,
   body.notae-theme-system .notae-sidebar-empty,
   body.notae-theme-system .notae-topbar-meta {
     color: var(--notae-muted);
+  }
+
+  body.notae-theme-system .notae-utility-subtitle {
+    color: #93c5fd;
   }
 
   body.notae-theme-system .notae-pref-row,
@@ -2719,6 +2731,37 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 .notae-utility-section {
   display: grid;
   gap: 0.4rem;
+}
+
+.notae-utility-ai-answer {
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.72rem;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.notae-utility-subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  letter-spacing: 0.01em;
+}
+
+.notae-utility-ai-sources {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.26rem;
+}
+
+.notae-utility-ai-sources li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  flex-wrap: wrap;
 }
 
 .notae-utility-meta {
