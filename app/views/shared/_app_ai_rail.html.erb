@@ -18,6 +18,43 @@
     <p class="notae-ai-copy">Current context: <strong><%= content_for(:title) || "Workspace" %></strong></p>
   </div>
 
+  <% if @ai_usage_panel.present? %>
+    <div class="notae-ai-card notae-ai-usage-card">
+      <div class="notae-ai-usage-head">
+        <p class="notae-ai-title">Today usage</p>
+        <span class="notae-ai-kicker"><%= @ai_usage_panel[:day_label] %></span>
+      </div>
+      <dl class="notae-ai-usage-grid">
+        <div>
+          <dt>Tokens</dt>
+          <dd><%= number_with_delimiter(@ai_usage_panel[:total_tokens]) %></dd>
+        </div>
+        <div>
+          <dt>Cost</dt>
+          <dd><%= number_to_currency(@ai_usage_panel[:estimated_cost_usd]) %></dd>
+        </div>
+        <div>
+          <dt>Requests</dt>
+          <dd><%= number_with_delimiter(@ai_usage_panel[:request_count]) %></dd>
+        </div>
+      </dl>
+      <div class="notae-ai-usage-guardrails">
+        <p class="notae-ai-copy">Guardrails</p>
+        <p class="notae-ai-copy">
+          Budget:
+          <strong><%= @ai_usage_panel[:budget_status] ? "Available" : "Reached" %></strong>
+          (<%= number_to_currency(@ai_usage_panel[:budget_remaining_usd]) %> left)
+        </p>
+        <p class="notae-ai-copy">
+          Rate:
+          <strong><%= @ai_usage_panel[:semantic_rate_limit_per_minute] %>/min semantic</strong>,
+          <strong><%= @ai_usage_panel[:answer_rate_limit_per_minute] %>/min answers</strong>
+          (window <%= @ai_usage_panel[:rate_limit_window_seconds] %>s)
+        </p>
+      </div>
+    </div>
+  <% end %>
+
   <form class="notae-ai-compose">
     <label for="ai_prompt" class="notae-ai-label">Prompt</label>
     <textarea id="ai_prompt" rows="5" placeholder="Create a simple daily planner for today with three priority tasks in a new page."></textarea>

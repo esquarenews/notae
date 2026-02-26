@@ -36,4 +36,38 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response).to redirect_to(workspace_notae_ai_settings_path(workspace_slug: workspace.slug))
     expect(user.reload.ai_loader_style).to eq("neural_network")
   end
+
+  it "shows today's AI usage totals and guardrail status in the right sidebar" do
+    original_budget = Rails.application.config.x.ai_search.daily_budget_usd
+    Rails.application.config.x.ai_search.daily_budget_usd = 1.0
+
+    user = User.create!(email: "notae-ai-settings-usage@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notae AI usage", slug: "notae-ai-usage")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    AiUsageLog.create!(
+      user: user,
+      workspace: workspace,
+      operation: AiUsageLog::OP_SEARCH_ANSWER,
+      model: "gpt-4o-mini",
+      prompt_tokens: 500,
+      completion_tokens: 120,
+      total_tokens: 620,
+      estimated_cost_usd: 0.24
+    )
+    sign_in user
+
+    get workspace_notae_ai_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-ai-usage-card")
+    expect(response.body).to include("Today usage")
+    expect(response.body).to include("620")
+    expect(response.body).to include("$0.24")
+    expect(response.body).to include("Guardrails")
+    expect(response.body).to include("Budget:")
+    expect(response.body).to include("Available")
+    expect(response.body).to include("left")
+  ensure
+    Rails.application.config.x.ai_search.daily_budget_usd = original_budget
+  end
 end
