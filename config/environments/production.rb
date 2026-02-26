@@ -56,26 +56,20 @@ Rails.application.configure do
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
 
-  config.action_mailer.delivery_method = :smtp
-  config.action_mailer.smtp_settings = {
-    smtp_address = ENV["SMTP_ADDRESS"]
+  smtp_address = ENV["SMTP_ADDRESS"].presence
+  default_smtp_port = smtp_address.present? ? "587" : "1025"
+  default_starttls = smtp_address.present? ? "true" : "false"
 
-if smtp_address.present?
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    address: smtp_address,
-    port: (ENV["SMTP_PORT"] || "587").to_i,
-    domain: ENV["SMTP_DOMAIN"] || (ENV["APP_HOST"] || "localhost"),
-    user_name: ENV["SMTP_USERNAME"],
-    password: ENV["SMTP_PASSWORD"],
-    authentication: (ENV["SMTP_AUTHENTICATION"] || "plain").to_sym,
-    enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(ENV["SMTP_ENABLE_STARTTLS_AUTO"] || "true")
-  }
-else
-  # If you're configuring mail from DB at runtime, don't block boot here.
-  # Optionally keep delivery_method as :smtp but settings can be injected later.
-end
-  }
+    address: smtp_address || "127.0.0.1",
+    port: ENV.fetch("SMTP_PORT", default_smtp_port).to_i,
+    domain: ENV["SMTP_DOMAIN"].presence || ENV.fetch("APP_HOST", "localhost"),
+    user_name: ENV["SMTP_USERNAME"].presence,
+    password: ENV["SMTP_PASSWORD"].presence,
+    authentication: ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym,
+    enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", default_starttls))
+  }.compact
   config.action_mailer.default_url_options = {
     host: ENV["APP_HOST"] || "localhost",
     port: (ENV["APP_PORT"] || "443").to_i

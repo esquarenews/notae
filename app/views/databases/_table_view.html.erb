@@ -1,53 +1,82 @@
-<div class="notae-db-table-wrap">
-  <table class="notae-db-table">
+<% row_params = {
+  view_id: @current_view&.id,
+  month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+  sort_property_id: params[:sort_property_id],
+  sort_direction: params[:sort_direction],
+  filter_property_id: params[:filter_property_id],
+  filter_value: params[:filter_value]
+}.compact %>
+
+<div class="notae-db-grid-wrap">
+  <table class="notae-db-grid">
     <thead>
       <tr>
-        <th class="notae-db-col-title">Title</th>
+        <th class="notae-db-grid-name-col">
+          <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
+        </th>
         <% @db_properties.each do |db_property| %>
           <% property_is_sorted = @sort_property&.id == db_property.id %>
           <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
           <th>
-            <div class="notae-db-col-head">
-              <%= link_to db_property.name,
-                          database_path(
-                            workspace_slug: @workspace.slug,
-                            id: @database.id,
-                            view_id: @current_view&.id,
-                            month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
-                            sort_property_id: db_property.id,
-                            sort_direction: next_direction,
-                            filter_property_id: params[:filter_property_id],
-                            filter_value: params[:filter_value]
-                          ),
-                          class: "notae-db-sort-link" %>
-              <% if property_is_sorted %>
-                <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
-              <% end %>
-              <% if policy(db_property).destroy? %>
-                <%= button_to "Remove",
-                              database_db_property_path(workspace_slug: @workspace.slug, database_id: @database.id, id: db_property.id),
-                              method: :delete,
-                              form: { data: { turbo_confirm: "Remove this column and all cell values?" } },
-                              class: "notae-chip-button text-[10px]" %>
-              <% end %>
-            </div>
+            <%= link_to db_property.name,
+                        database_path(
+                          workspace_slug: @workspace.slug,
+                          id: @database.id,
+                          view_id: @current_view&.id,
+                          month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+                          sort_property_id: db_property.id,
+                          sort_direction: next_direction,
+                          filter_property_id: params[:filter_property_id],
+                          filter_value: params[:filter_value]
+                        ),
+                        class: "notae-db-grid-property-link" %>
+            <% if property_is_sorted %>
+              <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+            <% end %>
           </th>
         <% end %>
-        <th class="notae-db-col-actions">Actions</th>
+        <th class="notae-db-grid-add-col">
+          <% if policy(DbProperty.new(database: @database, workspace: @workspace)).create? %>
+            <details class="notae-db-inline-details">
+              <summary class="notae-db-grid-add-link">+ Add property</summary>
+              <div class="notae-db-inline-panel">
+                <%= form_with model: @new_property,
+                              url: database_db_properties_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                              class: "notae-db-inline-form" do |form| %>
+                  <%= form.text_field :name, placeholder: "Property name", required: true, class: "notae-options-input" %>
+                  <%= form.select :property_type,
+                                  DbProperty.property_types.keys.map { |value| [value.titleize, value] },
+                                  {},
+                                  class: "notae-options-input" %>
+                  <%= form.submit "Add", class: "notae-chip-button" %>
+                <% end %>
+              </div>
+            </details>
+          <% end %>
+        </th>
       </tr>
     </thead>
     <tbody>
+      <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? %>
+        <tr class="notae-db-grid-new-row">
+          <td>
+            <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                          params: row_params.merge(db_row: { title: "New page" }),
+                          class: "notae-db-new-row-button" do %>
+              <span class="notae-db-new-row-plus">+</span>
+              <span>New page</span>
+            <% end %>
+          </td>
+          <% @db_properties.each do |_db_property| %>
+            <td></td>
+          <% end %>
+          <td></td>
+        </tr>
+      <% end %>
+
       <% @rows.each do |row| %>
-        <% row_params = {
-          view_id: @current_view&.id,
-          month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
-          sort_property_id: params[:sort_property_id],
-          sort_direction: params[:sort_direction],
-          filter_property_id: params[:filter_property_id],
-          filter_value: params[:filter_value]
-        }.compact %>
-        <tr id="row_<%= row.id %>" class="notae-db-row">
-          <td class="notae-db-title-cell">
+        <tr id="row_<%= row.id %>" class="notae-db-grid-data-row">
+          <td>
             <% if policy(row).update? %>
               <%= form_with model: row,
                             url: database_db_row_path(
@@ -124,23 +153,18 @@
               <% end %>
             </td>
           <% end %>
-          <td class="notae-db-action-cell">
-            <% if policy(row).destroy? %>
-              <%= button_to "Archive",
-                            database_db_row_path(
-                              {
-                                workspace_slug: @workspace.slug,
-                                database_id: @database.id,
-                                id: row.id
-                              }.merge(row_params)
-                            ),
-                            method: :delete,
-                            form: { data: { turbo_confirm: "Archive this row?" } },
-                            class: "notae-chip-button notae-chip-danger" %>
-            <% else %>
-              <span class="text-stone-400">—</span>
-            <% end %>
-          </td>
+          <td></td>
+        </tr>
+      <% end %>
+
+      <% placeholder_count = [6 - @rows.size, 0].max %>
+      <% placeholder_count.times do %>
+        <tr class="notae-db-grid-placeholder-row">
+          <td>&nbsp;</td>
+          <% @db_properties.each do |_db_property| %>
+            <td>&nbsp;</td>
+          <% end %>
+          <td>&nbsp;</td>
         </tr>
       <% end %>
     </tbody>

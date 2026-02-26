@@ -420,6 +420,23 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Announcements")
   end
 
+  it "renders the minimal table shell with add-property and quick new-row controls" do
+    owner = User.create!(email: "database-table-shell-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Table shell tables", slug: "table-shell-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "New database")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Aa")
+    expect(response.body).to include("Name")
+    expect(response.body).to include("+ Add property")
+    expect(response.body).to include("New page")
+    expect(response.body).to include("Database controls")
+  end
+
   it "updates row titles inline and normalizes blank titles" do
     owner = User.create!(email: "database-row-update-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row update tables", slug: "row-update-tables")
