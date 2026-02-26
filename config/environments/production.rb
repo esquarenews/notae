@@ -58,17 +58,27 @@ Rails.application.configure do
 
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    address: ENV.fetch("SMTP_ADDRESS"),
-    port: ENV.fetch("SMTP_PORT", "587").to_i,
-    domain: ENV.fetch("SMTP_DOMAIN", ENV.fetch("APP_HOST")),
-    user_name: ENV.fetch("SMTP_USERNAME"),
-    password: ENV.fetch("SMTP_PASSWORD"),
-    authentication: ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym,
-    enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", "true"))
+    smtp_address = ENV["SMTP_ADDRESS"]
+
+if smtp_address.present?
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = {
+    address: smtp_address,
+    port: (ENV["SMTP_PORT"] || "587").to_i,
+    domain: ENV["SMTP_DOMAIN"] || (ENV["APP_HOST"] || "localhost"),
+    user_name: ENV["SMTP_USERNAME"],
+    password: ENV["SMTP_PASSWORD"],
+    authentication: (ENV["SMTP_AUTHENTICATION"] || "plain").to_sym,
+    enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(ENV["SMTP_ENABLE_STARTTLS_AUTO"] || "true")
+  }
+else
+  # If you're configuring mail from DB at runtime, don't block boot here.
+  # Optionally keep delivery_method as :smtp but settings can be injected later.
+end
   }
   config.action_mailer.default_url_options = {
-    host: ENV.fetch("APP_HOST"),
-    port: ENV.fetch("APP_PORT", "443").to_i
+    host: ENV["APP_HOST"] || "localhost",
+    port: (ENV["APP_PORT"] || "443").to_i
   }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
