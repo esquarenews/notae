@@ -36,6 +36,7 @@ class Workspace < ApplicationRecord
   has_many :page_templates, dependent: :destroy
   has_many :page_presences, dependent: :destroy
   has_many :favorites, dependent: :destroy
+  has_many :search_chunks, dependent: :destroy
 
   scope :active, -> { where(archived_at: nil) }
 

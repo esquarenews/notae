@@ -15,6 +15,7 @@ RSpec.describe "Preferences", type: :request do
     expect(response.body).to include("Language & Time")
     expect(response.body).to include("Desktop app")
     expect(response.body).to include("Privacy")
+    expect(response.body).to include("Reduce Notae AI loader motion")
     expect(response.body).to include("Future implementation")
   end
 
@@ -36,6 +37,7 @@ RSpec.describe "Preferences", type: :request do
               time_zone: "UTC",
               open_links_in_desktop_app: "0",
               open_on_start_preference: "workspace_home",
+              reduce_ai_loader_motion: "1",
               cookie_settings_preference: "strict",
               show_view_history: "0",
               profile_discoverability: "0"
@@ -54,6 +56,7 @@ RSpec.describe "Preferences", type: :request do
     expect(user.time_zone).to eq("UTC")
     expect(user.open_links_in_desktop_app).to be(false)
     expect(user.open_on_start_preference).to eq("workspace_home")
+    expect(user.reduce_ai_loader_motion).to be(true)
     expect(user.cookie_settings_preference).to eq("strict")
     expect(user.show_view_history).to be(false)
     expect(user.profile_discoverability).to be(false)

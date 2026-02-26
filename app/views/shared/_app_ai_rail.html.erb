@@ -5,6 +5,14 @@
   </div>
 
   <div class="notae-ai-card">
+    <div class="notae-ai-loader-row">
+      <%= render "shared/ai_loader_icon",
+                 variant: current_user.ai_loader_style,
+                 state: "static",
+                 size: 64,
+                 reduced_motion: current_user.reduce_ai_loader_motion? %>
+      <p class="notae-ai-loader-meta"><%= User.ai_loader_label_for(current_user.ai_loader_style) %></p>
+    </div>
     <p class="notae-ai-title">Welcome <%= current_user.email.split("@").first %>!</p>
     <p class="notae-ai-copy">I can help draft, summarize, and organize this page while you edit.</p>
     <p class="notae-ai-copy">Current context: <strong><%= content_for(:title) || "Workspace" %></strong></p>

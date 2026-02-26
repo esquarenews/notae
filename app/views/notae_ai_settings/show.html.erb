@@ -1,0 +1,84 @@
+<% content_for :title, "Notae AI settings" %>
+<% content_for :topbar_page_icon, "🤖" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :notae_ai %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>Notae AI loader</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Current style</p>
+          <p class="notae-pref-description"><%= User.ai_loader_label_for(@user.ai_loader_style) %></p>
+          <p class="notae-pref-description">Two states are available for each style: static while idle and animated while AI is fetching data.</p>
+          <% if @user.reduce_ai_loader_motion? %>
+            <p class="notae-pref-description">Reduced motion is enabled in Preferences, so loading previews are shown as static.</p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="notae-ai-loader-stage">
+        <article class="notae-ai-loader-stage-card">
+          <p class="notae-ai-loader-stage-label">Static state</p>
+          <%= render "shared/ai_loader_icon",
+                     variant: @user.ai_loader_style,
+                     state: "static",
+                     size: 128,
+                     reduced_motion: @user.reduce_ai_loader_motion? %>
+        </article>
+        <article class="notae-ai-loader-stage-card">
+          <p class="notae-ai-loader-stage-label">Loading state</p>
+          <%= render "shared/ai_loader_icon",
+                     variant: @user.ai_loader_style,
+                     state: "loading",
+                     size: 128,
+                     reduced_motion: @user.reduce_ai_loader_motion? %>
+        </article>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Style library</h2>
+
+      <%= form_with model: @user,
+                    url: workspace_notae_ai_settings_path(workspace_slug: @workspace.slug),
+                    method: :patch,
+                    class: "notae-ai-loader-options-form" do |form| %>
+        <div class="notae-ai-loader-options-grid is-two-column">
+          <% User::AI_LOADER_STYLE_OPTIONS.each do |label, value| %>
+            <% selected = @user.ai_loader_style == value %>
+            <label class="notae-ai-loader-option <%= "is-active" if selected %>">
+              <span class="notae-ai-loader-option-head">
+                <%= form.radio_button :ai_loader_style,
+                                      value,
+                                      checked: selected,
+                                      class: "notae-ai-loader-option-radio",
+                                      onchange: "this.form.requestSubmit()" %>
+                <span class="notae-ai-loader-option-title"><%= label %></span>
+              </span>
+              <span class="notae-ai-loader-option-copy"><%= User::AI_LOADER_STYLE_DESCRIPTIONS[value] %></span>
+              <span class="notae-ai-loader-option-previews">
+                <%= render "shared/ai_loader_icon",
+                           variant: value,
+                           state: "static",
+                           size: 40,
+                           reduced_motion: @user.reduce_ai_loader_motion? %>
+                <%= render "shared/ai_loader_icon",
+                           variant: value,
+                           state: "loading",
+                           size: 40,
+                           reduced_motion: @user.reduce_ai_loader_motion? %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+  </div>
+</section>

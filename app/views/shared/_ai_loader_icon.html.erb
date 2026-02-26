@@ -1,0 +1,26 @@
+<% variant = local_assigns.fetch(:variant, User::AI_LOADER_STYLE_OPTIONS.first.last).to_s %>
+<% state = local_assigns.fetch(:state, "static").to_s %>
+<% size = local_assigns.fetch(:size, 64).to_i %>
+<% reduced_motion = local_assigns.fetch(:reduced_motion, false) == true %>
+<% particle_count = [ "flock_cloud", "luminous_pulse_sphere", "luminous_wave_sphere" ].include?(variant) ? 24 : 12 %>
+<%
+  classes = [
+    "notae-ai-loader",
+    "is-#{variant}",
+    ("is-loading" if state == "loading"),
+    ("is-reduced-motion" if reduced_motion)
+  ].compact.join(" ")
+%>
+
+<div class="<%= classes %>" style="--notae-ai-loader-size: <%= size %>px;" aria-hidden="true">
+  <span class="notae-ai-loader-ring ring-one"></span>
+  <span class="notae-ai-loader-ring ring-two"></span>
+  <span class="notae-ai-loader-ring ring-three"></span>
+  <span class="notae-ai-loader-line line-one"></span>
+  <span class="notae-ai-loader-line line-two"></span>
+  <span class="notae-ai-loader-line line-three"></span>
+  <% particle_count.times do |index| %>
+    <span class="notae-ai-loader-particle p-<%= index + 1 %>" style="--particle-index: <%= index %>;"></span>
+  <% end %>
+  <span class="notae-ai-loader-core"></span>
+</div>

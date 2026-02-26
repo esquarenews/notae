@@ -4,7 +4,9 @@ RSpec.describe "People settings", type: :request do
   it "renders people settings with invite link controls and tabs" do
     owner = User.create!(email: "people-settings-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "People settings", slug: "people-settings")
+    other_workspace = Workspace.create!(name: "People settings alt", slug: "people-settings-alt")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: other_workspace, user: owner, role: :owner)
     sign_in owner
 
     get workspace_people_settings_path(workspace_slug: workspace.slug)
@@ -14,6 +16,17 @@ RSpec.describe "People settings", type: :request do
     expect(response.body).to include("Copy link")
     expect(response.body).to include("Guests")
     expect(response.body).to include("Members")
+
+    document = Nokogiri::HTML(response.body)
+    workspace_picker = document.at_css(".notae-settings-workspace-picker select[name='workspace_nav_picker']")
+    expect(workspace_picker).to be_present
+    picker_options = workspace_picker.css("option").map { |option| [ option.text.strip, option["value"] ] }
+    expect(picker_options).to include(
+      [ workspace.name, workspace_people_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug) ],
+      [ other_workspace.name, workspace_people_settings_path(workspace_slug: other_workspace.slug, settings_workspace_slug: other_workspace.slug) ]
+    )
+    selected_option = workspace_picker.css("option").find { |option| option["selected"].present? }
+    expect(selected_option&.[]("value")).to eq(workspace_people_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
   end
 
   it "updates add-members-by-link toggle and can regenerate the link token" do

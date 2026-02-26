@@ -26,6 +26,8 @@ Rails.application.routes.draw do
     post "settings/import", to: "import_settings#create"
     get "settings/preferences", to: "preferences#show", as: :workspace_preferences
     patch "settings/preferences", to: "preferences#update"
+    get "settings/notae-ai", to: "notae_ai_settings#show", as: :workspace_notae_ai_settings
+    patch "settings/notae-ai", to: "notae_ai_settings#update"
     get "settings/connections", to: "connection_settings#show", as: :workspace_connection_settings
     patch "settings/connections", to: "connection_settings#update"
     get "settings/notifications", to: "notification_settings#show", as: :workspace_notification_settings

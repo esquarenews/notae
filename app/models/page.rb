@@ -35,6 +35,7 @@ class Page < ApplicationRecord
   has_many :page_templates, dependent: :destroy
   has_many :share_links, dependent: :destroy
   has_many :favorites, as: :favoritable, dependent: :destroy
+  has_many :search_chunks, dependent: :destroy
   has_many :shared_users, through: :page_shares, source: :user
   has_many :outgoing_page_links, class_name: "PageLink", foreign_key: :source_page_id, dependent: :destroy
   has_many :incoming_page_links, class_name: "PageLink", foreign_key: :target_page_id, dependent: :destroy
@@ -65,6 +66,8 @@ class Page < ApplicationRecord
 
   before_validation :set_workspace_from_parent, if: -> { workspace_id.nil? && parent_page.present? }
   before_validation :normalize_icon
+  after_commit :enqueue_search_chunk_reindex, on: %i[create update]
+  after_commit :remove_search_chunks, on: :destroy
 
   def archive!
     update!(archived_at: Time.current)
@@ -105,5 +108,13 @@ class Page < ApplicationRecord
     return if parent_page.workspace_id == workspace_id
 
     errors.add(:parent_page_id, "must belong to the same workspace")
+  end
+
+  def enqueue_search_chunk_reindex
+    Search::IndexPageJob.perform_later(id)
+  end
+
+  def remove_search_chunks
+    Search::ChunkIndexingService.delete_source!(source_type: SearchChunk::SOURCE_PAGE, source_id: id)
   end
 end

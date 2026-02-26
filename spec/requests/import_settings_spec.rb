@@ -12,7 +12,9 @@ RSpec.describe "Import settings", type: :request do
   it "renders import settings with warning note about potential formatting loss" do
     owner = User.create!(email: "import-settings-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Import settings", slug: "import-settings")
+    other_workspace = Workspace.create!(name: "Import settings alt", slug: "import-settings-alt")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: other_workspace, user: owner, role: :owner)
     sign_in owner
 
     get workspace_import_settings_path(workspace_slug: workspace.slug)
@@ -21,6 +23,17 @@ RSpec.describe "Import settings", type: :request do
     expect(response.body).to include("Import")
     expect(response.body).to include("Format warning")
     expect(response.body).to include("some structure, styling")
+
+    document = Nokogiri::HTML(response.body)
+    workspace_picker = document.at_css(".notae-settings-workspace-picker select[name='workspace_nav_picker']")
+    expect(workspace_picker).to be_present
+    picker_options = workspace_picker.css("option").map { |option| [ option.text.strip, option["value"] ] }
+    expect(picker_options).to include(
+      [ workspace.name, workspace_import_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug) ],
+      [ other_workspace.name, workspace_import_settings_path(workspace_slug: other_workspace.slug, settings_workspace_slug: other_workspace.slug) ]
+    )
+    selected_option = workspace_picker.css("option").find { |option| option["selected"].present? }
+    expect(selected_option&.[]("value")).to eq(workspace_import_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
   end
 
   it "imports uploaded files into pages" do

@@ -52,6 +52,7 @@ class Block < ApplicationRecord
   before_validation :set_search_text
   before_validation :set_initial_position, on: :create
   after_commit :sync_page_links, if: :sync_links_required?
+  after_commit :enqueue_search_chunk_reindex, if: :search_chunk_reindex_required?
 
   def archiveable_tree_ids
     ids = [ id ]
@@ -125,11 +126,22 @@ class Block < ApplicationRecord
       previous_changes.key?("page_id")
   end
 
+  def search_chunk_reindex_required?
+    previous_changes.key?("content_json") ||
+      previous_changes.key?("archived_at") ||
+      previous_changes.key?("page_id")
+  end
+
   def sync_page_links
     unless defined?(::PageLinks::SyncFromBlockService)
       load Rails.root.join("app/services/page_links/sync_from_block_service.rb").to_s
     end
     ::PageLinks::SyncFromBlockService.call(block: self)
+  end
+
+  def enqueue_search_chunk_reindex
+    page_ids = [ page_id, previous_changes.dig("page_id", 0) ].compact.uniq
+    page_ids.each { |target_page_id| Search::IndexPageJob.perform_later(target_page_id) }
   end
 
   def embed_block?

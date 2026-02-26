@@ -40,6 +40,7 @@ class PreferencesController < ApplicationController
       :time_zone,
       :open_links_in_desktop_app,
       :open_on_start_preference,
+      :reduce_ai_loader_motion,
       :cookie_settings_preference,
       :show_view_history,
       :profile_discoverability

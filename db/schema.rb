@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_26_001000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_26_142000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -365,6 +365,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_001000) do
     t.index ["workspace_id"], name: "index_pages_on_workspace_id"
   end
 
+  create_table "search_chunks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "chunk_index", null: false
+    t.string "content_hash", null: false
+    t.datetime "created_at", null: false
+    t.uuid "database_id"
+    t.uuid "db_row_id"
+    t.jsonb "embedding", default: [], null: false
+    t.string "embedding_model"
+    t.uuid "page_id"
+    t.uuid "source_id", null: false
+    t.string "source_type", null: false
+    t.text "text", null: false
+    t.integer "token_count", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["content_hash"], name: "index_search_chunks_on_content_hash"
+    t.index ["database_id"], name: "index_search_chunks_on_database_id"
+    t.index ["db_row_id"], name: "index_search_chunks_on_db_row_id"
+    t.index ["page_id"], name: "index_search_chunks_on_page_id"
+    t.index ["source_type", "source_id", "chunk_index"], name: "idx_search_chunks_on_source_and_index", unique: true
+    t.index ["workspace_id", "source_type"], name: "idx_search_chunks_on_workspace_and_source_type"
+    t.index ["workspace_id", "updated_at"], name: "idx_search_chunks_on_workspace_and_updated_at"
+    t.index ["workspace_id"], name: "index_search_chunks_on_workspace_id"
+  end
+
   create_table "share_link_views", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address", null: false
@@ -399,6 +424,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_001000) do
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "ai_loader_style", default: "disco_orbit", null: false
     t.boolean "auto_time_zone", default: true, null: false
     t.string "cookie_settings_preference", default: "customize", null: false
     t.datetime "created_at", null: false
@@ -418,6 +444,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_001000) do
     t.string "open_on_start_preference", default: "workspace_home", null: false
     t.string "openai_api_key"
     t.boolean "profile_discoverability", default: true, null: false
+    t.boolean "reduce_ai_loader_motion", default: false, null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
@@ -509,6 +536,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_001000) do
   add_foreign_key "pages", "pages", column: "parent_page_id"
   add_foreign_key "pages", "users", column: "created_by_id"
   add_foreign_key "pages", "workspaces"
+  add_foreign_key "search_chunks", "databases"
+  add_foreign_key "search_chunks", "db_rows"
+  add_foreign_key "search_chunks", "pages"
+  add_foreign_key "search_chunks", "workspaces"
   add_foreign_key "share_link_views", "pages"
   add_foreign_key "share_link_views", "share_links"
   add_foreign_key "share_link_views", "workspaces"

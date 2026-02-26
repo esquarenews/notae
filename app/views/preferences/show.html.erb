@@ -25,6 +25,22 @@
                           onchange: "this.form.requestSubmit()" %>
         <% end %>
       </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Reduce Notae AI loader motion</p>
+          <p class="notae-pref-description">Show static AI loader states instead of animated loops for accessibility.</p>
+        </div>
+        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+          <label class="notae-pref-toggle">
+            <%= form.check_box :reduce_ai_loader_motion,
+                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               "1",
+                               "0" %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
     </section>
 
     <section class="notae-settings-section">

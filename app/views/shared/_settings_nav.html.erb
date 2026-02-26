@@ -1,4 +1,21 @@
 <aside class="notae-settings-nav">
+  <% settings_workspace_slug = params[:settings_workspace_slug].to_s %>
+  <% workspace_section_item = %i[general people import].include?(active_item) ? active_item : :general %>
+  <% workspace_options = policy_scope(Workspace).order(updated_at: :desc).to_a %>
+  <% selected_workspace = workspace_options.find { |candidate_workspace| candidate_workspace.slug == settings_workspace_slug } || workspace %>
+  <% workspace_route_for = lambda do |candidate_workspace|
+       case workspace_section_item
+       when :people
+         workspace_people_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
+       when :import
+         workspace_import_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
+       else
+         workspace_general_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
+       end
+     end %>
+  <% workspace_nav_options = workspace_options
+       .map { |candidate_workspace| [candidate_workspace.name, workspace_route_for.call(candidate_workspace)] } %>
+
   <p class="notae-settings-nav-group">Account</p>
   <div class="notae-settings-nav-user">
     <span class="notae-settings-nav-avatar"><%= current_user.email.first.upcase %></span>
@@ -27,21 +44,28 @@
   <% end %>
 
   <p class="notae-settings-nav-group">Workspace</p>
-  <%= link_to workspace_general_settings_path(workspace_slug: workspace.slug),
+  <div class="notae-settings-workspace-picker">
+    <%= label_tag :workspace_nav_picker, "Active workspace", class: "notae-settings-workspace-picker-label" %>
+    <%= select_tag :workspace_nav_picker,
+                   options_for_select(workspace_nav_options, workspace_route_for.call(selected_workspace)),
+                   class: "notae-options-input",
+                   onchange: "window.location.href=this.value" %>
+  </div>
+  <%= link_to workspace_general_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
               class: [ "notae-settings-nav-item", ("active" if active_item == :general) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1 1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1-1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1-1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-.2a1 1 0 0 0-.4 1z"/></svg>
       <span>General</span>
     </span>
   <% end %>
-  <%= link_to workspace_people_settings_path(workspace_slug: workspace.slug),
+  <%= link_to workspace_people_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
               class: [ "notae-settings-nav-item", ("active" if active_item == :people) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="10" r="2.5"/><path d="M15 20a5 5 0 0 1 6 0"/></svg>
       <span>People</span>
     </span>
   <% end %>
-  <%= link_to workspace_import_settings_path(workspace_slug: workspace.slug),
+  <%= link_to workspace_import_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
               class: [ "notae-settings-nav-item", ("active" if active_item == :import) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><rect x="4" y="17" width="16" height="4" rx="1"/></svg>
@@ -50,13 +74,13 @@
   <% end %>
 
   <p class="notae-settings-nav-group">Features</p>
-  <span class="notae-settings-nav-item is-disabled">
+  <%= link_to workspace_notae_ai_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :notae_ai) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.9 4.8L19 9.7l-4 3.5 1.2 5L12 15.8 7.8 18.2 9 13.2 5 9.7l5.1-1.9z"/></svg>
       <span>Notae AI</span>
     </span>
-    <em>Future</em>
-  </span>
+  <% end %>
   <span class="notae-settings-nav-item is-disabled">
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
@@ -76,7 +100,7 @@
   <span class="notae-settings-nav-item is-disabled">
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8a3 3 0 0 1 0 6l-2 2a3 3 0 1 1-4-4l2-2"/><path d="M15 16a3 3 0 0 1 0-6l2-2a3 3 0 1 1 4 4l-2 2"/><path d="M8 12h8"/></svg>
-      <span>Connections</span>
+      <span>Manage</span>
     </span>
     <em>Future</em>
   </span>

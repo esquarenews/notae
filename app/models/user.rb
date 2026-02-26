@@ -35,6 +35,28 @@ class User < ApplicationRecord
     [ "Strict", "strict" ]
   ].freeze
 
+  AI_LOADER_STYLE_OPTIONS = [
+    [ "Disco Orbit", "disco_orbit" ],
+    [ "Neon Mesh", "neon_mesh" ],
+    [ "Pulse Beads", "pulse_beads" ],
+    [ "Disco Ball Reflect", "disco_ball_reflect" ],
+    [ "Flock Cloud", "flock_cloud" ],
+    [ "Neural Network", "neural_network" ],
+    [ "Luminous Pulse Sphere", "luminous_pulse_sphere" ],
+    [ "Luminous Wave Sphere", "luminous_wave_sphere" ]
+  ].freeze
+
+  AI_LOADER_STYLE_DESCRIPTIONS = {
+    "disco_orbit" => "A disco-inspired orbital field with neon cyan/magenta halos.",
+    "neon_mesh" => "A connected node mesh that feels like an active neural network.",
+    "pulse_beads" => "A ring of beads that softly pulses and rotates in sync.",
+    "disco_ball_reflect" => "A spinning disco sphere with mirrored facets and moving light reflections.",
+    "flock_cloud" => "A cloud of pink-purple-blue dots that drifts like a flock in formation.",
+    "neural_network" => "A futuristic network visualization with connected blue, pink, and purple nodes.",
+    "luminous_pulse_sphere" => "A dense luminous particle sphere with cyan-magenta pulses and a glowing energy core.",
+    "luminous_wave_sphere" => "A reactive plasma sphere where particle waves wrap and sweep around the core."
+  }.freeze
+
   CHANNEL_NOTIFICATION_OPTIONS = [
     [ "Off", "off" ],
     [ "Mentions", "mentions" ],
@@ -72,10 +94,12 @@ class User < ApplicationRecord
   validates :date_format_preference, inclusion: { in: DATE_FORMAT_OPTIONS.map(&:last) }
   validates :open_on_start_preference, inclusion: { in: OPEN_ON_START_OPTIONS.map(&:last) }
   validates :cookie_settings_preference, inclusion: { in: COOKIE_SETTINGS_OPTIONS.map(&:last) }
+  validates :ai_loader_style, inclusion: { in: AI_LOADER_STYLE_OPTIONS.map(&:last) }
   validates :show_text_direction_controls, inclusion: { in: [ true, false ] }
   validates :start_week_on_monday, inclusion: { in: [ true, false ] }
   validates :auto_time_zone, inclusion: { in: [ true, false ] }
   validates :open_links_in_desktop_app, inclusion: { in: [ true, false ] }
+  validates :reduce_ai_loader_motion, inclusion: { in: [ true, false ] }
   validates :show_view_history, inclusion: { in: [ true, false ] }
   validates :profile_discoverability, inclusion: { in: [ true, false ] }
   validates :meeting_notify_join_transcribing, inclusion: { in: [ true, false ] }
@@ -107,6 +131,10 @@ class User < ApplicationRecord
     return "Not configured" unless openai_api_key_configured?
 
     "#{openai_api_key.first(6)}...#{openai_api_key.last(4)}"
+  end
+
+  def self.ai_loader_label_for(value)
+    AI_LOADER_STYLE_OPTIONS.find { |(_label, option_value)| option_value == value }&.first || AI_LOADER_STYLE_OPTIONS.first.first
   end
 
   private
