@@ -210,6 +210,11 @@ export default class extends Controller {
   applyPrefill(detail) {
     if (!this.hasPromptInputTarget) return
 
+    if (detail.clearPrompt) {
+      this.promptInputTarget.value = ""
+      this.promptInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
+    }
+
     const prompt = String(detail.prompt || "").trim()
     if (prompt.length > 0) {
       this.promptInputTarget.value = prompt

@@ -41,23 +41,11 @@ export default class extends Controller {
 
   askAi(event) {
     event.preventDefault()
-    const template = event.currentTarget.dataset.promptTemplate || "Write polished text for this block."
-    const blockUrl = `${window.location.origin}${window.location.pathname}#block_${this.blockIdValue}`
-    const blockContext = this.blockTextValue?.trim()
-    const promptParts = [
-      template,
-      `Block reference: ${blockUrl}`,
-      `Page: ${this.pageTitleValue || "Untitled"}`
-    ]
-    if (blockContext) {
-      promptParts.push(`Current block text:\n${blockContext}`)
-    }
-
     this.prefillAiRail({
-      prompt: promptParts.join("\n\n"),
+      prompt: "",
       intent: "compose",
       targetBlockId: this.blockIdValue,
-      autoSubmit: true
+      clearPrompt: true
     })
 
     this.closeMenu(event)
@@ -155,12 +143,13 @@ export default class extends Controller {
     panel.style.pointerEvents = ""
   }
 
-  prefillAiRail({ prompt, intent, targetBlockId, autoSubmit = false }) {
+  prefillAiRail({ prompt, intent, targetBlockId, autoSubmit = false, clearPrompt = false }) {
     const detail = {
       prompt: String(prompt || ""),
       intent: String(intent || ""),
       targetBlockId: String(targetBlockId || ""),
-      autoSubmit: Boolean(autoSubmit)
+      autoSubmit: Boolean(autoSubmit),
+      clearPrompt: Boolean(clearPrompt)
     }
 
     window.dispatchEvent(new CustomEvent("notae:ai-prefill", { detail }))
