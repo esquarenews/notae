@@ -78,6 +78,7 @@ module Search
 
     def semantic_chunk_results
       return [] unless user.openai_api_key_configured?
+      return [] unless semantic_ai_allowed?
 
       query_embedding = embed_query
       return [] if query_embedding.empty?
@@ -125,11 +126,18 @@ module Search
     end
 
     def embed_query
-      Openai::EmbeddingsClient.embed(
+      response = Openai::EmbeddingsClient.embed_with_usage(
         text: query,
         api_key: user.openai_api_key,
         model: SearchChunk::EMBEDDING_MODEL
       )
+      log_embedding_usage!(
+        usage: response[:usage],
+        operation: AiUsageLog::OP_SEMANTIC_QUERY,
+        metadata: { query_length: query.length }
+      )
+
+      response[:embedding]
     end
 
     def backfill_chunk_embeddings!(chunks)
@@ -137,10 +145,16 @@ module Search
                              .first(SEMANTIC_EMBEDDING_BATCH_LIMIT)
       return if missing_chunks.empty?
 
-      vectors = Openai::EmbeddingsClient.embed_many(
+      response = Openai::EmbeddingsClient.embed_many_with_usage(
         texts: missing_chunks.map(&:text),
         api_key: user.openai_api_key,
         model: SearchChunk::EMBEDDING_MODEL
+      )
+      vectors = response[:embeddings]
+      log_embedding_usage!(
+        usage: response[:usage],
+        operation: AiUsageLog::OP_SEMANTIC_BACKFILL,
+        metadata: { chunk_count: missing_chunks.length }
       )
 
       missing_chunks.zip(vectors).each do |chunk, vector|
@@ -224,6 +238,24 @@ module Search
 
     def query_terms
       @query_terms ||= query.split(/\s+/).reject(&:blank?).uniq
+    end
+
+    def semantic_ai_allowed?
+      return false unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
+      return false unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "semantic_search")
+
+      true
+    end
+
+    def log_embedding_usage!(usage:, operation:, metadata:)
+      Search::AiUsageLogger.log!(
+        user: user,
+        workspace: workspace,
+        operation: operation,
+        model: SearchChunk::EMBEDDING_MODEL,
+        usage: usage,
+        metadata: metadata
+      )
     end
   end
 end

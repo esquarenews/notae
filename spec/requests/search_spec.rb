@@ -58,8 +58,12 @@ RSpec.describe "Search", type: :request do
 
     Page.create!(workspace: workspace, created_by: user, title: "Launch Brief")
 
-    allow(Openai::EmbeddingsClient).to receive(:embed).and_return([])
-    allow(Openai::ResponsesClient).to receive(:generate_text).and_return("Launch brief summary [1].")
+    allow(Openai::EmbeddingsClient).to receive(:embed_with_usage).and_return(
+      { embedding: [], usage: { prompt_tokens: 10, completion_tokens: 0, total_tokens: 10 } }
+    )
+    allow(Openai::ResponsesClient).to receive(:generate_text_with_usage).and_return(
+      { text: "Launch brief summary [1].", usage: { prompt_tokens: 120, completion_tokens: 18, total_tokens: 138 } }
+    )
 
     sign_in user
     get workspace_search_path(workspace_slug: workspace.slug), params: { q: "launch" }

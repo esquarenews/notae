@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_26_142000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_26_153000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -42,6 +42,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_142000) do
     t.uuid "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "ai_usage_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "completion_tokens", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.decimal "estimated_cost_usd", precision: 12, scale: 6, default: "0.0", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.string "model", null: false
+    t.string "operation", null: false
+    t.integer "prompt_tokens", default: 0, null: false
+    t.integer "total_tokens", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["model"], name: "index_ai_usage_logs_on_model"
+    t.index ["operation"], name: "index_ai_usage_logs_on_operation"
+    t.index ["user_id", "workspace_id", "created_at"], name: "idx_ai_usage_logs_on_user_workspace_created_at"
+    t.index ["user_id"], name: "index_ai_usage_logs_on_user_id"
+    t.index ["workspace_id", "created_at"], name: "idx_ai_usage_logs_on_workspace_created_at"
+    t.index ["workspace_id"], name: "index_ai_usage_logs_on_workspace_id"
   end
 
   create_table "api_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -486,6 +506,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_142000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ai_usage_logs", "users"
+  add_foreign_key "ai_usage_logs", "workspaces"
   add_foreign_key "api_tokens", "users"
   add_foreign_key "audit_events", "users", column: "actor_id"
   add_foreign_key "audit_events", "workspaces"

@@ -21,6 +21,13 @@ module Notae
     config.eager_load_paths << Rails.root.join("app/channels")
     config.x.api.rate_limit_per_minute = ENV.fetch("API_RATE_LIMIT_PER_MINUTE", "120").to_i
     config.x.api.rate_limit_window_seconds = ENV.fetch("API_RATE_LIMIT_WINDOW_SECONDS", "60").to_i
+    config.x.ai_search.semantic_rate_limit_per_minute = ENV.fetch("AI_SEARCH_SEMANTIC_RATE_LIMIT_PER_MINUTE", "24").to_i
+    config.x.ai_search.answer_rate_limit_per_minute = ENV.fetch("AI_SEARCH_ANSWER_RATE_LIMIT_PER_MINUTE", "12").to_i
+    config.x.ai_search.rate_limit_window_seconds = ENV.fetch("AI_SEARCH_RATE_LIMIT_WINDOW_SECONDS", "60").to_i
+    config.x.ai_search.daily_budget_usd = ENV.fetch("AI_SEARCH_DAILY_BUDGET_USD", "1.50").to_f
+    config.x.ai_pricing.embedding_3_small_input_per_1k = ENV.fetch("OPENAI_PRICE_TEXT_EMBEDDING_3_SMALL_INPUT_PER_1K", "0.00002").to_f
+    config.x.ai_pricing.gpt_4o_mini_input_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4O_MINI_INPUT_PER_1K", "0.00015").to_f
+    config.x.ai_pricing.gpt_4o_mini_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4O_MINI_OUTPUT_PER_1K", "0.00060").to_f
 
     config.generators do |generate|
       generate.orm :active_record, primary_key_type: :uuid

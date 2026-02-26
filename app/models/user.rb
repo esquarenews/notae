@@ -83,6 +83,7 @@ class User < ApplicationRecord
   has_many :created_page_templates, class_name: "PageTemplate", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :api_tokens, dependent: :destroy
   has_many :favorites, dependent: :destroy
+  has_many :ai_usage_logs, dependent: :destroy
 
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable

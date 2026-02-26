@@ -9,8 +9,18 @@ module Openai
     class Error < StandardError; end
 
     def self.generate_text(prompt:, api_key:, model: "gpt-4o-mini", max_output_tokens: 260)
+      response = generate_text_with_usage(
+        prompt: prompt,
+        api_key: api_key,
+        model: model,
+        max_output_tokens: max_output_tokens
+      )
+      response[:text]
+    end
+
+    def self.generate_text_with_usage(prompt:, api_key:, model: "gpt-4o-mini", max_output_tokens: 260)
       normalized_prompt = prompt.to_s.strip
-      return "" if normalized_prompt.blank?
+      return { text: "", usage: default_usage } if normalized_prompt.blank?
       raise Error, "Missing OpenAI API key" if api_key.to_s.strip.blank?
 
       body = request_response!(
@@ -20,7 +30,10 @@ module Openai
         max_output_tokens: max_output_tokens
       )
 
-      extract_output_text(body)
+      {
+        text: extract_output_text(body),
+        usage: usage_from_body(body)
+      }
     end
 
     def self.request_response!(prompt:, api_key:, model:, max_output_tokens:)
@@ -65,6 +78,27 @@ module Openai
       end
 
       segments.join("\n").strip
+    end
+
+    def self.usage_from_body(body)
+      usage = body.fetch("usage", {})
+      prompt_tokens = usage.fetch("input_tokens", usage.fetch("prompt_tokens", 0)).to_i
+      completion_tokens = usage.fetch("output_tokens", usage.fetch("completion_tokens", 0)).to_i
+      total_tokens = usage.fetch("total_tokens", prompt_tokens + completion_tokens).to_i
+
+      {
+        prompt_tokens: prompt_tokens,
+        completion_tokens: completion_tokens,
+        total_tokens: total_tokens
+      }
+    end
+
+    def self.default_usage
+      {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+      }
     end
   end
 end

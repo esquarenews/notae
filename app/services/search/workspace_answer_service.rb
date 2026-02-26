@@ -15,16 +15,27 @@ module Search
     def call
       return nil if query.blank?
       return nil unless user.openai_api_key_configured?
+      return nil unless answer_ai_allowed?
 
       context_results = results.first(CONTEXT_RESULT_LIMIT)
       return nil if context_results.empty?
 
-      response_text = Openai::ResponsesClient.generate_text(
+      response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: prompt_for(context_results),
         api_key: user.openai_api_key,
         model: MODEL
-      ).strip
+      )
+      response_text = response[:text].to_s.strip
       return nil if response_text.blank?
+
+      Search::AiUsageLogger.log!(
+        user: user,
+        workspace: workspace,
+        operation: AiUsageLog::OP_SEARCH_ANSWER,
+        model: MODEL,
+        usage: response[:usage],
+        metadata: { context_results: context_results.length, query_length: query.length }
+      )
 
       Answer.new(
         summary: response_text,
@@ -64,6 +75,13 @@ module Search
         Context:
         #{lines.join("\n")}
       PROMPT
+    end
+
+    def answer_ai_allowed?
+      return false unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
+      return false unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
+
+      true
     end
   end
 end
