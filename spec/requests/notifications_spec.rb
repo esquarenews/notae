@@ -54,6 +54,36 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include("Unread: 0")
   end
 
+  it "uses configured SMTP sender identity for mention emails when actor has SMTP settings" do
+    author = User.create!(
+      email: "mention-smtp-author@example.com",
+      password: "password123",
+      smtp_address: "smtp.example.com",
+      smtp_port: 587,
+      smtp_domain: "example.com",
+      smtp_username: "smtp-user",
+      smtp_password: "smtp-password-123",
+      smtp_authentication: "login",
+      smtp_enable_starttls_auto: true,
+      smtp_from_name: "Notae Alerts",
+      smtp_from_email: "alerts@example.com"
+    )
+    mentioned = User.create!(email: "mention-smtp-target@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Mentions SMTP", slug: "mentions-smtp")
+    Membership.create!(workspace: workspace, user: author, role: :owner)
+    Membership.create!(workspace: workspace, user: mentioned, role: :member)
+    page = Page.create!(workspace: workspace, created_by: author, title: "Mentions SMTP Page")
+    sign_in author
+
+    post page_comments_path(workspace_slug: workspace.slug, page_id: page.id),
+         params: { comment: { body: "Please review this @mention-smtp-target@example.com" } }
+
+    sent_mail = ActionMailer::Base.deliveries.last
+    expect(sent_mail.to).to eq([ mentioned.email ])
+    expect(sent_mail[:from].decoded).to include("Notae Alerts")
+    expect(sent_mail.from).to include("alerts@example.com")
+  end
+
   it "does not send mention email when recipient disables activity email notifications" do
     author = User.create!(email: "mention-author-no-email@example.com", password: "password123")
     mentioned = User.create!(

@@ -50,6 +50,89 @@
                           disabled: !@user.openai_api_key_configured? %>
         <% end %>
       </div>
+
+      <div class="notae-pref-row notae-pref-row--stacked">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Email SMTP credentials</p>
+          <p class="notae-pref-description">Configure SMTP to send invitations and notification emails from the app.</p>
+          <p class="notae-pref-description">Current status: <strong><%= @user.smtp_configured? ? "Configured" : "Not configured" %></strong></p>
+          <% if @user.smtp_configured? %>
+            <p class="notae-pref-description">SMTP server: <code><%= @user.smtp_address %>:<%= @user.smtp_port %></code></p>
+            <p class="notae-pref-description">Username: <code><%= @user.smtp_username %></code></p>
+            <p class="notae-pref-description">Password: <code><%= @user.masked_smtp_password %></code></p>
+            <p class="notae-pref-description">From: <code><%= @user.smtp_from_display %></code></p>
+          <% end %>
+        </div>
+        <%= form_with model: @user,
+                      url: workspace_connection_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form notae-connection-form-grid" do |form| %>
+          <%= form.text_field :smtp_address,
+                              value: @user.smtp_address,
+                              class: "notae-pref-select",
+                              placeholder: "SMTP host (for example smtp.sendgrid.net)" %>
+          <%= form.number_field :smtp_port,
+                                value: @user.smtp_port,
+                                class: "notae-pref-select",
+                                min: 1,
+                                max: 65_535,
+                                step: 1,
+                                placeholder: "Port (for example 587)" %>
+          <%= form.text_field :smtp_domain,
+                              value: @user.smtp_domain,
+                              class: "notae-pref-select",
+                              placeholder: "SMTP domain (for example yourdomain.com)" %>
+          <%= form.text_field :smtp_username,
+                              value: @user.smtp_username,
+                              class: "notae-pref-select",
+                              autocomplete: "off",
+                              spellcheck: "false",
+                              placeholder: "SMTP username" %>
+          <%= form.password_field :smtp_password,
+                                  value: "",
+                                  class: "notae-pref-select",
+                                  autocomplete: "new-password",
+                                  spellcheck: "false",
+                                  placeholder: @user.smtp_password.present? ? "Leave blank to keep existing password" : "SMTP password" %>
+          <%= form.text_field :smtp_from_name,
+                              value: @user.smtp_from_name,
+                              class: "notae-pref-select",
+                              placeholder: "From name (for example Notae)" %>
+          <%= form.email_field :smtp_from_email,
+                               value: @user.smtp_from_email,
+                               class: "notae-pref-select",
+                               autocomplete: "off",
+                               spellcheck: "false",
+                               placeholder: "From email (for example noreply@yourdomain.com)" %>
+          <%= form.select :smtp_authentication,
+                          User::SMTP_AUTHENTICATION_OPTIONS,
+                          {},
+                          class: "notae-pref-select" %>
+          <label class="notae-options-checkbox">
+            <%= form.check_box :smtp_enable_starttls_auto %>
+            <span>Enable STARTTLS</span>
+          </label>
+          <div class="notae-connection-form-actions">
+            <%= form.submit "Save SMTP", class: "notae-chip-button" %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Remove SMTP settings</p>
+          <p class="notae-pref-description">Deletes saved SMTP credentials from your account.</p>
+        </div>
+        <%= form_with model: @user,
+                      url: workspace_connection_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form" do |form| %>
+          <%= form.hidden_field :clear_smtp_settings, value: "1" %>
+          <%= form.submit "Remove SMTP",
+                          class: "notae-chip-button",
+                          disabled: !@user.smtp_configured? %>
+        <% end %>
+      </div>
     </section>
   </div>
 </section>

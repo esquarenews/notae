@@ -94,6 +94,57 @@ RSpec.describe "Databases", type: :request do
     expect(response.body.index("Alpha Row")).to be < response.body.index("Bravo Row")
   end
 
+  it "supports typed property filtering and sorting for number, date, and checkbox columns" do
+    owner = User.create!(email: "database-typed-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Typed tables", slug: "typed-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Typed DB")
+    estimate_property = DbProperty.create!(workspace: workspace, database: database, name: "Estimate", property_type: :number)
+    due_property = DbProperty.create!(workspace: workspace, database: database, name: "Due", property_type: :date)
+    done_property = DbProperty.create!(workspace: workspace, database: database, name: "Done", property_type: :checkbox)
+    low_row = DbRow.create!(workspace: workspace, database: database, title: "Low estimate")
+    high_row = DbRow.create!(workspace: workspace, database: database, title: "High estimate")
+    DbCell.create!(workspace: workspace, db_row: low_row, db_property: estimate_property, value_text: "2")
+    DbCell.create!(workspace: workspace, db_row: high_row, db_property: estimate_property, value_text: "10")
+    DbCell.create!(workspace: workspace, db_row: low_row, db_property: due_property, value_text: "2026-03-05")
+    DbCell.create!(workspace: workspace, db_row: high_row, db_property: due_property, value_text: "2026-03-22")
+    low_done = DbCell.create!(workspace: workspace, db_row: low_row, db_property: done_property, value_text: "false")
+    DbCell.create!(workspace: workspace, db_row: high_row, db_property: done_property, value_text: "true")
+    sign_in owner
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: low_done.id),
+          params: { db_cell: { value_text: "on" } }
+    expect(low_done.reload.value_text).to eq("true")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, sort_property_id: estimate_property.id, sort_direction: "asc")
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index("Low estimate")).to be < response.body.index("High estimate")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, sort_property_id: due_property.id, sort_direction: "desc")
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index("High estimate")).to be < response.body.index("Low estimate")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      filter_property_id: done_property.id,
+      filter_value: "true"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Low estimate")
+    expect(response.body).to include("High estimate")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      filter_property_id: done_property.id,
+      filter_value: "false"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Low estimate")
+    expect(response.body).not_to include("High estimate")
+  end
+
   it "blocks non-members from accessing a workspace database" do
     owner = User.create!(email: "database-member-owner@example.com", password: "password123")
     outsider = User.create!(email: "database-member-outsider@example.com", password: "password123")
@@ -342,5 +393,73 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Board view")
+  end
+
+  it "renders list and gallery views" do
+    owner = User.create!(email: "database-list-gallery-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "List gallery tables", slug: "list-gallery-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Content DB")
+    category_property = DbProperty.create!(workspace: workspace, database: database, name: "Category", property_type: :select)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Launch post")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: category_property, value_text: "Announcements")
+    list_view = DatabaseView.create!(workspace: workspace, database: database, created_by: owner, name: "List view", view_type: :list)
+    gallery_view = DatabaseView.create!(workspace: workspace, database: database, created_by: owner, name: "Gallery view", view_type: :gallery)
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: list_view.id)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-db-list-view")
+    expect(response.body).to include("Launch post")
+    expect(response.body).to include("Announcements")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: gallery_view.id)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-db-gallery-view")
+    expect(response.body).to include("Launch post")
+    expect(response.body).to include("Announcements")
+  end
+
+  it "updates row titles inline and normalizes blank titles" do
+    owner = User.create!(email: "database-row-update-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row update tables", slug: "row-update-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row update DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Original title")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { title: "Renamed row" } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
+    expect(row.reload.title).to eq("Renamed row")
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { title: "   " } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
+    expect(row.reload.title).to eq("Untitled row")
+  end
+
+  it "archives rows and excludes them from active database views" do
+    owner = User.create!(email: "database-row-archive-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row archive tables", slug: "row-archive-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row archive DB")
+    kept_row = DbRow.create!(workspace: workspace, database: database, title: "Keep me")
+    archived_row = DbRow.create!(workspace: workspace, database: database, title: "Archive me")
+    sign_in owner
+
+    delete database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: archived_row.id)
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(archived_row.reload.archived_at).to be_present
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Keep me")
+    expect(response.body).not_to include("Archive me")
+    expect(kept_row.reload.archived_at).to be_nil
   end
 end

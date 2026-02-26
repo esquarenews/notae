@@ -26,4 +26,45 @@ RSpec.describe DbCell, type: :model do
     expect(invalid_cell).not_to be_valid
     expect(invalid_cell.errors[:db_property_id]).to include("must belong to the same database as the row")
   end
+
+  it "normalizes checkbox values to true/false" do
+    workspace = Workspace.create!(name: "Cell checkbox", slug: "cell-checkbox")
+    database = Database.create!(workspace:, name: "Tasks")
+    db_property = DbProperty.create!(workspace:, database:, name: "Done", property_type: :checkbox)
+    db_row = DbRow.create!(workspace:, database:, title: "Write docs")
+
+    db_cell = described_class.create!(workspace:, db_row:, db_property:, value_text: "on")
+    expect(db_cell.value_text).to eq("true")
+
+    db_cell.update!(value_text: "no")
+    expect(db_cell.reload.value_text).to eq("false")
+  end
+
+  it "normalizes valid date values and rejects invalid dates" do
+    workspace = Workspace.create!(name: "Cell date", slug: "cell-date")
+    database = Database.create!(workspace:, name: "Tasks")
+    db_property = DbProperty.create!(workspace:, database:, name: "Due", property_type: :date)
+    db_row = DbRow.create!(workspace:, database:, title: "Date row")
+
+    db_cell = described_class.create!(workspace:, db_row:, db_property:, value_text: "2026-3-7")
+    expect(db_cell.value_text).to eq("2026-03-07")
+
+    invalid_cell = described_class.new(workspace:, db_row:, db_property:, value_text: "2026-99-99")
+    expect(invalid_cell).not_to be_valid
+    expect(invalid_cell.errors[:value_text]).to include("must be a valid date")
+  end
+
+  it "rejects invalid number values for number properties" do
+    workspace = Workspace.create!(name: "Cell number", slug: "cell-number")
+    database = Database.create!(workspace:, name: "Tasks")
+    db_property = DbProperty.create!(workspace:, database:, name: "Estimate", property_type: :number)
+    db_row = DbRow.create!(workspace:, database:, title: "Number row")
+
+    valid_cell = described_class.new(workspace:, db_row:, db_property:, value_text: "12.5")
+    expect(valid_cell).to be_valid
+
+    invalid_cell = described_class.new(workspace:, db_row:, db_property:, value_text: "12a")
+    expect(invalid_cell).not_to be_valid
+    expect(invalid_cell.errors[:value_text]).to include("must be a valid number")
+  end
 end

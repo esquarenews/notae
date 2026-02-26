@@ -21,7 +21,7 @@ class InvitationsController < ApplicationController
         },
         auditable: @invitation
       )
-      InvitationMailer.with(invitation: @invitation).workspace_invitation.deliver_later
+      InvitationMailer.with(invitation: @invitation, mailer_user: current_user).workspace_invitation.deliver_later
       redirect_to workspace_path(@workspace.slug), notice: "Invitation sent."
     else
       redirect_to workspace_path(@workspace.slug), alert: @invitation.errors.full_messages.to_sentence

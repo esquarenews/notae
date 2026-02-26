@@ -1,0 +1,65 @@
+<section class="notae-db-gallery-view grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  <% if @rows.empty? %>
+    <article class="col-span-full rounded border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-600">
+      No rows yet. Add a row to populate this gallery.
+    </article>
+  <% else %>
+    <% @rows.each do |row| %>
+      <% row_params = {
+        view_id: @current_view&.id,
+        month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+        sort_property_id: params[:sort_property_id],
+        sort_direction: params[:sort_direction],
+        filter_property_id: params[:filter_property_id],
+        filter_value: params[:filter_value]
+      }.compact %>
+      <article id="row_<%= row.id %>" class="notae-db-gallery-card">
+        <div class="notae-db-gallery-card-head">
+          <% if policy(row).update? %>
+            <%= form_with model: row,
+                          url: database_db_row_path(
+                            {
+                              workspace_slug: @workspace.slug,
+                              database_id: @database.id,
+                              id: row.id
+                            }.merge(row_params)
+                          ),
+                          method: :patch,
+                          class: "notae-db-title-form" do |form| %>
+              <%= form.text_field :title,
+                                  value: row.title,
+                                  class: "notae-db-title-input",
+                                  onchange: "this.form.requestSubmit()" %>
+            <% end %>
+          <% else %>
+            <p class="text-sm font-semibold text-stone-900"><%= row.title %></p>
+          <% end %>
+          <% if policy(row).destroy? %>
+            <%= button_to "Archive",
+                          database_db_row_path(
+                            {
+                              workspace_slug: @workspace.slug,
+                              database_id: @database.id,
+                              id: row.id
+                            }.merge(row_params)
+                          ),
+                          method: :delete,
+                          form: { data: { turbo_confirm: "Archive this row?" } },
+                          class: "notae-chip-button notae-chip-danger" %>
+          <% end %>
+        </div>
+        <dl class="mt-2 space-y-1 text-xs text-stone-600">
+          <% @db_properties.each do |property| %>
+            <% value = cell_value_for(row, property) %>
+            <% next if value.blank? %>
+
+            <div class="flex items-start justify-between gap-2">
+              <dt class="font-medium text-stone-500"><%= property.name %></dt>
+              <dd class="text-right text-stone-700"><%= value %></dd>
+            </div>
+          <% end %>
+        </dl>
+      </article>
+    <% end %>
+  <% end %>
+</section>

@@ -1,0 +1,65 @@
+<section class="notae-db-list-view space-y-2">
+  <% if @rows.empty? %>
+    <p class="rounded border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-600">
+      No rows yet. Add a row to start this list.
+    </p>
+  <% else %>
+    <% @rows.each do |row| %>
+      <% row_params = {
+        view_id: @current_view&.id,
+        month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+        sort_property_id: params[:sort_property_id],
+        sort_direction: params[:sort_direction],
+        filter_property_id: params[:filter_property_id],
+        filter_value: params[:filter_value]
+      }.compact %>
+      <article id="row_<%= row.id %>" class="notae-db-list-card">
+        <div class="notae-db-list-card-head">
+          <% if policy(row).update? %>
+            <%= form_with model: row,
+                          url: database_db_row_path(
+                            {
+                              workspace_slug: @workspace.slug,
+                              database_id: @database.id,
+                              id: row.id
+                            }.merge(row_params)
+                          ),
+                          method: :patch,
+                          class: "notae-db-title-form" do |form| %>
+              <%= form.text_field :title,
+                                  value: row.title,
+                                  class: "notae-db-title-input",
+                                  onchange: "this.form.requestSubmit()" %>
+            <% end %>
+          <% else %>
+            <p class="text-sm font-medium text-stone-900"><%= row.title %></p>
+          <% end %>
+          <% if policy(row).destroy? %>
+            <%= button_to "Archive",
+                          database_db_row_path(
+                            {
+                              workspace_slug: @workspace.slug,
+                              database_id: @database.id,
+                              id: row.id
+                            }.merge(row_params)
+                          ),
+                          method: :delete,
+                          form: { data: { turbo_confirm: "Archive this row?" } },
+                          class: "notae-chip-button notae-chip-danger" %>
+          <% end %>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2 text-xs text-stone-600">
+          <% @db_properties.each do |property| %>
+            <% value = cell_value_for(row, property) %>
+            <% next if value.blank? %>
+
+            <span class="rounded border border-stone-200 bg-stone-50 px-2 py-1">
+              <strong><%= property.name %>:</strong>
+              <%= value %>
+            </span>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+  <% end %>
+</section>

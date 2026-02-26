@@ -13,4 +13,31 @@ RSpec.describe User, type: :model do
 
     expect(association.macro).to eq(:has_many)
   end
+
+  it "requires complete SMTP settings when any SMTP field is provided" do
+    user = described_class.new(email: "smtp-user@example.com", password: "password123", smtp_address: "smtp.example.com")
+
+    expect(user).not_to be_valid
+    expect(user.errors[:smtp_port]).to include("can't be blank")
+    expect(user.errors[:smtp_username]).to include("can't be blank")
+    expect(user.errors[:smtp_password]).to include("can't be blank")
+    expect(user.errors[:smtp_from_email]).to include("can't be blank")
+  end
+
+  it "reports SMTP configuration and sender display values" do
+    user = described_class.new(
+      email: "smtp-ready@example.com",
+      password: "password123",
+      smtp_address: "smtp.example.com",
+      smtp_port: 587,
+      smtp_username: "smtp-user",
+      smtp_password: "smtp-password-123",
+      smtp_from_name: "Notae Bot",
+      smtp_from_email: "noreply@example.com"
+    )
+
+    expect(user.smtp_configured?).to be(true)
+    expect(user.smtp_from_display).to eq("Notae Bot <noreply@example.com>")
+    expect(user.masked_smtp_password).to eq("sm...23")
+  end
 end

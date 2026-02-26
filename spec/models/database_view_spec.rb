@@ -31,4 +31,16 @@ RSpec.describe DatabaseView, type: :model do
     expect(board.reload.default).to eq(true)
     expect(table.reload.default).to eq(false)
   end
+
+  it "supports list and gallery view types" do
+    owner = User.create!(email: "database-view-types-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "View type workspace", slug: "view-type-workspace")
+    database = Database.create!(workspace:, name: "Content")
+
+    list_view = described_class.create!(workspace:, database:, created_by: owner, name: "List", view_type: :list)
+    gallery_view = described_class.create!(workspace:, database:, created_by: owner, name: "Gallery", view_type: :gallery)
+
+    expect(list_view.view_type).to eq("list")
+    expect(gallery_view.view_type).to eq("gallery")
+  end
 end

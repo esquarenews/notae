@@ -43,7 +43,7 @@ module Comments
       return unless notification.previously_new_record?
       return unless user.email_notify_activity?
 
-      NotificationMailer.with(notification: notification).mention_notification.deliver_later
+      NotificationMailer.with(notification: notification, mailer_user: comment.author).mention_notification.deliver_later
     end
 
     def mention_emails

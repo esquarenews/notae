@@ -2,7 +2,7 @@ class DatabaseView < ApplicationRecord
   has_paper_trail
 
   attribute :view_type, :integer, default: 0
-  enum :view_type, { table: 0, board: 1, calendar: 2 }, default: :table, scopes: false
+  enum :view_type, { table: 0, board: 1, calendar: 2, list: 3, gallery: 4 }, default: :table, scopes: false
 
   belongs_to :workspace
   belongs_to :database

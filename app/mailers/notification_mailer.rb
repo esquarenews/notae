@@ -8,10 +8,15 @@ class NotificationMailer < ApplicationMailer
     @page = resolve_page(@comment)
     @comment_url = resolve_comment_url
 
-    mail(
+    mail_attributes = {
       to: @recipient.email,
-      subject: "#{@actor.email} mentioned you in #{@workspace.name}"
-    )
+      subject: "#{@actor.email} mentioned you in #{@workspace.name}",
+      from: mail_from_value
+    }
+    delivery_options = smtp_delivery_options
+    mail_attributes[:delivery_method_options] = delivery_options if delivery_options.present?
+
+    mail(mail_attributes)
   end
 
   private

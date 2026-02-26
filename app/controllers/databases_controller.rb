@@ -3,7 +3,7 @@ class DatabasesController < ApplicationController
   before_action :set_workspace
   before_action :set_database, only: :show
 
-  helper_method :cell_value_for
+  helper_method :cell_value_for, :select_options_for
 
   def show
     authorize @database
@@ -13,6 +13,7 @@ class DatabasesController < ApplicationController
     @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
     @cells = policy_scope(DbCell).for_database(@database).to_a
     @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
+    @select_options_by_property = build_select_options_by_property
     @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
     @current_view = resolve_current_view
     @view_type = @current_view&.view_type || "table"
@@ -59,11 +60,12 @@ class DatabasesController < ApplicationController
   def sort_rows!
     return unless @sort_property
 
-    @rows.sort_by! do |row|
-      cell_value = @cells_by_key[[ row.id, @sort_property.id ]]&.value_text.to_s.downcase
-      [ cell_value, row.title.to_s.downcase ]
+    @rows.sort! do |left_row, right_row|
+      compare_sort_values(
+        sort_value_for_row(left_row, @sort_property),
+        sort_value_for_row(right_row, @sort_property)
+      ).nonzero? || left_row.title.to_s.downcase <=> right_row.title.to_s.downcase
     end
-    @rows.reverse! if @sort_direction == "desc"
   end
 
   def resolve_current_view
@@ -92,9 +94,9 @@ class DatabasesController < ApplicationController
   def apply_row_filter!
     return if @filter_property.blank? || @filter_value.blank?
 
-    normalized_filter = @filter_value.to_s.downcase
+    normalized_filter = cast_value_for_property(@filter_property, @filter_value)
     @rows.select! do |row|
-      cell_value_for(row, @filter_property).downcase == normalized_filter
+      cast_value_for_property(@filter_property, cell_value_for(row, @filter_property)) == normalized_filter
     end
   end
 
@@ -153,5 +155,77 @@ class DatabasesController < ApplicationController
     return "" if row.blank? || property.blank?
 
     @cells_by_key[[ row.id, property.id ]]&.value_text.to_s
+  end
+
+  def select_options_for(property)
+    return [] if property.blank?
+
+    @select_options_by_property[property.id] || []
+  end
+
+  def build_select_options_by_property
+    @db_properties.select(&:select?).each_with_object({}) do |property, options|
+      values = @rows
+               .map { |row| cell_value_for(row, property).to_s.strip }
+               .reject(&:blank?)
+               .uniq
+               .sort
+      options[property.id] = values
+    end
+  end
+
+  def sort_value_for_row(row, property)
+    raw_value = cell_value_for(row, property)
+    cast_sort_value_for_property(property, raw_value)
+  end
+
+  def compare_sort_values(left_value, right_value)
+    if left_value.nil? && right_value.nil?
+      return 0
+    elsif left_value.nil?
+      return 1
+    elsif right_value.nil?
+      return -1
+    end
+
+    comparison = left_value <=> right_value
+    @sort_direction == "desc" ? -comparison : comparison
+  end
+
+  def cast_value_for_property(property, raw_value)
+    value = raw_value.to_s.strip
+    return nil if value.blank?
+
+    case property.property_type
+    when "number"
+      Float(value)
+    when "date"
+      parse_date_value(value)
+    when "checkbox"
+      parse_boolean_value(value)
+    else
+      value.downcase
+    end
+  rescue ArgumentError
+    nil
+  end
+
+  def cast_sort_value_for_property(property, raw_value)
+    if property.checkbox?
+      boolean_value = cast_value_for_property(property, raw_value)
+      return nil if boolean_value.nil?
+
+      return boolean_value ? 1 : 0
+    end
+
+    cast_value_for_property(property, raw_value)
+  end
+
+  def parse_boolean_value(value)
+    normalized = value.to_s.strip.downcase
+    return true if DbCell::TRUTHY_VALUES.include?(normalized)
+    return false if DbCell::FALSY_VALUES.include?(normalized)
+
+    nil
   end
 end

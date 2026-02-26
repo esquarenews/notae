@@ -2,7 +2,7 @@ class DbRowsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database
-  before_action :set_db_row, only: :move
+  before_action :set_db_row, only: %i[update destroy move]
 
   def create
     @db_row = @database.db_rows.new(db_row_params)
@@ -12,15 +12,28 @@ class DbRowsController < ApplicationController
     if @db_row.save
       seed_cells_for_row(@db_row)
       assign_date_value_to_row(@db_row)
-      redirect_to database_path(
-        workspace_slug: @workspace.slug,
-        id: @database.id,
-        view_id: params[:view_id],
-        month: params[:month]
-      ), notice: "Row created."
+      redirect_to database_redirect_location, notice: "Row created."
     else
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @db_row.errors.full_messages.to_sentence
     end
+  end
+
+  def update
+    authorize @db_row, :update?
+    @db_row.assign_attributes(db_row_params)
+    @db_row.title = "Untitled row" if @db_row.title.blank?
+
+    if @db_row.save
+      redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), notice: "Row updated."
+    else
+      redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: @db_row.errors.full_messages.to_sentence
+    end
+  end
+
+  def destroy
+    authorize @db_row, :destroy?
+    @db_row.update!(archived_at: Time.current)
+    redirect_to database_redirect_location, notice: "Row archived."
   end
 
   def move
@@ -42,12 +55,7 @@ class DbRowsController < ApplicationController
     respond_to do |format|
       format.json { head :ok }
       format.html do
-        redirect_to database_path(
-          workspace_slug: @workspace.slug,
-          id: @database.id,
-          view_id: params[:view_id],
-          month: params[:month]
-        ), notice: "Row moved."
+        redirect_to database_redirect_location, notice: "Row moved."
       end
     end
   end
@@ -91,5 +99,20 @@ class DbRowsController < ApplicationController
     end.tap do |cell|
       cell.update!(value_text: date_value)
     end
+  end
+
+  def database_redirect_location(anchor: nil)
+    path_params = {
+      workspace_slug: @workspace.slug,
+      id: @database.id,
+      view_id: params[:view_id].presence,
+      month: params[:month].presence,
+      sort_property_id: params[:sort_property_id].presence,
+      sort_direction: params[:sort_direction].presence,
+      filter_property_id: params[:filter_property_id].presence,
+      filter_value: params[:filter_value].presence
+    }.compact
+    path_params[:anchor] = anchor if anchor.present?
+    database_path(path_params)
   end
 end

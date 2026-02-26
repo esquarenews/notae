@@ -27,6 +27,33 @@ RSpec.describe "Invitations", type: :request do
     expect(AuditEvent.recent_first.first.action).to eq("share")
   end
 
+  it "uses configured SMTP sender identity when inviter saved SMTP settings" do
+    owner = User.create!(
+      email: "invite-smtp-owner@example.com",
+      password: "password123",
+      smtp_address: "smtp.example.com",
+      smtp_port: 587,
+      smtp_domain: "example.com",
+      smtp_username: "smtp-user",
+      smtp_password: "smtp-password-123",
+      smtp_authentication: "login",
+      smtp_enable_starttls_auto: true,
+      smtp_from_name: "Notae Ops",
+      smtp_from_email: "noreply@example.com"
+    )
+    workspace = Workspace.create!(name: "SMTP Workspace", slug: "smtp-workspace")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    post workspace_invitations_path(workspace_slug: workspace.slug), params: { invitation: { email: "smtp-joiner@example.com", role: "guest" } }
+
+    expect(response).to redirect_to(workspace_path(workspace.slug))
+    sent_mail = ActionMailer::Base.deliveries.last
+    expect(sent_mail.to).to include("smtp-joiner@example.com")
+    expect(sent_mail[:from].decoded).to include("Notae Ops")
+    expect(sent_mail.from).to include("noreply@example.com")
+  end
+
   it "creates membership when a valid invitation is accepted" do
     owner = User.create!(email: "owner2@example.com", password: "password123")
     invitee = User.create!(email: "invitee@example.com", password: "password123")

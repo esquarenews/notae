@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_26_193000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_26_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -495,6 +495,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_193000) do
     t.boolean "show_text_direction_controls", default: false, null: false
     t.boolean "show_view_history", default: true, null: false
     t.string "slack_notification_preference", default: "off", null: false
+    t.string "smtp_address"
+    t.string "smtp_authentication", default: "plain", null: false
+    t.string "smtp_domain"
+    t.boolean "smtp_enable_starttls_auto", default: true, null: false
+    t.string "smtp_from_email"
+    t.string "smtp_from_name"
+    t.string "smtp_password"
+    t.integer "smtp_port"
+    t.string "smtp_username"
     t.boolean "start_week_on_monday", default: true, null: false
     t.string "theme_preference", default: "light", null: false
     t.string "time_zone", default: "UTC", null: false

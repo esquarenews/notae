@@ -1,26 +1,27 @@
-<div class="overflow-x-auto rounded border border-stone-200">
-  <table class="min-w-full text-sm">
-    <thead class="bg-stone-50">
+<div class="notae-db-table-wrap">
+  <table class="notae-db-table">
+    <thead>
       <tr>
-        <th class="whitespace-nowrap border-b border-stone-200 px-3 py-2 text-left font-medium text-stone-700">Title</th>
+        <th class="notae-db-col-title">Title</th>
         <% @db_properties.each do |db_property| %>
           <% property_is_sorted = @sort_property&.id == db_property.id %>
           <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
-          <th class="whitespace-nowrap border-b border-stone-200 px-3 py-2 text-left font-medium text-stone-700">
-            <div class="flex items-center gap-2">
+          <th>
+            <div class="notae-db-col-head">
               <%= link_to db_property.name,
                           database_path(
                             workspace_slug: @workspace.slug,
                             id: @database.id,
                             view_id: @current_view&.id,
+                            month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
                             sort_property_id: db_property.id,
                             sort_direction: next_direction,
                             filter_property_id: params[:filter_property_id],
                             filter_value: params[:filter_value]
                           ),
-                          class: "underline" %>
+                          class: "notae-db-sort-link" %>
               <% if property_is_sorted %>
-                <span class="text-xs text-stone-500"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+                <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
               <% end %>
               <% if policy(db_property).destroy? %>
                 <%= button_to "Remove",
@@ -32,38 +33,127 @@
             </div>
           </th>
         <% end %>
+        <th class="notae-db-col-actions">Actions</th>
       </tr>
     </thead>
     <tbody>
       <% @rows.each do |row| %>
-        <tr id="row_<%= row.id %>" class="odd:bg-white even:bg-stone-50/40">
-          <td class="whitespace-nowrap border-b border-stone-100 px-3 py-2 align-top text-stone-800"><%= row.title %></td>
+        <% row_params = {
+          view_id: @current_view&.id,
+          month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+          sort_property_id: params[:sort_property_id],
+          sort_direction: params[:sort_direction],
+          filter_property_id: params[:filter_property_id],
+          filter_value: params[:filter_value]
+        }.compact %>
+        <tr id="row_<%= row.id %>" class="notae-db-row">
+          <td class="notae-db-title-cell">
+            <% if policy(row).update? %>
+              <%= form_with model: row,
+                            url: database_db_row_path(
+                              {
+                                workspace_slug: @workspace.slug,
+                                database_id: @database.id,
+                                id: row.id
+                              }.merge(row_params)
+                            ),
+                            method: :patch,
+                            class: "notae-db-title-form" do |form| %>
+                <%= form.text_field :title,
+                                    value: row.title,
+                                    class: "notae-db-title-input",
+                                    onchange: "this.form.requestSubmit()" %>
+              <% end %>
+            <% else %>
+              <span class="notae-db-title-text"><%= row.title %></span>
+            <% end %>
+          </td>
           <% @db_properties.each do |db_property| %>
             <% db_cell = @cells_by_key[[row.id, db_property.id]] %>
-            <td class="border-b border-stone-100 px-3 py-2">
+            <td>
               <% if db_cell && policy(db_cell).update? %>
                 <%= form_with model: db_cell,
                               url: database_db_cell_path(
-                                workspace_slug: @workspace.slug,
-                                database_id: @database.id,
-                                id: db_cell.id,
-                                sort_property_id: params[:sort_property_id],
-                                sort_direction: params[:sort_direction]
+                                {
+                                  workspace_slug: @workspace.slug,
+                                  database_id: @database.id,
+                                  id: db_cell.id
+                                }.merge(row_params)
                               ),
                               method: :patch do |form| %>
-                  <%= form.text_field :value_text,
-                                      value: db_cell.value_text,
-                                      id: "db_cell_#{db_cell.id}_value_text",
-                                      class: "w-full min-w-36 rounded border border-stone-300 px-2 py-1 text-sm",
-                                      onchange: "this.form.requestSubmit()" %>
+                  <% field_classes = "notae-db-cell-input" %>
+                  <% if db_property.checkbox? %>
+                    <label class="notae-db-checkbox-wrap">
+                      <%= form.check_box :value_text,
+                                         {
+                                           checked: db_cell.value_text == "true",
+                                           class: "h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400",
+                                           onchange: "this.form.requestSubmit()"
+                                         },
+                                         "true",
+                                         "false" %>
+                    </label>
+                  <% elsif db_property.number? %>
+                    <%= form.number_field :value_text,
+                                          value: db_cell.value_text,
+                                          id: "db_cell_#{db_cell.id}_value_text",
+                                          step: "any",
+                                          class: field_classes,
+                                          onchange: "this.form.requestSubmit()" %>
+                  <% elsif db_property.date? %>
+                    <%= form.date_field :value_text,
+                                        value: db_cell.value_text,
+                                        id: "db_cell_#{db_cell.id}_value_text",
+                                        class: field_classes,
+                                        onchange: "this.form.requestSubmit()" %>
+                  <% else %>
+                    <% input_options = {
+                      value: db_cell.value_text,
+                      id: "db_cell_#{db_cell.id}_value_text",
+                      class: field_classes,
+                      onchange: "this.form.requestSubmit()"
+                    } %>
+                    <% if db_property.select? %>
+                      <% input_options[:list] = "db_property_#{db_property.id}_options" %>
+                    <% end %>
+                    <%= form.text_field :value_text, **input_options %>
+                  <% end %>
                 <% end %>
               <% else %>
                 <span class="text-stone-400">-</span>
               <% end %>
             </td>
           <% end %>
+          <td class="notae-db-action-cell">
+            <% if policy(row).destroy? %>
+              <%= button_to "Archive",
+                            database_db_row_path(
+                              {
+                                workspace_slug: @workspace.slug,
+                                database_id: @database.id,
+                                id: row.id
+                              }.merge(row_params)
+                            ),
+                            method: :delete,
+                            form: { data: { turbo_confirm: "Archive this row?" } },
+                            class: "notae-chip-button notae-chip-danger" %>
+            <% else %>
+              <span class="text-stone-400">—</span>
+            <% end %>
+          </td>
         </tr>
       <% end %>
     </tbody>
   </table>
 </div>
+
+<% @db_properties.select(&:select?).each do |property| %>
+  <% options = select_options_for(property) %>
+  <% next if options.empty? %>
+
+  <datalist id="db_property_<%= property.id %>_options">
+    <% options.each do |option| %>
+      <option value="<%= option %>"></option>
+    <% end %>
+  </datalist>
+<% end %>

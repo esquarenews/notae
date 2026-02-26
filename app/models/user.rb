@@ -63,6 +63,12 @@ class User < ApplicationRecord
     [ "All activity", "all_activity" ]
   ].freeze
 
+  SMTP_AUTHENTICATION_OPTIONS = [
+    [ "Plain", "plain" ],
+    [ "Login", "login" ],
+    [ "CRAM-MD5", "cram_md5" ]
+  ].freeze
+
   has_many :memberships, dependent: :destroy
   has_many :workspaces, through: :memberships
   has_many :created_pages, class_name: "Page", foreign_key: :created_by_id, inverse_of: :created_by
@@ -114,6 +120,22 @@ class User < ApplicationRecord
   validates :slack_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
   validates :discord_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
   validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
+  validates :smtp_address, length: { maximum: 255 }, allow_blank: true
+  validates :smtp_domain, length: { maximum: 255 }, allow_blank: true
+  validates :smtp_username, length: { maximum: 255 }, allow_blank: true
+  validates :smtp_password, length: { maximum: 255 }, allow_blank: true
+  validates :smtp_from_name, length: { maximum: 255 }, allow_blank: true
+  validates :smtp_from_email, length: { maximum: 255 }, allow_blank: true
+  validates :smtp_port,
+            numericality: {
+              only_integer: true,
+              greater_than: 0,
+              less_than_or_equal_to: 65_535
+            },
+            allow_nil: true
+  validates :smtp_authentication, inclusion: { in: SMTP_AUTHENTICATION_OPTIONS.map(&:last) }
+  validate :smtp_settings_complete_if_any
+  validate :smtp_from_email_format
   validates :ai_search_daily_budget_usd, numericality: { greater_than_or_equal_to: 0 }
   validates :ai_search_semantic_rate_limit_per_minute, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
   validates :ai_search_answer_rate_limit_per_minute, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
@@ -136,6 +158,28 @@ class User < ApplicationRecord
     return "Not configured" unless openai_api_key_configured?
 
     "#{openai_api_key.first(6)}...#{openai_api_key.last(4)}"
+  end
+
+  def smtp_configured?
+    smtp_address.present? &&
+      smtp_port.present? &&
+      smtp_username.present? &&
+      smtp_password.present? &&
+      smtp_from_email.present?
+  end
+
+  def masked_smtp_password
+    return "Not configured" if smtp_password.blank?
+
+    "#{smtp_password.first(2)}...#{smtp_password.last(2)}"
+  end
+
+  def smtp_from_display
+    from_email = smtp_from_email.to_s.strip
+    from_name = smtp_from_name.to_s.strip
+    return from_email if from_name.blank?
+
+    "#{from_name} <#{from_email}>"
   end
 
   def self.ai_loader_label_for(value)
@@ -161,5 +205,34 @@ class User < ApplicationRecord
     return if ActiveSupport::TimeZone[time_zone].present?
 
     errors.add(:time_zone, "is not supported")
+  end
+
+  def smtp_settings_complete_if_any
+    return unless smtp_settings_started?
+
+    errors.add(:smtp_address, "can't be blank") if smtp_address.blank?
+    errors.add(:smtp_port, "can't be blank") if smtp_port.blank?
+    errors.add(:smtp_username, "can't be blank") if smtp_username.blank?
+    errors.add(:smtp_password, "can't be blank") if smtp_password.blank?
+    errors.add(:smtp_from_email, "can't be blank") if smtp_from_email.blank?
+  end
+
+  def smtp_from_email_format
+    return if smtp_from_email.blank?
+    return if smtp_from_email.match?(Devise.email_regexp)
+
+    errors.add(:smtp_from_email, "is invalid")
+  end
+
+  def smtp_settings_started?
+    [
+      smtp_address,
+      smtp_port,
+      smtp_domain,
+      smtp_username,
+      smtp_password,
+      smtp_from_name,
+      smtp_from_email
+    ].any?(&:present?)
   end
 end
