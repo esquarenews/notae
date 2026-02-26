@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_26_174000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_26_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -42,6 +42,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_174000) do
     t.uuid "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "ai_conversations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "answer", null: false
+    t.datetime "created_at", null: false
+    t.uuid "page_id"
+    t.text "prompt", null: false
+    t.string "scope", null: false
+    t.jsonb "sources", default: [], null: false
+    t.string "status", default: "success", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["page_id"], name: "index_ai_conversations_on_page_id"
+    t.index ["scope"], name: "index_ai_conversations_on_scope"
+    t.index ["status"], name: "index_ai_conversations_on_status"
+    t.index ["user_id", "created_at"], name: "idx_ai_conversations_on_user_created_at"
+    t.index ["user_id", "workspace_id", "created_at"], name: "idx_ai_conversations_on_user_workspace_created_at"
+    t.index ["user_id"], name: "index_ai_conversations_on_user_id"
+    t.index ["workspace_id", "created_at"], name: "idx_ai_conversations_on_workspace_created_at"
+    t.index ["workspace_id"], name: "index_ai_conversations_on_workspace_id"
   end
 
   create_table "ai_usage_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -509,6 +530,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_174000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ai_conversations", "pages"
+  add_foreign_key "ai_conversations", "users"
+  add_foreign_key "ai_conversations", "workspaces"
   add_foreign_key "ai_usage_logs", "users"
   add_foreign_key "ai_usage_logs", "workspaces"
   add_foreign_key "api_tokens", "users"

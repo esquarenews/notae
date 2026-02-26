@@ -84,6 +84,7 @@ class User < ApplicationRecord
   has_many :api_tokens, dependent: :destroy
   has_many :favorites, dependent: :destroy
   has_many :ai_usage_logs, dependent: :destroy
+  has_many :ai_conversations, dependent: :destroy
 
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable

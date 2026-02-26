@@ -1,0 +1,24 @@
+<section class="notae-auth-card notae-home-card" data-controller="copy-text">
+  <% if ai_conversations.any? %>
+    <ul class="notae-ai-history-list">
+      <% ai_conversations.each do |conversation| %>
+        <li class="notae-ai-history-item">
+          <div class="notae-ai-history-meta">
+            <span class="notae-ai-history-workspace"><%= conversation.workspace.name %></span>
+            <span class="notae-ai-history-time"><%= time_ago_in_words(conversation.created_at) %> ago</span>
+          </div>
+          <p class="notae-ai-history-prompt"><strong>Q:</strong> <%= conversation.prompt %></p>
+          <p class="notae-ai-history-answer"><strong>A:</strong> <%= conversation.answer %></p>
+          <div class="notae-ai-history-actions">
+            <button type="button"
+                    class="notae-chip-button"
+                    data-action="click->copy-text#copy"
+                    data-copy-text-value="<%= conversation.answer %>">Copy result</button>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="notae-page-subtle">No AI conversations found in the last week.</p>
+  <% end %>
+</section>

@@ -2,13 +2,15 @@
 <% state = local_assigns.fetch(:state, "static").to_s %>
 <% size = local_assigns.fetch(:size, 64).to_i %>
 <% reduced_motion = local_assigns.fetch(:reduced_motion, false) == true %>
+<% hover_animate = local_assigns.fetch(:hover_animate, false) == true %>
 <% particle_count = [ "flock_cloud", "luminous_pulse_sphere", "luminous_wave_sphere" ].include?(variant) ? 24 : 12 %>
 <%
   classes = [
     "notae-ai-loader",
     "is-#{variant}",
     ("is-loading" if state == "loading"),
-    ("is-reduced-motion" if reduced_motion)
+    ("is-reduced-motion" if reduced_motion),
+    ("is-hover-animate" if hover_animate)
   ].compact.join(" ")
 %>
 

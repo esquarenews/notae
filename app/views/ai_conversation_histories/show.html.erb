@@ -1,0 +1,17 @@
+<% content_for :title, "AI Conversation History" %>
+<% content_for :topbar_page_icon, "🧠" %>
+<% content_for :topbar_privacy, "Workspace" %>
+
+<section class="notae-workspace-home notae-ai-history-page" data-controller="copy-text">
+  <header class="notae-utility-header">
+    <p class="notae-utility-workspace">
+      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "notae-utility-workspace-link" %>
+    </p>
+    <h1 class="notae-utility-title">AI Conversation History</h1>
+    <p class="notae-page-subtle">Showing conversations from the last 7 days.</p>
+  </header>
+
+  <%= turbo_frame_tag "ai_conversation_history_list" do %>
+    <%= render "history_list", ai_conversations: @ai_conversations %>
+  <% end %>
+</section>

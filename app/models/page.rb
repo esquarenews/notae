@@ -36,6 +36,7 @@ class Page < ApplicationRecord
   has_many :share_links, dependent: :destroy
   has_many :favorites, as: :favoritable, dependent: :destroy
   has_many :search_chunks, dependent: :destroy
+  has_many :ai_conversations, dependent: :nullify
   has_many :shared_users, through: :page_shares, source: :user
   has_many :outgoing_page_links, class_name: "PageLink", foreign_key: :source_page_id, dependent: :destroy
   has_many :incoming_page_links, class_name: "PageLink", foreign_key: :target_page_id, dependent: :destroy

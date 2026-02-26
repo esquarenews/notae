@@ -20,6 +20,8 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response.body).to include("Luminous Pulse Sphere")
     expect(response.body).to include("Luminous Wave Sphere")
     expect(response.body).to include("notae-ai-loader")
+    expect(response.body).to include("is-hover-animate")
+    expect(response.body).to include("Hover to preview animation.")
     expect(response.body).to include("p-24")
     expect(response.body).to include("notae-ai-loader-options-grid is-two-column")
     expect(response.body).to include("This document only")

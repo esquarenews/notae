@@ -30,6 +30,18 @@ RSpec.describe "Workspace home", type: :request do
     get workspace_path(workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-ai-usage-card")
+    expect(response.body).to include("Today usage")
+    expect(response.body).to include("notae-ai-usage-toggle")
+    expect(response.body).to include("aria-expanded=\"false\"")
+    expect(response.body).to include("notae-ai-rail-toggle")
+    expect(response.body).to include("notae-ai-rail-reopen")
+    expect(response.body).to include("notae-ai-loader")
+    expect(response.body).to include("notae-ai-compose-swirl")
+    expect(response.body).to include("AI Conversation History")
+    expect(response.body).to include("submitOnShortcut")
+    expect(response.body).not_to include("Current context:")
+    expect(response.body).not_to include("Ask a question to start a conversation.")
     html = Nokogiri::HTML(response.body)
 
     page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)

@@ -30,7 +30,8 @@
                      variant: @user.ai_loader_style,
                      state: "static",
                      size: 128,
-                     reduced_motion: @user.reduce_ai_loader_motion? %>
+                     reduced_motion: @user.reduce_ai_loader_motion?,
+                     hover_animate: true %>
         </article>
         <article class="notae-ai-loader-stage-card">
           <p class="notae-ai-loader-stage-label">Loading state</p>
@@ -38,11 +39,13 @@
                      variant: @user.ai_loader_style,
                      state: "loading",
                      size: 128,
-                     reduced_motion: @user.reduce_ai_loader_motion? %>
+                     reduced_motion: @user.reduce_ai_loader_motion?,
+                     hover_animate: true %>
+          <p class="notae-ai-loader-stage-meta">Hover to preview animation.</p>
         </article>
       </div>
 
-      <div class="notae-pref-row">
+      <div class="notae-pref-row notae-pref-row--stacked">
         <div class="notae-pref-copy">
           <p class="notae-pref-label">AI guardrails</p>
           <p class="notae-pref-description">Set your daily spend cap and per-minute query limits for semantic search and AI answers.</p>
@@ -104,12 +107,14 @@
                            variant: value,
                            state: "static",
                            size: 40,
-                           reduced_motion: @user.reduce_ai_loader_motion? %>
+                           reduced_motion: @user.reduce_ai_loader_motion?,
+                           hover_animate: true %>
                 <%= render "shared/ai_loader_icon",
                            variant: value,
                            state: "loading",
                            size: 40,
-                           reduced_motion: @user.reduce_ai_loader_motion? %>
+                           reduced_motion: @user.reduce_ai_loader_motion?,
+                           hover_animate: true %>
               </span>
             </label>
           <% end %>

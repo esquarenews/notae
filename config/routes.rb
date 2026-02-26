@@ -15,6 +15,7 @@ Rails.application.routes.draw do
   scope "w/:workspace_slug" do
     get "/", to: "workspace_home#show", as: :workspace
     get "search", to: "searches#index", as: :workspace_search
+    get "ai-conversation-history", to: "ai_conversation_histories#show", as: :workspace_ai_conversation_history
     get "library", to: "libraries#show", as: :workspace_library
     get "trash", to: "trash#show", as: :workspace_trash
     get "settings/general", to: "general_settings#show", as: :workspace_general_settings

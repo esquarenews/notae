@@ -97,6 +97,10 @@
                     workspace_library_path(workspace_slug: workspace.slug),
                     class: notae_sidebar_link_classes(workspace_library_path(workspace_slug: workspace.slug)),
                     data: { action: "click->shell#close" } %>
+        <%= link_to "AI Conversation History",
+                    workspace_ai_conversation_history_path(workspace_slug: workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: workspace.slug)),
+                    data: { action: "click->shell#close" } %>
       <% end %>
     </nav>
 

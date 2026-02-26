@@ -1,96 +1,86 @@
 <% ai_rail_workspace = @ai_rail_workspace || (defined?(@workspace) ? @workspace : nil) %>
 <% ai_scope_options = Search::AssistantQueryService::SCOPE_OPTIONS %>
 <% ai_scope_value = @ai_assistant_scope.presence || Search::AssistantQueryService::SCOPE_AUTO %>
-<% ai_prompt_value = @ai_assistant_prompt.to_s %>
+<% ai_prompt_value = "" %>
+<% ai_rail_conversations = Array(@ai_rail_conversations) %>
 
 <aside class="notae-ai-rail" data-controller="ai-rail">
+  <button type="button"
+          class="notae-ai-rail-reopen"
+          data-action="click->ai-rail#toggleRail"
+          aria-label="Reopen AI assistant rail">
+    <%= render "shared/ai_loader_icon",
+               variant: current_user.ai_loader_style,
+               state: "static",
+               size: 18,
+               reduced_motion: current_user.reduce_ai_loader_motion? %>
+  </button>
+
   <div class="notae-ai-head">
     <span>New AI chat</span>
-    <% if ai_rail_workspace.present? %>
-      <%= select_tag "ai_assistant[scope]",
-                     options_for_select(ai_scope_options, ai_scope_value),
-                     class: "notae-ai-scope-select",
-                     form: "notae_ai_assistant_form" %>
-    <% else %>
-      <span class="notae-ai-kicker">Auto</span>
-    <% end %>
+    <div class="notae-ai-head-controls">
+      <% if ai_rail_workspace.present? %>
+        <%= select_tag "ai_assistant[scope]",
+                       options_for_select(ai_scope_options, ai_scope_value),
+                       class: "notae-ai-scope-select",
+                       form: "notae_ai_assistant_form" %>
+      <% else %>
+        <span class="notae-ai-kicker">Auto</span>
+      <% end %>
+      <button type="button"
+              class="notae-ai-rail-toggle"
+              data-action="click->ai-rail#toggleRail"
+              aria-label="Minimize AI assistant rail">
+        ▸
+      </button>
+    </div>
   </div>
 
   <div class="notae-ai-card">
-    <div class="notae-ai-loader-row">
-      <%= render "shared/ai_loader_icon",
-                 variant: current_user.ai_loader_style,
-                 state: "static",
-                 size: 64,
-                 reduced_motion: current_user.reduce_ai_loader_motion? %>
-      <p class="notae-ai-loader-meta"><%= User.ai_loader_label_for(current_user.ai_loader_style) %></p>
-    </div>
-    <p class="notae-ai-title">Welcome <%= current_user.email.split("@").first %>!</p>
-    <p class="notae-ai-copy">I can help draft, summarize, and organize this page while you edit.</p>
-    <p class="notae-ai-copy">Current context: <strong><%= content_for(:title) || "Workspace" %></strong></p>
+    <p class="notae-ai-title">Notae AI assistant</p>
+    <p class="notae-ai-copy">Ask search questions (for example: "Is Mac mentioned?") or summary requests.</p>
   </div>
 
-  <% if @ai_usage_panel.present? %>
-    <div class="notae-ai-card notae-ai-usage-card">
-      <div class="notae-ai-usage-head">
-        <p class="notae-ai-title">Today usage</p>
-        <span class="notae-ai-kicker"><%= @ai_usage_panel[:day_label] %></span>
-      </div>
-      <dl class="notae-ai-usage-grid">
-        <div>
-          <dt>Tokens</dt>
-          <dd><%= number_with_delimiter(@ai_usage_panel[:total_tokens]) %></dd>
-        </div>
-        <div>
-          <dt>Cost</dt>
-          <dd><%= number_to_currency(@ai_usage_panel[:estimated_cost_usd]) %></dd>
-        </div>
-        <div>
-          <dt>Requests</dt>
-          <dd><%= number_with_delimiter(@ai_usage_panel[:request_count]) %></dd>
-        </div>
-      </dl>
-      <div class="notae-ai-usage-guardrails">
-        <p class="notae-ai-copy">Guardrails</p>
-        <p class="notae-ai-copy">
-          Budget:
-          <strong><%= @ai_usage_panel[:budget_status] ? "Available" : "Reached" %></strong>
-          (<%= number_to_currency(@ai_usage_panel[:budget_remaining_usd]) %> left)
-        </p>
-        <p class="notae-ai-copy">
-          Rate:
-          <strong><%= @ai_usage_panel[:semantic_rate_limit_per_minute] %>/min semantic</strong>,
-          <strong><%= @ai_usage_panel[:answer_rate_limit_per_minute] %>/min answers</strong>
-          (window <%= @ai_usage_panel[:rate_limit_window_seconds] %>s)
-        </p>
-      </div>
-    </div>
-  <% end %>
-
-  <% if @ai_assistant_notice.present? %>
-    <p class="notae-ai-copy notae-ai-assistant-notice"><%= @ai_assistant_notice %></p>
-  <% end %>
-
-  <% if @ai_assistant_response.present? %>
-    <article class="notae-ai-card notae-ai-assistant-result">
-      <p class="notae-ai-title">Result</p>
-      <p class="notae-ai-copy"><strong>Scope:</strong> <%= @ai_assistant_response.scope.to_s.humanize %></p>
-      <p class="notae-ai-result-text" data-ai-rail-target="resultText"><%= @ai_assistant_response.answer %></p>
-      <% if @ai_assistant_response.sources.any? %>
-        <ul class="notae-ai-assistant-sources">
-          <% @ai_assistant_response.sources.each do |source| %>
-            <li>
-              <%= link_to "[#{source[:index]}] #{source[:title]}", source[:url], class: "notae-utility-link" %>
-              <span class="notae-ai-copy"><%= source[:workspace_name] %></span>
-            </li>
+  <section class="notae-ai-thread" data-ai-rail-target="thread">
+    <% ai_rail_conversations.each do |conversation| %>
+      <% sources = Array(conversation.sources).map { |source| source.respond_to?(:with_indifferent_access) ? source.with_indifferent_access : source } %>
+      <article class="notae-ai-message is-user is-compact">
+        <p class="notae-ai-message-body"><%= conversation.prompt %></p>
+      </article>
+      <article class="notae-ai-message is-assistant">
+        <p class="notae-ai-message-label">
+          Notae AI · <%= conversation.scope.to_s.humanize %>
+          <% if conversation.workspace.present? %>
+            · <%= conversation.workspace.name %>
           <% end %>
-        </ul>
-      <% end %>
-      <div class="notae-ai-compose-actions">
-        <button type="button" class="notae-chip-button" data-action="click->ai-rail#copyResult">Copy result</button>
-      </div>
-    </article>
-  <% end %>
+        </p>
+        <p class="notae-ai-result-text"><%= conversation.answer %></p>
+        <% if sources.any? %>
+          <ul class="notae-ai-assistant-sources">
+            <% sources.each do |source| %>
+              <li>
+                <%= link_to "[#{source[:index]}] #{source[:title]}", source[:url], class: "notae-utility-link" %>
+                <% if source[:workspace_name].present? %>
+                  <span class="notae-ai-copy"><%= source[:workspace_name] %></span>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+        <p class="notae-ai-message-meta"><%= time_ago_in_words(conversation.created_at) %> ago</p>
+        <div class="notae-ai-compose-actions">
+          <button type="button" class="notae-chip-button" data-action="click->ai-rail#copyResult">Copy result</button>
+        </div>
+      </article>
+    <% end %>
+
+    <% if ai_rail_conversations.empty? && @ai_assistant_notice.present? %>
+      <article class="notae-ai-message is-assistant">
+        <p class="notae-ai-message-label">Notae AI</p>
+        <p class="notae-ai-copy notae-ai-assistant-notice"><%= @ai_assistant_notice %></p>
+      </article>
+    <% end %>
+  </section>
 
   <% if ai_rail_workspace.present? %>
     <%= form_with scope: :ai_assistant,
@@ -98,21 +88,90 @@
                   method: :post,
                   id: "notae_ai_assistant_form",
                   class: "notae-ai-compose",
-                  data: { turbo_frame: "ai_rail_panel" } do |form| %>
+                  data: {
+                    turbo_frame: "ai_rail_panel",
+                    action: "turbo:submit-start->ai-rail#submitStart turbo:submit-end->ai-rail#submitEnd"
+                  } do |form| %>
       <%= form.hidden_field :current_page_id, value: @ai_rail_current_page_id %>
       <label for="ai_prompt" class="notae-ai-label">Prompt</label>
-      <%= form.text_area :prompt,
-                         value: ai_prompt_value,
-                         id: "ai_prompt",
-                         rows: 5,
-                         placeholder: "Ask search questions (for example: Is Mac mentioned in this document?) or request a summary." %>
+      <div class="notae-ai-compose-input-wrap">
+        <%= form.text_area :prompt,
+                           value: ai_prompt_value,
+                           id: "ai_prompt",
+                           rows: 5,
+                           data: {
+                             ai_rail_target: "promptInput",
+                             action: "keydown->ai-rail#submitOnShortcut"
+                           },
+                           placeholder: "Ask search questions or summary requests." %>
+        <div class="notae-ai-compose-loading" data-ai-rail-target="loading">
+          <span class="notae-ai-compose-swirl" aria-hidden="true"></span>
+          <%= render "shared/ai_loader_icon",
+                     variant: current_user.ai_loader_style,
+                     state: "loading",
+                     size: 56,
+                     reduced_motion: current_user.reduce_ai_loader_motion? %>
+        </div>
+      </div>
       <div class="notae-ai-compose-actions">
-        <button type="submit">Send</button>
+        <button type="submit" data-ai-rail-target="submitButton">Send</button>
       </div>
     <% end %>
   <% else %>
     <div class="notae-ai-compose">
       <p class="notae-ai-copy">Join a workspace to use Notae AI assistant prompts.</p>
+    </div>
+  <% end %>
+
+  <% if @ai_usage_panel.present? %>
+    <div class="notae-ai-usage-drawer-wrap">
+      <button type="button"
+              class="notae-chip-button notae-ai-usage-toggle"
+              data-ai-rail-target="usageToggle"
+              data-action="click->ai-rail#toggleUsage"
+              aria-expanded="false">
+        Usage
+      </button>
+      <div class="notae-ai-card notae-ai-usage-card notae-ai-usage-drawer" data-ai-rail-target="usageDrawer" hidden>
+        <div class="notae-ai-usage-head">
+          <p class="notae-ai-title">Today usage</p>
+          <div class="notae-ai-usage-head-actions">
+            <span class="notae-ai-kicker"><%= @ai_usage_panel[:day_label] %></span>
+            <button type="button"
+                    class="notae-ai-usage-close"
+                    data-action="click->ai-rail#closeUsage"
+                    aria-label="Minimize usage panel">×</button>
+          </div>
+        </div>
+        <dl class="notae-ai-usage-grid">
+          <div>
+            <dt>Tokens</dt>
+            <dd><%= number_with_delimiter(@ai_usage_panel[:total_tokens]) %></dd>
+          </div>
+          <div>
+            <dt>Cost</dt>
+            <dd><%= number_to_currency(@ai_usage_panel[:estimated_cost_usd]) %></dd>
+          </div>
+          <div>
+            <dt>Requests</dt>
+            <dd><%= number_with_delimiter(@ai_usage_panel[:request_count]) %></dd>
+          </div>
+        </dl>
+        <div class="notae-ai-usage-guardrails">
+          <p class="notae-ai-copy">Guardrails</p>
+          <p class="notae-ai-copy">
+            Budget:
+            <strong><%= @ai_usage_panel[:budget_status] ? "Available" : "Reached" %></strong>
+            (<%= number_to_currency(@ai_usage_panel[:budget_remaining_usd]) %> left)
+          </p>
+          <p class="notae-ai-copy">
+            Rate:
+            <strong><%= @ai_usage_panel[:semantic_rate_limit_per_minute] %>/min semantic</strong>,
+            <strong><%= @ai_usage_panel[:answer_rate_limit_per_minute] %>/min answers</strong>
+            (window <%= @ai_usage_panel[:rate_limit_window_seconds] %>s)
+          </p>
+        </div>
+      </div>
     </div>
   <% end %>
 </aside>
