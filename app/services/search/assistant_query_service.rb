@@ -1,6 +1,6 @@
 module Search
   class AssistantQueryService
-    Response = Struct.new(:answer, :sources, :scope, keyword_init: true)
+    Response = Struct.new(:answer, :sources, :scope, :intent, :auto_insert, :model, keyword_init: true)
 
     SCOPE_AUTO = "auto"
     SCOPE_DOCUMENT = "document"
@@ -13,17 +13,31 @@ module Search
       [ "Whole account", SCOPE_ACCOUNT ]
     ].freeze
 
-    MODEL = "gpt-4o-mini"
+    INTENT_SEARCH = "search"
+    INTENT_COMPOSE = "compose"
+    INTENT_SUGGEST_EDITS = "suggest_edits"
+    INTENT_ASK_AI = "ask_ai"
+    INTENT_OPTIONS = [
+      INTENT_SEARCH,
+      INTENT_COMPOSE,
+      INTENT_SUGGEST_EDITS,
+      INTENT_ASK_AI
+    ].freeze
+
+    SEARCH_MODEL = "gpt-4o-mini"
+    WRITING_MODEL = "gpt-4.1-mini"
     MAX_CONTEXT_ITEMS = 12
 
     attr_reader :unavailable_reason
 
-    def initialize(user:, workspace:, prompt:, scope:, current_page_id: nil)
+    def initialize(user:, workspace:, prompt:, scope:, current_page_id: nil, intent: nil, target_block: nil)
       @user = user
       @workspace = workspace
       @prompt = prompt.to_s.strip
       @scope = scope.to_s
       @current_page_id = current_page_id
+      @intent = intent.to_s
+      @target_block = target_block
       @unavailable_reason = nil
     end
 
@@ -34,13 +48,18 @@ module Search
       return unavailable(:rate_limited) unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
 
       resolved_scope = resolve_scope
+      resolved_intent = resolve_intent
+      if writing_intent?(resolved_intent)
+        return generate_writing_response(resolved_scope: resolved_scope, resolved_intent: resolved_intent)
+      end
+
       context_entries = build_context_entries(resolved_scope)
       return unavailable(:no_context) if context_entries.empty?
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: prompt_for(context_entries, resolved_scope),
         api_key: user.openai_api_key,
-        model: MODEL,
+        model: SEARCH_MODEL,
         max_output_tokens: 420
       )
       answer_text = response[:text].to_s.strip
@@ -53,7 +72,7 @@ module Search
         user: user,
         workspace: workspace,
         operation: AiUsageLog::OP_ASSISTANT_QUERY,
-        model: MODEL,
+        model: SEARCH_MODEL,
         usage: response[:usage],
         metadata: {
           scope: resolved_scope,
@@ -65,7 +84,10 @@ module Search
       Response.new(
         answer: normalized_text,
         sources: used_sources,
-        scope: resolved_scope
+        scope: resolved_scope,
+        intent: resolved_intent,
+        auto_insert: false,
+        model: SEARCH_MODEL
       )
     rescue Openai::ResponsesClient::Error => e
       Rails.logger.warn("AI assistant query failed for workspace=#{workspace.id}: #{e.message}")
@@ -74,13 +96,76 @@ module Search
 
     private
 
-    attr_reader :user, :workspace, :prompt, :scope, :current_page_id
+    attr_reader :user, :workspace, :prompt, :scope, :current_page_id, :intent, :target_block
 
     def resolve_scope
       return SCOPE_DOCUMENT if scope == SCOPE_AUTO && current_page_id.present?
       return SCOPE_WORKSPACE if scope == SCOPE_AUTO
 
       [ SCOPE_DOCUMENT, SCOPE_WORKSPACE, SCOPE_ACCOUNT ].include?(scope) ? scope : SCOPE_WORKSPACE
+    end
+
+    def resolve_intent
+      return INTENT_COMPOSE if intent == INTENT_ASK_AI
+      return intent if INTENT_OPTIONS.include?(intent)
+      return INTENT_COMPOSE if prompt_requests_writing?
+
+      INTENT_SEARCH
+    end
+
+    def writing_intent?(resolved_intent)
+      [ INTENT_COMPOSE, INTENT_SUGGEST_EDITS ].include?(resolved_intent)
+    end
+
+    def prompt_requests_writing?
+      normalized = prompt.downcase
+      patterns = [
+        /\b(write|draft|compose|generate|rewrite|reword|rephrase|expand|continue)\b/,
+        /\b(improve|polish|tighten)\b.*\b(text|copy|paragraph|sentence|writing|block)\b/,
+        /\b(fix|correct)\b.*\b(grammar|spelling|typos?|punctuation)\b/,
+        /\bsuggest edits?\b/
+      ]
+
+      patterns.any? { |pattern| normalized.match?(pattern) }
+    end
+
+    def generate_writing_response(resolved_scope:, resolved_intent:)
+      if resolved_intent == INTENT_SUGGEST_EDITS && target_block_text.blank?
+        return unavailable(:no_context)
+      end
+
+      response = Openai::ResponsesClient.generate_text_with_usage(
+        prompt: writing_prompt_for(resolved_scope: resolved_scope, resolved_intent: resolved_intent),
+        api_key: user.openai_api_key,
+        model: WRITING_MODEL,
+        max_output_tokens: 520
+      )
+
+      answer_text = response[:text].to_s.strip
+      return unavailable(:empty_response) if answer_text.blank?
+
+      Search::AiUsageLogger.log!(
+        user: user,
+        workspace: workspace,
+        operation: AiUsageLog::OP_ASSISTANT_WRITE,
+        model: WRITING_MODEL,
+        usage: response[:usage],
+        metadata: {
+          scope: resolved_scope,
+          intent: resolved_intent,
+          prompt_length: prompt.length,
+          target_block_id: target_block&.id
+        }
+      )
+
+      Response.new(
+        answer: answer_text,
+        sources: [],
+        scope: resolved_scope,
+        intent: resolved_intent,
+        auto_insert: resolved_intent == INTENT_COMPOSE,
+        model: WRITING_MODEL
+      )
     end
 
     def build_context_entries(resolved_scope)
@@ -202,6 +287,49 @@ module Search
         Context:
         #{context_lines.join("\n")}
       PROMPT
+    end
+
+    def writing_prompt_for(resolved_scope:, resolved_intent:)
+      context_lines = []
+      context_lines << "Scope: #{resolved_scope}"
+      if current_page.present?
+        context_lines << "Current page: #{current_page.title}"
+      end
+      if target_block.present?
+        context_lines << "Target block type: #{target_block.block_type}"
+      end
+      if target_block_text.present?
+        context_lines << "Target block text:\n#{target_block_text}"
+      end
+
+      instruction =
+        if resolved_intent == INTENT_SUGGEST_EDITS
+          "Rewrite the target text so it reads better while preserving meaning. Fix grammar, spelling, punctuation, and awkward phrasing."
+        else
+          "Generate paste-ready text that satisfies the request. Keep wording clean and natural."
+        end
+
+      <<~PROMPT
+        You are Notae AI.
+        #{instruction}
+        Return only the final text and no preamble.
+
+        #{context_lines.join("\n")}
+
+        User request:
+        #{prompt}
+      PROMPT
+    end
+
+    def current_page
+      return @current_page if defined?(@current_page)
+      return @current_page = nil if current_page_id.blank?
+
+      @current_page = accessible_pages_scope.find_by(id: current_page_id)
+    end
+
+    def target_block_text
+      @target_block_text ||= target_block&.search_text.to_s.squish.presence
     end
 
     def normalize_citations(text, max_index)

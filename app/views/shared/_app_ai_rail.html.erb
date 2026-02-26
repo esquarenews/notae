@@ -1,6 +1,8 @@
 <% ai_rail_workspace = @ai_rail_workspace || (defined?(@workspace) ? @workspace : nil) %>
 <% ai_scope_options = Search::AssistantQueryService::SCOPE_OPTIONS %>
 <% ai_scope_value = @ai_assistant_scope.presence || Search::AssistantQueryService::SCOPE_AUTO %>
+<% ai_intent_value = @ai_assistant_intent.to_s %>
+<% ai_target_block_value = @ai_assistant_target_block_id.to_s %>
 <% ai_prompt_value = "" %>
 <% ai_rail_conversations = Array(@ai_rail_conversations) %>
 
@@ -82,6 +84,17 @@
     <% end %>
   </section>
 
+  <% if @ai_insert_payload.present? %>
+    <%= tag.div "",
+                hidden: true,
+                data: {
+                  ai_rail_target: "insertPayload",
+                  ai_insert_text: @ai_insert_payload[:text],
+                  ai_insert_target_block_id: @ai_insert_payload[:target_block_id],
+                  ai_insert_intent: @ai_insert_payload[:intent]
+                } %>
+  <% end %>
+
   <% if ai_rail_workspace.present? %>
     <%= form_with scope: :ai_assistant,
                   url: workspace_ai_assistant_path(workspace_slug: ai_rail_workspace.slug),
@@ -93,6 +106,11 @@
                     action: "turbo:submit-start->ai-rail#submitStart turbo:submit-end->ai-rail#submitEnd"
                   } do |form| %>
       <%= form.hidden_field :current_page_id, value: @ai_rail_current_page_id %>
+      <%= form.hidden_field :intent, value: ai_intent_value, id: "ai_intent", data: { ai_rail_target: "intentInput" } %>
+      <%= form.hidden_field :target_block_id,
+                            value: ai_target_block_value,
+                            id: "ai_target_block_id",
+                            data: { ai_rail_target: "targetBlockInput" } %>
       <label for="ai_prompt" class="notae-ai-label">Prompt</label>
       <div class="notae-ai-compose-input-wrap">
         <%= form.text_area :prompt,

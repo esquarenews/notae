@@ -65,5 +65,4 @@ RSpec.describe Block, type: :model do
 
     expect(::PageLinks::SyncFromBlockService).to have_received(:call).with(block: block)
   end
-
 end

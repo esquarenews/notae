@@ -77,7 +77,8 @@
              data-block-index="<%= index %>"
              data-controller="block-tools"
              data-block-tools-block-id-value="<%= block.id %>"
-             data-block-tools-page-title-value="<%= page.title %>">
+             data-block-tools-page-title-value="<%= page.title %>"
+             data-block-tools-block-text-value="<%= block.search_text %>">
       <% unless reader_mode %>
         <div class="notae-doc-block-row">
           <span class="notae-doc-handle"
@@ -162,14 +163,10 @@
                   <span class="notae-menu-item-icon">x</span>
                   <span class="notae-menu-item-label">Delete</span>
                 <% end %>
-                <%= button_to command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
-                              method: :post,
-                              params: { block_command: { command: "suggest_edits" } },
-                              form_class: "notae-block-menu-inline-form",
-                              class: "notae-block-menu-item" do %>
+                <button type="button" class="notae-block-menu-item" data-action="block-tools#suggestEdits">
                   <span class="notae-menu-item-icon">~</span>
                   <span class="notae-menu-item-label">Suggest edits</span>
-                <% end %>
+                </button>
                 <button type="button"
                         class="notae-block-menu-item"
                         data-prompt-template="Improve this block on <%= page.title %>."

@@ -1,13 +1,30 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["promptInput", "thread", "loading", "submitButton", "usageToggle", "usageDrawer"]
+  static targets = [
+    "promptInput",
+    "thread",
+    "loading",
+    "submitButton",
+    "usageToggle",
+    "usageDrawer",
+    "intentInput",
+    "targetBlockInput",
+    "insertPayload"
+  ]
 
   connect() {
     this.shellElement = this.element.closest(".notae-shell")
+    this.prefillEventHandler = (event) => this.applyPrefill(event.detail || {})
+    window.addEventListener("notae:ai-prefill", this.prefillEventHandler)
     this.restoreRailState()
     this.restoreUsageState()
     this.queueThreadScroll()
+    this.applyInsertPayload()
+  }
+
+  disconnect() {
+    window.removeEventListener("notae:ai-prefill", this.prefillEventHandler)
   }
 
   async copyResult(event) {
@@ -49,11 +66,14 @@ export default class extends Controller {
     const form = event.target
     if (!(form instanceof HTMLFormElement)) return
 
+    this.capturePendingInsertion()
+
     const prompt = this.hasPromptInputTarget ? this.promptInputTarget.value.trim() : ""
     if (prompt.length > 0) {
       this.appendPendingUserMessage(prompt)
       this.promptInputTarget.value = ""
     }
+    this.resetAssistantInputs()
 
     if (this.hasPromptInputTarget) this.promptInputTarget.setAttribute("disabled", "disabled")
     if (this.hasSubmitButtonTarget) this.submitButtonTarget.setAttribute("disabled", "disabled")
@@ -185,5 +205,72 @@ export default class extends Controller {
     } catch (_error) {
       // no-op if storage is unavailable
     }
+  }
+
+  applyPrefill(detail) {
+    if (!this.hasPromptInputTarget) return
+
+    const prompt = String(detail.prompt || "").trim()
+    if (prompt.length > 0) {
+      this.promptInputTarget.value = prompt
+      this.promptInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
+    }
+
+    if (this.hasIntentInputTarget) this.intentInputTarget.value = String(detail.intent || "")
+    if (this.hasTargetBlockInputTarget) this.targetBlockInputTarget.value = String(detail.targetBlockId || "")
+
+    this.setRailCollapsed(false)
+    this.promptInputTarget.focus()
+
+    if (detail.autoSubmit) {
+      const form = this.promptInputTarget.form
+      if (form instanceof HTMLFormElement) {
+        if (this.hasSubmitButtonTarget) {
+          form.requestSubmit(this.submitButtonTarget)
+        } else {
+          form.requestSubmit()
+        }
+      }
+    }
+  }
+
+  capturePendingInsertion() {
+    const sourceInsertion = window.notaeAiInsertionPoint
+    const insertionPoint = sourceInsertion ? { ...sourceInsertion } : null
+    const targetBlockId = this.hasTargetBlockInputTarget ? this.targetBlockInputTarget.value : ""
+
+    window.notaeAiPendingInsertion = {
+      insertionPoint,
+      targetBlockId: String(targetBlockId || ""),
+      requestedAt: Date.now()
+    }
+  }
+
+  resetAssistantInputs() {
+    if (this.hasIntentInputTarget) this.intentInputTarget.value = ""
+    if (this.hasTargetBlockInputTarget) this.targetBlockInputTarget.value = ""
+  }
+
+  applyInsertPayload() {
+    if (!this.hasInsertPayloadTarget) return
+
+    const text = this.insertPayloadTarget.dataset.aiInsertText?.trim()
+    if (!text) return
+
+    const pending = window.notaeAiPendingInsertion || {}
+    const payloadTargetBlockId = this.insertPayloadTarget.dataset.aiInsertTargetBlockId || ""
+    const targetBlockId = payloadTargetBlockId || pending.targetBlockId || ""
+    const insertionPoint = pending.insertionPoint || window.notaeAiInsertionPoint || null
+
+    const detail = {
+      text,
+      targetBlockId: targetBlockId || null,
+      insertionPoint: insertionPoint ? { ...insertionPoint } : null,
+      inserted: false
+    }
+    window.dispatchEvent(new CustomEvent("notae:ai-insert", { detail }))
+
+    delete window.notaeAiPendingInsertion
+    this.insertPayloadTarget.remove()
   }
 }

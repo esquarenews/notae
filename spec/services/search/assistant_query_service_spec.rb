@@ -133,4 +133,77 @@ RSpec.describe Search::AssistantQueryService do
     expect(response.answer).to include("[1]")
     expect(response.sources.first[:workspace_name]).to eq("Assistant Account Secondary")
   end
+
+  it "uses a higher-quality writing model for compose-style prompts" do
+    user = User.create!(email: "assistant-compose@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Assistant Compose", slug: "assistant-compose")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:model]).to eq("gpt-4.1-mini")
+      expect(args[:prompt]).to include("Generate paste-ready text")
+      {
+        text: "Launch highlights include QA sign-off and announcement prep.",
+        usage: { prompt_tokens: 80, completion_tokens: 18, total_tokens: 98 }
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "Write two sentences about launch readiness.",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+    ).call
+
+    expect(response).to be_present
+    expect(response.intent).to eq(Search::AssistantQueryService::INTENT_COMPOSE)
+    expect(response.auto_insert).to be(true)
+    expect(response.sources).to eq([])
+    expect(AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_ASSISTANT_WRITE)).to exist
+  end
+
+  it "uses suggest-edits intent to rewrite a target block without auto insert" do
+    user = User.create!(email: "assistant-suggest-edits@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Assistant Suggest Edits", slug: "assistant-suggest-edits")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Draft")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: user,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "this draft have typo and unclear phrasing" } ]
+          }
+        ]
+      }
+    )
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:model]).to eq("gpt-4.1-mini")
+      expect(args[:prompt]).to include(block.search_text)
+      {
+        text: "This draft has typos and unclear phrasing.",
+        usage: { prompt_tokens: 90, completion_tokens: 15, total_tokens: 105 }
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "Please suggest edits for this block.",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      intent: Search::AssistantQueryService::INTENT_SUGGEST_EDITS,
+      target_block: block
+    ).call
+
+    expect(response).to be_present
+    expect(response.intent).to eq(Search::AssistantQueryService::INTENT_SUGGEST_EDITS)
+    expect(response.auto_insert).to be(false)
+    expect(response.answer).to include("This draft has")
+  end
 end

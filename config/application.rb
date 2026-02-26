@@ -28,6 +28,8 @@ module Notae
     config.x.ai_pricing.embedding_3_small_input_per_1k = ENV.fetch("OPENAI_PRICE_TEXT_EMBEDDING_3_SMALL_INPUT_PER_1K", "0.00002").to_f
     config.x.ai_pricing.gpt_4o_mini_input_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4O_MINI_INPUT_PER_1K", "0.00015").to_f
     config.x.ai_pricing.gpt_4o_mini_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4O_MINI_OUTPUT_PER_1K", "0.00060").to_f
+    config.x.ai_pricing.gpt_4_1_mini_input_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4_1_MINI_INPUT_PER_1K", "0.00040").to_f
+    config.x.ai_pricing.gpt_4_1_mini_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4_1_MINI_OUTPUT_PER_1K", "0.00160").to_f
 
     config.generators do |generate|
       generate.orm :active_record, primary_key_type: :uuid

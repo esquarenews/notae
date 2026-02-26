@@ -5,7 +5,8 @@ const MENU_VIEWPORT_MARGIN = 12
 export default class extends Controller {
   static values = {
     blockId: String,
-    pageTitle: String
+    pageTitle: String,
+    blockText: String
   }
 
   connect() {
@@ -40,14 +41,46 @@ export default class extends Controller {
 
   askAi(event) {
     event.preventDefault()
-    const template = event.currentTarget.dataset.promptTemplate || "Improve this block."
-    const promptInput = document.querySelector("#ai_prompt")
-    if (!promptInput) return
-
+    const template = event.currentTarget.dataset.promptTemplate || "Write polished text for this block."
     const blockUrl = `${window.location.origin}${window.location.pathname}#block_${this.blockIdValue}`
-    promptInput.value = `${template}\n\nBlock reference: ${blockUrl}\nPage: ${this.pageTitleValue || "Untitled"}`
-    promptInput.dispatchEvent(new Event("input", { bubbles: true }))
-    promptInput.focus()
+    const blockContext = this.blockTextValue?.trim()
+    const promptParts = [
+      template,
+      `Block reference: ${blockUrl}`,
+      `Page: ${this.pageTitleValue || "Untitled"}`
+    ]
+    if (blockContext) {
+      promptParts.push(`Current block text:\n${blockContext}`)
+    }
+
+    this.prefillAiRail({
+      prompt: promptParts.join("\n\n"),
+      intent: "compose",
+      targetBlockId: this.blockIdValue,
+      autoSubmit: true
+    })
+
+    this.closeMenu(event)
+  }
+
+  suggestEdits(event) {
+    event.preventDefault()
+
+    const blockContext = this.blockTextValue?.trim()
+    if (!blockContext) return
+
+    const prompt = [
+      "Suggest edits for this block.",
+      "Return a single improved version that fixes typos, grammar, and readability while preserving meaning.",
+      `Original block text:\n${blockContext}`
+    ].join("\n\n")
+
+    this.prefillAiRail({
+      prompt,
+      intent: "suggest_edits",
+      targetBlockId: this.blockIdValue,
+      autoSubmit: true
+    })
 
     this.closeMenu(event)
   }
@@ -120,5 +153,35 @@ export default class extends Controller {
     panel.style.setProperty("--notae-menu-shift-y", "0px")
     panel.style.visibility = ""
     panel.style.pointerEvents = ""
+  }
+
+  prefillAiRail({ prompt, intent, targetBlockId, autoSubmit = false }) {
+    const detail = {
+      prompt: String(prompt || ""),
+      intent: String(intent || ""),
+      targetBlockId: String(targetBlockId || ""),
+      autoSubmit: Boolean(autoSubmit)
+    }
+
+    window.dispatchEvent(new CustomEvent("notae:ai-prefill", { detail }))
+
+    const promptInput = document.querySelector("#ai_prompt")
+    if (!promptInput) return
+
+    promptInput.value = detail.prompt
+    promptInput.dispatchEvent(new Event("input", { bubbles: true }))
+
+    const intentInput = document.querySelector("#ai_intent")
+    if (intentInput) intentInput.value = detail.intent
+
+    const targetBlockInput = document.querySelector("#ai_target_block_id")
+    if (targetBlockInput) targetBlockInput.value = detail.targetBlockId
+
+    promptInput.focus()
+    if (!detail.autoSubmit) return
+
+    const form = promptInput.form
+    if (!form) return
+    form.requestSubmit()
   }
 }

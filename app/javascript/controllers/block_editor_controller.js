@@ -146,7 +146,9 @@ export default class extends Controller {
     this.selectedSlashIndex = 0
     this.slashMenuMouseDownHandler = (event) => this.handleSlashMenuMouseDown(event)
     this.remoteUpdateHandler = (event) => this.applyRemoteUpdate(event.detail)
+    this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
     window.addEventListener("notae:block-remote-update", this.remoteUpdateHandler)
+    window.addEventListener("notae:ai-insert", this.aiInsertHandler)
 
     this.editor = new Editor({
       element: this.editorTarget,
@@ -170,11 +172,14 @@ export default class extends Controller {
         this.refreshSlashMenu(editor)
         this.syncBlockTypeFromDocument(editor.getJSON())
         this.markEditingActive()
+        this.captureInsertionPoint()
         this.scheduleSave()
       },
+      onSelectionUpdate: () => this.captureInsertionPoint(),
       onFocus: () => {
         this.setBlockFocused(true)
         this.markEditingActive()
+        this.captureInsertionPoint()
       },
       onBlur: () => {
         this.setBlockFocused(false)
@@ -190,7 +195,9 @@ export default class extends Controller {
     this.hideSlashMenu()
     this.setBlockFocused(false)
     window.removeEventListener("notae:block-remote-update", this.remoteUpdateHandler)
+    window.removeEventListener("notae:ai-insert", this.aiInsertHandler)
     this.markEditingInactive()
+    this.clearCapturedInsertionPoint()
 
     if (this.editor) {
       this.editor.destroy()
@@ -562,6 +569,69 @@ export default class extends Controller {
     }
 
     return node
+  }
+
+  captureInsertionPoint() {
+    if (!this.editor || !this.hasBlockIdValue) return
+
+    const { from, to } = this.editor.state.selection
+    window.notaeAiInsertionPoint = {
+      blockId: String(this.blockIdValue),
+      from,
+      to,
+      capturedAt: Date.now()
+    }
+  }
+
+  clearCapturedInsertionPoint() {
+    const insertionPoint = window.notaeAiInsertionPoint
+    if (!insertionPoint) return
+    if (String(insertionPoint.blockId) !== String(this.blockIdValue)) return
+
+    delete window.notaeAiInsertionPoint
+  }
+
+  handleAiInsert(detail) {
+    if (!this.editor || !detail) return
+
+    const targetBlockId = detail.targetBlockId ? String(detail.targetBlockId) : null
+    if (targetBlockId && targetBlockId !== String(this.blockIdValue)) return
+
+    const insertion = this.resolveInsertionFor(detail.insertionPoint)
+    if (!insertion) return
+
+    const text = this.normalizeAiInsertText(detail.text)
+    if (!text) return
+
+    const inserted = this.editor.chain().focus().insertContentAt({ from: insertion.from, to: insertion.to }, text).run()
+    if (!inserted) return
+
+    detail.inserted = true
+    this.captureInsertionPoint()
+    this.markEditingActive()
+    this.scheduleSave()
+  }
+
+  resolveInsertionFor(providedInsertionPoint) {
+    const candidate = providedInsertionPoint || window.notaeAiInsertionPoint
+    if (candidate && String(candidate.blockId) === String(this.blockIdValue)) {
+      const from = Number(candidate.from)
+      const to = Number(candidate.to)
+      if (Number.isInteger(from) && Number.isInteger(to) && from > 0 && to >= from) {
+        return { from, to }
+      }
+    }
+
+    if (!this.editor.isFocused) return null
+
+    const { from, to } = this.editor.state.selection
+    return { from, to }
+  }
+
+  normalizeAiInsertText(text) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .trim()
   }
 
   async save() {

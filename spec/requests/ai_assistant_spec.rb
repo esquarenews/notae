@@ -67,4 +67,53 @@ RSpec.describe "AI Assistant", type: :request do
     expect(conversation.status).to eq(AiConversation::STATUS_NOTICE)
     expect(conversation.answer).to include("could not find enough context")
   end
+
+  it "returns compose responses with insert payload metadata for editor insertion fallback" do
+    user = User.create!(email: "ai-assistant-compose-request@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Assistant Compose Request", slug: "ai-assistant-compose-request")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Draft page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: user,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Existing draft context" } ]
+          }
+        ]
+      }
+    )
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:model]).to eq("gpt-4.1-mini")
+      {
+        text: "A polished launch paragraph for insertion.",
+        usage: { prompt_tokens: 65, completion_tokens: 22, total_tokens: 87 }
+      }
+    end
+
+    sign_in user
+    post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+         params: {
+           ai_assistant: {
+             prompt: "Write a polished paragraph for this section.",
+             scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
+             intent: Search::AssistantQueryService::INTENT_COMPOSE,
+             current_page_id: page.id,
+             target_block_id: block.id
+           }
+         },
+         headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("data-ai-insert-text")
+    expect(response.body).to include("A polished launch paragraph for insertion.")
+    expect(response.body).to include(block.id)
+    expect(AiConversation.order(:created_at).last.answer).to include("polished launch paragraph")
+  end
 end
