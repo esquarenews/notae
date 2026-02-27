@@ -1,4 +1,6 @@
 <% ai_rail_workspace = @ai_rail_workspace || (defined?(@workspace) ? @workspace : nil) %>
+<% ai_rail_workspace_slug = ai_rail_workspace&.slug.to_s.strip.presence %>
+<% ai_rail_workspace_ready = ai_rail_workspace_slug.present? %>
 <% ai_scope_options = Search::AssistantQueryService::SCOPE_OPTIONS %>
 <% ai_scope_value = @ai_assistant_scope.presence || Search::AssistantQueryService::SCOPE_AUTO %>
 <% ai_intent_value = @ai_assistant_intent.to_s %>
@@ -21,7 +23,7 @@
   <div class="notae-ai-head">
     <span>New AI chat</span>
     <div class="notae-ai-head-controls">
-      <% if ai_rail_workspace.present? %>
+      <% if ai_rail_workspace_ready %>
         <%= select_tag "ai_assistant[scope]",
                        options_for_select(ai_scope_options, ai_scope_value),
                        class: "notae-ai-scope-select",
@@ -95,9 +97,9 @@
                 } %>
   <% end %>
 
-  <% if ai_rail_workspace.present? %>
+  <% if ai_rail_workspace_ready %>
     <%= form_with scope: :ai_assistant,
-                  url: workspace_ai_assistant_path(workspace_slug: ai_rail_workspace.slug),
+                  url: workspace_ai_assistant_path(workspace_slug: ai_rail_workspace_slug),
                   method: :post,
                   id: "notae_ai_assistant_form",
                   class: "notae-ai-compose",

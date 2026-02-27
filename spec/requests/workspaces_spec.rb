@@ -20,6 +20,16 @@ RSpec.describe "Workspaces", type: :request do
     expect(response.body).to include("Create Workspace")
   end
 
+  it "renders new workspace for a signed-in user with no existing workspaces" do
+    user = User.create!(email: "workspace-first-owner@example.com", password: "password123")
+    sign_in user
+
+    get new_workspace_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Create Workspace")
+  end
+
   it "lets an authenticated user create a workspace and become owner" do
     user = User.create!(email: "owner@example.com", password: "password123")
     sign_in user
