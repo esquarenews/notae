@@ -49,4 +49,12 @@ RSpec.describe Database, type: :model do
     expect(invalid_database).not_to be_valid
     expect(invalid_database.errors[:linked_page_id]).to include("must belong to the same workspace")
   end
+
+  it "keeps active and archived scopes safe when archived_at is unavailable" do
+    original_column_names = described_class.column_names
+    allow(described_class).to receive(:column_names).and_return(original_column_names - [ "archived_at" ])
+
+    expect(described_class.active.to_sql).not_to include("archived_at")
+    expect(described_class.archived).to be_empty
+  end
 end

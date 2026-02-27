@@ -24,8 +24,20 @@ class Database < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validate :linked_page_workspace_matches
 
-  scope :active, -> { where(archived_at: nil) }
-  scope :archived, -> { where.not(archived_at: nil) }
+  scope :active, lambda {
+    if column_names.include?("archived_at")
+      where(archived_at: nil)
+    else
+      all
+    end
+  }
+  scope :archived, lambda {
+    if column_names.include?("archived_at")
+      where.not(archived_at: nil)
+    else
+      none
+    end
+  }
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
 
   before_validation :normalize_icon
