@@ -26,4 +26,15 @@ RSpec.describe DbRow, type: :model do
     expect(invalid_row).not_to be_valid
     expect(invalid_row.errors[:linked_page_id]).to include("must belong to the same workspace")
   end
+
+  it "updates a row when async indexing queue is unavailable" do
+    workspace = Workspace.create!(name: "Row queue safe", slug: "row-queue-safe")
+    database = Database.create!(workspace:, name: "Queue rows")
+    row = described_class.create!(workspace:, database:, title: "First")
+
+    allow(Search::IndexDbRowJob).to receive(:perform_later).and_raise(Errno::ECONNREFUSED.new("Connection refused"))
+
+    expect { row.update!(title: "Updated row") }.not_to raise_error
+    expect(row.reload.title).to eq("Updated row")
+  end
 end

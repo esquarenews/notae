@@ -141,7 +141,19 @@ class Block < ApplicationRecord
 
   def enqueue_search_chunk_reindex
     page_ids = [ page_id, previous_changes.dig("page_id", 0) ].compact.uniq
-    page_ids.each { |target_page_id| Search::IndexPageJob.perform_later(target_page_id) }
+    page_ids.each do |target_page_id|
+      Search::IndexPageJob.perform_later(target_page_id)
+    rescue StandardError => error
+      raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+
+      Rails.logger.warn("Search index queue unavailable for page=#{target_page_id}: #{error.class}: #{error.message}")
+      fallback_page = Page.find_by(id: target_page_id)
+      if fallback_page.present?
+        Search::ChunkIndexingService.index_page!(page: fallback_page)
+      else
+        Search::ChunkIndexingService.delete_source!(source_type: SearchChunk::SOURCE_PAGE, source_id: target_page_id)
+      end
+    end
   end
 
   def embed_block?

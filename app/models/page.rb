@@ -113,6 +113,11 @@ class Page < ApplicationRecord
 
   def enqueue_search_chunk_reindex
     Search::IndexPageJob.perform_later(id)
+  rescue StandardError => error
+    raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+
+    Rails.logger.warn("Search index queue unavailable for page=#{id}: #{error.class}: #{error.message}")
+    Search::ChunkIndexingService.index_page!(page: self)
   end
 
   def remove_search_chunks

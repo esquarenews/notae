@@ -65,4 +65,20 @@ RSpec.describe Block, type: :model do
 
     expect(::PageLinks::SyncFromBlockService).to have_received(:call).with(block: block)
   end
+
+  it "updates a block when async indexing queue is unavailable" do
+    owner = User.create!(email: "block-queue-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Block queue safe", slug: "block-queue-safe")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Queue page")
+    block = described_class.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    updated_content = {
+      "type" => "doc",
+      "content" => [ { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Updated body" } ] } ]
+    }
+
+    allow(Search::IndexPageJob).to receive(:perform_later).and_raise(Errno::ECONNREFUSED.new("Connection refused"))
+
+    expect { block.update!(content_json: updated_content) }.not_to raise_error
+    expect(block.reload.search_text).to include("Updated body")
+  end
 end

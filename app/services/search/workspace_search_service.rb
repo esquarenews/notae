@@ -152,6 +152,10 @@ module Search
         workspace.id,
         missing_chunks.map(&:id)
       )
+    rescue StandardError => error
+      raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+
+      Rails.logger.warn("Skipping semantic embedding backfill enqueue workspace=#{workspace.id}: #{error.class}: #{error.message}")
     end
 
     def build_semantic_result(chunk, similarity)

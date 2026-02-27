@@ -63,6 +63,49 @@ RSpec.describe Search::WorkspaceSearchService do
     expect(chunk.embedding_model).to be_nil
   end
 
+  it "continues semantic search when embedding backfill enqueue is unavailable" do
+    user = User.create!(email: "semantic-backfill-queue-down@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Semantic Queue Down", slug: "semantic-queue-down")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    page = Page.create!(workspace: workspace, created_by: user, title: "Queue fallback page")
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "queue fallback result",
+      token_count: 3,
+      content_hash: "hash-queue",
+      embedding: [ 1.0, 0.0 ],
+      embedding_model: SearchChunk::EMBEDDING_MODEL
+    )
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 1,
+      text: "needs embedding",
+      token_count: 2,
+      content_hash: "hash-missing",
+      embedding: [],
+      embedding_model: nil
+    )
+
+    allow(Openai::EmbeddingsClient).to receive(:embed_with_usage).and_return(
+      { embedding: [ 1.0, 0.0 ], usage: { prompt_tokens: 5, completion_tokens: 0, total_tokens: 5 } }
+    )
+    allow(Search::BackfillChunkEmbeddingsJob).to receive(:perform_later)
+      .and_raise(Errno::ECONNREFUSED.new("Connection refused"))
+
+    expect do
+      results = described_class.new(user: user, workspace: workspace, query: "queue").call
+      expect(results.map(&:title)).to include("Queue fallback page")
+    end.not_to raise_error
+  end
+
   it "skips semantic lookup when OpenAI key is not configured" do
     user = User.create!(email: "semantic-no-key@example.com", password: "password123", openai_api_key: nil)
     workspace = Workspace.create!(name: "Semantic No Key", slug: "semantic-no-key")
