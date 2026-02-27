@@ -1,6 +1,21 @@
 require "rails_helper"
 
 RSpec.describe "Databases", type: :request do
+  it "creates a grid when optional database columns are unavailable" do
+    owner = User.create!(email: "database-legacy-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables legacy", slug: "tables-legacy")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    original_column_names = Database.column_names
+    allow(Database).to receive(:column_names).and_return(original_column_names - %w[locked])
+    sign_in owner
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: { database: { name: "Legacy Tasks" } }
+
+    database = Database.find_by!(workspace: workspace, name: "Legacy Tasks")
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+  end
+
   it "defines schema, creates rows, and edits cells inline" do
     owner = User.create!(email: "database-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables", slug: "tables")

@@ -57,4 +57,29 @@ RSpec.describe Database, type: :model do
     expect(described_class.active.to_sql).not_to include("archived_at")
     expect(described_class.archived).to be_empty
   end
+
+  it "falls back safely when optional grid columns are unavailable" do
+    workspace = Workspace.create!(name: "Database model workspace legacy", slug: "database-model-workspace-legacy")
+    original_column_names = described_class.column_names
+    missing_optional_columns = %w[
+      archived_at
+      description
+      icon
+      cover_preset_key
+      cover_focal_y
+      linked_page_id
+      locked
+      small_text
+      font_style
+    ]
+    allow(described_class).to receive(:column_names).and_return(original_column_names - missing_optional_columns)
+
+    database = described_class.create!(workspace: workspace, name: "Legacy grid")
+    expect(database.locked?).to eq(false)
+    expect(database.small_text?).to eq(false)
+    expect(database.font_style).to eq("default")
+    expect(database.cover_preset_key).to be_nil
+    expect(database.cover_focal_y).to eq(50)
+    expect(database.description).to be_nil
+  end
 end
