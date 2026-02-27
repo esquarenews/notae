@@ -36,6 +36,21 @@ RSpec.describe "Authentication", type: :request do
     expect(response).to redirect_to(root_path)
   end
 
+  it "re-renders sign up with validation errors instead of redirecting on invalid registration" do
+    post user_registration_path, params: {
+      user: {
+        email: "invalid-email",
+        password: "short",
+        password_confirmation: "mismatch"
+      }
+    }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Create account")
+    expect(response.body).to include("notae-auth-form")
+    expect(response.body).to include("Password confirmation")
+  end
+
   it "persists session across requests after login" do
     user = User.create!(email: "persist@example.com", password: "password123")
 

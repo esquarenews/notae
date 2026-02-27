@@ -10,6 +10,7 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include("notae-auth-brand-icon")
     expect(response.body).to include("/icon.svg")
     expect(response.body).to include("notae-auth-card")
+    expect(response.body).to include('data-turbo="false"')
   end
 
   it "renders a branded sign up page with the shared auth shell classes" do
@@ -22,5 +23,6 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include("notae-auth-form")
     expect(response.body).to include("notae-auth-input")
     expect(response.body).to include("notae-auth-submit")
+    expect(response.body).to include('data-turbo="false"')
   end
 end

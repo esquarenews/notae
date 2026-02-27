@@ -108,7 +108,7 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Cmd/Ctrl + K")
   end
 
-  it "includes tailwind stylesheet in the shared app layout" do
+  it "includes the compiled app stylesheet and keeps the tailwind entrypoint present" do
     tailwind_entrypoint = Rails.root.join("app/assets/tailwind/application.css")
     expect(tailwind_entrypoint).to exist
     expect(tailwind_entrypoint.read).to include('@import "tailwindcss";')
@@ -122,7 +122,7 @@ RSpec.describe "Pages", type: :request do
     get workspace_path(workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to match(%r{href="[^"]*/assets/tailwind[^"]*\.css"})
+    expect(response.body).to match(%r{href="[^"]*/assets/application[^"]*\.css"})
   end
 
   it "renders sidebar create menu with page, grid, and meeting options plus icons" do
