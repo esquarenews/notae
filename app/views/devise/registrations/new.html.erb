@@ -1,0 +1,46 @@
+<section class="notae-auth-page">
+  <div class="notae-auth-brand">
+    <%= image_tag "/icon.svg", alt: "Notae icon", class: "notae-auth-brand-icon" %>
+    <div>
+      <h1>Notae</h1>
+      <p>Create your account to start a workspace.</p>
+    </div>
+  </div>
+
+  <section class="notae-auth-card">
+    <h2>Create account</h2>
+
+    <% if resource.errors.any? %>
+      <p class="notae-flash alert"><%= resource.errors.full_messages.to_sentence %></p>
+    <% end %>
+
+    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "notae-auth-form" }) do |form| %>
+      <div class="notae-auth-field">
+        <%= form.label :email %>
+        <%= form.email_field :email, autofocus: true, autocomplete: "email", class: "notae-auth-input" %>
+      </div>
+
+      <div class="notae-auth-field">
+        <%= form.label :password %>
+        <%= form.password_field :password, autocomplete: "new-password", class: "notae-auth-input" %>
+        <% if @minimum_password_length %>
+          <small class="notae-page-subtle">Minimum <%= @minimum_password_length %> characters.</small>
+        <% end %>
+      </div>
+
+      <div class="notae-auth-field">
+        <%= form.label :password_confirmation %>
+        <%= form.password_field :password_confirmation, autocomplete: "new-password", class: "notae-auth-input" %>
+      </div>
+
+      <%= form.submit "Create account", class: "notae-chip-button notae-auth-submit" %>
+    <% end %>
+
+    <div class="notae-auth-links">
+      <%= link_to "Already have an account?", new_session_path(resource_name) %>
+      <% if devise_mapping.recoverable? %>
+        <%= link_to "Forgot your password?", new_password_path(resource_name) %>
+      <% end %>
+    </div>
+  </section>
+</section>

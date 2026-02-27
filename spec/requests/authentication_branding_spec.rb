@@ -11,4 +11,16 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include("/icon.svg")
     expect(response.body).to include("notae-auth-card")
   end
+
+  it "renders a branded sign up page with the shared auth shell classes" do
+    get new_user_registration_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Create account")
+    expect(response.body).to include("notae-auth-page")
+    expect(response.body).to include("notae-auth-brand-icon")
+    expect(response.body).to include("notae-auth-form")
+    expect(response.body).to include("notae-auth-input")
+    expect(response.body).to include("notae-auth-submit")
+  end
 end
