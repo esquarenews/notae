@@ -10,16 +10,16 @@ class DbPropertiesController < ApplicationController
 
     if @db_property.save
       seed_cells_for_existing_rows(@db_property)
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Column added."
+      redirect_to database_redirect_location, notice: "Column added."
     else
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @db_property.errors.full_messages.to_sentence
+      redirect_to database_redirect_location, alert: @db_property.errors.full_messages.to_sentence
     end
   end
 
   def destroy
     authorize @db_property
     @db_property.destroy!
-    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Column removed."
+    redirect_to database_redirect_location, notice: "Column removed."
   end
 
   private
@@ -46,5 +46,21 @@ class DbPropertiesController < ApplicationController
         cell.value_text = ""
       end
     end
+  end
+
+  def database_redirect_location
+    database_path(
+      workspace_slug: @workspace.slug,
+      id: @database.id,
+      view_id: params[:view_id].presence,
+      month: params[:month].presence,
+      sort_property_id: params[:sort_property_id].presence,
+      sort_direction: params[:sort_direction].presence,
+      filter_property_id: params[:filter_property_id].presence,
+      filter_value: params[:filter_value].presence,
+      split_page_id: params[:split_page_id].presence,
+      split_source: params[:split_source].presence,
+      split_row_id: params[:split_row_id].presence
+    )
   end
 end

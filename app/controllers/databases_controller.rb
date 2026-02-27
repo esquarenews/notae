@@ -20,6 +20,9 @@ class DatabasesController < ApplicationController
     @current_view = resolve_current_view
     @view_type = @current_view&.view_type || "table"
     @view_config = @current_view&.config_json.to_h || {}
+    @linkable_pages = policy_scope(Page).for_workspace(@workspace).active.order(updated_at: :desc).to_a
+    @linkable_pages_by_id = @linkable_pages.index_by(&:id)
+    @split_page = resolve_split_page
 
     resolve_filter_and_sort_settings!
     apply_row_filter!
@@ -57,15 +60,29 @@ class DatabasesController < ApplicationController
 
     @database.assign_attributes(database_update_params)
     apply_header_customizations!
+    apply_linked_page_update!
 
     if @database.changed? || @database.attachment_changes.present?
       @database.save
     end
 
     if @database.errors.empty?
-      redirect_to database_redirect_path, notice: "Grid updated."
+      respond_to do |format|
+        format.html { redirect_to database_redirect_path, notice: "Grid updated." }
+        format.json do
+          render json: {
+            id: @database.id,
+            name: @database.name,
+            icon: @database.icon,
+            updated_at: @database.updated_at&.iso8601(6)
+          }, status: :ok
+        end
+      end
     else
-      redirect_to database_redirect_path, alert: @database.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.html { redirect_to database_redirect_path, alert: @database.errors.full_messages.to_sentence }
+        format.json { render json: { errors: @database.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
@@ -85,6 +102,10 @@ class DatabasesController < ApplicationController
 
   def database_update_params
     params.fetch(:database, ActionController::Parameters.new).permit(:name, :description)
+  end
+
+  def database_link_params
+    params.fetch(:database, ActionController::Parameters.new).permit(:linked_page_id, :linked_page_action)
   end
 
   def database_header_params
@@ -146,6 +167,60 @@ class DatabasesController < ApplicationController
     when "clear"
       @database.description = nil
     end
+  end
+
+  def apply_linked_page_update!
+    payload = database_link_params
+    action = payload[:linked_page_action].to_s
+
+    if action == "clear"
+      @database.linked_page = nil
+      @clear_split_page = true
+      return
+    end
+
+    if action == "create_page"
+      linked_page = create_linked_page_for_database
+      @database.linked_page = linked_page if linked_page.present?
+      @redirect_split_page_id = linked_page&.id
+      @redirect_split_source = "database"
+      return
+    end
+
+    return unless payload.key?(:linked_page_id)
+
+    resolved_page = resolve_linkable_page(payload[:linked_page_id])
+    return if resolved_page == :invalid
+
+    @database.linked_page = resolved_page
+    @clear_split_page = true if resolved_page.nil?
+    @redirect_split_page_id = resolved_page&.id
+    @redirect_split_source = "database" if resolved_page.present?
+  end
+
+  def create_linked_page_for_database
+    page_title = [ @database.name.presence || "Untitled grid", "notes" ].join(" ")
+    page = @workspace.pages.new(title: page_title, created_by: current_user)
+    unless policy(page).create?
+      @database.errors.add(:base, "You are not authorized to create pages in this workspace.")
+      return nil
+    end
+
+    return page if page.save
+
+    @database.errors.add(:base, page.errors.full_messages.to_sentence)
+    nil
+  end
+
+  def resolve_linkable_page(raw_id)
+    candidate_id = raw_id.to_s.strip
+    return nil if candidate_id.blank?
+
+    linked_page = policy_scope(Page).for_workspace(@workspace).active.find_by(id: candidate_id)
+    return linked_page if linked_page.present?
+
+    @database.errors.add(:linked_page_id, "must reference an accessible page in this workspace")
+    :invalid
   end
 
   def sort_rows!
@@ -321,6 +396,10 @@ class DatabasesController < ApplicationController
   end
 
   def database_redirect_path
+    split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
+    split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
+    split_row_id = @clear_split_page ? nil : params[:split_row_id].presence
+
     database_path(
       workspace_slug: @workspace.slug,
       id: @database.id,
@@ -329,8 +408,18 @@ class DatabasesController < ApplicationController
       sort_property_id: params[:sort_property_id].presence,
       sort_direction: params[:sort_direction].presence,
       filter_property_id: params[:filter_property_id].presence,
-      filter_value: params[:filter_value].presence
+      filter_value: params[:filter_value].presence,
+      split_page_id: split_page_id,
+      split_source: split_source,
+      split_row_id: split_row_id
     )
+  end
+
+  def resolve_split_page
+    split_page_id = params[:split_page_id].presence
+    return nil if split_page_id.blank?
+
+    policy_scope(Page).for_workspace(@workspace).active.find_by(id: split_page_id)
   end
 
   def ensure_default_view!

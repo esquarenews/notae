@@ -4,6 +4,7 @@ class Database < ApplicationRecord
   ICON_SUGGESTIONS = Page::ICON_SUGGESTIONS
 
   belongs_to :workspace
+  belongs_to :linked_page, class_name: "Page", optional: true
   has_many :db_properties, -> { order(:position, :created_at) }, dependent: :destroy
   has_many :db_rows, dependent: :destroy
   has_many :database_views, dependent: :destroy
@@ -17,6 +18,7 @@ class Database < ApplicationRecord
   validates :cover_preset_key, inclusion: { in: COVER_PRESET_KEYS }, allow_blank: true
   validates :cover_focal_y,
             numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
+  validate :linked_page_workspace_matches
 
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
 
@@ -31,5 +33,12 @@ class Database < ApplicationRecord
   def normalize_icon
     normalized = icon.to_s.strip.presence
     self.icon = normalized&.scan(/\X/)&.first(2)&.join
+  end
+
+  def linked_page_workspace_matches
+    return if linked_page.blank?
+    return if linked_page.workspace_id == workspace_id
+
+    errors.add(:linked_page_id, "must belong to the same workspace")
   end
 end

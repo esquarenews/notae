@@ -26,4 +26,19 @@ RSpec.describe Database, type: :model do
     expect(database.cover?).to eq(true)
     expect(database.cover_focal_y).to eq(50)
   end
+
+  it "accepts linked pages in the same workspace and rejects cross-workspace links" do
+    owner = User.create!(email: "database-linked-page-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database linked page workspace", slug: "database-linked-page-workspace")
+    other_workspace = Workspace.create!(name: "Database linked page other workspace", slug: "database-linked-page-other-workspace")
+    local_page = Page.create!(workspace: workspace, created_by: owner, title: "Local page")
+    remote_page = Page.create!(workspace: other_workspace, created_by: owner, title: "Remote page")
+
+    valid_database = described_class.new(workspace: workspace, name: "Linked DB", linked_page: local_page)
+    invalid_database = described_class.new(workspace: workspace, name: "Invalid linked DB", linked_page: remote_page)
+
+    expect(valid_database).to be_valid
+    expect(invalid_database).not_to be_valid
+    expect(invalid_database.errors[:linked_page_id]).to include("must belong to the same workspace")
+  end
 end

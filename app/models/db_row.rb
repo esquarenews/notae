@@ -7,11 +7,13 @@ class DbRow < ApplicationRecord
 
   belongs_to :workspace
   belongs_to :database
+  belongs_to :linked_page, class_name: "Page", optional: true
   has_many :db_cells, dependent: :destroy
   has_many :search_chunks, dependent: :destroy
 
   validates :title, presence: true
   validates :position, numericality: { greater_than: 0, only_integer: true }
+  validate :linked_page_workspace_matches
 
   scope :active, -> { where(archived_at: nil) }
   scope :ordered, -> { order(:position, :created_at) }
@@ -60,6 +62,13 @@ class DbRow < ApplicationRecord
   def set_search_text
     flattened = data_json.is_a?(Hash) ? data_json.values.join(" ") : data_json.to_s
     self.search_text = [ title, flattened ].compact.join(" ").strip
+  end
+
+  def linked_page_workspace_matches
+    return if linked_page.blank?
+    return if linked_page.workspace_id == workspace_id
+
+    errors.add(:linked_page_id, "must belong to the same workspace")
   end
 
   def enqueue_search_chunk_reindex

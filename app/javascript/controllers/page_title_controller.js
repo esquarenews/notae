@@ -4,7 +4,11 @@ const DEBOUNCE_MS = 350
 
 export default class extends Controller {
   static targets = ["input", "status"]
-  static values = { url: String }
+  static values = {
+    url: String,
+    resource: { type: String, default: "page" },
+    field: { type: String, default: "title" }
+  }
 
   connect() {
     this.inFlight = false
@@ -74,7 +78,11 @@ export default class extends Controller {
           "Content-Type": "application/json",
           ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {})
         },
-        body: JSON.stringify({ page: { title } })
+        body: JSON.stringify({
+          [this.resourceValue]: {
+            [this.fieldValue]: title
+          }
+        })
       })
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)

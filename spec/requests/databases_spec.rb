@@ -446,7 +446,28 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Move up")
     expect(response.body).to include("Move down")
     expect(response.body).to include("🧠")
+    expect(response.body).to include("name=\"database[name]\"")
+    expect(response.body).to include("notae-page-title-input")
     expect(response.body).not_to include("db-edit-view-panel")
+  end
+
+  it "supports json autosave for database name updates" do
+    owner = User.create!(email: "database-name-json-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database name json workspace", slug: "database-name-json-workspace")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Initial grid title")
+    sign_in owner
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { name: "Updated grid title" } },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(database.reload.name).to eq("Updated grid title")
+    expect(JSON.parse(response.body)).to include(
+      "id" => database.id,
+      "name" => "Updated grid title"
+    )
   end
 
   it "updates database header controls (icon, description, and cover)" do
@@ -509,6 +530,112 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
     expect(row.reload.title).to eq("Untitled row")
+  end
+
+  it "creates and links a page from a row action and opens side peek" do
+    owner = User.create!(email: "database-row-link-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row link tables", slug: "row-link-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row link DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Errol")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { link_action: "create_page" } }
+
+    row.reload
+    expect(row.linked_page).to be_present
+    expect(row.linked_page.title).to eq("Errol")
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_page_id: row.linked_page_id,
+        split_source: "row",
+        split_row_id: row.id,
+        anchor: "row_#{row.id}"
+      )
+    )
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      split_page_id: row.linked_page_id,
+      split_source: "row",
+      split_row_id: row.id
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-db-split-pane")
+    expect(response.body).to include("Linked page side peek")
+    expect(response.body).to include(row.linked_page.title)
+  end
+
+  it "links an existing page to a grid and renders split pane controls" do
+    owner = User.create!(email: "database-grid-link-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid link tables", slug: "grid-link-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Grid link DB")
+    linked_page = Page.create!(workspace: workspace, created_by: owner, title: "Linked grid page")
+    sign_in owner
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { linked_page_id: linked_page.id } }
+
+    expect(database.reload.linked_page_id).to eq(linked_page.id)
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_page_id: linked_page.id,
+        split_source: "database"
+      )
+    )
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      split_page_id: linked_page.id,
+      split_source: "database"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Grid page")
+    expect(response.body).to include("notae-db-open-link-button")
+    expect(response.body).to include(page_path(workspace_slug: workspace.slug, id: linked_page.id, embedded: 1))
+  end
+
+  it "keeps the current grid link when an invalid page id is submitted" do
+    owner = User.create!(email: "database-grid-link-invalid-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid link invalid tables", slug: "grid-link-invalid-tables")
+    other_workspace = Workspace.create!(name: "Grid link invalid other", slug: "grid-link-invalid-other")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: other_workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Grid link invalid DB")
+    linked_page = Page.create!(workspace: workspace, created_by: owner, title: "Valid linked page")
+    remote_page = Page.create!(workspace: other_workspace, created_by: owner, title: "Remote linked page")
+    database.update!(linked_page: linked_page)
+    sign_in owner
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { linked_page_id: remote_page.id } }
+
+    expect(database.reload.linked_page_id).to eq(linked_page.id)
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+  end
+
+  it "renders pages in embedded shell mode for split-pane previews" do
+    owner = User.create!(email: "database-embedded-preview-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Embedded preview tables", slug: "embedded-preview-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embedded page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id, embedded: 1)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-shell-embedded")
+    expect(response.body).not_to include("notae-ai-rail")
   end
 
   it "archives rows and excludes them from active database views" do

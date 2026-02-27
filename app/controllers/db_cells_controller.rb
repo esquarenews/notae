@@ -15,7 +15,7 @@ class DbCellsController < ApplicationController
     else
       respond_to do |format|
         format.turbo_stream { render plain: @db_cell.errors.full_messages.to_sentence, status: :unprocessable_entity }
-        format.html { redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @db_cell.errors.full_messages.to_sentence }
+        format.html { redirect_to cell_redirect_location, alert: @db_cell.errors.full_messages.to_sentence }
       end
     end
   end
@@ -42,8 +42,15 @@ class DbCellsController < ApplicationController
     database_path(
       workspace_slug: @workspace.slug,
       id: @database.id,
+      view_id: params[:view_id].presence,
+      month: params[:month].presence,
       sort_property_id: params[:sort_property_id],
       sort_direction: params[:sort_direction],
+      filter_property_id: params[:filter_property_id],
+      filter_value: params[:filter_value],
+      split_page_id: params[:split_page_id],
+      split_source: params[:split_source],
+      split_row_id: params[:split_row_id],
       anchor: "row_#{@db_cell.db_row_id}"
     )
   end

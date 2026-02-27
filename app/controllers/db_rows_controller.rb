@@ -21,6 +21,7 @@ class DbRowsController < ApplicationController
   def update
     authorize @db_row, :update?
     @db_row.assign_attributes(db_row_params)
+    apply_linked_page_update!
     @db_row.title = "Untitled row" if @db_row.title.blank?
 
     if @db_row.save
@@ -74,6 +75,10 @@ class DbRowsController < ApplicationController
     params.require(:db_row).permit(:title)
   end
 
+  def db_row_link_params
+    params.fetch(:db_row, ActionController::Parameters.new).permit(:linked_page_id, :link_action)
+  end
+
   def set_db_row
     @db_row = policy_scope(DbRow).for_database(@database).find(params[:id])
   end
@@ -102,6 +107,10 @@ class DbRowsController < ApplicationController
   end
 
   def database_redirect_location(anchor: nil)
+    split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
+    split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
+    split_row_id = @clear_split_page ? nil : (@redirect_split_row_id || params[:split_row_id].presence)
+
     path_params = {
       workspace_slug: @workspace.slug,
       id: @database.id,
@@ -110,9 +119,62 @@ class DbRowsController < ApplicationController
       sort_property_id: params[:sort_property_id].presence,
       sort_direction: params[:sort_direction].presence,
       filter_property_id: params[:filter_property_id].presence,
-      filter_value: params[:filter_value].presence
+      filter_value: params[:filter_value].presence,
+      split_page_id: split_page_id,
+      split_source: split_source,
+      split_row_id: split_row_id
     }.compact
     path_params[:anchor] = anchor if anchor.present?
     database_path(path_params)
+  end
+
+  def apply_linked_page_update!
+    payload = db_row_link_params
+    action = payload[:link_action].to_s
+
+    if action == "create_page"
+      linked_page = create_linked_page_for_row
+      @db_row.linked_page = linked_page if linked_page.present?
+      @redirect_split_page_id = linked_page&.id
+      @redirect_split_source = "row"
+      @redirect_split_row_id = @db_row.id
+      return
+    end
+
+    return unless payload.key?(:linked_page_id)
+
+    resolved_page = resolve_linkable_page(payload[:linked_page_id])
+    return if resolved_page == :invalid
+
+    @db_row.linked_page = resolved_page
+    @clear_split_page = true if resolved_page.nil?
+    @redirect_split_page_id = resolved_page&.id
+    @redirect_split_source = "row" if resolved_page.present?
+    @redirect_split_row_id = @db_row.id if resolved_page.present?
+  end
+
+  def create_linked_page_for_row
+    title = @db_row.title.presence || "Untitled row"
+    page = @workspace.pages.new(title: title, created_by: current_user)
+    unless policy(page).create?
+      @db_row.errors.add(:base, "You are not authorized to create pages in this workspace.")
+      return nil
+    end
+
+    return page if page.save
+
+    @db_row.errors.add(:base, page.errors.full_messages.to_sentence)
+    nil
+  end
+
+  def resolve_linkable_page(raw_id)
+    candidate_id = raw_id.to_s.strip
+    return nil if candidate_id.blank?
+
+    linked_page = policy_scope(Page).for_workspace(@workspace).active.find_by(id: candidate_id)
+    return linked_page if linked_page.present?
+
+    @db_row.errors.add(:linked_page_id, "must reference an accessible page in this workspace")
+    :invalid
   end
 end

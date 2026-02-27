@@ -532,6 +532,11 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   grid-template-columns: 246px minmax(0, 1fr) 2.8rem;
 }
 
+.notae-shell.notae-shell-embedded {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
 .notae-sidebar {
   border-right: 1px solid var(--notae-border);
   background: #f4f3f2;
@@ -2973,6 +2978,22 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   color: var(--notae-muted);
 }
 
+.notae-db-linked-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.2rem;
+}
+
+.notae-db-linked-page-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--notae-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 .notae-db-view-pill {
   border: 1px solid transparent;
   border-radius: 999px;
@@ -3277,6 +3298,124 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   margin: 0;
 }
 
+.notae-db-title-stack {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.notae-db-linked-page-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.26rem;
+  flex-wrap: wrap;
+}
+
+.notae-db-linked-page-row .button_to,
+.notae-db-linked-page-controls .button_to {
+  margin: 0;
+}
+
+.notae-db-open-link-button,
+.notae-db-link-create-button,
+.notae-db-link-clear-button {
+  border: 1px solid var(--notae-border);
+  border-radius: 0.36rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 90%, transparent);
+  color: var(--notae-text);
+  text-decoration: none;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.18rem 0.36rem;
+}
+
+.notae-db-link-create-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  cursor: pointer;
+}
+
+.notae-db-link-create-plus {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.notae-db-open-link-button:hover,
+.notae-db-link-create-button:hover,
+.notae-db-link-clear-button:hover {
+  background: color-mix(in srgb, var(--notae-surface-muted) 86%, transparent);
+}
+
+.notae-db-linked-page-name {
+  color: var(--notae-muted);
+  text-decoration: none;
+  font-size: 0.69rem;
+}
+
+.notae-db-linked-page-name:hover {
+  color: var(--notae-text);
+  text-decoration: underline;
+}
+
+.notae-db-linked-page-muted {
+  color: var(--notae-muted);
+  font-size: 0.69rem;
+}
+
+.notae-db-split-layout {
+  display: block;
+}
+
+.notae-db-split-layout.has-side-peek {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 48%);
+  align-items: start;
+}
+
+.notae-db-split-pane {
+  border-left: 1px solid var(--notae-border);
+  background: var(--notae-surface);
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 2.45rem);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.notae-db-split-pane-head {
+  border-bottom: 1px solid var(--notae-border);
+  padding: 0.36rem 0.52rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.notae-db-split-pane-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--notae-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notae-db-split-pane-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+}
+
+.notae-db-split-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--notae-surface);
+}
+
 .notae-db-title-input,
 .notae-db-cell-input {
   width: 100%;
@@ -3335,6 +3474,17 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   .notae-db-header-tools {
     opacity: 1;
     transform: none;
+  }
+
+  .notae-db-split-layout.has-side-peek {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notae-db-split-pane {
+    position: static;
+    height: min(70vh, 620px);
+    border-top: 1px solid var(--notae-border);
+    border-left: 0;
   }
 }
 
@@ -6293,6 +6443,10 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 @media (max-width: 1360px) {
   .notae-shell {
     grid-template-columns: 236px minmax(0, 1fr);
+  }
+
+  .notae-shell.notae-shell-embedded {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .notae-ai-rail {

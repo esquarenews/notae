@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_26_224500) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_27_121500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -182,9 +182,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_224500) do
     t.datetime "created_at", null: false
     t.text "description"
     t.string "icon"
+    t.uuid "linked_page_id"
     t.string "name", null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
+    t.index ["linked_page_id"], name: "index_databases_on_linked_page_id"
     t.index ["workspace_id", "name"], name: "index_databases_on_workspace_id_and_name"
     t.index ["workspace_id"], name: "index_databases_on_workspace_id"
   end
@@ -225,6 +227,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_224500) do
     t.datetime "created_at", null: false
     t.jsonb "data_json", default: {}, null: false
     t.uuid "database_id", null: false
+    t.uuid "linked_page_id"
     t.integer "position", default: 1024, null: false
     t.text "search_text", default: "", null: false
     t.string "title", default: "", null: false
@@ -233,6 +236,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_224500) do
     t.index ["database_id", "archived_at"], name: "index_db_rows_on_database_id_and_archived_at"
     t.index ["database_id", "position"], name: "index_db_rows_on_database_id_and_position"
     t.index ["database_id"], name: "index_db_rows_on_database_id"
+    t.index ["linked_page_id"], name: "index_db_rows_on_linked_page_id"
     t.index ["search_text"], name: "index_db_rows_on_search_text", opclass: :gin_trgm_ops, using: :gin
     t.index ["workspace_id", "archived_at"], name: "index_db_rows_on_workspace_id_and_archived_at"
     t.index ["workspace_id"], name: "index_db_rows_on_workspace_id"
@@ -561,6 +565,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_224500) do
   add_foreign_key "database_views", "databases"
   add_foreign_key "database_views", "users", column: "created_by_id"
   add_foreign_key "database_views", "workspaces"
+  add_foreign_key "databases", "pages", column: "linked_page_id", on_delete: :nullify
   add_foreign_key "databases", "workspaces"
   add_foreign_key "db_cells", "db_properties"
   add_foreign_key "db_cells", "db_rows"
@@ -568,6 +573,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_26_224500) do
   add_foreign_key "db_properties", "databases"
   add_foreign_key "db_properties", "workspaces"
   add_foreign_key "db_rows", "databases"
+  add_foreign_key "db_rows", "pages", column: "linked_page_id", on_delete: :nullify
   add_foreign_key "db_rows", "workspaces"
   add_foreign_key "favorites", "users"
   add_foreign_key "favorites", "workspaces"

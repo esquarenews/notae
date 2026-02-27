@@ -24,7 +24,7 @@
   <% end %>
 <% end %>
 
-<% view_link = database_path(
+<% view_params = {
   workspace_slug: @workspace.slug,
   id: @database.id,
   view_id: @current_view&.id,
@@ -32,9 +32,14 @@
   sort_property_id: params[:sort_property_id],
   sort_direction: params[:sort_direction],
   filter_property_id: params[:filter_property_id],
-  filter_value: params[:filter_value]
-) %>
+  filter_value: params[:filter_value],
+  split_page_id: params[:split_page_id],
+  split_source: params[:split_source],
+  split_row_id: params[:split_row_id]
+}.compact %>
+<% view_link = database_path(view_params) %>
 
+<section class="notae-db-split-layout <%= "has-side-peek" if @split_page.present? %>">
 <section class="notae-db-canvas">
   <% if @database.cover? %>
     <section class="notae-page-cover">
@@ -215,7 +220,31 @@
       </div>
       <% end %>
 
-    <h1 class="notae-db-title"><%= @database.name %></h1>
+    <% if can_update_database %>
+      <%= form_with model: @database,
+                    url: database_path(view_params),
+                    method: :patch,
+                    class: "notae-page-title-form",
+                    data: {
+                      controller: "page-title",
+                      page_title_url_value: database_path(view_params),
+                      page_title_resource_value: "database",
+                      page_title_field_value: "name"
+                    } do |form| %>
+        <%= form.text_field :name,
+                            value: @database.name,
+                            class: "notae-page-title-input",
+                            required: true,
+                            aria: { label: "Grid title" },
+                            data: {
+                              page_title_target: "input",
+                              action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
+                            } %>
+        <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
+      <% end %>
+    <% else %>
+      <h1 class="notae-db-title"><%= @database.name %></h1>
+    <% end %>
     <% if @database.description.present? %>
       <p class="notae-db-description"><%= @database.description %></p>
     <% end %>
@@ -360,7 +389,55 @@
     <% end %>
   </div>
 
+  <% linked_page = @linkable_pages_by_id[@database.linked_page_id] %>
   <p class="notae-db-meta"><%= pluralize(@rows.size, "row") %></p>
+  <div class="notae-db-linked-page-controls">
+    <span class="notae-db-linked-page-label">Grid page</span>
+    <% if linked_page.present? %>
+      <%= link_to "Open",
+                  database_path(view_params.merge(split_page_id: linked_page.id, split_source: "database", split_row_id: nil)),
+                  class: "notae-db-open-link-button" %>
+      <%= link_to linked_page.title,
+                  database_path(view_params.merge(split_page_id: linked_page.id, split_source: "database", split_row_id: nil)),
+                  class: "notae-db-linked-page-name" %>
+      <% if can_update_database %>
+        <%= button_to database_path(view_params),
+                      method: :patch,
+                      params: { database: { linked_page_action: "clear" } },
+                      class: "notae-db-link-clear-button" do %>
+          Unlink
+        <% end %>
+      <% end %>
+    <% elsif can_update_database %>
+      <%= button_to database_path(view_params),
+                    method: :patch,
+                    params: { database: { linked_page_action: "create_page" } },
+                    class: "notae-db-link-create-button" do %>
+        <span class="notae-db-link-create-plus">+</span>
+        <span>Create page</span>
+      <% end %>
+    <% else %>
+      <span class="notae-db-linked-page-muted">No linked page</span>
+    <% end %>
+
+    <% if can_update_database %>
+      <details class="notae-db-inline-details">
+        <summary class="notae-db-grid-add-link">Choose page</summary>
+        <div class="notae-db-inline-panel">
+          <%= form_with model: @database,
+                        url: database_path(view_params),
+                        method: :patch,
+                        class: "notae-db-inline-form" do |form| %>
+            <%= form.select :linked_page_id,
+                            options_for_select(@linkable_pages.map { |page| [page.title, page.id] }, linked_page&.id),
+                            { include_blank: "No linked page" },
+                            class: "notae-options-input" %>
+            <%= form.submit "Save", class: "notae-chip-button" %>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+  </div>
 
   <% if @view_type == "board" %>
     <%= render "databases/board_view" %>
@@ -373,4 +450,29 @@
   <% else %>
     <%= render "databases/table_view" %>
   <% end %>
+</section>
+
+<% if @split_page.present? %>
+  <aside class="notae-db-split-pane">
+    <div class="notae-db-split-pane-head">
+      <p class="notae-db-split-pane-title"><%= @split_page.icon.presence || "📄" %> <%= @split_page.title %></p>
+      <div class="notae-db-split-pane-actions">
+        <%= link_to "Open full",
+                    page_path(workspace_slug: @workspace.slug, id: @split_page.id),
+                    class: "notae-chip-button",
+                    target: "_blank",
+                    rel: "noopener" %>
+        <%= link_to "✕",
+                    database_path(view_params.except(:split_page_id, :split_source, :split_row_id)),
+                    class: "notae-inline-icon-button",
+                    aria: { label: "Close side peek" },
+                    title: "Close side peek" %>
+      </div>
+    </div>
+    <iframe src="<%= page_path(workspace_slug: @workspace.slug, id: @split_page.id, embedded: 1) %>"
+            title="Linked page side peek"
+            class="notae-db-split-frame"
+            loading="lazy"></iframe>
+  </aside>
+<% end %>
 </section>

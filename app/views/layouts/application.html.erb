@@ -30,14 +30,19 @@
         data-controller="<%= "link-preferences" if user_signed_in? %>"
         data-link-preferences-open-links-in-new-window-value="<%= user_signed_in? ? current_user.open_links_in_desktop_app? : false %>">
     <% if user_signed_in? %>
-      <div class="notae-shell" data-controller="shell global-shortcuts">
-        <button type="button" class="notae-mobile-overlay" data-action="click->shell#close" aria-label="Close sidebar"></button>
-        <%= render "shared/app_sidebar" %>
+      <% embedded_shell = params[:embedded].to_s == "1" %>
+      <div class="notae-shell <%= "notae-shell-embedded" if embedded_shell %>" data-controller="<%= embedded_shell ? "shell" : "shell global-shortcuts" %>">
+        <% unless embedded_shell %>
+          <button type="button" class="notae-mobile-overlay" data-action="click->shell#close" aria-label="Close sidebar"></button>
+          <%= render "shared/app_sidebar" %>
+        <% end %>
 
         <div class="notae-main">
           <header class="notae-topbar">
             <div class="notae-topbar-leading">
-              <button type="button" class="notae-mobile-toggle" data-action="shell#toggle" aria-label="Toggle sidebar">☰</button>
+              <% unless embedded_shell %>
+                <button type="button" class="notae-mobile-toggle" data-action="shell#toggle" aria-label="Toggle sidebar">☰</button>
+              <% end %>
               <div class="notae-topbar-title">
                 <span class="notae-topbar-page-icon"><%= content_for?(:topbar_page_icon) ? yield(:topbar_page_icon) : "📄" %></span>
                 <span><%= content_for(:title) || "New page" %></span>
@@ -65,38 +70,40 @@
           </main>
         </div>
 
-        <%= turbo_frame_tag "ai_rail_panel" do %>
-          <%= render "shared/app_ai_rail" %>
+        <% unless embedded_shell %>
+          <%= turbo_frame_tag "ai_rail_panel" do %>
+            <%= render "shared/app_ai_rail" %>
+          <% end %>
+
+          <div class="notae-modal is-hidden" data-global-shortcuts-target="quickSwitcher" data-action="click->global-shortcuts#closeAll">
+            <div class="notae-modal-panel" data-action="click->global-shortcuts#noop">
+              <div class="notae-modal-header">
+                <h2>Quick switcher</h2>
+                <button type="button" class="notae-inline-icon-button" data-action="global-shortcuts#closeAll" aria-label="Close quick switcher">✕</button>
+              </div>
+              <input type="search"
+                    class="notae-modal-input"
+                    placeholder="Search pages..."
+                    data-global-shortcuts-target="quickInput"
+                    data-action="input->global-shortcuts#filterQuickResults keydown->global-shortcuts#handleQuickInputKeydown">
+              <div class="notae-quick-results" data-global-shortcuts-target="quickResults"></div>
+            </div>
+          </div>
+
+          <div class="notae-modal is-hidden" data-global-shortcuts-target="shortcutGuide" data-action="click->global-shortcuts#closeAll">
+            <div class="notae-modal-panel notae-shortcut-panel" data-action="click->global-shortcuts#noop">
+              <div class="notae-modal-header">
+                <h2>Keyboard shortcuts</h2>
+                <button type="button" class="notae-inline-icon-button" data-action="global-shortcuts#closeAll" aria-label="Close shortcut guide">✕</button>
+              </div>
+              <ul class="notae-shortcut-list">
+                <li><span>Quick switcher</span><kbd>Cmd/Ctrl + K</kbd></li>
+                <li><span>Shortcut guide</span><kbd>Cmd/Ctrl + /</kbd></li>
+                <li><span>Close dialogs</span><kbd>Esc</kbd></li>
+              </ul>
+            </div>
+          </div>
         <% end %>
-
-        <div class="notae-modal is-hidden" data-global-shortcuts-target="quickSwitcher" data-action="click->global-shortcuts#closeAll">
-          <div class="notae-modal-panel" data-action="click->global-shortcuts#noop">
-            <div class="notae-modal-header">
-              <h2>Quick switcher</h2>
-              <button type="button" class="notae-inline-icon-button" data-action="global-shortcuts#closeAll" aria-label="Close quick switcher">✕</button>
-            </div>
-            <input type="search"
-                   class="notae-modal-input"
-                   placeholder="Search pages..."
-                   data-global-shortcuts-target="quickInput"
-                   data-action="input->global-shortcuts#filterQuickResults keydown->global-shortcuts#handleQuickInputKeydown">
-            <div class="notae-quick-results" data-global-shortcuts-target="quickResults"></div>
-          </div>
-        </div>
-
-        <div class="notae-modal is-hidden" data-global-shortcuts-target="shortcutGuide" data-action="click->global-shortcuts#closeAll">
-          <div class="notae-modal-panel notae-shortcut-panel" data-action="click->global-shortcuts#noop">
-            <div class="notae-modal-header">
-              <h2>Keyboard shortcuts</h2>
-              <button type="button" class="notae-inline-icon-button" data-action="global-shortcuts#closeAll" aria-label="Close shortcut guide">✕</button>
-            </div>
-            <ul class="notae-shortcut-list">
-              <li><span>Quick switcher</span><kbd>Cmd/Ctrl + K</kbd></li>
-              <li><span>Shortcut guide</span><kbd>Cmd/Ctrl + /</kbd></li>
-              <li><span>Close dialogs</span><kbd>Esc</kbd></li>
-            </ul>
-          </div>
-        </div>
       </div>
     <% else %>
       <main class="notae-auth-shell">
