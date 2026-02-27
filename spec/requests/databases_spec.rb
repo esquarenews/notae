@@ -144,6 +144,28 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).not_to include("Low estimate")
     expect(response.body).not_to include("High estimate")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      filter_property_id: due_property.id,
+      filter_operator: "before",
+      filter_value: "2026-03-10"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Low estimate")
+    expect(response.body).not_to include("High estimate")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      filter_property_id: estimate_property.id,
+      filter_operator: "after",
+      filter_value: "5"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Low estimate")
+    expect(response.body).to include("High estimate")
   end
 
   it "blocks non-members from accessing a workspace database" do
@@ -434,21 +456,111 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Aa")
     expect(response.body).to include("Name")
     expect(response.body).to include("+ Add property")
-    expect(response.body).to include("New page")
+    expect(response.body).to include("Enter name")
+    expect(response.body).to include("notae-db-new-row-form")
     expect(response.body).to include("Add icon")
     expect(response.body).to include("Add cover")
     expect(response.body).to include("Add description")
-    expect(response.body).to include("Rename")
-    expect(response.body).to include("Edit view")
+    expect(response.body).to include("View settings")
+    expect(response.body).to include("Layout")
+    expect(response.body).to include("Property visibility")
+    expect(response.body).to include("Conditional color")
+    expect(response.body).to include("Lock grid")
+    expect(response.body).to include("notae-actions-font-grid")
+    expect(response.body).to include("Default")
+    expect(response.body).to include("Serif")
+    expect(response.body).to include("Mono")
     expect(response.body).to include("Copy link to view")
-    expect(response.body).to include("Duplicate view")
+    expect(response.body).to include("Copy page contents")
+    expect(response.body).to include("Duplicate")
+    expect(response.body).to include("Move to")
+    expect(response.body).to include("Move to Trash")
+    expect(response.body).to include("Small text")
+    expect(response.body).to include("Undo")
+    expect(response.body).to include("Export")
+    expect(response.body).to include("Updates &amp; analytics")
+    expect(response.body).to include("Version history")
+    expect(response.body).to include("notae-db-actions-menu")
+    expect(response.body).to include("data-copy-text-feedback")
+    expect(response.body).to include("http://www.example.com/w/#{workspace.slug}/databases/#{database.id}")
+    expect(response.body).to include("Timeline")
+    expect(response.body).to include("Kanban board")
+    expect(response.body).to include("Map")
+    expect(response.body).not_to include("Open linked page")
     expect(response.body).to include("Random cover")
     expect(response.body).to include("Move up")
     expect(response.body).to include("Move down")
+    expect(response.body).to include("notae-db-settings-menu")
     expect(response.body).to include("🧠")
     expect(response.body).to include("name=\"database[name]\"")
     expect(response.body).to include("notae-page-title-input")
     expect(response.body).not_to include("db-edit-view-panel")
+    expect(response.body).not_to include("notae-db-view-plus")
+  end
+
+  it "applies property visibility from view config to table columns" do
+    owner = User.create!(email: "database-property-visibility-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Property visibility tables", slug: "property-visibility-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Visibility DB")
+    visible_property = DbProperty.create!(workspace: workspace, database: database, name: "Visible column", property_type: :text)
+    hidden_property = DbProperty.create!(workspace: workspace, database: database, name: "Hidden column", property_type: :text)
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "visible_property_ids" => [ visible_property.id ] }
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    visible_headers = html.css(".notae-db-grid-property-link").map { |node| node.text.strip }
+    expect(visible_headers).to include("Visible column")
+    expect(visible_headers).not_to include("Hidden column")
+  end
+
+  it "locks the grid and blocks row edits until unlocked" do
+    owner = User.create!(email: "database-lock-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Lock tables", slug: "lock-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Lock DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Initial title")
+    sign_in owner
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { locked: true } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.locked).to eq(true)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_settings: "open")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-db-settings-panel is-grid-locked")
+    expect(response.body).to include("Grid is locked. Unlock to edit settings.")
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { title: "Locked edit" } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(row.reload.title).to eq("Initial title")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { name: "Renamed while locked" } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.name).to eq("Lock DB")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { locked: false } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.locked).to eq(false)
   end
 
   it "supports json autosave for database name updates" do
@@ -569,6 +681,35 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("notae-db-split-pane")
     expect(response.body).to include("Linked page side peek")
     expect(response.body).to include(row.linked_page.title)
+    expect(response.body).to include("notae-db-title-link")
+    expect(response.body).to include("Open linked Nota")
+  end
+
+  it "uses the submitted row name when creating a linked page from the name field action" do
+    owner = User.create!(email: "database-row-link-name-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row link name tables", slug: "row-link-name-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row link name DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Untitled row")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { title: "Webinars", link_action: "create_page" } }
+
+    row.reload
+    expect(row.title).to eq("Webinars")
+    expect(row.linked_page).to be_present
+    expect(row.linked_page.title).to eq("Webinars")
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_page_id: row.linked_page_id,
+        split_source: "row",
+        split_row_id: row.id,
+        anchor: "row_#{row.id}"
+      )
+    )
   end
 
   it "links an existing page to a grid and renders split pane controls" do
@@ -658,5 +799,110 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Keep me")
     expect(response.body).not_to include("Archive me")
     expect(kept_row.reload.archived_at).to be_nil
+  end
+
+  it "duplicates a grid with properties, rows, values, and views" do
+    owner = User.create!(email: "database-duplicate-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Duplicate tables", slug: "duplicate-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Ops grid")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship launch")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "Done")
+    DatabaseView.create!(workspace: workspace, database: database, created_by: owner, name: "Board", view_type: :board)
+    sign_in owner
+
+    post duplicate_database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to be_redirect
+    duplicate_id = response.location.split("/").last
+    duplicate = Database.find(duplicate_id)
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: duplicate.id))
+    expect(duplicate.name).to start_with("Ops grid (copy)")
+
+    copied_property = duplicate.db_properties.find_by!(name: "Status")
+    copied_row = duplicate.db_rows.find_by!(title: "Ship launch")
+    copied_cell = copied_row.db_cells.find_by!(db_property_id: copied_property.id)
+    expect(copied_cell.value_text).to eq("Done")
+    expect(duplicate.database_views.pluck(:name)).to include("Board")
+  end
+
+  it "archives and restores a grid via trash flow" do
+    owner = User.create!(email: "database-trash-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database trash tables", slug: "database-trash-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Archive me grid")
+    sign_in owner
+
+    patch archive_database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to redirect_to(workspace_trash_path(workspace_slug: workspace.slug))
+    expect(database.reload.archived_at).to be_present
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:not_found)
+
+    get workspace_trash_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Archive me grid")
+
+    patch restore_database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.archived_at).to be_nil
+  end
+
+  it "exports grid rows as csv" do
+    owner = User.create!(email: "database-export-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Export tables", slug: "export-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Export grid")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship launch")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "Done")
+    sign_in owner
+
+    get export_csv_database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/csv")
+    expect(response.body).to include("Name,Status")
+    expect(response.body).to include("Ship launch,Done")
+  end
+
+  it "toggles small text mode for the grid shell" do
+    owner = User.create!(email: "database-small-text-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Small text tables", slug: "small-text-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Small text grid")
+    sign_in owner
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { small_text: true } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.small_text).to eq(true)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    layout_shell = html.at_css(".notae-db-split-layout")
+    expect(layout_shell["class"]).to include("is-small-text")
+  end
+
+  it "updates grid font style from actions controls" do
+    owner = User.create!(email: "database-font-style-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Font style tables", slug: "font-style-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Font style grid")
+    sign_in owner
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { font_style: "serif" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.font_style).to eq("serif")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    layout_shell = html.at_css(".notae-db-split-layout")
+    expect(layout_shell["class"]).to include("is-font-serif")
   end
 end

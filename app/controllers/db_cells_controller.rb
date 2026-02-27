@@ -2,6 +2,7 @@ class DbCellsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database
+  before_action :ensure_database_unlocked!
   before_action :set_db_cell
 
   def update
@@ -27,7 +28,7 @@ class DbCellsController < ApplicationController
   end
 
   def set_database
-    @database = policy_scope(Database).for_workspace(@workspace).find(params[:database_id])
+    @database = policy_scope(Database).for_workspace(@workspace).active.find(params[:database_id])
   end
 
   def set_db_cell
@@ -39,7 +40,7 @@ class DbCellsController < ApplicationController
   end
 
   def cell_redirect_location
-    database_path(
+    path_params = {
       workspace_slug: @workspace.slug,
       id: @database.id,
       view_id: params[:view_id].presence,
@@ -48,10 +49,20 @@ class DbCellsController < ApplicationController
       sort_direction: params[:sort_direction],
       filter_property_id: params[:filter_property_id],
       filter_value: params[:filter_value],
+      filter_operator: params[:filter_operator],
+      view_settings: params[:view_settings].presence,
+      actions_menu: params[:actions_menu].presence,
       split_page_id: params[:split_page_id],
       split_source: params[:split_source],
-      split_row_id: params[:split_row_id],
-      anchor: "row_#{@db_cell.db_row_id}"
-    )
+      split_row_id: params[:split_row_id]
+    }.compact
+    path_params[:anchor] = "row_#{@db_cell.db_row_id}" if @db_cell.present?
+    database_path(path_params)
+  end
+
+  def ensure_database_unlocked!
+    return unless @database.locked?
+
+    redirect_to cell_redirect_location, alert: "Grid is locked. Unlock to make changes."
   end
 end

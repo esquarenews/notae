@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["createMenu", "actionsMenu", "optionsMenu"]
+  static targets = ["createMenu", "actionsMenu", "optionsMenu", "workspaceDialog", "workspaceNameInput", "workspaceSlugInput"]
 
   connect() {
     this.onKeydown = (event) => {
@@ -38,6 +38,7 @@ export default class extends Controller {
     this.element.classList.remove("sidebar-open")
     this.unlockBody()
     this.closeCreateMenu()
+    this.closeWorkspaceDialog()
     this.closeActionsMenu()
     this.closeOptionsMenu()
     this.closeCommentsMenu()
@@ -59,6 +60,50 @@ export default class extends Controller {
     if (!this.hasCreateMenuTarget) return
 
     this.createMenuTarget.classList.add("is-hidden")
+  }
+
+  openWorkspaceDialog(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (!this.hasWorkspaceDialogTarget) return
+
+    this.closeCreateMenu()
+    this.workspaceDialogTarget.classList.remove("is-hidden")
+    if (this.hasWorkspaceSlugInputTarget) {
+      this.workspaceSlugInputTarget.dataset.userEdited = "false"
+    }
+    if (this.hasWorkspaceNameInputTarget) {
+      this.workspaceNameInputTarget.focus()
+    }
+  }
+
+  closeWorkspaceDialog(event) {
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    if (!this.hasWorkspaceDialogTarget) return
+
+    this.workspaceDialogTarget.classList.add("is-hidden")
+  }
+
+  syncWorkspaceSlug(event) {
+    if (!this.hasWorkspaceSlugInputTarget) return
+    if (this.workspaceSlugInputTarget.dataset.userEdited === "true") return
+
+    const normalized = (event.target?.value || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .replace(/-{2,}/g, "-")
+    this.workspaceSlugInputTarget.value = normalized
+  }
+
+  markWorkspaceSlugEdited() {
+    if (!this.hasWorkspaceSlugInputTarget) return
+
+    this.workspaceSlugInputTarget.dataset.userEdited = "true"
   }
 
   closeActionsMenu() {
@@ -174,7 +219,7 @@ export default class extends Controller {
   handleActionsMenuWindowClick(event) {
     if (!this.hasActionsMenuTarget) return
     if (!this.actionsMenuTarget.hasAttribute("open")) return
-    if (event.target.closest("#page-actions-menu")) return
+    if (event.target.closest("[data-shell-actions-menu]")) return
 
     this.closeActionsMenu()
   }

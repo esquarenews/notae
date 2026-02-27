@@ -5,7 +5,7 @@
 <section class="notae-trash-shell">
   <header class="notae-trash-header">
     <%= form_with url: workspace_trash_path(workspace_slug: @workspace.slug), method: :get, class: "notae-trash-search-form" do |form| %>
-      <%= form.search_field :q, value: @query, placeholder: "Search pages in Trash", class: "notae-pref-select notae-trash-search" %>
+      <%= form.search_field :q, value: @query, placeholder: "Search Notarum in Trash", class: "notae-pref-select notae-trash-search" %>
     <% end %>
     <div class="notae-trash-filters">
       <span class="notae-trash-chip">Last edited by</span>
@@ -14,36 +14,64 @@
     </div>
   </header>
 
-  <% if @archived_pages.empty? %>
+  <% if @archived_pages.empty? && @archived_databases.empty? %>
     <div class="notae-trash-empty">
       <p class="notae-trash-empty-icon">🗑️</p>
       <p class="notae-pref-label">No results</p>
     </div>
   <% else %>
-    <ul class="notae-trash-list">
-      <% @archived_pages.each do |page| %>
-        <li class="notae-trash-item">
-          <div class="notae-trash-item-main">
-            <p class="notae-pref-label"><%= page.icon.presence || "📄" %> <%= page.title %></p>
-            <p class="notae-pref-description">Archived <%= time_ago_in_words(page.archived_at) %> ago</p>
-          </div>
-          <div class="notae-trash-item-actions">
-            <%= button_to "Restore",
-                          restore_page_path(workspace_slug: @workspace.slug, id: page.id),
-                          method: :patch,
-                          class: "notae-chip-button" %>
-            <%= button_to "Delete permanently",
-                          page_path(workspace_slug: @workspace.slug, id: page.id),
-                          method: :delete,
-                          class: "notae-chip-button notae-chip-danger",
-                          form: { data: { turbo_confirm: "Delete #{page.title} permanently?" } } %>
-          </div>
-        </li>
-      <% end %>
-    </ul>
+    <% if @archived_pages.any? %>
+      <p class="notae-pref-label">Notarum</p>
+      <ul class="notae-trash-list">
+        <% @archived_pages.each do |page| %>
+          <li class="notae-trash-item">
+            <div class="notae-trash-item-main">
+              <p class="notae-pref-label"><%= page.icon.presence || "📄" %> <%= page.title %></p>
+              <p class="notae-pref-description">Archived <%= time_ago_in_words(page.archived_at) %> ago</p>
+            </div>
+            <div class="notae-trash-item-actions">
+              <%= button_to "Restore",
+                            restore_page_path(workspace_slug: @workspace.slug, id: page.id),
+                            method: :patch,
+                            class: "notae-chip-button" %>
+              <%= button_to "Delete permanently",
+                            page_path(workspace_slug: @workspace.slug, id: page.id),
+                            method: :delete,
+                            class: "notae-chip-button notae-chip-danger",
+                            form: { data: { turbo_confirm: "Delete #{page.title} permanently?" } } %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <% if @archived_databases.any? %>
+      <p class="notae-pref-label">Grids</p>
+      <ul class="notae-trash-list">
+        <% @archived_databases.each do |database| %>
+          <li class="notae-trash-item">
+            <div class="notae-trash-item-main">
+              <p class="notae-pref-label"><%= database.icon.presence || "🗃️" %> <%= database.name %></p>
+              <p class="notae-pref-description">Archived <%= time_ago_in_words(database.archived_at) %> ago</p>
+            </div>
+            <div class="notae-trash-item-actions">
+              <%= button_to "Restore",
+                            restore_database_path(workspace_slug: @workspace.slug, id: database.id),
+                            method: :patch,
+                            class: "notae-chip-button" %>
+              <%= button_to "Delete permanently",
+                            database_path(workspace_slug: @workspace.slug, id: database.id),
+                            method: :delete,
+                            class: "notae-chip-button notae-chip-danger",
+                            form: { data: { turbo_confirm: "Delete #{database.name} permanently?" } } %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
   <% end %>
 
   <footer class="notae-trash-footer">
-    Pages in Trash for over 30 days will be automatically deleted.
+    Notarum and grids in Trash for over 30 days will be automatically deleted.
   </footer>
 </section>

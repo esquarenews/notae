@@ -2,6 +2,7 @@ class DatabaseViewsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database
+  before_action :ensure_database_unlocked!, only: %i[create update set_default]
   before_action :set_database_view, only: %i[update set_default]
 
   def create
@@ -11,7 +12,13 @@ class DatabaseViewsController < ApplicationController
 
     if @database_view.save
       @database_view.set_as_default! if @database_view.default?
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @database_view.id), notice: "View saved."
+      redirect_to database_path(
+        workspace_slug: @workspace.slug,
+        id: @database.id,
+        view_id: @database_view.id,
+        view_settings: params[:view_settings].presence,
+        actions_menu: params[:actions_menu].presence
+      ), notice: "View saved."
     else
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @database_view.errors.full_messages.to_sentence
     end
@@ -22,7 +29,13 @@ class DatabaseViewsController < ApplicationController
 
     if @database_view.update(database_view_params)
       @database_view.set_as_default! if @database_view.default?
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @database_view.id), notice: "View updated."
+      redirect_to database_path(
+        workspace_slug: @workspace.slug,
+        id: @database.id,
+        view_id: @database_view.id,
+        view_settings: params[:view_settings].presence,
+        actions_menu: params[:actions_menu].presence
+      ), notice: "View updated."
     else
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @database_view.id), alert: @database_view.errors.full_messages.to_sentence
     end
@@ -31,7 +44,13 @@ class DatabaseViewsController < ApplicationController
   def set_default
     authorize @database_view, :set_default?
     @database_view.set_as_default!
-    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @database_view.id), notice: "Default view set."
+    redirect_to database_path(
+      workspace_slug: @workspace.slug,
+      id: @database.id,
+      view_id: @database_view.id,
+      view_settings: params[:view_settings].presence,
+      actions_menu: params[:actions_menu].presence
+    ), notice: "Default view set."
   end
 
   private
@@ -41,7 +60,7 @@ class DatabaseViewsController < ApplicationController
   end
 
   def set_database
-    @database = policy_scope(Database).for_workspace(@workspace).find(params[:database_id])
+    @database = policy_scope(Database).for_workspace(@workspace).active.find(params[:database_id])
   end
 
   def set_database_view
@@ -57,20 +76,40 @@ class DatabaseViewsController < ApplicationController
       :sort_direction,
       :filter_property_id,
       :filter_value,
+      :filter_operator,
       :group_property_id,
-      :date_property_id
+      :date_property_id,
+      :conditional_color_mode,
+      :conditional_color_property_id,
+      visible_property_ids: []
     )
 
-    config = {
-      "sort_property_id" => permitted.delete(:sort_property_id).presence,
-      "sort_direction" => normalize_sort_direction(permitted.delete(:sort_direction)),
-      "filter_property_id" => permitted.delete(:filter_property_id).presence,
-      "filter_value" => permitted.delete(:filter_value).presence,
-      "group_property_id" => permitted.delete(:group_property_id).presence,
-      "date_property_id" => permitted.delete(:date_property_id).presence
-    }.compact
+    config = @database_view&.config_json.to_h.deep_dup
 
-    permitted[:config_json] = config
+    apply_config_value!(config, "sort_property_id", permitted, :sort_property_id) { |value| value.presence }
+    apply_config_value!(config, "sort_direction", permitted, :sort_direction) { |value| normalize_sort_direction(value) }
+    apply_config_value!(config, "filter_property_id", permitted, :filter_property_id) { |value| value.presence }
+    apply_config_value!(config, "filter_value", permitted, :filter_value) { |value| value.presence }
+    apply_config_value!(config, "filter_operator", permitted, :filter_operator) { |value| normalize_filter_operator(value) }
+    apply_config_value!(config, "group_property_id", permitted, :group_property_id) { |value| value.presence }
+    apply_config_value!(config, "date_property_id", permitted, :date_property_id) { |value| value.presence }
+    apply_config_value!(config, "conditional_color_mode", permitted, :conditional_color_mode) do |value|
+      normalize_conditional_color_mode(value)
+    end
+    apply_config_value!(config, "conditional_color_property_id", permitted, :conditional_color_property_id) do |value|
+      value.presence
+    end
+
+    if permitted.key?(:visible_property_ids)
+      visible_ids = Array(permitted.delete(:visible_property_ids)).map(&:to_s).reject(&:blank?).uniq
+      if visible_ids.empty?
+        config.delete("visible_property_ids")
+      else
+        config["visible_property_ids"] = visible_ids
+      end
+    end
+
+    permitted[:config_json] = config.compact
     permitted
   end
 
@@ -79,5 +118,38 @@ class DatabaseViewsController < ApplicationController
     return direction if %w[asc desc].include?(direction)
 
     nil
+  end
+
+  def ensure_database_unlocked!
+    return unless @database.locked?
+
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: "Grid is locked. Unlock to make changes."
+  end
+
+  def normalize_filter_operator(value)
+    operator = value.to_s
+    return operator if %w[eq before after].include?(operator)
+
+    nil
+  end
+
+  def normalize_conditional_color_mode(value)
+    mode = value.to_s
+    return mode if %w[overdue].include?(mode)
+
+    nil
+  end
+
+  def apply_config_value!(config, config_key, params_hash, params_key)
+    return unless params_hash.key?(params_key)
+
+    raw_value = params_hash.delete(params_key)
+    normalized_value = block_given? ? yield(raw_value) : raw_value
+
+    if normalized_value.nil?
+      config.delete(config_key)
+    else
+      config[config_key] = normalized_value
+    end
   end
 end

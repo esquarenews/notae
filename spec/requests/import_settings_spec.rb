@@ -51,6 +51,7 @@ RSpec.describe "Import settings", type: :request do
     end.to change(Page, :count).by(2)
 
     expect(response).to redirect_to(workspace_import_settings_path(workspace_slug: workspace.slug))
+    expect(flash[:notice]).to include("Imported 2 Notarum.")
     expect(workspace.pages.where(title: "notes")).to exist
     expect(workspace.pages.where(title: "summary")).to exist
   end
@@ -88,6 +89,7 @@ RSpec.describe "Import settings", type: :request do
     end.to change(Page, :count).by(1)
 
     expect(response).to redirect_to(workspace_import_settings_path(workspace_slug: workspace.slug))
+    expect(flash[:notice]).to include("Imported 1 Nota.")
     page = workspace.pages.order(created_at: :desc).first
     expect(page.title).to eq("broken")
     expect(page.blocks.first.content_json.to_s).to include("PDF")

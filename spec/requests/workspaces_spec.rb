@@ -44,6 +44,19 @@ RSpec.describe "Workspaces", type: :request do
     expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
   end
 
+  it "derives the workspace slug from the name when slug is omitted" do
+    user = User.create!(email: "workspace-slug-derived@example.com", password: "password123")
+    sign_in user
+
+    expect do
+      post workspaces_path, params: { workspace: { name: "Growth Team", slug: "" } }
+    end.to change(Workspace, :count).by(1)
+
+    workspace = Workspace.find_by!(slug: "growth-team")
+    expect(response).to redirect_to(workspace_path("growth-team"))
+    expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
+  end
+
   it "restricts workspace access to members" do
     owner = User.create!(email: "ws-owner@example.com", password: "password123")
     outsider = User.create!(email: "outsider@example.com", password: "password123")

@@ -33,9 +33,9 @@ RSpec.describe "Workspace home styling", type: :request do
     expect(response.body).to include("🚀")
 
     body = response.body
-    search_index = body.index("Search pages, blocks, and rows")
-    create_page_index = body.index("<h2>Create page</h2>")
-    pages_index = body.index("<h2>Pages</h2>")
+    search_index = body.index("Search Notarum, blocks, and rows")
+    create_page_index = body.index("<h2>Create Nota</h2>")
+    pages_index = body.index("<h2>Notarum</h2>")
     databases_index = body.index("<h2>Grids</h2>")
     members_index = body.index("<h2>Members</h2>")
     invite_index = body.index("<h2>Invite people</h2>")

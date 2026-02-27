@@ -15,6 +15,14 @@ RSpec.describe Database, type: :model do
     expect(database).to be_valid
   end
 
+  it "validates font style against supported values" do
+    workspace = Workspace.create!(name: "Database model workspace font", slug: "database-model-workspace-font")
+    database = described_class.new(workspace: workspace, name: "Font spec", font_style: "comic")
+
+    expect(database).not_to be_valid
+    expect(database.errors[:font_style]).to include("is not included in the list")
+  end
+
   it "treats preset covers as a valid attached-style cover state" do
     workspace = Workspace.create!(name: "Database model workspace 3", slug: "database-model-workspace-3")
     database = described_class.create!(

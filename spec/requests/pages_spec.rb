@@ -125,7 +125,7 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to match(%r{href="[^"]*/assets/application[^"]*\.css"})
   end
 
-  it "renders sidebar create menu with page, grid, and meeting options plus icons" do
+  it "renders sidebar create menu with Nota, grid, meeting, and workspace options plus icons" do
     owner = User.create!(email: "page-sidebar-create-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Sidebar create", slug: "sidebar-create")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -135,12 +135,35 @@ RSpec.describe "Pages", type: :request do
     get workspace_path(workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("New page")
+    expect(response.body).to include("New Nota")
     expect(response.body).to include("New grid")
     expect(response.body).to include("New meeting")
+    expect(response.body).to include("New Workspace")
     expect(response.body).to include("notae-create-menu-icon-page")
     expect(response.body).to include("notae-create-menu-icon-database")
     expect(response.body).to include("notae-create-menu-icon-meeting")
+    expect(response.body).to include("notae-create-menu-icon-workspace")
+    expect(response.body).to include("data-shell-target=\"workspaceDialog\"")
+  end
+
+  it "keeps create redirects working even if another workspace has a blank slug" do
+    owner = User.create!(email: "page-create-blank-slug-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Create target", slug: "create-target")
+    stale_workspace = Workspace.create!(name: "Stale workspace", slug: "stale-workspace")
+    stale_workspace.update_column(:slug, "")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: stale_workspace, user: owner, role: :owner)
+    sign_in owner
+
+    post pages_path(workspace_slug: workspace.slug), params: { page: { title: "Created from menu" } }
+
+    created_page = Page.order(created_at: :desc).first
+    expect(created_page.title).to eq("Created from menu")
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: created_page.id))
+
+    follow_redirect!
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Created from menu")
   end
 
   it "renders grids in the sidebar with each grid icon appended to the title" do

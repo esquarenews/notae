@@ -3,7 +3,7 @@ class LibrariesController < ApplicationController
   before_action :set_workspace
 
   COLUMN_OPTIONS = {
-    "page_name" => "Page name",
+    "page_name" => "Nota name",
     "workspace" => "Workspace",
     "created_by" => "Created by",
     "source" => "Source",
@@ -162,6 +162,7 @@ class LibrariesController < ApplicationController
   def database_rows(workspace_ids, owner_email_lookup, favorite_lookup)
     policy_scope(Database)
       .where(workspace_id: workspace_ids)
+      .active
       .includes(:workspace)
       .to_a
       .map do |database|

@@ -26,6 +26,7 @@ module Search
 
     SEARCH_MODEL = "gpt-4o-mini"
     WRITING_MODEL = "gpt-4.1-mini"
+    GENERAL_MODEL = "gpt-4.1-mini"
     MAX_CONTEXT_ITEMS = 12
 
     attr_reader :unavailable_reason
@@ -54,6 +55,9 @@ module Search
       end
 
       context_entries = build_context_entries(resolved_scope)
+      if use_general_knowledge_response?(resolved_scope: resolved_scope, context_entries: context_entries)
+        return generate_general_knowledge_response(resolved_scope: resolved_scope, resolved_intent: resolved_intent)
+      end
       return unavailable(:no_context) if context_entries.empty?
 
       response = Openai::ResponsesClient.generate_text_with_usage(
@@ -165,6 +169,76 @@ module Search
         intent: resolved_intent,
         auto_insert: resolved_intent == INTENT_COMPOSE,
         model: WRITING_MODEL
+      )
+    end
+
+    def use_general_knowledge_response?(resolved_scope:, context_entries:)
+      return false if resolved_scope == SCOPE_DOCUMENT
+      return true if general_knowledge_prompt?
+
+      context_entries.empty?
+    end
+
+    def general_knowledge_prompt?
+      normalized = prompt.downcase.strip
+      return false if normalized.blank?
+      return false if context_bound_prompt?(normalized)
+
+      dictionary_like_patterns = [
+        /\bdefinition of\b/,
+        /\bdefine\b/,
+        /\bwhat does .+ mean\b/,
+        /\bmeaning of\b/,
+        /\bsynonym(?:s)? (?:for|of)\b/,
+        /\balternative word(?:s)? (?:for|to)\b/,
+        /\banother word(?:s)? (?:for|to)\b/
+      ]
+      return true if dictionary_like_patterns.any? { |pattern| normalized.match?(pattern) }
+
+      normalized.start_with?("what is ") && normalized.split.size <= 7
+    end
+
+    def context_bound_prompt?(normalized_prompt)
+      context_patterns = [
+        /\b(this|current|our)\s+(document|nota|page|workspace|grid|row|account)\b/,
+        /\b(in|from|within)\s+(this|the)\s+(document|nota|page|workspace|grid)\b/,
+        /\bmentioned\b/,
+        /\bsummari[sz]e\b/
+      ]
+
+      context_patterns.any? { |pattern| normalized_prompt.match?(pattern) }
+    end
+
+    def generate_general_knowledge_response(resolved_scope:, resolved_intent:)
+      response = Openai::ResponsesClient.generate_text_with_usage(
+        prompt: general_prompt_for(resolved_scope: resolved_scope),
+        api_key: user.openai_api_key,
+        model: GENERAL_MODEL,
+        max_output_tokens: 420
+      )
+      answer_text = response[:text].to_s.strip
+      return unavailable(:empty_response) if answer_text.blank?
+
+      Search::AiUsageLogger.log!(
+        user: user,
+        workspace: workspace,
+        operation: AiUsageLog::OP_ASSISTANT_QUERY,
+        model: GENERAL_MODEL,
+        usage: response[:usage],
+        metadata: {
+          scope: resolved_scope,
+          answer_mode: "general_knowledge",
+          prompt_length: prompt.length
+        }
+      )
+
+      Response.new(
+        answer: answer_text,
+        sources: [],
+        scope: resolved_scope,
+        intent: resolved_intent,
+        auto_insert: false,
+        model: GENERAL_MODEL
       )
     end
 
@@ -286,6 +360,20 @@ module Search
 
         Context:
         #{context_lines.join("\n")}
+      PROMPT
+    end
+
+    def general_prompt_for(resolved_scope:)
+      <<~PROMPT
+        You are Notae AI.
+        Answer the user directly using general knowledge.
+        Keep the answer concise and practical.
+        If the request asks for a definition, provide a short definition first.
+        If the request asks for alternative words or synonyms, provide a short list.
+        Do not include citation markers like [1].
+
+        Scope: #{resolved_scope}
+        Question: #{prompt}
       PROMPT
     end
 

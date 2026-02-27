@@ -29,6 +29,16 @@ export default class extends Controller {
   }
 
   flashCopied(button) {
+    const feedback = button.querySelector("[data-copy-text-feedback]")
+    if (feedback) {
+      const original = feedback.textContent
+      feedback.textContent = "Copied"
+      window.setTimeout(() => {
+        feedback.textContent = original
+      }, 1200)
+      return
+    }
+
     const original = button.textContent
     button.textContent = "Copied"
     window.setTimeout(() => {

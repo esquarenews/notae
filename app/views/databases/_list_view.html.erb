@@ -11,11 +11,13 @@
         sort_property_id: params[:sort_property_id],
         sort_direction: params[:sort_direction],
         filter_property_id: params[:filter_property_id],
-        filter_value: params[:filter_value]
+        filter_value: params[:filter_value],
+        filter_operator: params[:filter_operator],
+        view_settings: params[:view_settings]
       }.compact %>
       <article id="row_<%= row.id %>" class="notae-db-list-card">
         <div class="notae-db-list-card-head">
-          <% if policy(row).update? %>
+          <% if policy(row).update? && !@database.locked? %>
             <%= form_with model: row,
                           url: database_db_row_path(
                             {
@@ -34,7 +36,7 @@
           <% else %>
             <p class="text-sm font-medium text-stone-900"><%= row.title %></p>
           <% end %>
-          <% if policy(row).destroy? %>
+          <% if policy(row).destroy? && !@database.locked? %>
             <%= button_to "Archive",
                           database_db_row_path(
                             {
@@ -49,7 +51,7 @@
           <% end %>
         </div>
         <div class="mt-2 flex flex-wrap gap-2 text-xs text-stone-600">
-          <% @db_properties.each do |property| %>
+          <% (@visible_db_properties || @db_properties).each do |property| %>
             <% value = cell_value_for(row, property) %>
             <% next if value.blank? %>
 

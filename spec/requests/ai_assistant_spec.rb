@@ -116,4 +116,28 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.body).to include(block.id)
     expect(AiConversation.order(:created_at).last.answer).to include("polished launch paragraph")
   end
+
+  it "falls back to general-knowledge answers when workspace context is not required" do
+    user = User.create!(email: "ai-assistant-general-knowledge@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Assistant General Knowledge", slug: "ai-assistant-general-knowledge")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:model]).to eq(Search::AssistantQueryService::GENERAL_MODEL)
+      {
+        text: "An alternative word for nice is pleasant.",
+        usage: { prompt_tokens: 50, completion_tokens: 14, total_tokens: 64 }
+      }
+    end
+
+    sign_in user
+    post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+         params: { ai_assistant: { prompt: "What is an alternative word to nice?", scope: Search::AssistantQueryService::SCOPE_WORKSPACE } },
+         headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("alternative word for nice is pleasant")
+    expect(response.body).not_to include("could not find enough context")
+    expect(AiConversation.order(:created_at).last.status).to eq(AiConversation::STATUS_SUCCESS)
+  end
 end

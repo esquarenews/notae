@@ -58,6 +58,35 @@ RSpec.describe Search::AssistantQueryService do
     expect(service.unavailable_reason).to eq(:no_context)
   end
 
+  it "uses a full-model general knowledge response for definition-style prompts" do
+    user = User.create!(email: "assistant-general-knowledge@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Assistant General Knowledge", slug: "assistant-general-knowledge")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:model]).to eq(Search::AssistantQueryService::GENERAL_MODEL)
+      expect(args[:prompt]).to include("general knowledge")
+      {
+        text: "Notarum means notes or records, often used as a stylized plural for notes.",
+        usage: { prompt_tokens: 55, completion_tokens: 22, total_tokens: 77 }
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "What is definition of notarum?",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+    ).call
+
+    expect(response).to be_present
+    expect(response.answer).to include("Notarum")
+    expect(response.sources).to eq([])
+    expect(response.model).to eq(Search::AssistantQueryService::GENERAL_MODEL)
+    usage = AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_ASSISTANT_QUERY)
+    expect(usage).to exist
+  end
+
   it "drops invalid citations and keeps mapped sources only" do
     user = User.create!(email: "assistant-citation@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Assistant Citation", slug: "assistant-citation")

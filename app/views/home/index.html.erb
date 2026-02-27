@@ -19,9 +19,11 @@
       <% if @workspaces.any? %>
         <div class="notae-home-workspace-list">
           <% @workspaces.each do |workspace| %>
-            <%= link_to workspace_path(workspace.slug), class: "notae-home-workspace-item" do %>
+            <% workspace_slug = workspace.slug.to_s.strip %>
+            <% next if workspace_slug.blank? %>
+            <%= link_to workspace_path(workspace_slug), class: "notae-home-workspace-item" do %>
               <strong><%= workspace.name %></strong>
-              <span><%= workspace.slug %></span>
+              <span><%= workspace_slug %></span>
             <% end %>
           <% end %>
         </div>

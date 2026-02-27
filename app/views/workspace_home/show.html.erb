@@ -9,7 +9,7 @@
 
   <section class="notae-auth-card notae-home-card">
     <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search" do |form| %>
-      <%= form.text_field :q, placeholder: "Search pages, blocks, and rows", class: "notae-auth-input" %>
+      <%= form.text_field :q, placeholder: "Search Notarum, blocks, and rows", class: "notae-auth-input" %>
       <%= form.submit "Search", class: "notae-chip-button" %>
       <%= link_to "Notifications (#{@unread_notifications_count})",
                   workspace_notifications_path(workspace_slug: @workspace.slug),
@@ -21,12 +21,12 @@
     <% if policy(Page.new(workspace: @workspace)).create? %>
       <div class="notae-auth-card notae-home-card">
         <div class="notae-home-card-head">
-          <h2>Create page</h2>
+          <h2>Create Nota</h2>
         </div>
         <%= form_with model: @new_page, url: pages_path(workspace_slug: @workspace.slug), class: "notae-workspace-home-stack" do |form| %>
-          <%= form.text_field :title, placeholder: "New page title", required: true, class: "notae-auth-input" %>
+          <%= form.text_field :title, placeholder: "New Nota title", required: true, class: "notae-auth-input" %>
           <%= form.hidden_field :parent_page_id %>
-          <%= form.submit "Create page", class: "notae-chip-button" %>
+          <%= form.submit "Create Nota", class: "notae-chip-button" %>
         <% end %>
       </div>
     <% end %>
@@ -46,7 +46,7 @@
 
   <section class="notae-auth-card notae-home-card">
     <div class="notae-home-card-head">
-      <h2>Pages</h2>
+      <h2>Notarum</h2>
     </div>
     <% if @recent_pages.any? %>
       <div class="notae-workspace-page-grid">
@@ -66,14 +66,14 @@
               <span class="notae-workspace-page-card-icon"><%= page.icon.presence || "📄" %></span>
               <div class="notae-workspace-page-card-text">
                 <strong><%= page.title %></strong>
-                <span>Page</span>
+                <span>Nota</span>
               </div>
             </div>
           <% end %>
         <% end %>
       </div>
     <% else %>
-      <p class="notae-page-subtle">No pages yet.</p>
+      <p class="notae-page-subtle">No Notarum yet.</p>
     <% end %>
   </section>
 

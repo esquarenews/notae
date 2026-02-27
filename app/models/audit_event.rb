@@ -1,5 +1,5 @@
 class AuditEvent < ApplicationRecord
-  ACTIONS = %w[share role_change delete].freeze
+  ACTIONS = %w[share role_change delete create update duplicate restore].freeze
 
   belongs_to :workspace
   belongs_to :actor, class_name: "User"

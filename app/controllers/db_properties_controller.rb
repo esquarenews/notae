@@ -2,6 +2,7 @@ class DbPropertiesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database
+  before_action :ensure_database_unlocked!
   before_action :set_db_property, only: :destroy
 
   def create
@@ -29,7 +30,7 @@ class DbPropertiesController < ApplicationController
   end
 
   def set_database
-    @database = policy_scope(Database).for_workspace(@workspace).find(params[:database_id])
+    @database = policy_scope(Database).for_workspace(@workspace).active.find(params[:database_id])
   end
 
   def set_db_property
@@ -58,9 +59,18 @@ class DbPropertiesController < ApplicationController
       sort_direction: params[:sort_direction].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
+      filter_operator: params[:filter_operator].presence,
+      view_settings: params[:view_settings].presence,
+      actions_menu: params[:actions_menu].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence
     )
+  end
+
+  def ensure_database_unlocked!
+    return unless @database.locked?
+
+    redirect_to database_redirect_location, alert: "Grid is locked. Unlock to make changes."
   end
 end

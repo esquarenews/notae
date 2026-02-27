@@ -15,8 +15,8 @@
     <h1>Library</h1>
     <% if policy(Page.new(workspace: @workspace)).create? %>
       <%= form_with model: Page.new, url: pages_path(workspace_slug: @workspace.slug), class: "notae-library-new-page-form" do |form| %>
-        <%= form.hidden_field :title, value: "New page" %>
-        <%= form.submit "New page", class: "notae-chip-button" %>
+        <%= form.hidden_field :title, value: "New Nota" %>
+        <%= form.submit "New Nota", class: "notae-chip-button" %>
       <% end %>
     <% end %>
   </header>
@@ -62,7 +62,7 @@
           <%= select_tag :source,
                          options_for_select([
                            ["All sources", "all"],
-                           ["Pages", "page"],
+                           ["Notarum", "page"],
                            ["Meetings", "meeting"],
                            ["Grids", "database"]
                          ], @source_filter),
@@ -80,8 +80,8 @@
                            ["Last edited (oldest first)", "last_edited_asc"],
                            ["Created (newest first)", "created_desc"],
                            ["Created (oldest first)", "created_asc"],
-                           ["Page name (A-Z)", "page_name_asc"],
-                           ["Page name (Z-A)", "page_name_desc"]
+                           ["Nota name (A-Z)", "page_name_asc"],
+                           ["Nota name (Z-A)", "page_name_desc"]
                          ], @sort),
                          class: "notae-options-input" %>
           <%= select_tag :filter_property,
@@ -132,7 +132,7 @@
       <thead>
         <tr>
           <% if visible_columns.include?("page_name") %>
-            <th>Page name</th>
+            <th>Nota name</th>
           <% end %>
           <% if visible_columns.include?("workspace") %>
             <th>Workspace</th>

@@ -2,7 +2,7 @@ module ApplicationHelper
   def ui_workspaces
     return [] unless user_signed_in?
 
-    @ui_workspaces ||= policy_scope(Workspace).order(:created_at).to_a
+    @ui_workspaces ||= workspace_scope_with_slug.order(:created_at).to_a
   end
 
   def ui_current_workspace
@@ -36,6 +36,7 @@ module ApplicationHelper
 
     @ui_sidebar_databases ||= policy_scope(Database)
                               .for_workspace(workspace)
+                              .active
                               .order(:created_at)
                               .limit(12)
                               .to_a
@@ -59,6 +60,7 @@ module ApplicationHelper
 
     policy_scope(Database)
       .for_workspace(workspace)
+      .active
       .order(updated_at: :desc)
       .limit(limit)
       .to_a
@@ -80,7 +82,7 @@ module ApplicationHelper
   def ui_sidebar_recent_workspaces(limit: 6)
     return [] unless user_signed_in?
 
-    policy_scope(Workspace)
+    workspace_scope_with_slug
       .order(updated_at: :desc)
       .limit(limit)
       .to_a
@@ -99,6 +101,7 @@ module ApplicationHelper
       .filter_map do |favorite|
         record = favorite.favoritable
         next if record.blank?
+        next if record.respond_to?(:archived?) && record.archived?
 
         type =
           case favorite.favoritable_type
@@ -142,5 +145,11 @@ module ApplicationHelper
 
   def format_date_mention(date:, preference:)
     DateMentions::Formatter.format(date: date, preference: preference)
+  end
+
+  private
+
+  def workspace_scope_with_slug
+    policy_scope(Workspace).where.not(slug: [ nil, "" ])
   end
 end

@@ -5,6 +5,7 @@
   <% recent_meetings = workspace ? ui_sidebar_recent_meetings : [] %>
   <% recent_favorites = workspace ? ui_sidebar_recent_favorites : [] %>
   <% recent_workspaces = ui_sidebar_recent_workspaces(limit: 6) %>
+  <% can_create_workspace = policy(Workspace.new).create? %>
   <div class="notae-sidebar-header">
     <div class="notae-user-chip notae-workspace-chip">
       <span class="notae-user-avatar"><%= workspace ? workspace.display_icon : current_user.email.first.upcase %></span>
@@ -33,7 +34,7 @@
                           <path d="M5.7 8h5M5.7 10.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
                         </svg>
                       </span>
-                      <span>New page</span>
+                      <span>New Nota</span>
                     </button>
                   <% end %>
                 </li>
@@ -66,6 +67,19 @@
                       <span>New grid</span>
                     </button>
                   <% end %>
+                </li>
+              <% end %>
+              <% if can_create_workspace %>
+                <li class="notae-create-menu-item">
+                  <button type="button" class="notae-create-menu-button" data-action="click->shell#openWorkspaceDialog">
+                    <span class="notae-create-menu-icon notae-create-menu-icon-workspace" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.2 5.2 8 2.2l5.8 3v6.6L8 14.8l-5.8-3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                        <path d="M8 2.2v12.6M2.2 5.2 8 8.1l5.8-2.9" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span>New Workspace</span>
+                  </button>
                 </li>
               <% end %>
             </ul>
@@ -110,9 +124,11 @@
         <% if recent_workspaces.any? %>
           <ul class="notae-sidebar-list is-indented">
             <% recent_workspaces.each do |sidebar_workspace| %>
+              <% sidebar_workspace_slug = sidebar_workspace.slug.to_s.strip %>
+              <% next if sidebar_workspace_slug.blank? %>
               <li>
-                <%= link_to workspace_path(sidebar_workspace.slug),
-                            class: notae_sidebar_link_classes(workspace_path(sidebar_workspace.slug)),
+                <%= link_to workspace_path(sidebar_workspace_slug),
+                            class: notae_sidebar_link_classes(workspace_path(sidebar_workspace_slug)),
                             data: { action: "click->shell#close" } do %>
                   <span class="notae-sidebar-page-title"><%= sidebar_workspace.display_icon %> <%= sidebar_workspace.name %></span>
                 <% end %>
@@ -125,7 +141,7 @@
       </section>
 
       <section class="notae-sidebar-section">
-        <p class="notae-sidebar-label">Pages</p>
+        <p class="notae-sidebar-label">Notarum</p>
         <% if recent_pages.any? %>
           <ul class="notae-sidebar-list is-indented">
             <% recent_pages.each do |page| %>
@@ -139,7 +155,7 @@
             <% end %>
           </ul>
         <% else %>
-          <p class="notae-sidebar-empty">No pages yet.</p>
+          <p class="notae-sidebar-empty">No Notarum yet.</p>
         <% end %>
       </section>
 
@@ -211,6 +227,49 @@
       </section>
     <% end %>
   </div>
+
+  <% if workspace && can_create_workspace %>
+    <div class="notae-modal is-hidden"
+         data-shell-target="workspaceDialog"
+         data-action="click->shell#closeWorkspaceDialog">
+      <div class="notae-modal-panel notae-workspace-modal-panel" data-action="click->shell#noop">
+        <div class="notae-modal-header">
+          <h2>Create Workspace</h2>
+          <button type="button"
+                  class="notae-inline-icon-button"
+                  data-action="click->shell#closeWorkspaceDialog"
+                  aria-label="Close create workspace dialog">✕</button>
+        </div>
+        <p class="notae-pref-description">Start a new workspace and become its owner.</p>
+        <%= form_with model: Workspace.new, url: workspaces_path, class: "notae-workspace-modal-form" do |form| %>
+          <label class="notae-workspace-modal-label" for="new_workspace_name">Workspace name</label>
+          <%= form.text_field :name,
+                              id: "new_workspace_name",
+                              required: true,
+                              class: "notae-auth-input",
+                              data: {
+                                shell_target: "workspaceNameInput",
+                                action: "input->shell#syncWorkspaceSlug"
+                              } %>
+
+          <label class="notae-workspace-modal-label" for="new_workspace_slug">Workspace URL slug</label>
+          <%= form.text_field :slug,
+                              id: "new_workspace_slug",
+                              required: true,
+                              class: "notae-auth-input",
+                              data: {
+                                shell_target: "workspaceSlugInput",
+                                action: "input->shell#markWorkspaceSlugEdited"
+                              } %>
+
+          <div class="notae-workspace-modal-actions">
+            <button type="button" class="notae-chip-button" data-action="click->shell#closeWorkspaceDialog">Cancel</button>
+            <%= form.submit "Create workspace", class: "notae-chip-button" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
 
   <div class="notae-sidebar-footer">
     <%= link_to "Settings",

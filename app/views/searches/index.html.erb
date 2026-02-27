@@ -11,7 +11,7 @@
   <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search notae-utility-search-form" do |form| %>
     <%= form.text_field :q,
                         value: @query,
-                        placeholder: "Find pages, blocks, rows",
+                        placeholder: "Find Notarum, blocks, rows",
                         class: "notae-auth-input notae-utility-input" %>
     <%= form.submit "Search", class: "notae-auth-submit notae-utility-submit" %>
   <% end %>

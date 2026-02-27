@@ -45,4 +45,22 @@ RSpec.describe "Trash", type: :request do
     end.to change(Page, :count).by(-1)
     expect(response).to redirect_to(workspace_trash_path(workspace_slug: workspace.slug))
   end
+
+  it "lists and restores archived grids" do
+    owner = User.create!(email: "trash-grid-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Trash grid workspace", slug: "trash-grid-workspace")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    archived_grid = Database.create!(workspace: workspace, name: "Old grid", archived_at: Time.current)
+    sign_in owner
+
+    get workspace_trash_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Old grid")
+
+    patch restore_database_path(workspace_slug: workspace.slug, id: archived_grid.id)
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: archived_grid.id))
+    expect(archived_grid.reload.archived_at).to be_nil
+  end
 end

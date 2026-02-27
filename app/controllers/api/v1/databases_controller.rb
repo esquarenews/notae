@@ -5,7 +5,7 @@ module Api
       before_action :set_database!, only: %i[show update]
 
       def index
-        databases = policy_scope(Database).for_workspace(workspace).order(:created_at).includes(:db_properties, :db_rows)
+        databases = policy_scope(Database).for_workspace(workspace).active.order(:created_at).includes(:db_properties, :db_rows)
 
         render json: { data: Api::V1::Serializers::DatabaseSerializer.render_collection(databases) }, status: :ok
       end
@@ -51,7 +51,7 @@ module Api
       private
 
       def set_database!
-        @database = policy_scope(Database).for_workspace(workspace).find(params[:id])
+        @database = policy_scope(Database).for_workspace(workspace).active.find(params[:id])
       end
 
       def database_params

@@ -18,7 +18,8 @@ class ImportSettingsController < ApplicationController
 
     result = Imports::IngestService.call(workspace: @workspace, user: current_user, files: files)
     if result.imported_count.positive?
-      notice_parts = [ "Imported #{result.imported_count} page#{'s' if result.imported_count != 1}." ]
+      imported_label = result.imported_count == 1 ? "Nota" : "Notarum"
+      notice_parts = [ "Imported #{result.imported_count} #{imported_label}." ]
       notice_parts << "Skipped #{result.skipped_files.count} unsupported file#{'s' if result.skipped_files.count != 1}." if result.skipped_files.any?
       redirect_to workspace_import_settings_path(workspace_slug: @workspace.slug), notice: notice_parts.join(" ")
     else

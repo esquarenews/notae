@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_27_121500) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_27_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -177,16 +177,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_121500) do
   end
 
   create_table "databases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "archived_at"
     t.integer "cover_focal_y", default: 50, null: false
     t.string "cover_preset_key"
     t.datetime "created_at", null: false
     t.text "description"
+    t.string "font_style", default: "default", null: false
     t.string "icon"
     t.uuid "linked_page_id"
+    t.boolean "locked", default: false, null: false
     t.string "name", null: false
+    t.boolean "small_text", default: false, null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
     t.index ["linked_page_id"], name: "index_databases_on_linked_page_id"
+    t.index ["workspace_id", "archived_at"], name: "index_databases_on_workspace_id_and_archived_at"
     t.index ["workspace_id", "name"], name: "index_databases_on_workspace_id_and_name"
     t.index ["workspace_id"], name: "index_databases_on_workspace_id"
   end

@@ -9,7 +9,13 @@
                   workspace_slug: @workspace.slug,
                   id: @database.id,
                   view_id: @current_view&.id,
-                  month: (@calendar_month - 1.month).to_s
+                  month: (@calendar_month - 1.month).to_s,
+                  sort_property_id: params[:sort_property_id],
+                  sort_direction: params[:sort_direction],
+                  filter_property_id: params[:filter_property_id],
+                  filter_value: params[:filter_value],
+                  filter_operator: params[:filter_operator],
+                  view_settings: params[:view_settings]
                 ),
                 class: "notae-chip-button" %>
     <h3 class="text-base font-medium"><%= @calendar_month.strftime("%B %Y") %></h3>
@@ -18,7 +24,13 @@
                   workspace_slug: @workspace.slug,
                   id: @database.id,
                   view_id: @current_view&.id,
-                  month: (@calendar_month + 1.month).to_s
+                  month: (@calendar_month + 1.month).to_s,
+                  sort_property_id: params[:sort_property_id],
+                  sort_direction: params[:sort_direction],
+                  filter_property_id: params[:filter_property_id],
+                  filter_value: params[:filter_value],
+                  filter_operator: params[:filter_operator],
+                  view_settings: params[:view_settings]
                 ),
                 class: "notae-chip-button" %>
   </div>
@@ -43,12 +55,18 @@
                  data-action="dragover->database-drag#dragover drop->database-drag#drop">
           <div class="mb-1 flex items-center justify-between">
             <span class="text-xs <%= day.month == @calendar_month.month ? 'text-stone-800' : 'text-stone-400' %>"><%= day.day %></span>
-            <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? %>
+            <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
               <%= form_with model: @new_row,
                             url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
                             class: "inline" do |form| %>
                 <%= hidden_field_tag :view_id, @current_view&.id %>
                 <%= hidden_field_tag :month, @calendar_month.to_s %>
+                <%= hidden_field_tag :sort_property_id, params[:sort_property_id] %>
+                <%= hidden_field_tag :sort_direction, params[:sort_direction] %>
+                <%= hidden_field_tag :filter_property_id, params[:filter_property_id] %>
+                <%= hidden_field_tag :filter_value, params[:filter_value] %>
+                <%= hidden_field_tag :filter_operator, params[:filter_operator] %>
+                <%= hidden_field_tag :view_settings, params[:view_settings] %>
                 <%= hidden_field_tag :date_property_id, @calendar_date_property.id %>
                 <%= hidden_field_tag :date_value, day.iso8601 %>
                 <%= form.hidden_field :title, value: "Untitled row" %>

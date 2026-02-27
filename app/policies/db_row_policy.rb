@@ -4,7 +4,7 @@ class DbRowPolicy < ApplicationPolicy
   end
 
   def create?
-    database_policy.create?
+    database_policy.update?
   end
 
   def update?

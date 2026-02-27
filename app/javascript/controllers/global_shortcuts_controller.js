@@ -171,7 +171,7 @@ export default class extends Controller {
 
   renderQuickResults() {
     if (this.filteredQuickItems.length === 0) {
-      this.quickResultsTarget.innerHTML = '<p class="notae-quick-empty">No matching pages.</p>'
+      this.quickResultsTarget.innerHTML = '<p class="notae-quick-empty">No matching Notarum.</p>'
       return
     }
 

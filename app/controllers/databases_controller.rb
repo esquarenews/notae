@@ -1,16 +1,18 @@
 class DatabasesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update]
+  before_action :set_database, only: %i[show update duplicate archive export_csv]
+  before_action :set_archived_database, only: %i[restore destroy]
   COVER_SHIFT_STEP = 10
+  FILTER_OPERATORS = %w[eq before after].freeze
 
-  helper_method :cell_value_for, :select_options_for
+  helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row
 
   def show
     authorize @database
     ensure_default_view!
 
-    @databases = policy_scope(Database).for_workspace(@workspace).order(:created_at)
+    @databases = policy_scope(Database).for_workspace(@workspace).active.order(:created_at)
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
     @cells = policy_scope(DbCell).for_database(@database).to_a
@@ -35,6 +37,14 @@ class DatabasesController < ApplicationController
     @new_row = DbRow.new
     @new_database_view = DatabaseView.new
     @database_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @database)
+    @can_archive_database = policy(@database).archive?
+    @recent_database_audit_events = policy_scope(AuditEvent)
+                                      .where(workspace_id: @workspace.id, auditable: @database)
+                                      .recent_first
+                                      .limit(10)
+                                      .to_a
+    @database_versions = @database.versions.reorder(created_at: :desc).limit(10).to_a
+    @database_plain_text = build_database_plain_text
   end
 
   def create
@@ -49,6 +59,7 @@ class DatabasesController < ApplicationController
         view_type: :table,
         default: true
       )
+      log_database_audit_event!(action: "create", kind: "database_created")
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Grid created."
     else
       redirect_to workspace_path(@workspace.slug), alert: @database.errors.full_messages.to_sentence
@@ -58,15 +69,21 @@ class DatabasesController < ApplicationController
   def update
     authorize @database, :update?
 
-    @database.assign_attributes(database_update_params)
-    apply_header_customizations!
-    apply_linked_page_update!
+    if @database.locked? && !unlocking_database_request?
+      @database.errors.add(:base, "Grid is locked. Unlock to make changes.")
+    else
+      @database.assign_attributes(database_update_params)
+      apply_header_customizations!
+      apply_linked_page_update!
+    end
 
-    if @database.changed? || @database.attachment_changes.present?
+    database_changed = @database.changed? || @database.attachment_changes.present?
+    if database_changed
       @database.save
     end
 
     if @database.errors.empty?
+      log_database_audit_event!(action: "update", kind: "database_updated", changed_fields: @database.saved_changes.keys) if database_changed
       respond_to do |format|
         format.html { redirect_to database_redirect_path, notice: "Grid updated." }
         format.json do
@@ -86,6 +103,55 @@ class DatabasesController < ApplicationController
     end
   end
 
+  def duplicate
+    authorize @database, :show?
+    authorize Database.new(workspace: @workspace, name: "#{@database.name} (copy)"), :create?
+
+    duplicated_database = Databases::DuplicateService.call(
+      database: @database,
+      created_by: current_user,
+      name: params.dig(:database, :name)
+    )
+    log_database_audit_event!(action: "duplicate", kind: "database_duplicated", source_database_id: @database.id, auditable: duplicated_database)
+    redirect_to database_path(workspace_slug: @workspace.slug, id: duplicated_database.id), notice: "Grid duplicated."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_redirect_path, alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def archive
+    authorize @database, :archive?
+    @database.archive!
+    log_database_audit_event!(action: "delete", kind: "database_archived")
+    redirect_to workspace_trash_path(workspace_slug: @workspace.slug), notice: "Grid archived."
+  end
+
+  def restore
+    authorize @database, :restore?
+    @database.restore!
+    log_database_audit_event!(action: "restore", kind: "database_restored")
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Grid restored."
+  end
+
+  def destroy
+    authorize @database, :destroy?
+
+    unless @database.archived?
+      redirect_to workspace_trash_path(workspace_slug: @workspace.slug), alert: "Archive the grid before deleting it permanently."
+      return
+    end
+
+    @database.destroy!
+    redirect_to workspace_trash_path(workspace_slug: @workspace.slug), notice: "Grid deleted permanently."
+  end
+
+  def export_csv
+    authorize @database, :show?
+
+    send_data Databases::CsvExportService.call(database: @database),
+              filename: "#{@database.name.parameterize.presence || "grid"}-#{Time.zone.today}.csv",
+              type: "text/csv; charset=utf-8"
+  end
+
   private
 
   def set_workspace
@@ -93,7 +159,11 @@ class DatabasesController < ApplicationController
   end
 
   def set_database
-    @database = policy_scope(Database).for_workspace(@workspace).find(params[:id])
+    @database = policy_scope(Database).for_workspace(@workspace).active.find(params[:id])
+  end
+
+  def set_archived_database
+    @database = policy_scope(Database).for_workspace(@workspace).archived.find(params[:id])
   end
 
   def database_params
@@ -101,7 +171,9 @@ class DatabasesController < ApplicationController
   end
 
   def database_update_params
-    params.fetch(:database, ActionController::Parameters.new).permit(:name, :description)
+    permitted = params.fetch(:database, ActionController::Parameters.new).permit(:name, :description, :locked, :small_text, :font_style)
+    permitted.delete(:locked) unless policy(@database).permissions?
+    permitted
   end
 
   def database_link_params
@@ -202,7 +274,7 @@ class DatabasesController < ApplicationController
     page_title = [ @database.name.presence || "Untitled grid", "notes" ].join(" ")
     page = @workspace.pages.new(title: page_title, created_by: current_user)
     unless policy(page).create?
-      @database.errors.add(:base, "You are not authorized to create pages in this workspace.")
+      @database.errors.add(:base, "You are not authorized to create Notarum in this workspace.")
       return nil
     end
 
@@ -244,6 +316,7 @@ class DatabasesController < ApplicationController
   def resolve_filter_and_sort_settings!
     sort_property_id = params[:sort_property_id].presence || @view_config["sort_property_id"]
     filter_property_id = params[:filter_property_id].presence || @view_config["filter_property_id"]
+    conditional_color_property_id = params[:conditional_color_property_id].presence || @view_config["conditional_color_property_id"]
 
     @sort_property = @db_properties.find { |property| property.id.to_s == sort_property_id.to_s }
     configured_direction = params[:sort_direction].presence || @view_config["sort_direction"]
@@ -251,6 +324,21 @@ class DatabasesController < ApplicationController
 
     @filter_property = @db_properties.find { |property| property.id.to_s == filter_property_id.to_s }
     @filter_value = params[:filter_value].presence || @view_config["filter_value"].to_s
+    @filter_operator = normalize_filter_operator(params[:filter_operator].presence || @view_config["filter_operator"])
+
+    @visible_property_ids = resolve_visible_property_ids
+    @visible_db_properties = if @visible_property_ids.present?
+      @db_properties.select { |property| @visible_property_ids.include?(property.id.to_s) }
+    else
+      @db_properties
+    end
+
+    @conditional_color_mode = normalize_conditional_color_mode(
+      params[:conditional_color_mode].presence || @view_config["conditional_color_mode"]
+    )
+    @conditional_color_property = @db_properties.find do |property|
+      property.id.to_s == conditional_color_property_id.to_s && property.date?
+    end
 
     @board_group_property = resolve_property_from_config(:group_property_id, "select")
     @calendar_date_property = resolve_property_from_config(:date_property_id, "date")
@@ -261,8 +349,11 @@ class DatabasesController < ApplicationController
     return if @filter_property.blank? || @filter_value.blank?
 
     normalized_filter = cast_value_for_property(@filter_property, @filter_value)
+    return if normalized_filter.nil?
+
     @rows.select! do |row|
-      cast_value_for_property(@filter_property, cell_value_for(row, @filter_property)) == normalized_filter
+      row_value = cast_value_for_property(@filter_property, cell_value_for(row, @filter_property))
+      filter_match?(row_value, normalized_filter)
     end
   end
 
@@ -395,6 +486,61 @@ class DatabasesController < ApplicationController
     nil
   end
 
+  def filter_match?(row_value, normalized_filter)
+    return false if row_value.nil?
+
+    case @filter_operator
+    when "before"
+      return false unless @filter_property.number? || @filter_property.date?
+
+      row_value < normalized_filter
+    when "after"
+      return false unless @filter_property.number? || @filter_property.date?
+
+      row_value > normalized_filter
+    else
+      row_value == normalized_filter
+    end
+  end
+
+  def normalize_filter_operator(value)
+    candidate = value.to_s
+    FILTER_OPERATORS.include?(candidate) ? candidate : "eq"
+  end
+
+  def resolve_visible_property_ids
+    requested_ids = params[:visible_property_ids]
+    configured_ids = @view_config["visible_property_ids"]
+    candidate_ids = requested_ids.present? ? requested_ids : configured_ids
+
+    Array(candidate_ids)
+      .map(&:to_s)
+      .select { |property_id| @db_properties.any? { |property| property.id.to_s == property_id } }
+      .uniq
+  end
+
+  def normalize_conditional_color_mode(value)
+    value.to_s == "overdue" ? "overdue" : "none"
+  end
+
+  def conditional_color_class_for_row(row)
+    return nil unless @conditional_color_mode == "overdue"
+    return nil if @conditional_color_property.blank?
+
+    due_date = cast_value_for_property(@conditional_color_property, cell_value_for(row, @conditional_color_property))
+    return nil unless due_date.is_a?(Date)
+    return nil unless due_date < Date.current
+
+    "is-overdue-highlight"
+  end
+
+  def unlocking_database_request?
+    return false unless params.key?(:database)
+    return false unless params[:database].respond_to?(:key?) && params[:database].key?(:locked)
+
+    ActiveModel::Type::Boolean.new.cast(params.dig(:database, :locked)) == false
+  end
+
   def database_redirect_path
     split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
     split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
@@ -409,6 +555,9 @@ class DatabasesController < ApplicationController
       sort_direction: params[:sort_direction].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
+      filter_operator: params[:filter_operator].presence,
+      view_settings: params[:view_settings].presence,
+      actions_menu: params[:actions_menu].presence,
       split_page_id: split_page_id,
       split_source: split_source,
       split_row_id: split_row_id
@@ -432,6 +581,25 @@ class DatabasesController < ApplicationController
       name: "Table",
       view_type: :table,
       default: true
+    )
+  end
+
+  def build_database_plain_text
+    headers = [ "Name" ] + @visible_db_properties.map(&:name)
+    rows = @rows.map do |row|
+      [ row.title ] + @visible_db_properties.map { |property| cell_value_for(row, property) }
+    end
+
+    [ headers, *rows ].map { |line| line.join("\t") }.join("\n")
+  end
+
+  def log_database_audit_event!(action:, kind:, auditable: @database, **metadata)
+    AuditEventLogger.log!(
+      workspace: @workspace,
+      actor: current_user,
+      action: action,
+      metadata: metadata.merge(kind: kind, database_id: @database.id).compact,
+      auditable: auditable
     )
   end
 end

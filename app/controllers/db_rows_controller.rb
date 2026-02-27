@@ -2,6 +2,7 @@ class DbRowsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database
+  before_action :ensure_database_unlocked!
   before_action :set_db_row, only: %i[update destroy move]
 
   def create
@@ -68,7 +69,7 @@ class DbRowsController < ApplicationController
   end
 
   def set_database
-    @database = policy_scope(Database).for_workspace(@workspace).find(params[:database_id])
+    @database = policy_scope(Database).for_workspace(@workspace).active.find(params[:database_id])
   end
 
   def db_row_params
@@ -120,6 +121,9 @@ class DbRowsController < ApplicationController
       sort_direction: params[:sort_direction].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
+      filter_operator: params[:filter_operator].presence,
+      view_settings: params[:view_settings].presence,
+      actions_menu: params[:actions_menu].presence,
       split_page_id: split_page_id,
       split_source: split_source,
       split_row_id: split_row_id
@@ -157,7 +161,7 @@ class DbRowsController < ApplicationController
     title = @db_row.title.presence || "Untitled row"
     page = @workspace.pages.new(title: title, created_by: current_user)
     unless policy(page).create?
-      @db_row.errors.add(:base, "You are not authorized to create pages in this workspace.")
+      @db_row.errors.add(:base, "You are not authorized to create Notarum in this workspace.")
       return nil
     end
 
@@ -176,5 +180,11 @@ class DbRowsController < ApplicationController
 
     @db_row.errors.add(:linked_page_id, "must reference an accessible page in this workspace")
     :invalid
+  end
+
+  def ensure_database_unlocked!
+    return unless @database.locked?
+
+    redirect_to database_redirect_location, alert: "Grid is locked. Unlock to make changes."
   end
 end

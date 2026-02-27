@@ -5,12 +5,17 @@
   sort_direction: params[:sort_direction],
   filter_property_id: params[:filter_property_id],
   filter_value: params[:filter_value],
+  filter_operator: params[:filter_operator],
+  view_settings: params[:view_settings],
   split_page_id: params[:split_page_id],
   split_source: params[:split_source],
   split_row_id: params[:split_row_id]
 }.compact %>
 <% linkable_pages = Array(@linkable_pages) %>
 <% linkable_pages_by_id = @linkable_pages_by_id || linkable_pages.index_by(&:id) %>
+<% visible_properties = @visible_db_properties || @db_properties %>
+<% can_edit_grid = policy(@database).update? && !@database.locked? %>
+<% can_update_view = @current_view.present? && policy(@current_view).update? && !@database.locked? %>
 
 <div class="notae-db-grid-wrap">
   <table class="notae-db-grid">
@@ -19,29 +24,53 @@
         <th class="notae-db-grid-name-col">
           <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
         </th>
-        <% @db_properties.each do |db_property| %>
+        <% visible_properties.each do |db_property| %>
           <% property_is_sorted = @sort_property&.id == db_property.id %>
           <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
           <th>
-            <%= link_to db_property.name,
-                        database_path(
-                          workspace_slug: @workspace.slug,
-                          id: @database.id,
-                          view_id: @current_view&.id,
-                          month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
-                          sort_property_id: db_property.id,
-                          sort_direction: next_direction,
-                          filter_property_id: params[:filter_property_id],
-                          filter_value: params[:filter_value]
-                        ),
-                        class: "notae-db-grid-property-link" %>
-            <% if property_is_sorted %>
-              <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
-            <% end %>
+            <div class="notae-db-grid-property-header">
+              <%= link_to db_property.name,
+                          database_path(
+                            workspace_slug: @workspace.slug,
+                            id: @database.id,
+                            view_id: @current_view&.id,
+                            month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+                            sort_property_id: db_property.id,
+                            sort_direction: next_direction,
+                            filter_property_id: params[:filter_property_id],
+                            filter_value: params[:filter_value],
+                            filter_operator: params[:filter_operator]
+                          ),
+                          class: "notae-db-grid-property-link" %>
+              <% if property_is_sorted %>
+                <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+              <% end %>
+              <% if can_update_view && visible_properties.size > 1 %>
+                <%= form_with model: @current_view,
+                              url: database_database_view_path(
+                                workspace_slug: @workspace.slug,
+                                database_id: @database.id,
+                                id: @current_view.id,
+                                view_settings: "open"
+                              ),
+                              method: :patch,
+                              class: "notae-db-property-visibility-form" do |form| %>
+                  <% visible_properties.each do |property| %>
+                    <% next if property.id == db_property.id %>
+
+                    <%= hidden_field_tag "database_view[visible_property_ids][]", property.id %>
+                  <% end %>
+                  <button type="submit"
+                          class="notae-db-grid-visibility-toggle"
+                          title="Hide column"
+                          aria-label="Hide <%= db_property.name %> column">👁</button>
+                <% end %>
+              <% end %>
+            </div>
           </th>
         <% end %>
         <th class="notae-db-grid-add-col">
-          <% if policy(DbProperty.new(database: @database, workspace: @workspace)).create? %>
+          <% if policy(DbProperty.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
             <details class="notae-db-inline-details">
               <summary class="notae-db-grid-add-link">+ Add property</summary>
               <div class="notae-db-inline-panel">
@@ -74,17 +103,30 @@
       </tr>
     </thead>
     <tbody>
-      <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? %>
+      <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
         <tr class="notae-db-grid-new-row">
           <td>
-            <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                          params: row_params.merge(db_row: { title: "New page" }),
-                          class: "notae-db-new-row-button" do %>
-              <span class="notae-db-new-row-plus">+</span>
-              <span>New page</span>
+            <%= form_with model: @new_row,
+                          url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                          class: "notae-db-new-row-form" do |form| %>
+              <%= hidden_field_tag :view_id, row_params[:view_id] %>
+              <%= hidden_field_tag :month, row_params[:month] %>
+              <%= hidden_field_tag :sort_property_id, row_params[:sort_property_id] %>
+              <%= hidden_field_tag :sort_direction, row_params[:sort_direction] %>
+              <%= hidden_field_tag :filter_property_id, row_params[:filter_property_id] %>
+              <%= hidden_field_tag :filter_value, row_params[:filter_value] %>
+              <%= hidden_field_tag :filter_operator, row_params[:filter_operator] %>
+              <%= hidden_field_tag :view_settings, row_params[:view_settings] %>
+              <%= hidden_field_tag :split_page_id, row_params[:split_page_id] %>
+              <%= hidden_field_tag :split_source, row_params[:split_source] %>
+              <%= hidden_field_tag :split_row_id, row_params[:split_row_id] %>
+              <%= form.text_field :title,
+                                  placeholder: "Enter name",
+                                  class: "notae-db-title-input notae-db-new-row-input" %>
+              <%= form.submit "+", class: "notae-db-row-link-action is-create notae-db-new-row-submit", title: "Add row" %>
             <% end %>
           </td>
-          <% @db_properties.each do |_db_property| %>
+          <% visible_properties.each do |_db_property| %>
             <td></td>
           <% end %>
           <td></td>
@@ -93,72 +135,65 @@
 
       <% @rows.each do |row| %>
         <% linked_page = linkable_pages_by_id[row.linked_page_id] %>
-        <tr id="row_<%= row.id %>" class="notae-db-grid-data-row">
+        <% row_split_params = row_params.merge(
+          workspace_slug: @workspace.slug,
+          id: @database.id,
+          split_page_id: linked_page&.id,
+          split_source: "row",
+          split_row_id: row.id
+        ) %>
+        <tr id="row_<%= row.id %>" class="notae-db-grid-data-row <%= conditional_color_class_for_row(row) %>">
           <td>
             <div class="notae-db-title-stack">
-              <% if policy(row).update? %>
-                <%= form_with model: row,
-                              url: database_db_row_path(
-                                {
-                                  workspace_slug: @workspace.slug,
-                                  database_id: @database.id,
-                                  id: row.id
-                                }.merge(row_params)
-                              ),
-                              method: :patch,
-                              class: "notae-db-title-form" do |form| %>
-                  <%= form.text_field :title,
-                                      value: row.title,
-                                      class: "notae-db-title-input",
-                                      onchange: "this.form.requestSubmit()" %>
+              <div class="notae-db-title-primary">
+                <% if linked_page.present? %>
+                  <%= link_to row.title.presence || linked_page.title,
+                              database_path(row_split_params),
+                              class: "notae-db-title-link" %>
+                  <%= link_to database_path(row_split_params),
+                              class: "notae-db-row-link-action",
+                              title: "Open linked Nota",
+                              aria: { label: "Open linked Nota" } do %>
+                    ↗
+                  <% end %>
+                <% elsif policy(row).update? && !@database.locked? %>
+                  <%= form_with model: row,
+                                url: database_db_row_path(
+                                  {
+                                    workspace_slug: @workspace.slug,
+                                    database_id: @database.id,
+                                    id: row.id
+                                  }.merge(row_params)
+                                ),
+                                method: :patch,
+                                class: "notae-db-title-form notae-db-title-form-inline" do |form| %>
+                    <%= form.text_field :title,
+                                        value: row.title,
+                                        class: "notae-db-title-input",
+                                        placeholder: "Enter name",
+                                        onchange: "this.form.requestSubmit()" %>
+                    <%= form.submit "+",
+                                    class: "notae-db-row-link-action is-create",
+                                    name: "db_row[link_action]",
+                                    value: "create_page",
+                                    title: "Create linked Nota" %>
+                  <% end %>
+                <% else %>
+                  <span class="notae-db-title-text"><%= row.title %></span>
                 <% end %>
-              <% else %>
-                <span class="notae-db-title-text"><%= row.title %></span>
-              <% end %>
+              </div>
 
               <div class="notae-db-linked-page-row">
                 <% if linked_page.present? %>
-                  <%= link_to "Open",
-                              database_path(
-                                row_params.merge(
-                                  workspace_slug: @workspace.slug,
-                                  id: @database.id,
-                                  split_page_id: linked_page.id,
-                                  split_source: "row",
-                                  split_row_id: row.id
-                                )
-                              ),
-                              class: "notae-db-open-link-button" %>
+                  <span class="notae-db-linked-page-muted">Linked</span>
                   <%= link_to linked_page.title,
-                              database_path(
-                                row_params.merge(
-                                  workspace_slug: @workspace.slug,
-                                  id: @database.id,
-                                  split_page_id: linked_page.id,
-                                  split_source: "row",
-                                  split_row_id: row.id
-                                )
-                              ),
+                              database_path(row_split_params),
                               class: "notae-db-linked-page-name" %>
-                <% elsif policy(row).update? %>
-                  <%= button_to database_db_row_path(
-                                {
-                                  workspace_slug: @workspace.slug,
-                                  database_id: @database.id,
-                                  id: row.id
-                                }.merge(row_params)
-                              ),
-                                method: :patch,
-                                params: { db_row: { link_action: "create_page" } },
-                                class: "notae-db-link-create-button" do %>
-                    <span class="notae-db-link-create-plus">+</span>
-                    <span>Page</span>
-                  <% end %>
-                <% else %>
+                <% elsif !(policy(row).update? && !@database.locked?) %>
                   <span class="notae-db-linked-page-muted">No linked page</span>
                 <% end %>
 
-                <% if policy(row).update? %>
+                <% if policy(row).update? && !@database.locked? %>
                   <details class="notae-db-inline-details">
                     <summary class="notae-db-grid-add-link"><%= linked_page.present? ? "Link" : "Choose" %></summary>
                     <div class="notae-db-inline-panel">
@@ -184,10 +219,10 @@
               </div>
             </div>
           </td>
-          <% @db_properties.each do |db_property| %>
+          <% visible_properties.each do |db_property| %>
             <% db_cell = @cells_by_key[[row.id, db_property.id]] %>
             <td>
-              <% if db_cell && policy(db_cell).update? %>
+              <% if db_cell && policy(db_cell).update? && !@database.locked? %>
                 <%= form_with model: db_cell,
                               url: database_db_cell_path(
                                 {
@@ -248,7 +283,7 @@
       <% placeholder_count.times do %>
         <tr class="notae-db-grid-placeholder-row">
           <td>&nbsp;</td>
-          <% @db_properties.each do |_db_property| %>
+          <% visible_properties.each do |_db_property| %>
             <td>&nbsp;</td>
           <% end %>
           <td>&nbsp;</td>

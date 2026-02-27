@@ -29,6 +29,6 @@ class DatabaseFavoritesController < ApplicationController
   end
 
   def set_database
-    @database = policy_scope(Database).for_workspace(@workspace).find(params[:database_id])
+    @database = policy_scope(Database).for_workspace(@workspace).active.find(params[:database_id])
   end
 end

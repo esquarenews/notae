@@ -56,6 +56,7 @@ class Workspace < ApplicationRecord
   validates :join_link_enabled, inclusion: { in: [ true, false ] }
   validates :join_link_token, uniqueness: true, allow_blank: true
 
+  before_validation :default_slug_from_name
   before_validation :normalize_slug
 
   pg_search_scope :search_by_name,
@@ -90,6 +91,10 @@ class Workspace < ApplicationRecord
   end
 
   private
+
+  def default_slug_from_name
+    self.slug = name if slug.blank? && name.present?
+  end
 
   def normalize_slug
     return if slug.blank?

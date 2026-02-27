@@ -48,9 +48,10 @@ RSpec.describe "Workspace home", type: :request do
     expect(page_titles).to eq([ "Page 4 latest", "Page 3 newer", "Page 2 mid" ])
 
     database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map(&:text)
-    expect(database_titles).to include("DB 4 latest", "DB 3 newer", "DB 2 mid")
-    expect(database_titles).not_to include("DB 1 old")
-    expect(database_titles.count).to eq(3)
+    normalized_database_titles = database_titles.map { |title| title.gsub(/\A\S+\s+/, "") }
+    expect(normalized_database_titles).to include("DB 4 latest", "DB 3 newer", "DB 2 mid")
+    expect(normalized_database_titles).not_to include("DB 1 old")
+    expect(normalized_database_titles.count).to eq(3)
   end
 
   it "renders the workspace library page for members" do
