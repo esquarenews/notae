@@ -105,4 +105,19 @@ RSpec.describe "Preferences", type: :request do
     get workspace_preferences_path(workspace_slug: workspace.slug)
     expect(response.body).to include("notae-theme-system")
   end
+
+  it "renders preferences when another workspace has a blank slug" do
+    user = User.create!(email: "preferences-blank-slug@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Prefs stable", slug: "prefs-stable")
+    stale_workspace = Workspace.create!(name: "Prefs stale", slug: "prefs-stale")
+    stale_workspace.update_column(:slug, "")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Membership.create!(workspace: stale_workspace, user: user, role: :owner)
+    sign_in user
+
+    get workspace_preferences_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Preferences")
+  end
 end

@@ -1,7 +1,7 @@
 <aside class="notae-settings-nav">
   <% settings_workspace_slug = params[:settings_workspace_slug].to_s %>
   <% workspace_section_item = %i[general people import].include?(active_item) ? active_item : :general %>
-  <% workspace_options = policy_scope(Workspace).order(updated_at: :desc).to_a %>
+  <% workspace_options = policy_scope(Workspace).where.not(slug: [ nil, "" ]).order(updated_at: :desc).to_a %>
   <% selected_workspace = workspace_options.find { |candidate_workspace| candidate_workspace.slug == settings_workspace_slug } || workspace %>
   <% workspace_route_for = lambda do |candidate_workspace|
        case workspace_section_item
