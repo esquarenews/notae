@@ -37,7 +37,9 @@ class ApplicationController < ActionController::Base
   def set_unread_notifications_count
     @unread_notifications_count =
       if user_signed_in?
-        policy_scope(Notification).unread.count
+        with_optional_schema_fallback(default: 0, feature: "unread notifications") do
+          policy_scope(Notification).unread.count
+        end
       else
         0
       end
@@ -46,10 +48,14 @@ class ApplicationController < ActionController::Base
   def set_ai_rail_context
     return unless user_signed_in?
 
-    @ai_rail_workspace = if params[:workspace_slug].present?
-      policy_scope(Workspace).find_by(slug: params[:workspace_slug])
+    @ai_rail_workspace = with_optional_schema_fallback(default: nil, feature: "AI rail workspace context") do
+      if params[:workspace_slug].present?
+        policy_scope(Workspace).find_by(slug: params[:workspace_slug])
+      end
     end
-    @ai_rail_workspace ||= policy_scope(Workspace).order(updated_at: :desc).first
+    @ai_rail_workspace = with_optional_schema_fallback(default: @ai_rail_workspace, feature: "AI rail workspace fallback") do
+      @ai_rail_workspace || policy_scope(Workspace).order(updated_at: :desc).first
+    end
     @ai_rail_current_page_id = params[:controller] == "pages" && params[:action] == "show" ? params[:id] : nil
   end
 
@@ -57,16 +63,22 @@ class ApplicationController < ActionController::Base
     return unless user_signed_in?
     return if @ai_rail_workspace.blank?
 
-    @ai_usage_panel = build_ai_usage_panel(user: current_user, workspace: @ai_rail_workspace)
+    @ai_usage_panel = with_optional_schema_fallback(default: nil, feature: "AI usage panel") do
+      build_ai_usage_panel(user: current_user, workspace: @ai_rail_workspace)
+    end
   end
 
   def set_ai_rail_conversations
     return unless user_signed_in?
 
-    @ai_rail_conversations = recent_ai_conversations_for(user: current_user, window: 1.week, limit: 60).to_a.reverse
+    @ai_rail_conversations = with_optional_schema_fallback(default: [], feature: "AI conversations") do
+      recent_ai_conversations_for(user: current_user, window: 1.week, limit: 60).to_a.reverse
+    end
   end
 
   def recent_ai_conversations_for(user:, window: 1.week, limit: 60)
+    return AiConversation.none unless data_source_available?("ai_conversations")
+
     workspace_ids = policy_scope(Workspace).select(:id)
     AiConversation
       .for_user(user)
@@ -78,6 +90,8 @@ class ApplicationController < ActionController::Base
   end
 
   def build_ai_usage_panel(user:, workspace:)
+    return nil unless data_source_available?("ai_usage_logs")
+
     day_end = Time.current
     day_start = day_end.beginning_of_day
     usage_scope = AiUsageLog.for_user_and_workspace(user: user, workspace: workspace).for_day(day_start, day_end)
@@ -125,5 +139,40 @@ class ApplicationController < ActionController::Base
     return yield unless zone
 
     Time.use_zone(zone, &block)
+  end
+
+  def with_optional_schema_fallback(default:, feature:)
+    yield
+  rescue ActiveRecord::StatementInvalid => e
+    raise unless optional_schema_error?(e)
+
+    Rails.logger.warn("[OptionalSchema] Skipping #{feature}: #{e.class}: #{e.message}")
+    default
+  end
+
+  def data_source_available?(name)
+    ActiveRecord::Base.connection.data_source_exists?(name)
+  rescue ActiveRecord::StatementInvalid => e
+    raise unless optional_schema_error?(e)
+
+    false
+  end
+
+  def optional_schema_error?(error)
+    return true if optional_schema_error_message?(error.message)
+
+    cause = error.cause
+    return false if cause.blank?
+
+    optional_schema_error_message?(cause.message)
+  end
+
+  def optional_schema_error_message?(message)
+    text = message.to_s
+    text.include?("PG::UndefinedTable") ||
+      text.include?("PG::UndefinedColumn") ||
+      text.include?("no such table") ||
+      text.include?("no such column") ||
+      (text.include?("relation") && text.include?("does not exist"))
   end
 end

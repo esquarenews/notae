@@ -40,7 +40,13 @@ class Workspace < ApplicationRecord
   has_many :ai_usage_logs, dependent: :destroy
   has_many :ai_conversations, dependent: :destroy
 
-  scope :active, -> { where(archived_at: nil) }
+  scope :active, lambda {
+    if column_names.include?("archived_at")
+      where(archived_at: nil)
+    else
+      all
+    end
+  }
 
   validates :name, presence: true
   validates :name, length: { maximum: 65 }
@@ -61,7 +67,9 @@ class Workspace < ApplicationRecord
   end
 
   def archived?
-    archived_at.present?
+    return false unless has_attribute?(:archived_at)
+
+    self[:archived_at].present?
   end
 
   def ensure_join_link_token!
