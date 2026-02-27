@@ -1,0 +1,36 @@
+<section class="notae-auth-page">
+  <div class="notae-auth-brand">
+    <%= image_tag "/icon.svg", alt: "Notae icon", class: "notae-auth-brand-icon" %>
+    <div>
+      <h1>Notae</h1>
+      <p>Reset your password and get back to your workspace.</p>
+    </div>
+  </div>
+
+  <section class="notae-auth-card">
+    <h2>Forgot your password?</h2>
+
+    <% if resource.errors.any? %>
+      <p class="notae-flash alert"><%= resource.errors.full_messages.to_sentence %></p>
+    <% end %>
+
+    <%= form_for(resource,
+                 as: resource_name,
+                 url: password_path(resource_name),
+                 html: { class: "notae-auth-form", data: { turbo: false } }) do |form| %>
+      <div class="notae-auth-field">
+        <%= form.label :email %>
+        <%= form.email_field :email, autofocus: true, autocomplete: "email", class: "notae-auth-input" %>
+      </div>
+
+      <%= form.submit "Send reset instructions", class: "notae-chip-button notae-auth-submit" %>
+    <% end %>
+
+    <div class="notae-auth-links">
+      <%= link_to "Back to sign in", new_session_path(resource_name) %>
+      <% if devise_mapping.registerable? %>
+        <%= link_to "Create account", new_registration_path(resource_name) %>
+      <% end %>
+    </div>
+  </section>
+</section>

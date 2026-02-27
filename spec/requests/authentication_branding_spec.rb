@@ -25,4 +25,17 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include("notae-auth-submit")
     expect(response.body).to include('data-turbo="false"')
   end
+
+  it "renders a branded forgot password page with the shared auth shell classes" do
+    get new_user_password_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Forgot your password?")
+    expect(response.body).to include("notae-auth-page")
+    expect(response.body).to include("notae-auth-brand-icon")
+    expect(response.body).to include("notae-auth-form")
+    expect(response.body).to include("notae-auth-input")
+    expect(response.body).to include("notae-auth-submit")
+    expect(response.body).to include('data-turbo="false"')
+  end
 end

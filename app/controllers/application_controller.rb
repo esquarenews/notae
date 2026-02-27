@@ -17,6 +17,7 @@ class ApplicationController < ActionController::Base
   after_action :verify_pundit_authorization, unless: :devise_controller?
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
+  rescue_from ActionController::InvalidAuthenticityToken, with: :handle_invalid_authenticity_token
 
   private
 
@@ -26,6 +27,11 @@ class ApplicationController < ActionController::Base
 
   def handle_not_authorized
     redirect_back fallback_location: root_path, alert: "You are not authorized to perform this action."
+  end
+
+  def handle_invalid_authenticity_token
+    reset_session
+    redirect_to new_user_session_path, alert: "Your session expired. Please sign in again."
   end
 
   def set_unread_notifications_count

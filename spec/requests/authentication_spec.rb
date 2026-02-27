@@ -51,6 +51,19 @@ RSpec.describe "Authentication", type: :request do
     expect(response.body).to include("Password confirmation")
   end
 
+  it "redirects invalid login attempts back to sign in with an alert" do
+    post user_session_path, params: {
+      user: {
+        email: "missing-user@example.com",
+        password: "wrong-password"
+      }
+    }
+
+    expect(response).to have_http_status(:see_other)
+    expect(response).to redirect_to(new_user_session_path)
+    expect(flash[:alert]).to include("Invalid")
+  end
+
   it "persists session across requests after login" do
     user = User.create!(email: "persist@example.com", password: "password123")
 
@@ -68,5 +81,23 @@ RSpec.describe "Authentication", type: :request do
 
     expect(response).to redirect_to(new_user_session_path)
     expect(ActionMailer::Base.deliveries.last.to).to include(user.email)
+  end
+
+  it "redirects to sign in when CSRF token is invalid" do
+    previous_setting = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    begin
+      post user_session_path,
+           params: {
+             authenticity_token: "invalid",
+             user: { email: "nobody@example.com", password: "password123" }
+           }
+    ensure
+      ActionController::Base.allow_forgery_protection = previous_setting
+    end
+
+    expect(response).to redirect_to(new_user_session_path)
+    expect(flash[:alert]).to eq("Your session expired. Please sign in again.")
   end
 end

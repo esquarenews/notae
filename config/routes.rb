@@ -3,7 +3,9 @@ require "sidekiq/web" if Rails.env.development?
 Rails.application.routes.draw do
   mount ActionCable.server => "/cable"
 
-  devise_for :users
+  devise_for :users, controllers: {
+    sessions: "users/sessions"
+  }
   root "home#index"
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
