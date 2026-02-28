@@ -86,4 +86,45 @@ RSpec.describe "Connection settings", type: :request do
     expect(user.smtp_authentication).to eq("plain")
     expect(user.smtp_enable_starttls_auto).to be(true)
   end
+
+  it "recovers missing encryption config before saving connection secrets" do
+    user = User.create!(email: "connection-settings-bootstrap@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Connection settings bootstrap", slug: "connection-settings-bootstrap")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    runtime_config = ActiveRecord::Encryption.config
+    app_config = Rails.application.config.active_record.encryption
+    original_values = {
+      runtime_primary: runtime_config.instance_variable_get(:@primary_key),
+      runtime_deterministic: runtime_config.instance_variable_get(:@deterministic_key),
+      runtime_salt: runtime_config.instance_variable_get(:@key_derivation_salt),
+      app_primary: app_config.instance_variable_get(:@primary_key),
+      app_deterministic: app_config.instance_variable_get(:@deterministic_key),
+      app_salt: app_config.instance_variable_get(:@key_derivation_salt)
+    }
+
+    runtime_config.instance_variable_set(:@primary_key, nil)
+    runtime_config.instance_variable_set(:@deterministic_key, nil)
+    runtime_config.instance_variable_set(:@key_derivation_salt, nil)
+    app_config.instance_variable_set(:@primary_key, nil)
+    app_config.instance_variable_set(:@deterministic_key, nil)
+    app_config.instance_variable_set(:@key_derivation_salt, nil)
+
+    patch workspace_connection_settings_path(workspace_slug: workspace.slug),
+          params: { user: { openai_api_key: "sk-test-bootstrap-123" } }
+
+    expect(response).to redirect_to(workspace_connection_settings_path(workspace_slug: workspace.slug))
+    expect(user.reload.openai_api_key).to eq("sk-test-bootstrap-123")
+    expect(runtime_config.instance_variable_get(:@primary_key)).to be_present
+    expect(runtime_config.instance_variable_get(:@deterministic_key)).to be_present
+    expect(runtime_config.instance_variable_get(:@key_derivation_salt)).to be_present
+  ensure
+    runtime_config.instance_variable_set(:@primary_key, original_values[:runtime_primary]) if runtime_config
+    runtime_config.instance_variable_set(:@deterministic_key, original_values[:runtime_deterministic]) if runtime_config
+    runtime_config.instance_variable_set(:@key_derivation_salt, original_values[:runtime_salt]) if runtime_config
+    app_config.instance_variable_set(:@primary_key, original_values[:app_primary]) if app_config
+    app_config.instance_variable_set(:@deterministic_key, original_values[:app_deterministic]) if app_config
+    app_config.instance_variable_set(:@key_derivation_salt, original_values[:app_salt]) if app_config
+  end
 end

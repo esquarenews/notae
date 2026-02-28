@@ -7,6 +7,7 @@ class ApplicationController < ActionController::Base
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
 
+  before_action :ensure_active_record_encryption_keys
   before_action :set_paper_trail_whodunnit
   before_action :set_unread_notifications_count
   before_action :set_ai_rail_context
@@ -18,6 +19,7 @@ class ApplicationController < ActionController::Base
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
   rescue_from ActionController::InvalidAuthenticityToken, with: :handle_invalid_authenticity_token
+  rescue_from ActiveRecord::Encryption::Errors::Configuration, with: :handle_encryption_configuration_error
 
   private
 
@@ -32,6 +34,20 @@ class ApplicationController < ActionController::Base
   def handle_invalid_authenticity_token
     reset_session
     redirect_to new_user_session_path, alert: "Your session expired. Please sign in again."
+  end
+
+  def handle_encryption_configuration_error(error)
+    Rails.logger.error("[EncryptionConfig] #{error.class}: #{error.message}")
+
+    respond_to do |format|
+      format.json do
+        render json: { error: { code: "encryption_unavailable", message: "Encryption configuration is unavailable." } },
+               status: :service_unavailable
+      end
+      format.any do
+        redirect_back fallback_location: root_path, alert: "Encryption configuration is unavailable. Please retry."
+      end
+    end
   end
 
   def set_unread_notifications_count
@@ -129,6 +145,37 @@ class ApplicationController < ActionController::Base
 
     load Rails.root.join("app/channels/application_cable/channel.rb").to_s unless defined?(::ApplicationCable::Channel)
     load Rails.root.join("app/channels/page_channel.rb").to_s
+  end
+
+  def ensure_active_record_encryption_keys
+    secret = encryption_bootstrap_secret
+    return if secret.blank?
+
+    primary_key = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].presence || derive_encryption_key(secret, "primary")
+    deterministic_key = ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].presence || derive_encryption_key(secret, "deterministic")
+    key_derivation_salt = ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].presence || derive_encryption_key(secret, "salt")
+
+    [ Rails.application.config.active_record.encryption, ActiveRecord::Encryption.config ].each do |encryption_config|
+      next if encryption_config.has_primary_key? && encryption_config.has_deterministic_key? && encryption_config.has_key_derivation_salt?
+
+      encryption_config.primary_key = primary_key unless encryption_config.has_primary_key?
+      encryption_config.deterministic_key = deterministic_key unless encryption_config.has_deterministic_key?
+      encryption_config.key_derivation_salt = key_derivation_salt unless encryption_config.has_key_derivation_salt?
+      encryption_config.support_unencrypted_data = true
+      encryption_config.extend_queries = true
+    end
+  end
+
+  def encryption_bootstrap_secret
+    configured_secret = Rails.application.secret_key_base.to_s.presence || ENV["SECRET_KEY_BASE"].to_s.presence
+    return configured_secret if configured_secret.present?
+    return "notae-active-record-encryption-fallback-#{Rails.env}" unless Rails.env.production?
+
+    nil
+  end
+
+  def derive_encryption_key(secret, context)
+    OpenSSL::HMAC.hexdigest("SHA256", secret, "notae:active-record-encryption:#{context}")
   end
 
   def use_user_time_zone(&block)

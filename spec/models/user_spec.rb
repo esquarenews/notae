@@ -63,4 +63,23 @@ RSpec.describe User, type: :model do
     expect(user.smtp_username).to eq("smtp-user")
     expect(user.smtp_password).to eq("smtp-password-123")
   end
+
+  it "configures active record encryption keys at boot" do
+    encryption_config = Rails.application.config.active_record.encryption
+
+    expect(encryption_config.primary_key).to be_present
+    expect(encryption_config.deterministic_key).to be_present
+    expect(encryption_config.key_derivation_salt).to be_present
+  end
+
+  it "fails closed when encryption keys are missing instead of raising" do
+    user = described_class.new(email: "missing-encryption@example.com", password: "password123")
+    configuration_error = ActiveRecord::Encryption::Errors::Configuration.new("Missing key")
+    allow(user).to receive(:openai_api_key).and_raise(configuration_error)
+    allow(user).to receive(:smtp_password).and_raise(configuration_error)
+
+    expect(user.openai_api_key_configured?).to be(false)
+    expect(user.masked_openai_api_key).to eq("Not configured")
+    expect(user.masked_smtp_password).to eq("Not configured")
+  end
 end

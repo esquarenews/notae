@@ -155,27 +155,30 @@ class User < ApplicationRecord
   end
 
   def openai_api_key_configured?
-    openai_api_key.present?
+    encrypted_value_present?(:openai_api_key)
   end
 
   def masked_openai_api_key
     return "Not configured" unless openai_api_key_configured?
+    value = safe_encrypted_value(:openai_api_key)
+    return "Not configured" if value.blank?
 
-    "#{openai_api_key.first(6)}...#{openai_api_key.last(4)}"
+    "#{value.first(6)}...#{value.last(4)}"
   end
 
   def smtp_configured?
     smtp_address.present? &&
       smtp_port.present? &&
       smtp_username.present? &&
-      smtp_password.present? &&
+      encrypted_value_present?(:smtp_password) &&
       smtp_from_email.present?
   end
 
   def masked_smtp_password
-    return "Not configured" if smtp_password.blank?
+    value = safe_encrypted_value(:smtp_password)
+    return "Not configured" if value.blank?
 
-    "#{smtp_password.first(2)}...#{smtp_password.last(2)}"
+    "#{value.first(2)}...#{value.last(2)}"
   end
 
   def smtp_from_display
@@ -234,9 +237,26 @@ class User < ApplicationRecord
       smtp_port,
       smtp_domain,
       smtp_username,
-      smtp_password,
+      safe_encrypted_value(:smtp_password),
       smtp_from_name,
       smtp_from_email
     ].any?(&:present?)
+  end
+
+  def encrypted_value_present?(attribute_name)
+    safe_encrypted_value(attribute_name).present?
+  end
+
+  def safe_encrypted_value(attribute_name)
+    public_send(attribute_name)
+  rescue ActiveRecord::Encryption::Errors::Configuration => error
+    log_encryption_configuration_error(attribute_name, error)
+    nil
+  end
+
+  def log_encryption_configuration_error(attribute_name, error)
+    Rails.logger.error(
+      "[EncryptionConfig] Missing key while reading User##{attribute_name}: #{error.message}"
+    )
   end
 end
