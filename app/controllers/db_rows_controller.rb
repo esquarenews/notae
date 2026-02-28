@@ -3,7 +3,7 @@ class DbRowsController < ApplicationController
   before_action :set_workspace
   before_action :set_database
   before_action :ensure_database_unlocked!
-  before_action :set_db_row, only: %i[update destroy move duplicate]
+  before_action :set_db_row, only: %i[update destroy move duplicate restore]
 
   def create
     @db_row = @database.db_rows.new(db_row_params)
@@ -54,6 +54,12 @@ class DbRowsController < ApplicationController
     authorize @db_row, :destroy?
     @db_row.update!(archived_at: Time.current)
     redirect_to database_redirect_location, notice: "Row archived."
+  end
+
+  def restore
+    authorize @db_row, :restore?
+    @db_row.update!(archived_at: nil)
+    redirect_to database_redirect_location, notice: "Row restored."
   end
 
   def move
@@ -158,6 +164,7 @@ class DbRowsController < ApplicationController
       filter_operator: params[:filter_operator].presence,
       view_settings: params[:view_settings].presence,
       actions_menu: params[:actions_menu].presence,
+      options_menu: params[:options_menu].presence,
       split_page_id: split_page_id,
       split_source: split_source,
       split_row_id: split_row_id
@@ -175,6 +182,7 @@ class DbRowsController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      options_menu: params[:options_menu].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence

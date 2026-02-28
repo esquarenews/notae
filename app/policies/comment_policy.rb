@@ -22,12 +22,14 @@ class CommentPolicy < ApplicationPolicy
       workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
       visible_page_ids = PagePolicy::Scope.new(user, Page).resolve.pluck(:id)
       visible_block_ids = BlockPolicy::Scope.new(user, Block).resolve.pluck(:id)
+      visible_database_ids = DatabasePolicy::Scope.new(user, Database).resolve.pluck(:id)
 
       scoped = scope.where(workspace_id: workspace_ids)
       page_visible = scoped.where(commentable_type: "Page", commentable_id: visible_page_ids)
       block_visible = scoped.where(commentable_type: "Block", commentable_id: visible_block_ids)
+      database_visible = scoped.where(commentable_type: "Database", commentable_id: visible_database_ids)
 
-      page_visible.or(block_visible)
+      page_visible.or(block_visible).or(database_visible)
     end
   end
 
@@ -39,6 +41,8 @@ class CommentPolicy < ApplicationPolicy
       PagePolicy.new(user, record.commentable).show?
     when Block
       BlockPolicy.new(user, record.commentable).show?
+    when Database
+      DatabasePolicy.new(user, record.commentable).show?
     else
       false
     end
@@ -50,6 +54,8 @@ class CommentPolicy < ApplicationPolicy
       PagePolicy.new(user, record.commentable).update?
     when Block
       BlockPolicy.new(user, record.commentable).update?
+    when Database
+      DatabasePolicy.new(user, record.commentable).update?
     else
       false
     end

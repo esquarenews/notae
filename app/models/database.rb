@@ -4,12 +4,20 @@ class Database < ApplicationRecord
   ICON_SUGGESTIONS = Page::ICON_SUGGESTIONS
   FONT_STYLES = Page::FONT_STYLES
 
+  attribute :permission_mode, :integer, default: 0
+  enum :permission_mode, { shared_to_workspace: 0, private_database: 1, specific_users: 2 }, default: :shared_to_workspace
+
   belongs_to :workspace
+  belongs_to :created_by, class_name: "User", optional: true
   belongs_to :linked_page, class_name: "Page", optional: true
   has_many :db_properties, -> { order(:position, :created_at) }, dependent: :destroy
   has_many :db_rows, dependent: :destroy
   has_many :database_views, dependent: :destroy
   has_many :favorites, as: :favoritable, dependent: :destroy
+  has_many :comments, as: :commentable, dependent: :destroy
+  has_many :database_shares, dependent: :destroy
+  has_many :database_share_links, dependent: :destroy
+  has_many :shared_users, through: :database_shares, source: :user
   has_many :search_chunks, dependent: :nullify
   has_one_attached :cover_image
 
@@ -145,6 +153,13 @@ class Database < ApplicationRecord
 
   def locked?
     ActiveModel::Type::Boolean.new.cast(locked)
+  end
+
+  def visible_to_specific_user?(user)
+    return false unless user
+    return true if created_by_id == user.id
+
+    database_shares.exists?(user_id: user.id)
   end
 
   def small_text

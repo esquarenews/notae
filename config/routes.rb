@@ -41,22 +41,31 @@ Rails.application.routes.draw do
     post "invitations", to: "invitations#create", as: :workspace_invitations
     resources :memberships, only: :update
     resources :databases, only: %i[show create update destroy] do
+      member do
+        post :duplicate
+        patch :archive
+        patch :restore
+        patch :permissions
+        get :export_csv
+      end
+      resource :favorite, only: %i[create destroy], controller: "database_favorites"
+      resources :database_views, only: %i[create update]
+      patch "database_views/:id/default", to: "database_views#set_default", as: :default_database_view
+      resources :db_properties, only: %i[create destroy]
+      resources :db_rows, only: %i[create update destroy] do
         member do
+          patch :move
           post :duplicate
-          patch :archive
           patch :restore
-          get :export_csv
         end
-        resource :favorite, only: %i[create destroy], controller: "database_favorites"
-        resources :database_views, only: %i[create update]
-        patch "database_views/:id/default", to: "database_views#set_default", as: :default_database_view
-        resources :db_properties, only: %i[create destroy]
-        resources :db_rows, only: %i[create update destroy] do
-          member do
-            patch :move
-            post :duplicate
-          end
+      end
+      resources :share_links, only: %i[create destroy], controller: "database_share_links"
+      resources :comments, only: :create, controller: "database_comments" do
+        member do
+          patch :resolve
+          patch :unresolve
         end
+      end
       resources :db_cells, only: :update
     end
 
@@ -125,6 +134,7 @@ Rails.application.routes.draw do
   get "invitations/:token", to: "invitations#show", as: :invitation
   post "invitations/:token/accept", to: "invitations#accept", as: :accept_invitation
   get "s/:token", to: "public/pages#show", as: :public_share
+  get "g/:token", to: "public/databases#show", as: :public_database_share
 
   mount Sidekiq::Web => "/sidekiq" if Rails.env.development?
 end

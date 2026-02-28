@@ -1,7 +1,7 @@
 class DatabasesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv]
+  before_action :set_database, only: %i[show update duplicate archive export_csv permissions]
   before_action :set_archived_database, only: %i[restore destroy]
   COVER_SHIFT_STEP = 10
   FILTER_OPERATORS = %w[eq before after].freeze
@@ -12,9 +12,11 @@ class DatabasesController < ApplicationController
     authorize @database
     ensure_default_view!
 
+    @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
     @databases = policy_scope(Database).for_workspace(@workspace).active.order(:created_at)
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
+    @archived_rows = policy_scope(DbRow).for_database(@database).where.not(archived_at: nil).ordered.to_a
     ensure_cells_for_rendered_rows!
     @cells = policy_scope(DbCell).for_database(@database).to_a
     @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
@@ -46,10 +48,27 @@ class DatabasesController < ApplicationController
                                       .to_a
     @database_versions = @database.versions.reorder(created_at: :desc).limit(10).to_a
     @database_plain_text = build_database_plain_text
+    @database_share_links =
+      if policy(@database).permissions?
+        policy_scope(DatabaseShareLink).for_database(@database).recent_first.to_a
+      else
+        []
+      end
+    @shared_user_ids = @database.database_shares.pluck(:user_id)
+    database_comment_probe = Comment.new(commentable: @database, workspace: @workspace, author: current_user, body: "draft")
+    @can_comment_on_database = policy(database_comment_probe).create?
+    @new_database_comment = Comment.new
+    @database_comments = policy_scope(Comment)
+                           .for_workspace(@workspace)
+                           .where(commentable: @database)
+                           .includes(:author, :resolved_by)
+                           .order(created_at: :desc)
+                           .to_a
   end
 
   def create
     @database = @workspace.databases.new(database_params)
+    @database.created_by = current_user
     authorize @database
 
     if @database.save
@@ -65,6 +84,41 @@ class DatabasesController < ApplicationController
     else
       redirect_to workspace_path(@workspace.slug), alert: @database.errors.full_messages.to_sentence
     end
+  end
+
+  def permissions
+    authorize @database, :permissions?
+
+    permission_mode = params.require(:database).permit(:permission_mode)[:permission_mode]
+    shared_user_ids = Array(params.dig(:database, :shared_user_ids)).reject(&:blank?)
+    allowed_user_ids =
+      if permission_mode == "specific_users"
+        @workspace.memberships.where(user_id: shared_user_ids).pluck(:user_id)
+      else
+        []
+      end
+
+    ActiveRecord::Base.transaction do
+      @database.update!(permission_mode: permission_mode)
+
+      @database.database_shares.where.not(user_id: allowed_user_ids).delete_all
+      allowed_user_ids.each do |user_id|
+        @database.database_shares.find_or_create_by!(user_id: user_id) do |share|
+          share.created_by = current_user
+        end
+      end
+
+      log_database_audit_event!(
+        action: "share",
+        kind: "database_permissions_updated",
+        permission_mode: @database.permission_mode,
+        shared_user_ids: allowed_user_ids
+      )
+    end
+
+    redirect_to database_redirect_path, notice: "Grid permissions updated."
+  rescue ActionController::ParameterMissing, ActiveRecord::RecordInvalid => error
+    redirect_to database_redirect_path, alert: error.message
   end
 
   def update
@@ -560,6 +614,7 @@ class DatabasesController < ApplicationController
       view_settings: params[:view_settings].presence,
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
+      options_menu: params[:options_menu].presence,
       split_page_id: split_page_id,
       split_source: split_source,
       split_row_id: split_row_id

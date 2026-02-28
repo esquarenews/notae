@@ -16,6 +16,7 @@
   --notae-surface-muted: #f8f7f6;
   --notae-border: #e7e5e4;
   --notae-text: #292524;
+  --notae-heading-ink: #292524d4;
   --notae-muted: #57534e;
   --notae-accent: #2563eb;
 }
@@ -46,6 +47,7 @@ body.notae-theme-dark {
   --notae-surface-muted: #14171a;
   --notae-border: #2b3138;
   --notae-text: #e8eaed;
+  --notae-heading-ink: var(--notae-text);
   --notae-muted: #a9b1bc;
   --notae-accent: #7aa2ff;
 }
@@ -63,6 +65,7 @@ body.notae-theme-system {
     --notae-surface-muted: #14171a;
     --notae-border: #2b3138;
     --notae-text: #e8eaed;
+    --notae-heading-ink: var(--notae-text);
     --notae-muted: #a9b1bc;
     --notae-accent: #7aa2ff;
   }
@@ -2926,6 +2929,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   line-height: 1.04;
   font-weight: 700;
   letter-spacing: -0.03em;
+  color: var(--notae-heading-ink);
 }
 
 .notae-page-subtle {
@@ -3005,7 +3009,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   line-height: 1.04;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: color-mix(in srgb, var(--notae-text) 20%, transparent);
+  color: var(--notae-heading-ink);
 }
 
 .notae-db-description {
@@ -4365,7 +4369,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   line-height: 1.02;
   letter-spacing: -0.03em;
   font-weight: 800;
-  color: #292524;
+  color: var(--notae-heading-ink);
 }
 
 .notae-workspace-home-search {
@@ -4567,7 +4571,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   line-height: 1.04;
   letter-spacing: -0.03em;
   font-weight: 800;
-  color: #292524;
+  color: var(--notae-heading-ink);
 }
 
 .notae-utility-search-form {
@@ -4849,7 +4853,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   font-size: 1.95rem;
   line-height: 1.04;
   letter-spacing: -0.02em;
-  color: #292524;
+  color: var(--notae-heading-ink);
 }
 
 .notae-pref-row {
@@ -5135,7 +5139,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   margin: 0;
   font-size: 1rem;
   font-weight: 800;
-  color: #292524;
+  color: var(--notae-heading-ink);
 }
 
 .notae-danger-modal-form {
@@ -6461,7 +6465,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   line-height: 1.1;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #292524;
+  color: var(--notae-heading-ink);
 }
 
 .notae-page-title-input::placeholder {
@@ -7616,7 +7620,7 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
   margin: 0;
   font-size: 0.86rem;
   font-weight: 700;
-  color: #292524;
+  color: var(--notae-heading-ink);
 }
 
 .notae-library-property-group {

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_28_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -160,6 +160,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100000) do
     t.index ["workspace_id"], name: "index_comments_on_workspace_id"
   end
 
+  create_table "database_share_links", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.uuid "database_id", null: false
+    t.datetime "expires_at"
+    t.datetime "last_viewed_at"
+    t.datetime "revoked_at"
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_database_share_links_on_created_by_id"
+    t.index ["database_id", "revoked_at"], name: "index_database_share_links_on_database_id_and_revoked_at"
+    t.index ["database_id"], name: "index_database_share_links_on_database_id"
+    t.index ["token"], name: "index_database_share_links_on_token", unique: true
+    t.index ["workspace_id", "revoked_at"], name: "index_database_share_links_on_workspace_id_and_revoked_at"
+    t.index ["workspace_id"], name: "index_database_share_links_on_workspace_id"
+  end
+
+  create_table "database_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.uuid "database_id", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["created_by_id"], name: "index_database_shares_on_created_by_id"
+    t.index ["database_id", "user_id"], name: "index_database_shares_on_database_id_and_user_id", unique: true
+    t.index ["database_id"], name: "index_database_shares_on_database_id"
+    t.index ["user_id"], name: "index_database_shares_on_user_id"
+  end
+
   create_table "database_views", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.jsonb "config_json", default: {}, null: false
     t.datetime "created_at", null: false
@@ -183,18 +213,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100000) do
     t.integer "cover_focal_y", default: 50, null: false
     t.string "cover_preset_key"
     t.datetime "created_at", null: false
+    t.uuid "created_by_id"
     t.text "description"
     t.string "font_style", default: "default", null: false
     t.string "icon"
     t.uuid "linked_page_id"
     t.boolean "locked", default: false, null: false
     t.string "name", null: false
+    t.integer "permission_mode", default: 0, null: false
     t.boolean "small_text", default: false, null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_databases_on_created_by_id"
     t.index ["linked_page_id"], name: "index_databases_on_linked_page_id"
     t.index ["workspace_id", "archived_at"], name: "index_databases_on_workspace_id_and_archived_at"
     t.index ["workspace_id", "name"], name: "index_databases_on_workspace_id_and_name"
+    t.index ["workspace_id", "permission_mode"], name: "index_databases_on_workspace_id_and_permission_mode"
     t.index ["workspace_id"], name: "index_databases_on_workspace_id"
   end
 
@@ -569,10 +603,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100000) do
   add_foreign_key "comments", "users", column: "author_id"
   add_foreign_key "comments", "users", column: "resolved_by_id"
   add_foreign_key "comments", "workspaces"
+  add_foreign_key "database_share_links", "databases"
+  add_foreign_key "database_share_links", "users", column: "created_by_id"
+  add_foreign_key "database_share_links", "workspaces"
+  add_foreign_key "database_shares", "databases"
+  add_foreign_key "database_shares", "users"
+  add_foreign_key "database_shares", "users", column: "created_by_id"
   add_foreign_key "database_views", "databases"
   add_foreign_key "database_views", "users", column: "created_by_id"
   add_foreign_key "database_views", "workspaces"
   add_foreign_key "databases", "pages", column: "linked_page_id", on_delete: :nullify
+  add_foreign_key "databases", "users", column: "created_by_id"
   add_foreign_key "databases", "workspaces"
   add_foreign_key "db_cells", "db_properties"
   add_foreign_key "db_cells", "db_rows"

@@ -33,7 +33,11 @@ module Api
         database = workspace.databases.new(database_params)
         authorize database, :create?
 
-        database = Api::V1::Databases::CreateService.call(workspace: workspace, attributes: database_params.to_h)
+        database = Api::V1::Databases::CreateService.call(
+          workspace: workspace,
+          created_by: current_user,
+          attributes: database_params.to_h
+        )
         return render_validation_errors(database) unless database.persisted?
 
         render json: { data: Api::V1::Serializers::DatabaseSerializer.render_summary(database) }, status: :created

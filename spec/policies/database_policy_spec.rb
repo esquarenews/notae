@@ -20,4 +20,34 @@ RSpec.describe DatabasePolicy do
     expect(described_class.new(member, database).create?).to be(true)
     expect(described_class.new(guest, database).create?).to be(false)
   end
+
+  it "enforces private and specific user visibility modes" do
+    workspace = Workspace.create!(name: "Database visibility policy", slug: "database-visibility-policy")
+    owner = User.create!(email: "database-vis-owner@example.com", password: "password123")
+    member = User.create!(email: "database-vis-member@example.com", password: "password123")
+    other = User.create!(email: "database-vis-other@example.com", password: "password123")
+
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    Membership.create!(workspace: workspace, user: other, role: :member)
+
+    private_database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Private grid",
+      permission_mode: :private_database
+    )
+    specific_database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Specific grid",
+      permission_mode: :specific_users
+    )
+    DatabaseShare.create!(database: specific_database, user: member, created_by: owner)
+
+    expect(described_class.new(member, private_database).show?).to be(false)
+    expect(described_class.new(owner, private_database).show?).to be(true)
+    expect(described_class.new(member, specific_database).show?).to be(true)
+    expect(described_class.new(other, specific_database).show?).to be(false)
+  end
 end

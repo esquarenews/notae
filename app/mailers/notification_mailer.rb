@@ -35,6 +35,9 @@ class NotificationMailer < ApplicationMailer
   end
 
   def resolve_comment_url
+    if @comment.commentable.is_a?(Database)
+      return database_url(workspace_slug: @workspace.slug, id: @comment.commentable_id, anchor: "database-comments-menu")
+    end
     return workspace_url(workspace_slug: @workspace.slug) if @page.blank?
 
     page_url(workspace_slug: @workspace.slug, id: @page.id, anchor: "page-comments-menu")

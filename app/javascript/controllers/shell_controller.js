@@ -227,7 +227,7 @@ export default class extends Controller {
   handleOptionsMenuWindowClick(event) {
     if (!this.hasOptionsMenuTarget) return
     if (!this.optionsMenuTarget.hasAttribute("open")) return
-    if (event.target.closest("#page-options-menu")) return
+    if (event.target.closest("[data-shell-options-menu]")) return
 
     this.closeOptionsMenu()
   }

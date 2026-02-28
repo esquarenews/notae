@@ -1,6 +1,15 @@
 <% content_for :title, @database.name %>
 <% content_for :topbar_page_icon, @database.icon.presence || "🗃️" %>
-<% content_for :topbar_privacy, "Private" %>
+<% database_privacy_label =
+     case @database.permission_mode
+     when "private_database"
+       "Private"
+     when "specific_users"
+       "Specific users"
+     else
+       "Shared to workspace"
+     end %>
+<% content_for :topbar_privacy, database_privacy_label %>
 <% content_for :content_class, "notae-content-page" %>
 <% can_update_database = policy(@database).update? %>
 <% can_edit_database = can_update_database && !@database.locked? %>
@@ -10,6 +19,24 @@
 <% can_archive_database = @can_archive_database %>
 <% supported_layout_types = %w[table board timeline calendar list gallery chart feed map] %>
 <% enabled_layout_types = %w[table board calendar list gallery] %>
+<% topbar_view_params = {
+  workspace_slug: @workspace.slug,
+  id: @database.id,
+  view_id: @current_view&.id,
+  month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+  sort_property_id: params[:sort_property_id],
+  sort_direction: params[:sort_direction],
+  filter_property_id: params[:filter_property_id],
+  filter_value: params[:filter_value],
+  filter_operator: params[:filter_operator],
+  view_settings: params[:view_settings],
+  view_settings_section: params[:view_settings_section],
+  actions_menu: params[:actions_menu],
+  options_menu: params[:options_menu],
+  split_page_id: params[:split_page_id],
+  split_source: params[:split_source],
+  split_row_id: params[:split_row_id]
+}.compact %>
 <% content_for :topbar_actions do %>
   <span id="database_topbar_edited_at">
     <%= render "databases/topbar_edited_meta", database: @database %>
@@ -31,26 +58,31 @@
       ☆
     <% end %>
   <% end %>
+  <% unless @database.locked? %>
+    <%= render "databases/comments_menu",
+               workspace: @workspace,
+               database: @database,
+               can_comment_on_database: @can_comment_on_database,
+               new_database_comment: @new_database_comment,
+               database_comments: @database_comments,
+               view_params: topbar_view_params %>
+  <% end %>
+
+  <%= render "databases/options_menu",
+             workspace: @workspace,
+             database: @database,
+             can_manage_database_permissions: can_manage_database_permissions,
+             memberships: @memberships,
+             shared_user_ids: @shared_user_ids,
+             view_params: topbar_view_params,
+             view_link: database_url(topbar_view_params.except(:view_settings, :actions_menu, :options_menu, :split_page_id, :split_source, :split_row_id)),
+             archived_rows: @archived_rows,
+             can_create_database: can_create_database,
+             share_links: @database_share_links %>
 <% end %>
 
-<% view_params = {
-  workspace_slug: @workspace.slug,
-  id: @database.id,
-  view_id: @current_view&.id,
-  month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
-  sort_property_id: params[:sort_property_id],
-  sort_direction: params[:sort_direction],
-  filter_property_id: params[:filter_property_id],
-  filter_value: params[:filter_value],
-  filter_operator: params[:filter_operator],
-  view_settings: params[:view_settings],
-  view_settings_section: params[:view_settings_section],
-  actions_menu: params[:actions_menu],
-  split_page_id: params[:split_page_id],
-  split_source: params[:split_source],
-  split_row_id: params[:split_row_id]
-}.compact %>
-<% view_link_params = view_params.except(:view_settings, :actions_menu, :split_page_id, :split_source, :split_row_id) %>
+<% view_params = topbar_view_params %>
+<% view_link_params = view_params.except(:view_settings, :actions_menu, :options_menu, :split_page_id, :split_source, :split_row_id) %>
 <% view_link = database_url(view_link_params) %>
 <% db_layout_classes = [ "notae-db-split-layout" ] %>
 <% db_layout_classes << "has-side-peek" if @split_page.present? %>
@@ -284,8 +316,6 @@
     </div>
 
     <div class="notae-db-viewbar-right">
-      <button type="button" class="notae-db-toolbar-icon is-muted" disabled title="Quick menu">☰</button>
-      <button type="button" class="notae-db-toolbar-icon is-muted" disabled title="Sort">↕</button>
       <% if @current_view.present? %>
         <details id="database-actions-menu"
                  class="notae-actions-menu notae-db-actions-menu"
@@ -575,7 +605,6 @@
       <% else %>
         <button type="button" class="notae-db-toolbar-icon is-muted" disabled title="Actions">⚡</button>
       <% end %>
-      <button type="button" class="notae-db-toolbar-icon is-muted" disabled title="Search">⌕</button>
 
       <% if @current_view.present? %>
         <details class="notae-db-settings-menu" data-controller="copy-text" <%= "open" if params[:view_settings].to_s == "open" %>>

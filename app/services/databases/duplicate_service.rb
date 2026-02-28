@@ -31,7 +31,9 @@ module Databases
     def build_duplicate_database!
       duplicate = workspace.databases.create!(
         name: duplicate_name,
+        created_by: created_by,
         description: database.description,
+        permission_mode: database.permission_mode,
         icon: database.icon,
         cover_preset_key: database.cover_preset_key,
         cover_focal_y: database.cover_focal_y,

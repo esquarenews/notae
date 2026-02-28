@@ -15,6 +15,10 @@ class DbRowPolicy < ApplicationPolicy
     database_policy.destroy?
   end
 
+  def restore?
+    database_policy.destroy?
+  end
+
   class Scope < Scope
     def resolve
       return scope.none unless user

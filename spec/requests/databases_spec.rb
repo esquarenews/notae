@@ -202,6 +202,52 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
+  it "supports grid-level permission overrides: private, workspace, and specific users" do
+    owner = User.create!(email: "database-perms-owner@example.com", password: "password123")
+    member = User.create!(email: "database-perms-member@example.com", password: "password123")
+    outsider = User.create!(email: "database-perms-outsider@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database perms", slug: "database-perms")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    Membership.create!(workspace: workspace, user: outsider, role: :member)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Visibility grid")
+
+    sign_in owner
+    patch permissions_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { permission_mode: "private_database" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(AuditEvent.recent_first.first.action).to eq("share")
+
+    sign_out owner
+    sign_in member
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:not_found)
+
+    sign_out member
+    sign_in owner
+    patch permissions_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { permission_mode: "shared_to_workspace" } }
+    sign_out owner
+    sign_in member
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+
+    sign_out member
+    sign_in owner
+    patch permissions_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { permission_mode: "specific_users", shared_user_ids: [ member.id ] } }
+    sign_out owner
+
+    sign_in member
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+
+    sign_out member
+    sign_in outsider
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:not_found)
+  end
+
   it "groups board columns by select property and persists drag ordering" do
     owner = User.create!(email: "database-board-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Board tables", slug: "board-tables")
@@ -500,6 +546,10 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Duplicate")
     expect(response.body).to include("Move to")
     expect(response.body).to include("Move to Trash")
+    expect(response.body).to include("Options")
+    expect(response.body).to include("Permissions")
+    expect(response.body).to include("Public share links")
+    expect(response.body).to include("Archived rows")
     expect(response.body).to include("Small text")
     expect(response.body).to include("Undo")
     expect(response.body).to include("Export")
@@ -523,6 +573,10 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).not_to include("notae-db-view-plus")
 
     html = Nokogiri::HTML(response.body)
+    permissions_form = html.at_css("form[action*='/permissions']")
+    expect(permissions_form).to be_present
+    expect(permissions_form.at_css("select[name='database[permission_mode]']")).to be_present
+    expect(permissions_form.at_css("input[type='checkbox'][name='database[shared_user_ids][]']")).to be_present
     table_rows = html.css(".notae-db-grid tbody tr")
     expect(table_rows).not_to be_empty
     expect(table_rows.last["class"]).to include("notae-db-grid-add-row-control")
@@ -1133,8 +1187,10 @@ RSpec.describe "Databases", type: :request do
     get database_path(workspace_slug: workspace.slug, id: database.id)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Keep me")
-    expect(response.body).not_to include("Archive me")
+    html = Nokogiri::HTML(response.body)
+    active_row_titles = html.css(".notae-db-grid .notae-db-title-input").map { |input| input["value"].to_s.strip }
+    expect(active_row_titles).to include("Keep me")
+    expect(active_row_titles).not_to include("Archive me")
     expect(kept_row.reload.archived_at).to be_nil
   end
 
@@ -1185,6 +1241,21 @@ RSpec.describe "Databases", type: :request do
     patch restore_database_path(workspace_slug: workspace.slug, id: database.id)
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
     expect(database.reload.archived_at).to be_nil
+  end
+
+  it "restores archived rows from the grid options menu flow" do
+    owner = User.create!(email: "database-row-restore-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row restore tables", slug: "row-restore-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row restore grid")
+    archived_row = DbRow.create!(workspace: workspace, database: database, title: "Bring me back", archived_at: 1.hour.ago)
+    sign_in owner
+
+    patch restore_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: archived_row.id),
+          params: { options_menu: "open" }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, options_menu: "open"))
+    expect(archived_row.reload.archived_at).to be_nil
   end
 
   it "exports grid rows as csv" do

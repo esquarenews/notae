@@ -34,6 +34,10 @@
               <%= link_to "Open block",
                           page_path(workspace_slug: @workspace.slug, id: commentable.page_id, anchor: "block_#{commentable.id}"),
                           class: "notae-utility-link notae-utility-mini-link" %>
+            <% elsif commentable.is_a?(Database) %>
+              <%= link_to "Open grid",
+                          database_path(workspace_slug: @workspace.slug, id: commentable.id, anchor: "database-comments-menu"),
+                          class: "notae-utility-link notae-utility-mini-link" %>
             <% end %>
           <% end %>
 
