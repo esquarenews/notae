@@ -1,6 +1,8 @@
 require "base64"
 
 class PageExport < ApplicationRecord
+  encrypts :token, deterministic: true
+
   belongs_to :workspace
   belongs_to :page
   belongs_to :requested_by, class_name: "User"

@@ -9,8 +9,15 @@ class DbCellsController < ApplicationController
     authorize @db_cell
 
     if @db_cell.update(db_cell_params)
+      @database.reload
       respond_to do |format|
-        format.turbo_stream { head :no_content }
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.update(
+            "database_topbar_edited_at",
+            partial: "databases/topbar_edited_meta",
+            locals: { database: @database }
+          )
+        end
         format.html { redirect_to cell_redirect_location, notice: "Cell updated." }
       end
     else

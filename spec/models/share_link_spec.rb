@@ -26,4 +26,17 @@ RSpec.describe ShareLink, type: :model do
     expect(share_link).not_to be_active
     expect(share_link.revoked_at).to be_present
   end
+
+  it "encrypts public share token at rest" do
+    owner = User.create!(email: "share-link-encrypted-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Share encrypted", slug: "share-encrypted")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Public page")
+    share_link = described_class.create!(page: page, created_by: owner)
+    plaintext = share_link.token
+
+    share_link.reload
+
+    expect(share_link.attributes_before_type_cast["token"]).not_to eq(plaintext)
+    expect(share_link.token).to eq(plaintext)
+  end
 end

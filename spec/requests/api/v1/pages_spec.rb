@@ -20,6 +20,19 @@ RSpec.describe "API V1 Pages", type: :request do
     expect(json_body.dig("error", "code")).to eq("unauthorized")
   end
 
+  it "rejects abnormally long bearer token headers" do
+    user = User.create!(email: "api-pages-long-token@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Pages long token", slug: "api-pages-long-token")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    long_token = "a" * 2_048
+
+    get "/api/v1/workspaces/#{workspace.slug}/pages",
+        headers: { "Authorization" => "Bearer #{long_token}", "Accept" => "application/json" }
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(json_body.dig("error", "code")).to eq("unauthorized")
+  end
+
   it "returns policy-scoped pages only" do
     owner = User.create!(email: "api-pages-owner@example.com", password: "password123")
     member = User.create!(email: "api-pages-member@example.com", password: "password123")

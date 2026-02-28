@@ -11,7 +11,9 @@
 <% supported_layout_types = %w[table board timeline calendar list gallery chart feed map] %>
 <% enabled_layout_types = %w[table board calendar list gallery] %>
 <% content_for :topbar_actions do %>
-  <span class="notae-topbar-meta">Edited <%= time_ago_in_words(@database.updated_at) %> ago</span>
+  <span id="database_topbar_edited_at">
+    <%= render "databases/topbar_edited_meta", database: @database %>
+  </span>
   <% if @database_favorite.present? %>
     <%= button_to database_favorite_path(workspace_slug: @workspace.slug, database_id: @database.id),
                   method: :delete,
@@ -42,6 +44,7 @@
   filter_value: params[:filter_value],
   filter_operator: params[:filter_operator],
   view_settings: params[:view_settings],
+  view_settings_section: params[:view_settings_section],
   actions_menu: params[:actions_menu],
   split_page_id: params[:split_page_id],
   split_source: params[:split_source],
@@ -681,7 +684,7 @@
                 </div>
               </details>
 
-              <details class="notae-db-settings-submenu">
+              <details class="notae-db-settings-submenu" <%= "open" if params[:view_settings_section].to_s == "visibility" %>>
                 <summary class="notae-db-settings-row-button">
                   <span><span class="notae-db-settings-icon">◌</span> Property visibility</span>
                   <span class="notae-db-settings-meta"><%= @visible_db_properties.size %></span>
@@ -878,14 +881,16 @@
         </details>
       <% end %>
 
-      <% if can_edit_database %>
-        <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                      params: view_params.except(:workspace_slug, :id).merge(db_row: { title: "Untitled row" }),
-                      class: "notae-db-toolbar-new" do %>
-          <span>New</span>
+      <% unless @view_type == "table" %>
+        <% if can_edit_database %>
+          <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                        params: view_params.except(:workspace_slug, :id).merge(db_row: { title: "Untitled row" }),
+                        class: "notae-db-toolbar-new" do %>
+            <span>New</span>
+          <% end %>
+        <% else %>
+          <button type="button" class="notae-db-toolbar-new" disabled>New</button>
         <% end %>
-      <% else %>
-        <button type="button" class="notae-db-toolbar-new" disabled>New</button>
       <% end %>
     </div>
   </div>
@@ -893,11 +898,7 @@
   <% linked_page = @linkable_pages_by_id[@database.linked_page_id] %>
   <p class="notae-db-meta"><%= pluralize(@rows.size, "row") %></p>
   <div class="notae-db-linked-page-controls">
-    <span class="notae-db-linked-page-label">Grid page</span>
     <% if linked_page.present? %>
-      <%= link_to "Open",
-                  database_path(view_params.merge(split_page_id: linked_page.id, split_source: "database", split_row_id: nil)),
-                  class: "notae-db-open-link-button" %>
       <%= link_to linked_page.title,
                   database_path(view_params.merge(split_page_id: linked_page.id, split_source: "database", split_row_id: nil)),
                   class: "notae-db-linked-page-name" %>
@@ -921,7 +922,7 @@
       <span class="notae-db-linked-page-muted">No linked page</span>
     <% end %>
 
-    <% if can_edit_database %>
+    <% if can_edit_database && linked_page.blank? %>
       <details class="notae-db-inline-details">
         <summary class="notae-db-grid-add-link">Choose page</summary>
         <div class="notae-db-inline-panel">

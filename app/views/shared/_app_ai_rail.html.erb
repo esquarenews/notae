@@ -48,6 +48,7 @@
   <section class="notae-ai-thread" data-ai-rail-target="thread">
     <% ai_rail_conversations.each do |conversation| %>
       <% sources = Array(conversation.sources).map { |source| source.respond_to?(:with_indifferent_access) ? source.with_indifferent_access : source } %>
+      <% safe_sources = sources.select { |source| source[:url].to_s.start_with?("/") && !source[:url].to_s.start_with?("//") } %>
       <article class="notae-ai-message is-user is-compact">
         <p class="notae-ai-message-body"><%= conversation.prompt %></p>
       </article>
@@ -57,19 +58,31 @@
           <% if conversation.workspace.present? %>
             · <%= conversation.workspace.name %>
           <% end %>
+          <% if Rails.env.development? && conversation.respond_to?(:model) && conversation.model.present? %>
+            <span class="notae-ai-model-indicator">Model: <%= conversation.model %></span>
+          <% end %>
         </p>
         <p class="notae-ai-result-text"><%= conversation.answer %></p>
-        <% if sources.any? %>
-          <ul class="notae-ai-assistant-sources">
-            <% sources.each do |source| %>
-              <li>
-                <%= link_to "[#{source[:index]}] #{source[:title]}", source[:url], class: "notae-utility-link" %>
-                <% if source[:workspace_name].present? %>
-                  <span class="notae-ai-copy"><%= source[:workspace_name] %></span>
-                <% end %>
-              </li>
-            <% end %>
-          </ul>
+        <% if safe_sources.any? %>
+          <details class="notae-ai-sources-panel">
+            <summary class="notae-chip-button notae-ai-sources-toggle">
+              <span class="notae-ai-sources-when-closed">Sources</span>
+              <span class="notae-ai-sources-when-open">Hide</span>
+            </summary>
+            <ul class="notae-ai-assistant-sources">
+              <% safe_sources.each do |source| %>
+                <li>
+                  <%= link_to "[#{source[:index]}] #{source[:title]}",
+                              source[:url],
+                              class: "notae-utility-link",
+                              data: { turbo_frame: "_top" } %>
+                  <% if source[:workspace_name].present? %>
+                    <span class="notae-ai-copy"><%= source[:workspace_name] %></span>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          </details>
         <% end %>
         <p class="notae-ai-message-meta"><%= time_ago_in_words(conversation.created_at) %> ago</p>
         <div class="notae-ai-compose-actions">

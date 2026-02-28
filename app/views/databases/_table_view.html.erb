@@ -6,7 +6,6 @@
   filter_property_id: params[:filter_property_id],
   filter_value: params[:filter_value],
   filter_operator: params[:filter_operator],
-  view_settings: params[:view_settings],
   split_page_id: params[:split_page_id],
   split_source: params[:split_source],
   split_row_id: params[:split_row_id]
@@ -15,7 +14,20 @@
 <% linkable_pages_by_id = @linkable_pages_by_id || linkable_pages.index_by(&:id) %>
 <% visible_properties = @visible_db_properties || @db_properties %>
 <% can_edit_grid = policy(@database).update? && !@database.locked? %>
-<% can_update_view = @current_view.present? && policy(@current_view).update? && !@database.locked? %>
+<% can_create_rows = policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
+<% new_row_form_id = "db_new_row_form_#{@database.id}" %>
+<% row_color_options = [
+  ["Default", "default"],
+  ["Gray", "gray"],
+  ["Brown", "brown"],
+  ["Orange", "orange"],
+  ["Yellow", "yellow"],
+  ["Green", "green"],
+  ["Blue", "blue"],
+  ["Purple", "purple"],
+  ["Pink", "pink"],
+  ["Red", "red"]
+] %>
 
 <div class="notae-db-grid-wrap">
   <table class="notae-db-grid">
@@ -44,27 +56,6 @@
                           class: "notae-db-grid-property-link" %>
               <% if property_is_sorted %>
                 <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
-              <% end %>
-              <% if can_update_view && visible_properties.size > 1 %>
-                <%= form_with model: @current_view,
-                              url: database_database_view_path(
-                                workspace_slug: @workspace.slug,
-                                database_id: @database.id,
-                                id: @current_view.id,
-                                view_settings: "open"
-                              ),
-                              method: :patch,
-                              class: "notae-db-property-visibility-form" do |form| %>
-                  <% visible_properties.each do |property| %>
-                    <% next if property.id == db_property.id %>
-
-                    <%= hidden_field_tag "database_view[visible_property_ids][]", property.id %>
-                  <% end %>
-                  <button type="submit"
-                          class="notae-db-grid-visibility-toggle"
-                          title="Hide column"
-                          aria-label="Hide <%= db_property.name %> column">👁</button>
-                <% end %>
               <% end %>
             </div>
           </th>
@@ -102,39 +93,20 @@
         </th>
       </tr>
     </thead>
-    <tbody>
-      <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
-        <tr class="notae-db-grid-new-row">
-          <td>
-            <%= form_with model: @new_row,
-                          url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                          class: "notae-db-new-row-form" do |form| %>
-              <%= hidden_field_tag :view_id, row_params[:view_id] %>
-              <%= hidden_field_tag :month, row_params[:month] %>
-              <%= hidden_field_tag :sort_property_id, row_params[:sort_property_id] %>
-              <%= hidden_field_tag :sort_direction, row_params[:sort_direction] %>
-              <%= hidden_field_tag :filter_property_id, row_params[:filter_property_id] %>
-              <%= hidden_field_tag :filter_value, row_params[:filter_value] %>
-              <%= hidden_field_tag :filter_operator, row_params[:filter_operator] %>
-              <%= hidden_field_tag :view_settings, row_params[:view_settings] %>
-              <%= hidden_field_tag :split_page_id, row_params[:split_page_id] %>
-              <%= hidden_field_tag :split_source, row_params[:split_source] %>
-              <%= hidden_field_tag :split_row_id, row_params[:split_row_id] %>
-              <%= form.text_field :title,
-                                  placeholder: "Enter name",
-                                  class: "notae-db-title-input notae-db-new-row-input" %>
-              <%= form.submit "+", class: "notae-db-row-link-action is-create notae-db-new-row-submit", title: "Add row" %>
-            <% end %>
-          </td>
-          <% visible_properties.each do |_db_property| %>
-            <td></td>
-          <% end %>
-          <td></td>
-        </tr>
-      <% end %>
-
+    <tbody data-controller="db-table-reorder"
+           data-db-table-reorder-workspace-slug-value="<%= @workspace.slug %>"
+           data-db-table-reorder-database-id-value="<%= @database.id %>"
+           data-db-table-reorder-view-id-value="<%= @current_view&.id %>"
+           data-db-table-reorder-month-value="<%= row_params[:month] %>">
       <% @rows.each do |row| %>
         <% linked_page = linkable_pages_by_id[row.linked_page_id] %>
+        <% row_can_update = policy(row).update? && !@database.locked? %>
+        <% row_can_destroy = policy(row).destroy? && !@database.locked? %>
+        <% row_style_classes = [] %>
+        <% row_style_classes << "is-row-bold" if row.row_bold? %>
+        <% row_style_classes << "is-row-italic" if row.row_italic? %>
+        <% row_color_class = row.row_text_color %>
+        <% row_style_classes << "is-row-color-#{row_color_class}" unless row_color_class == "default" %>
         <% row_split_params = row_params.merge(
           workspace_slug: @workspace.slug,
           id: @database.id,
@@ -142,80 +114,174 @@
           split_source: "row",
           split_row_id: row.id
         ) %>
-        <tr id="row_<%= row.id %>" class="notae-db-grid-data-row <%= conditional_color_class_for_row(row) %>">
+        <tr id="row_<%= row.id %>"
+            class="notae-db-grid-data-row <%= conditional_color_class_for_row(row) %> <%= row_style_classes.join(" ") %>"
+            data-db-table-reorder-target="row"
+            data-db-table-reorder-row-id="<%= row.id %>"
+            data-action="dragover->db-table-reorder#dragover drop->db-table-reorder#drop dragleave->db-table-reorder#dragleave">
           <td>
-            <div class="notae-db-title-stack">
-              <div class="notae-db-title-primary">
-                <% if linked_page.present? %>
-                  <%= link_to row.title.presence || linked_page.title,
-                              database_path(row_split_params),
-                              class: "notae-db-title-link" %>
-                  <%= link_to database_path(row_split_params),
-                              class: "notae-db-row-link-action",
-                              title: "Open linked Nota",
-                              aria: { label: "Open linked Nota" } do %>
-                    ↗
+            <% row_update_path = database_db_row_path(
+              {
+                workspace_slug: @workspace.slug,
+                database_id: @database.id,
+                id: row.id
+              }.merge(row_params)
+            ) %>
+            <div class="notae-db-row-shell">
+              <% if row_can_update %>
+                <div class="notae-db-row-hover-controls">
+                  <% if can_create_rows %>
+                    <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                                  params: row_params.merge(insert_after_id: row.id, db_row: { title: "Untitled row" }),
+                                  class: "notae-db-row-hover-control",
+                                  form: { class: "notae-db-row-hover-control-form" },
+                                  title: "Insert row below",
+                                  aria: { label: "Insert row below" } do %>
+                      +
+                    <% end %>
                   <% end %>
-                <% elsif policy(row).update? && !@database.locked? %>
-                  <%= form_with model: row,
-                                url: database_db_row_path(
-                                  {
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @database.id,
-                                    id: row.id
-                                  }.merge(row_params)
-                                ),
-                                method: :patch,
-                                class: "notae-db-title-form notae-db-title-form-inline" do |form| %>
-                    <%= form.text_field :title,
-                                        value: row.title,
-                                        class: "notae-db-title-input",
-                                        placeholder: "Enter name",
-                                        onchange: "this.form.requestSubmit()" %>
-                    <%= form.submit "+",
-                                    class: "notae-db-row-link-action is-create",
-                                    name: "db_row[link_action]",
-                                    value: "create_page",
-                                    title: "Create linked Nota" %>
-                  <% end %>
-                <% else %>
-                  <span class="notae-db-title-text"><%= row.title %></span>
-                <% end %>
-              </div>
+                  <button type="button"
+                          class="notae-db-row-hover-control is-drag-handle"
+                          title="Drag to reorder"
+                          aria-label="Drag to reorder"
+                          draggable="true"
+                          data-db-table-reorder-row-id="<%= row.id %>"
+                          data-action="dragstart->db-table-reorder#dragstart dragend->db-table-reorder#dragend">
+                    ⠿
+                  </button>
+                  <div class="notae-db-inline-details notae-db-row-more-menu"
+                       data-controller="row-menu"
+                       data-row-menu-gap-value="6"
+                       data-row-menu-margin-value="12">
+                    <button type="button"
+                            class="notae-db-row-hover-control"
+                            title="Row options"
+                            aria-label="Row options"
+                            aria-expanded="false"
+                            data-row-menu-target="button"
+                            data-action="click->row-menu#toggle">⋯</button>
+                    <div class="notae-db-inline-panel notae-db-row-more-panel" data-row-menu-target="panel" hidden>
+                      <div class="notae-db-row-more-actions">
+                        <%= button_to duplicate_database_db_row_path(workspace_slug: @workspace.slug, database_id: @database.id, id: row.id),
+                                      params: row_params,
+                                      class: "notae-db-row-menu-button",
+                                      form: { class: "notae-db-row-menu-form" } do %>
+                          <span class="notae-db-row-menu-icon">⧉</span>
+                          <span class="notae-db-row-menu-label">Duplicate row</span>
+                        <% end %>
+                        <% if linked_page.present? %>
+                          <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+                            <%= form.hidden_field :linked_page_id, value: "" %>
+                            <button type="submit" class="notae-db-row-menu-button">
+                              <span class="notae-db-row-menu-icon">⤬</span>
+                              <span class="notae-db-row-menu-label">Remove Nota association</span>
+                            </button>
+                          <% end %>
+                        <% end %>
+                        <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+                          <%= form.hidden_field :style_action, value: "toggle_bold" %>
+                          <button type="submit" class="notae-db-row-menu-button">
+                            <span class="notae-db-row-menu-icon">B</span>
+                            <span class="notae-db-row-menu-label"><%= row.row_bold? ? "Unbold row" : "Bold row" %></span>
+                          </button>
+                        <% end %>
+                        <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+                          <%= form.hidden_field :style_action, value: "toggle_italic" %>
+                          <button type="submit" class="notae-db-row-menu-button">
+                            <span class="notae-db-row-menu-icon">I</span>
+                            <span class="notae-db-row-menu-label"><%= row.row_italic? ? "Unitalic row" : "Italic row" %></span>
+                          </button>
+                        <% end %>
+                        <div class="notae-db-row-menu-color-grid">
+                          <% row_color_options.each do |label, color_key| %>
+                            <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+                            <%= form.hidden_field :style_action, value: "set_color" %>
+                            <%= form.hidden_field :text_color, value: color_key %>
+                              <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_text_color == color_key %>">
+                                <span class="notae-db-row-menu-color-swatch is-<%= color_key %>"></span>
+                                <span class="notae-db-row-menu-label"><%= label %></span>
+                              </button>
+                            <% end %>
+                          <% end %>
+                        </div>
+                        <% if row_can_destroy %>
+                          <%= button_to database_db_row_path(workspace_slug: @workspace.slug, database_id: @database.id, id: row.id),
+                                        method: :delete,
+                                        params: row_params,
+                                        class: "notae-db-row-menu-button is-danger",
+                                        form: { class: "notae-db-row-menu-form" } do %>
+                            <span class="notae-db-row-menu-icon">x</span>
+                            <span class="notae-db-row-menu-label">Delete row</span>
+                          <% end %>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
 
-              <div class="notae-db-linked-page-row">
-                <% if linked_page.present? %>
-                  <span class="notae-db-linked-page-muted">Linked</span>
-                  <%= link_to linked_page.title,
-                              database_path(row_split_params),
-                              class: "notae-db-linked-page-name" %>
-                <% elsif !(policy(row).update? && !@database.locked?) %>
-                  <span class="notae-db-linked-page-muted">No linked page</span>
-                <% end %>
-
-                <% if policy(row).update? && !@database.locked? %>
-                  <details class="notae-db-inline-details">
-                    <summary class="notae-db-grid-add-link"><%= linked_page.present? ? "Link" : "Choose" %></summary>
-                    <div class="notae-db-inline-panel">
+              <div class="notae-db-title-stack">
+                <div class="notae-db-title-primary">
+                  <% if linked_page.present? %>
+                    <% if row_can_update %>
                       <%= form_with model: row,
-                                    url: database_db_row_path(
-                                      {
-                                        workspace_slug: @workspace.slug,
-                                        database_id: @database.id,
-                                        id: row.id
-                                      }.merge(row_params)
-                                    ),
+                                    url: row_update_path,
                                     method: :patch,
-                                    class: "notae-db-inline-form" do |form| %>
-                        <%= form.select :linked_page_id,
-                                        options_for_select(linkable_pages.map { |page| [page.title, page.id] }, linked_page&.id),
-                                        { include_blank: "No linked page" },
-                                        class: "notae-options-input" %>
-                        <%= form.submit "Save", class: "notae-chip-button" %>
+                                    class: "notae-db-title-form notae-db-title-form-inline" do |form| %>
+                        <%= form.text_field :title,
+                                            value: row.title,
+                                            class: "notae-db-title-input",
+                                            placeholder: "Enter name",
+                                            onchange: "this.form.requestSubmit()" %>
+                      <% end %>
+                    <% else %>
+                      <span class="notae-db-title-text"><%= row.title.presence || linked_page.title %></span>
+                    <% end %>
+                    <div class="notae-db-row-link-actions">
+                      <%= link_to database_path(row_split_params),
+                                  class: "notae-db-row-link-action",
+                                  title: "Open linked Nota",
+                                  aria: { label: "Open linked Nota" } do %>
+                        ↗
                       <% end %>
                     </div>
-                  </details>
-                <% end %>
+                  <% elsif row_can_update %>
+                    <%= form_with model: row,
+                                  url: row_update_path,
+                                  method: :patch,
+                                  class: "notae-db-title-form notae-db-title-form-inline" do |form| %>
+                      <%= form.text_field :title,
+                                          value: row.title,
+                                          class: "notae-db-title-input",
+                                          placeholder: "Enter name",
+                                          onchange: "this.form.requestSubmit()" %>
+                      <%= form.button "+",
+                                      type: "submit",
+                                      class: "notae-db-row-link-action is-create",
+                                      name: "db_row[link_action]",
+                                      value: "create_page",
+                                      title: "Create linked Nota",
+                                      aria: { label: "Create linked Nota" } %>
+                    <% end %>
+                    <details class="notae-db-inline-details notae-db-row-link-chooser">
+                      <summary class="notae-db-row-link-action is-choose" title="Choose linked Nota" aria-label="Choose linked Nota">🔗</summary>
+                      <div class="notae-db-inline-panel">
+                        <%= form_with model: row,
+                                      url: row_update_path,
+                                      method: :patch,
+                                      class: "notae-db-inline-form" do |form| %>
+                          <%= form.select :linked_page_id,
+                                          options_for_select(linkable_pages.map { |page| [page.title, page.id] }, linked_page&.id),
+                                          { include_blank: "No linked page" },
+                                          class: "notae-options-input" %>
+                          <%= form.submit "Save", class: "notae-chip-button" %>
+                        <% end %>
+                      </div>
+                    </details>
+                  <% else %>
+                    <span class="notae-db-title-text"><%= row.title %></span>
+                  <% end %>
+                </div>
               </div>
             </div>
           </td>
@@ -287,6 +353,34 @@
             <td>&nbsp;</td>
           <% end %>
           <td>&nbsp;</td>
+        </tr>
+      <% end %>
+
+      <% if can_create_rows %>
+        <tr class="notae-db-grid-add-row-control">
+          <td>
+            <%= form_with model: @new_row,
+                          url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                          id: new_row_form_id,
+                          class: "notae-db-new-row-trigger-form" do |form| %>
+              <%= hidden_field_tag :view_id, row_params[:view_id] %>
+              <%= hidden_field_tag :month, row_params[:month] %>
+              <%= hidden_field_tag :sort_property_id, row_params[:sort_property_id] %>
+              <%= hidden_field_tag :sort_direction, row_params[:sort_direction] %>
+              <%= hidden_field_tag :filter_property_id, row_params[:filter_property_id] %>
+              <%= hidden_field_tag :filter_value, row_params[:filter_value] %>
+              <%= hidden_field_tag :filter_operator, row_params[:filter_operator] %>
+              <%= hidden_field_tag :split_page_id, row_params[:split_page_id] %>
+              <%= hidden_field_tag :split_source, row_params[:split_source] %>
+              <%= hidden_field_tag :split_row_id, row_params[:split_row_id] %>
+              <%= form.hidden_field :title, value: "Untitled row" %>
+              <button type="submit" class="notae-db-new-row-trigger">+ New row</button>
+            <% end %>
+          </td>
+          <% visible_properties.each do |_db_property| %>
+            <td></td>
+          <% end %>
+          <td></td>
         </tr>
       <% end %>
     </tbody>

@@ -50,7 +50,7 @@ RSpec.describe "Databases", type: :request do
     expect(db_row.reload.data_json["Status"]).to eq("In Progress")
   end
 
-  it "updates cells inline without a redirect for turbo-stream requests" do
+  it "updates cells inline and refreshes topbar edited metadata for turbo-stream requests" do
     owner = User.create!(email: "database-inline-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables Inline", slug: "tables-inline")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -58,16 +58,22 @@ RSpec.describe "Databases", type: :request do
     db_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
     db_row = DbRow.create!(workspace: workspace, database: database, title: "Inline row")
     db_cell = DbCell.create!(workspace: workspace, db_row: db_row, db_property: db_property, value_text: "Todo")
+    database.update_column(:updated_at, 2.days.ago)
+    previous_database_updated_at = database.reload.updated_at
     sign_in owner
 
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: db_cell.id),
           params: { db_cell: { value_text: "Done" } },
           as: :turbo_stream
 
-    expect(response).to have_http_status(:no_content)
+    expect(response).to have_http_status(:ok)
     expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(response.body).to include("Edited")
     expect(db_cell.reload.value_text).to eq("Done")
     expect(db_row.reload.data_json["Status"]).to eq("Done")
+    expect(database.reload.updated_at).to be > previous_database_updated_at
   end
 
   it "removes columns and dependent cells" do
@@ -458,7 +464,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Announcements")
   end
 
-  it "renders the minimal table shell with add-property and quick new-row controls" do
+  it "renders the minimal table shell with add-property and a bottom new-row control" do
     owner = User.create!(email: "database-table-shell-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Table shell tables", slug: "table-shell-tables")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -471,8 +477,12 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Aa")
     expect(response.body).to include("Name")
     expect(response.body).to include("+ Add property")
-    expect(response.body).to include("Enter name")
-    expect(response.body).to include("notae-db-new-row-form")
+    expect(response.body).to include("notae-db-new-row-trigger-form")
+    expect(response.body).to include("notae-db-grid-add-row-control")
+    expect(response.body).to include("+ New row")
+    expect(response.body).not_to include("notae-db-toolbar-new")
+    expect(response.body).not_to include("notae-db-grid-new-row")
+    expect(response.body).not_to include("Link &amp; add row")
     expect(response.body).to include("Add icon")
     expect(response.body).to include("Add cover")
     expect(response.body).to include("Add description")
@@ -511,6 +521,12 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("notae-page-title-input")
     expect(response.body).not_to include("db-edit-view-panel")
     expect(response.body).not_to include("notae-db-view-plus")
+
+    html = Nokogiri::HTML(response.body)
+    table_rows = html.css(".notae-db-grid tbody tr")
+    expect(table_rows).not_to be_empty
+    expect(table_rows.last["class"]).to include("notae-db-grid-add-row-control")
+    expect(table_rows.map { |row| row["class"] }.join(" ")).not_to include("notae-db-grid-new-row")
   end
 
   it "applies property visibility from view config to table columns" do
@@ -538,6 +554,85 @@ RSpec.describe "Databases", type: :request do
     visible_headers = html.css(".notae-db-grid-property-link").map { |node| node.text.strip }
     expect(visible_headers).to include("Visible column")
     expect(visible_headers).not_to include("Hidden column")
+  end
+
+  it "includes newly added columns in explicit view visibility config" do
+    owner = User.create!(email: "database-property-new-visible-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Property visibility new columns", slug: "property-visibility-new-columns")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Visibility New DB")
+    visible_property = DbProperty.create!(workspace: workspace, database: database, name: "Visible column", property_type: :text)
+    DbProperty.create!(workspace: workspace, database: database, name: "Hidden column", property_type: :text)
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "visible_property_ids" => [ visible_property.id ] }
+    )
+    sign_in owner
+
+    post database_db_properties_path(workspace_slug: workspace.slug, database_id: database.id, view_id: view.id),
+         params: { db_property: { name: "Fresh column", property_type: "text" } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id))
+    created_property = database.db_properties.find_by!(name: "Fresh column")
+    configured_visible_ids = Array(view.reload.config_json["visible_property_ids"]).map(&:to_s)
+    expect(configured_visible_ids).to include(visible_property.id.to_s, created_property.id.to_s)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    visible_headers = html.css(".notae-db-grid-property-link").map { |node| node.text.strip }
+    expect(visible_headers).to include("Visible column", "Fresh column")
+    expect(visible_headers).not_to include("Hidden column")
+  end
+
+  it "does not render a header eye icon for property visibility" do
+    owner = User.create!(email: "database-property-eye-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Property eye tables", slug: "property-eye-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Eye DB")
+    DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css(".notae-db-grid-visibility-toggle")).to be_nil
+    expect(response.body).not_to include("Open property visibility")
+  end
+
+  it "backfills missing cells so new columns remain editable on existing rows" do
+    owner = User.create!(email: "database-backfill-cell-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Backfill cells tables", slug: "backfill-cells-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Backfill DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Row one")
+    property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    cell = DbCell.create!(workspace: workspace, db_row: row, db_property: property, value_text: "")
+    cell.destroy!
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    recreated_cell = DbCell.find_by(workspace: workspace, db_row: row, db_property: property)
+    expect(recreated_cell).to be_present
+    html = Nokogiri::HTML(response.body)
+    expect(html.css("input#db_cell_#{recreated_cell.id}_value_text")).not_to be_empty
   end
 
   it "locks the grid and blocks row edits until unlocked" do
@@ -644,6 +739,8 @@ RSpec.describe "Databases", type: :request do
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     database = Database.create!(workspace: workspace, name: "Row update DB")
     row = DbRow.create!(workspace: workspace, database: database, title: "Original title")
+    database.update_column(:updated_at, 2.days.ago)
+    previous_database_updated_at = database.reload.updated_at
     sign_in owner
 
     patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
@@ -651,12 +748,158 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
     expect(row.reload.title).to eq("Renamed row")
+    expect(database.reload.updated_at).to be > previous_database_updated_at
 
     patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
           params: { db_row: { title: "   " } }
 
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
     expect(row.reload.title).to eq("Untitled row")
+  end
+
+  it "inserts a newly created row directly below the referenced row" do
+    owner = User.create!(email: "database-row-insert-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row insert tables", slug: "row-insert-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row insert DB")
+    first_row = DbRow.create!(workspace: workspace, database: database, title: "First")
+    second_row = DbRow.create!(workspace: workspace, database: database, title: "Second")
+    sign_in owner
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: { insert_after_id: first_row.id, db_row: { title: "Inserted" } }
+
+    inserted_row = database.db_rows.find_by!(title: "Inserted")
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    ordered_ids = DbRow.for_database(database).active.ordered.pluck(:id)
+    expect(ordered_ids).to eq([ first_row.id, inserted_row.id, second_row.id ])
+  end
+
+  it "duplicates a row directly underneath and preserves cells, styling, and linked nota" do
+    owner = User.create!(email: "database-row-duplicate-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row duplicate tables", slug: "row-duplicate-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row duplicate DB")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    linked_page = Page.create!(workspace: workspace, created_by: owner, title: "Linked note")
+    source_row = DbRow.create!(
+      workspace: workspace,
+      database: database,
+      title: "Source row",
+      linked_page: linked_page,
+      data_json: {
+        DbRow::ROW_STYLE_BOLD_KEY => true,
+        DbRow::ROW_STYLE_ITALIC_KEY => true,
+        DbRow::ROW_STYLE_COLOR_KEY => "purple"
+      }
+    )
+    tail_row = DbRow.create!(workspace: workspace, database: database, title: "Tail row")
+    DbCell.create!(workspace: workspace, db_row: source_row, db_property: status_property, value_text: "In progress")
+    sign_in owner
+
+    post duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: source_row.id)
+
+    duplicate_row = database.db_rows.where.not(id: [ source_row.id, tail_row.id ]).find_by!(title: "Source row")
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_page_id: linked_page.id,
+        split_source: "row",
+        split_row_id: duplicate_row.id,
+        anchor: "row_#{duplicate_row.id}"
+      )
+    )
+    expect(duplicate_row.linked_page_id).to eq(linked_page.id)
+    expect(duplicate_row.row_bold?).to eq(true)
+    expect(duplicate_row.row_italic?).to eq(true)
+    expect(duplicate_row.row_text_color).to eq("purple")
+    expect(duplicate_row.db_cells.find_by!(db_property: status_property).value_text).to eq("In progress")
+
+    ordered_ids = DbRow.for_database(database).active.ordered.pluck(:id)
+    expect(ordered_ids).to eq([ source_row.id, duplicate_row.id, tail_row.id ])
+  end
+
+  it "updates row style actions and preserves styling after cell sync" do
+    owner = User.create!(email: "database-row-style-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row style tables", slug: "row-style-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row style DB")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Styled row")
+    cell = DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "Todo")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { style_action: "toggle_bold" } }
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { style_action: "toggle_italic" } }
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { style_action: "set_color", text_color: "blue" } }
+
+    row.reload
+    expect(row.row_bold?).to eq(true)
+    expect(row.row_italic?).to eq(true)
+    expect(row.row_text_color).to eq("blue")
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: cell.id),
+          params: { db_cell: { value_text: "Done" } }
+
+    row.reload
+    expect(row.row_bold?).to eq(true)
+    expect(row.row_italic?).to eq(true)
+    expect(row.row_text_color).to eq("blue")
+    expect(row.data_json["Status"]).to eq("Done")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    styled_row = html.at_css("#row_#{row.id}")
+    expect(styled_row).to be_present
+    expect(styled_row["class"]).to include("is-row-bold")
+    expect(styled_row["class"]).to include("is-row-italic")
+  end
+
+  it "clears active sorting config when manually reordering rows" do
+    owner = User.create!(email: "database-row-manual-order-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Manual order tables", slug: "manual-order-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Manual order DB")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    row_one = DbRow.create!(workspace: workspace, database: database, title: "One")
+    row_two = DbRow.create!(workspace: workspace, database: database, title: "Two")
+    DbCell.create!(workspace: workspace, db_row: row_one, db_property: status_property, value_text: "B")
+    DbCell.create!(workspace: workspace, db_row: row_two, db_property: status_property, value_text: "A")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "sort_property_id" => status_property.id, "sort_direction" => "asc" }
+    )
+    sign_in owner
+
+    patch move_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row_two.id),
+          params: {
+            property_id: nil,
+            target_value: "",
+            target_index: 1,
+            view_id: view.id,
+            clear_sort: true
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    payload = JSON.parse(response.body)
+    expect(payload["redirect_url"]).to include("/w/#{workspace.slug}/databases/#{database.id}")
+    expect(payload["redirect_url"]).not_to include("sort_property_id")
+    expect(payload["redirect_url"]).not_to include("sort_direction")
+    expect(view.reload.config_json).not_to have_key("sort_property_id")
+    expect(view.reload.config_json).not_to have_key("sort_direction")
+    ordered_ids = DbRow.for_database(database).active.ordered.pluck(:id)
+    expect(ordered_ids.last).to eq(row_two.id)
   end
 
   it "creates and links a page from a row action and opens side peek" do
@@ -696,8 +939,16 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("notae-db-split-pane")
     expect(response.body).to include("Linked page side peek")
     expect(response.body).to include(row.linked_page.title)
-    expect(response.body).to include("notae-db-title-link")
     expect(response.body).to include("Open linked Nota")
+
+    html = Nokogiri::HTML(response.body)
+    linked_row = html.at_css("#row_#{row.id}")
+    expect(linked_row).to be_present
+    expect(linked_row.css(".notae-db-row-link-action").size).to eq(1)
+    expect(linked_row.css(".notae-db-row-link-action").first.text.strip).to eq("↗")
+    expect(linked_row.css(".notae-db-row-link-chooser")).to be_empty
+    expect(linked_row.css(".notae-db-linked-page-row")).to be_empty
+    expect(linked_row.css(".notae-db-linked-page-name")).to be_empty
   end
 
   it "uses the submitted row name when creating a linked page from the name field action" do
@@ -723,6 +974,74 @@ RSpec.describe "Databases", type: :request do
         split_source: "row",
         split_row_id: row.id,
         anchor: "row_#{row.id}"
+      )
+    )
+  end
+
+  it "keeps linked pages attached when editing the row title" do
+    owner = User.create!(email: "database-row-edit-linked-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row edit linked tables", slug: "row-edit-linked-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row edit linked DB")
+    linked_page = Page.create!(workspace: workspace, created_by: owner, title: "Original linked nota")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Old title", linked_page: linked_page)
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { title: "Renamed linked row" } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
+    row.reload
+    expect(row.title).to eq("Renamed linked row")
+    expect(row.linked_page_id).to eq(linked_page.id)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    linked_row = html.at_css("#row_#{row.id}")
+    expect(linked_row).to be_present
+    expect(linked_row.at_css("input.notae-db-title-input")).to be_present
+    expect(linked_row.css(".notae-db-title-link")).to be_empty
+    expect(linked_row.css(".notae-db-row-link-action").size).to eq(1)
+    expect(linked_row.css(".notae-db-row-link-action").first.text.strip).to eq("↗")
+  end
+
+  it "creates and links a row directly from row creation actions" do
+    owner = User.create!(email: "database-row-create-link-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row create link tables", slug: "row-create-link-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row create link DB")
+    existing_page = Page.create!(workspace: workspace, created_by: owner, title: "Existing Nota")
+    sign_in owner
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: { db_row: { title: "From create action", link_action: "create_page" } }
+
+    created_row = database.db_rows.find_by!(title: "From create action")
+    expect(created_row.linked_page).to be_present
+    expect(created_row.linked_page.title).to eq("From create action")
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_page_id: created_row.linked_page_id,
+        split_source: "row",
+        split_row_id: created_row.id
+      )
+    )
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: { db_row: { title: "From choose action", linked_page_id: existing_page.id } }
+
+    chosen_row = database.db_rows.find_by!(title: "From choose action")
+    expect(chosen_row.linked_page_id).to eq(existing_page.id)
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_page_id: existing_page.id,
+        split_source: "row",
+        split_row_id: chosen_row.id
       )
     )
   end
@@ -756,8 +1075,11 @@ RSpec.describe "Databases", type: :request do
     )
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Grid page")
-    expect(response.body).to include("notae-db-open-link-button")
+    expect(response.body).not_to include("Grid page")
+    expect(response.body).not_to include("notae-db-open-link-button")
+    expect(response.body).not_to include("Choose page")
+    expect(response.body).to include(linked_page.title)
+    expect(response.body).to include("Unlink")
     expect(response.body).to include(page_path(workspace_slug: workspace.slug, id: linked_page.id, embedded: 1))
   end
 

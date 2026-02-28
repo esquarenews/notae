@@ -659,5 +659,36 @@ export default class extends Controller {
     if (Number.isFinite(updatedAtMs)) {
       this.lastKnownUpdatedAtMs = updatedAtMs
     }
+
+    this.updatePageTopbarEditedAt(data.page_updated_at || data.updated_at)
+  }
+
+  updatePageTopbarEditedAt(isoTimestamp) {
+    if (!isoTimestamp) return
+
+    const updatedAtMs = Date.parse(isoTimestamp)
+    if (!Number.isFinite(updatedAtMs)) return
+
+    const topbar = document.getElementById("page_topbar_edited_at")
+    if (!topbar) return
+
+    topbar.textContent = `Edited ${this.relativeTimeLabel(updatedAtMs)} ago`
+  }
+
+  relativeTimeLabel(updatedAtMs) {
+    const deltaSeconds = Math.max(1, Math.round((Date.now() - updatedAtMs) / 1000))
+
+    if (deltaSeconds < 45) return "less than a minute"
+    if (deltaSeconds < 90) return "1 minute"
+    if (deltaSeconds < 45 * 60) return `${Math.round(deltaSeconds / 60)} minutes`
+    if (deltaSeconds < 90 * 60) return "about 1 hour"
+    if (deltaSeconds < 24 * 60 * 60) return `about ${Math.round(deltaSeconds / (60 * 60))} hours`
+    if (deltaSeconds < 42 * 60 * 60) return "1 day"
+    if (deltaSeconds < 30 * 24 * 60 * 60) return `${Math.round(deltaSeconds / (24 * 60 * 60))} days`
+    if (deltaSeconds < 45 * 24 * 60 * 60) return "about 1 month"
+    if (deltaSeconds < 365 * 24 * 60 * 60) return `${Math.round(deltaSeconds / (30 * 24 * 60 * 60))} months`
+    if (deltaSeconds < 545 * 24 * 60 * 60) return "about 1 year"
+
+    return `${Math.round(deltaSeconds / (365 * 24 * 60 * 60))} years`
   }
 }

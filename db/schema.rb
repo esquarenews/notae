@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_27_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_28_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -47,6 +47,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_160000) do
   create_table "ai_conversations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.text "answer", null: false
     t.datetime "created_at", null: false
+    t.string "model"
     t.uuid "page_id"
     t.text "prompt", null: false
     t.string "scope", null: false
@@ -55,6 +56,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_160000) do
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
     t.uuid "workspace_id", null: false
+    t.index ["model"], name: "index_ai_conversations_on_model"
     t.index ["page_id"], name: "index_ai_conversations_on_page_id"
     t.index ["scope"], name: "index_ai_conversations_on_scope"
     t.index ["status"], name: "index_ai_conversations_on_status"

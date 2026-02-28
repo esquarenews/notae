@@ -5,7 +5,7 @@ class DatabaseView < ApplicationRecord
   enum :view_type, { table: 0, board: 1, calendar: 2, list: 3, gallery: 4 }, default: :table, scopes: false
 
   belongs_to :workspace
-  belongs_to :database
+  belongs_to :database, touch: true
   belongs_to :created_by, class_name: "User"
 
   validates :name, presence: true, uniqueness: { scope: :database_id, case_sensitive: false }

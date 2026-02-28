@@ -40,4 +40,27 @@ RSpec.describe User, type: :model do
     expect(user.smtp_from_display).to eq("Notae Bot <noreply@example.com>")
     expect(user.masked_smtp_password).to eq("sm...23")
   end
+
+  it "encrypts AI and SMTP credential fields at rest" do
+    user = described_class.create!(
+      email: "encrypted-credentials@example.com",
+      password: "password123",
+      openai_api_key: "sk-test-abc123",
+      smtp_address: "smtp.example.com",
+      smtp_port: 587,
+      smtp_domain: "example.com",
+      smtp_username: "smtp-user",
+      smtp_password: "smtp-password-123",
+      smtp_from_name: "Notae Team",
+      smtp_from_email: "noreply@example.com"
+    )
+    user.reload
+
+    expect(user.attributes_before_type_cast["openai_api_key"]).not_to eq("sk-test-abc123")
+    expect(user.attributes_before_type_cast["smtp_username"]).not_to eq("smtp-user")
+    expect(user.attributes_before_type_cast["smtp_password"]).not_to eq("smtp-password-123")
+    expect(user.openai_api_key).to eq("sk-test-abc123")
+    expect(user.smtp_username).to eq("smtp-user")
+    expect(user.smtp_password).to eq("smtp-password-123")
+  end
 end

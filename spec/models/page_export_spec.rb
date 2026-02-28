@@ -30,4 +30,17 @@ RSpec.describe PageExport, type: :model do
     expect(page_export).not_to be_active
     expect(page_export).not_to be_downloadable
   end
+
+  it "encrypts export token at rest" do
+    owner = User.create!(email: "page-export-encrypted-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page export encrypted workspace", slug: "page-export-encrypted-workspace")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Exportable page")
+    page_export = described_class.create!(workspace: workspace, page: page, requested_by: owner)
+    plaintext = page_export.token
+
+    page_export.reload
+
+    expect(page_export.attributes_before_type_cast["token"]).not_to eq(plaintext)
+    expect(page_export.token).to eq(plaintext)
+  end
 end

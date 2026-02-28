@@ -2,11 +2,15 @@ class DbRow < ApplicationRecord
   include PgSearch::Model
 
   POSITION_GAP = 1024
+  ROW_STYLE_BOLD_KEY = "__notae_row_bold".freeze
+  ROW_STYLE_ITALIC_KEY = "__notae_row_italic".freeze
+  ROW_STYLE_COLOR_KEY = "__notae_row_text_color".freeze
+  ROW_TEXT_COLORS = %w[default gray brown orange yellow green blue purple pink red].freeze
 
   has_paper_trail
 
   belongs_to :workspace
-  belongs_to :database
+  belongs_to :database, touch: true
   belongs_to :linked_page, class_name: "Page", optional: true
   has_many :db_cells, dependent: :destroy
   has_many :search_chunks, dependent: :destroy
@@ -34,6 +38,7 @@ class DbRow < ApplicationRecord
   after_commit :remove_search_chunks, on: :destroy
 
   def sync_data_from_cells!
+    style_payload = style_metadata
     serialized_data = db_cells.includes(:db_property).to_a.sort_by { |cell| [ cell.db_property.position, cell.db_property.created_at ] }
                              .each_with_object({}) do |cell, data|
       key = cell.db_property.name.to_s.strip
@@ -41,8 +46,65 @@ class DbRow < ApplicationRecord
 
       data[key] = cell.value_text.to_s
     end
+    serialized_data.merge!(style_payload)
 
     update!(data_json: serialized_data)
+  end
+
+  def row_bold?
+    ActiveModel::Type::Boolean.new.cast(data_json[ROW_STYLE_BOLD_KEY])
+  end
+
+  def row_italic?
+    ActiveModel::Type::Boolean.new.cast(data_json[ROW_STYLE_ITALIC_KEY])
+  end
+
+  def row_text_color
+    color = data_json[ROW_STYLE_COLOR_KEY].to_s
+    ROW_TEXT_COLORS.include?(color) ? color : "default"
+  end
+
+  def style_metadata
+    json = data_json.to_h
+    metadata = {}
+    metadata[ROW_STYLE_BOLD_KEY] = true if ActiveModel::Type::Boolean.new.cast(json[ROW_STYLE_BOLD_KEY])
+    metadata[ROW_STYLE_ITALIC_KEY] = true if ActiveModel::Type::Boolean.new.cast(json[ROW_STYLE_ITALIC_KEY])
+    color = json[ROW_STYLE_COLOR_KEY].to_s
+    metadata[ROW_STYLE_COLOR_KEY] = color if ROW_TEXT_COLORS.include?(color) && color != "default"
+    metadata
+  end
+
+  def apply_row_style_action!(action:, text_color: nil)
+    metadata = style_metadata.deep_dup
+
+    case action.to_s
+    when "toggle_bold"
+      if row_bold?
+        metadata.delete(ROW_STYLE_BOLD_KEY)
+      else
+        metadata[ROW_STYLE_BOLD_KEY] = true
+      end
+    when "toggle_italic"
+      if row_italic?
+        metadata.delete(ROW_STYLE_ITALIC_KEY)
+      else
+        metadata[ROW_STYLE_ITALIC_KEY] = true
+      end
+    when "set_color"
+      normalized = normalize_row_text_color(text_color)
+      if normalized == "default"
+        metadata.delete(ROW_STYLE_COLOR_KEY)
+      else
+        metadata[ROW_STYLE_COLOR_KEY] = normalized
+      end
+    when "clear_styles"
+      metadata = {}
+    else
+      return
+    end
+
+    payload = data_json.to_h.except(ROW_STYLE_BOLD_KEY, ROW_STYLE_ITALIC_KEY, ROW_STYLE_COLOR_KEY).merge(metadata)
+    self.data_json = payload
   end
 
   private
@@ -69,6 +131,11 @@ class DbRow < ApplicationRecord
     return if linked_page.workspace_id == workspace_id
 
     errors.add(:linked_page_id, "must belong to the same workspace")
+  end
+
+  def normalize_row_text_color(value)
+    color = value.to_s
+    ROW_TEXT_COLORS.include?(color) ? color : "default"
   end
 
   def enqueue_search_chunk_reindex

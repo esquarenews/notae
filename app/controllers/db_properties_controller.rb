@@ -11,6 +11,7 @@ class DbPropertiesController < ApplicationController
 
     if @db_property.save
       seed_cells_for_existing_rows(@db_property)
+      append_property_to_active_view_visibility(@db_property)
       redirect_to database_redirect_location, notice: "Column added."
     else
       redirect_to database_redirect_location, alert: @db_property.errors.full_messages.to_sentence
@@ -49,6 +50,24 @@ class DbPropertiesController < ApplicationController
     end
   end
 
+  def append_property_to_active_view_visibility(db_property)
+    view_id = params[:view_id].presence
+    return if view_id.blank?
+
+    database_view = policy_scope(DatabaseView).for_database(@database).find_by(id: view_id)
+    return if database_view.blank?
+    return unless policy(database_view).update?
+
+    config = database_view.config_json.to_h.deep_dup
+    visible_ids = Array(config["visible_property_ids"]).map(&:to_s).reject(&:blank?).uniq
+    return if visible_ids.empty?
+    return if visible_ids.include?(db_property.id.to_s)
+
+    visible_ids << db_property.id.to_s
+    config["visible_property_ids"] = visible_ids
+    database_view.update_columns(config_json: config, updated_at: Time.current)
+  end
+
   def database_redirect_location
     database_path(
       workspace_slug: @workspace.slug,
@@ -61,6 +80,7 @@ class DbPropertiesController < ApplicationController
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
       view_settings: params[:view_settings].presence,
+      view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,

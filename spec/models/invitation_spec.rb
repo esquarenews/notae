@@ -24,4 +24,22 @@ RSpec.describe Invitation, type: :model do
     expect(invitation).to be_expired
     expect { invitation.accept!(invitee) }.to raise_error(ActiveRecord::RecordInvalid)
   end
+
+  it "encrypts invitation token at rest" do
+    owner = User.create!(email: "inv-owner-encrypted@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Invite encrypted", slug: "invite-encrypted")
+    invitation = described_class.create!(
+      workspace: workspace,
+      invited_by: owner,
+      email: "target@example.com",
+      role: :guest,
+      expires_at: 2.days.from_now
+    )
+    plaintext = invitation.token
+
+    invitation.reload
+
+    expect(invitation.attributes_before_type_cast["token"]).not_to eq(plaintext)
+    expect(invitation.token).to eq(plaintext)
+  end
 end

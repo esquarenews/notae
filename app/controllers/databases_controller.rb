@@ -15,6 +15,7 @@ class DatabasesController < ApplicationController
     @databases = policy_scope(Database).for_workspace(@workspace).active.order(:created_at)
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
+    ensure_cells_for_rendered_rows!
     @cells = policy_scope(DbCell).for_database(@database).to_a
     @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
     @select_options_by_property = build_select_options_by_property
@@ -557,6 +558,7 @@ class DatabasesController < ApplicationController
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
       view_settings: params[:view_settings].presence,
+      view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
       split_page_id: split_page_id,
       split_source: split_source,
@@ -569,6 +571,42 @@ class DatabasesController < ApplicationController
     return nil if split_page_id.blank?
 
     policy_scope(Page).for_workspace(@workspace).active.find_by(id: split_page_id)
+  end
+
+  def ensure_cells_for_rendered_rows!
+    return if @rows.empty? || @db_properties.empty?
+
+    row_ids = @rows.map(&:id)
+    property_ids = @db_properties.map(&:id)
+
+    existing_keys = policy_scope(DbCell)
+                    .for_database(@database)
+                    .where(db_row_id: row_ids, db_property_id: property_ids)
+                    .pluck(:db_row_id, :db_property_id)
+                    .to_set
+
+    now = Time.current
+    missing_cells = []
+
+    row_ids.each do |row_id|
+      property_ids.each do |property_id|
+        next if existing_keys.include?([ row_id, property_id ])
+
+        missing_cells << {
+          id: SecureRandom.uuid,
+          workspace_id: @workspace.id,
+          db_row_id: row_id,
+          db_property_id: property_id,
+          value_text: "",
+          created_at: now,
+          updated_at: now
+        }
+      end
+    end
+
+    return if missing_cells.empty?
+
+    DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
   end
 
   def ensure_default_view!

@@ -1,4 +1,8 @@
 class User < ApplicationRecord
+  encrypts :openai_api_key
+  encrypts :smtp_username
+  encrypts :smtp_password
+
   THEME_OPTIONS = [
     [ "Light", "light" ],
     [ "Use system setting", "system" ],

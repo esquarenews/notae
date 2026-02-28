@@ -1,4 +1,6 @@
 class Workspace < ApplicationRecord
+  encrypts :join_link_token, deterministic: true
+
   include PgSearch::Model
 
   DISCO_ICON_OPTIONS = [

@@ -54,6 +54,7 @@ Rails.application.routes.draw do
         resources :db_rows, only: %i[create update destroy] do
           member do
             patch :move
+            post :duplicate
           end
         end
       resources :db_cells, only: :update

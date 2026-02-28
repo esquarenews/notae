@@ -26,4 +26,15 @@ RSpec.describe ApiToken, type: :model do
     expect(described_class.active).not_to include(revoked)
     expect(described_class.active).not_to include(expired)
   end
+
+  it "encrypts token at rest while keeping lookup value readable in memory" do
+    user = User.create!(email: "api-token-encrypted@example.com", password: "password123")
+    api_token = described_class.create!(user: user, name: "Encrypted")
+    plaintext = api_token.token
+
+    api_token.reload
+
+    expect(api_token.attributes_before_type_cast["token"]).not_to eq(plaintext)
+    expect(api_token.token).to eq(plaintext)
+  end
 end

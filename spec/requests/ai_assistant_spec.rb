@@ -40,12 +40,16 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.body).to include("notae-ai-thread")
     expect(response.body).to include("Is Mac mentioned?")
     expect(response.body).to include("Copy result")
+    expect(response.body).to include("Sources")
+    expect(response.body).to include("Hide")
+    expect(response.body).to include("data-turbo-frame=\"_top\"")
     expect(response.body).to include("Yes, Mac is mentioned")
 
     conversation = AiConversation.order(:created_at).last
     expect(conversation.prompt).to eq("Is Mac mentioned?")
     expect(conversation.answer).to include("Yes, Mac is mentioned")
     expect(conversation.status).to eq(AiConversation::STATUS_SUCCESS)
+    expect(conversation.model).to eq(Search::AssistantQueryService::SEARCH_MODEL)
   end
 
   it "shows a no-context notice for document scope without current document and stores notice history" do
@@ -139,5 +143,109 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.body).to include("alternative word for nice is pleasant")
     expect(response.body).not_to include("could not find enough context")
     expect(AiConversation.order(:created_at).last.status).to eq(AiConversation::STATUS_SUCCESS)
+  end
+
+  it "restricts document scope to the current workspace page" do
+    user = User.create!(email: "ai-assistant-document-scope@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Assistant Scope", slug: "ai-assistant-scope")
+    other_workspace = Workspace.create!(name: "AI Assistant Scope Other", slug: "ai-assistant-scope-other")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Membership.create!(workspace: other_workspace, user: user, role: :owner)
+
+    local_page = Page.create!(workspace: workspace, created_by: user, title: "Local Doc")
+    local_page.blocks.create!(
+      workspace: workspace,
+      created_by: user,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Local workspace details only." } ] }
+        ]
+      }
+    )
+
+    external_page = Page.create!(workspace: other_workspace, created_by: user, title: "External Doc")
+    external_page.blocks.create!(
+      workspace: other_workspace,
+      created_by: user,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Confidential external workspace text." } ] }
+        ]
+      }
+    )
+
+    captured_prompts = []
+    allow(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      captured_prompts << args[:prompt].to_s
+      {
+        text: "Answer from local doc [1].",
+        usage: { prompt_tokens: 66, completion_tokens: 20, total_tokens: 86 }
+      }
+    end
+
+    sign_in user
+    post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+         params: {
+           ai_assistant: {
+             prompt: "Summarize this document",
+             scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
+             current_page_id: external_page.id
+           }
+         },
+         headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("could not find enough context")
+    conversation = AiConversation.order(:created_at).last
+    expect(conversation.status).to eq(AiConversation::STATUS_NOTICE)
+    expect(captured_prompts).to be_empty
+
+    post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+         params: {
+           ai_assistant: {
+             prompt: "Summarize this document",
+             scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
+             current_page_id: local_page.id
+           }
+         },
+         headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Answer from local doc")
+    expect(captured_prompts.length).to eq(1)
+    expect(captured_prompts.first).to include("Title=Local Doc")
+    expect(captured_prompts.first).not_to include("Title=External Doc")
+  end
+
+  it "renders only internal source links in AI conversation history" do
+    user = User.create!(email: "ai-assistant-source-links@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Assistant Source Links", slug: "ai-assistant-source-links")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    AiConversation.create!(
+      user: user,
+      workspace: workspace,
+      prompt: "Source security check",
+      answer: "Answer with source links",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUCCESS,
+      sources: [
+        { index: 1, title: "Internal page", kind: "Page", url: "/w/#{workspace.slug}" },
+        { index: 2, title: "External page", kind: "Page", url: "https://malicious.example/steal" },
+        { index: 3, title: "Scheme-relative", kind: "Page", url: "//malicious.example/steal" }
+      ]
+    )
+
+    sign_in user
+    get workspace_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Internal page")
+    expect(response.body).not_to include("External page")
+    expect(response.body).not_to include("malicious.example")
   end
 end

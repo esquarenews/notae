@@ -31,7 +31,7 @@ RSpec.describe "Library page", type: :request do
     expect(workspace_filter_options(response.body)).to include([ "All workspaces", "all" ], [ "Library Main", "library-main" ], [ "Library Other", "library-other" ])
     expect(workspace_filter_options(response.body)).not_to include([ "Current workspace", "current" ])
     expect(workspace_filter_onchange(response.body)).to eq("this.form.requestSubmit()")
-    expect(source_filter_options(response.body)).to include([ "All sources", "all" ], [ "Pages", "page" ], [ "Meetings", "meeting" ], [ "Grids", "database" ])
+    expect(source_filter_options(response.body)).to include([ "All sources", "all" ], [ "Notarum", "page" ], [ "Meetings", "meeting" ], [ "Grids", "database" ])
     expect(source_filter_options(response.body)).not_to include([ "Workspaces", "workspace" ])
     expect(library_row_classes(response.body).all? { |klass| klass.include?("notae-library-row") }).to be(true)
     expect(response.body).to include("Filters")
@@ -80,7 +80,7 @@ RSpec.describe "Library page", type: :request do
         params: { visible_columns: %w[page_name created_by] }
 
     headers = library_headers(response.body)
-    expect(headers).to include("Page name", "Created by")
+    expect(headers).to include("Nota name", "Created by")
     expect(headers).not_to include("Workspace")
     expect(headers).not_to include("Source")
     expect(headers).not_to include("Last edited time")

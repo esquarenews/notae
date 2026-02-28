@@ -24,4 +24,15 @@ RSpec.describe Workspace, type: :model do
 
     expect(workspace.slug).to eq("marketing-team")
   end
+
+  it "encrypts join link token at rest" do
+    workspace = described_class.create!(name: "Join link workspace", slug: "join-link-workspace")
+
+    workspace.ensure_join_link_token!
+    plaintext = workspace.join_link_token
+    workspace.reload
+
+    expect(workspace.attributes_before_type_cast["join_link_token"]).not_to eq(plaintext)
+    expect(workspace.join_link_token).to eq(plaintext)
+  end
 end

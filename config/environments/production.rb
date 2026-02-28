@@ -1,4 +1,5 @@
 require "active_support/core_ext/integer/time"
+require "uri"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -29,7 +30,7 @@ Rails.application.configure do
   config.assume_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("ASSUME_SSL", "true"))
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  # config.force_ssl = true
+  config.force_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("FORCE_SSL", "true"))
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
@@ -88,10 +89,22 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
+  configured_hosts = [ ENV["APP_HOST"], ENV["ALLOWED_HOSTS"] ]
+                     .compact
+                     .flat_map { |value| value.to_s.split(",") }
+                     .map(&:strip)
+                     .filter_map do |value|
+                       next if value.blank?
+
+                       begin
+                         parsed = URI.parse(value)
+                         parsed.host.presence || value
+                       rescue URI::InvalidURIError
+                         value.sub(%r{\Ahttps?://}i, "").split("/").first
+                       end
+                     end
+                     .uniq
+  config.hosts = configured_hosts if configured_hosts.any?
   #
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }

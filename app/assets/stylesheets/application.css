@@ -1292,7 +1292,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 }
 
 .notae-ai-assistant-sources {
-  margin: 0;
+  margin: 0.22rem 0 0;
   padding-left: 1rem;
   display: grid;
   gap: 0.24rem;
@@ -1301,6 +1301,52 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 .notae-ai-assistant-sources li {
   display: grid;
   gap: 0.04rem;
+}
+
+.notae-ai-sources-panel {
+  margin: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.notae-ai-sources-panel > summary {
+  list-style: none;
+}
+
+.notae-ai-sources-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.notae-ai-sources-toggle {
+  width: fit-content;
+  margin-top: 0.14rem;
+  font-size: 0.67rem;
+  padding: 0.16rem 0.44rem;
+}
+
+.notae-ai-sources-panel .notae-ai-sources-when-open {
+  display: none;
+}
+
+.notae-ai-sources-panel[open] .notae-ai-sources-when-closed {
+  display: none;
+}
+
+.notae-ai-sources-panel[open] .notae-ai-sources-when-open {
+  display: inline;
+}
+
+.notae-ai-model-indicator {
+  display: inline-flex;
+  margin-left: 0.32rem;
+  border: 1px solid var(--notae-border);
+  border-radius: 999px;
+  padding: 0.02rem 0.38rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--notae-muted);
+  background: color-mix(in srgb, var(--notae-surface-muted) 82%, transparent);
 }
 
 .notae-ai-loader-row {
@@ -3348,6 +3394,12 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   z-index: 50;
 }
 
+.notae-db-grid-add-col .notae-db-inline-panel {
+  left: auto;
+  right: 0;
+  padding: 0.62rem;
+}
+
 .notae-db-grid-wrap {
   overflow: auto;
   border-radius: 0.4rem;
@@ -3416,20 +3468,6 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   margin: 0;
 }
 
-.notae-db-grid-visibility-toggle {
-  border: 0;
-  background: transparent;
-  color: var(--notae-muted);
-  font-size: 0.76rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-}
-
-.notae-db-grid-visibility-toggle:hover {
-  color: var(--notae-text);
-}
-
 .notae-db-grid-add-col {
   width: 180px;
   min-width: 180px;
@@ -3453,6 +3491,34 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   gap: 0.4rem;
 }
 
+.notae-db-new-row-trigger-form {
+  margin: 0;
+}
+
+.notae-db-new-row-trigger {
+  border: 1px solid var(--notae-border);
+  background: var(--notae-surface-raised);
+  color: var(--notae-text);
+  border-radius: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.3rem 0.56rem;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.notae-db-new-row-trigger:hover {
+  background: color-mix(in srgb, var(--notae-surface-muted) 86%, transparent);
+}
+
+.notae-db-new-row-trigger:focus,
+.notae-db-new-row-trigger:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--notae-accent) 58%, var(--notae-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--notae-accent) 18%, transparent);
+}
+
 .notae-db-new-row-input {
   min-width: 0;
   flex: 1 1 auto;
@@ -3466,8 +3532,96 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   background: color-mix(in srgb, var(--notae-accent) 4%, transparent);
 }
 
+.notae-db-grid-data-row {
+  position: relative;
+}
+
+.notae-db-grid-data-row:has(.notae-db-row-more-menu[open]) {
+  z-index: 180;
+}
+
 .notae-db-grid-data-row.is-overdue-highlight td {
   background: color-mix(in srgb, #ef4444 8%, transparent);
+}
+
+.notae-db-grid-data-row.is-drop-before td {
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--notae-accent) 65%, transparent);
+}
+
+.notae-db-grid-data-row.is-drop-after td {
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--notae-accent) 65%, transparent);
+}
+
+.notae-db-grid-data-row.is-row-bold td {
+  font-weight: 650;
+}
+
+.notae-db-grid-data-row.is-row-bold .notae-db-title-input,
+.notae-db-grid-data-row.is-row-bold .notae-db-cell-input {
+  font-weight: 650;
+}
+
+.notae-db-grid-data-row.is-row-italic td {
+  font-style: italic;
+}
+
+.notae-db-grid-data-row.is-row-italic .notae-db-title-input,
+.notae-db-grid-data-row.is-row-italic .notae-db-cell-input {
+  font-style: italic;
+}
+
+.notae-db-grid-data-row.is-row-color-gray td,
+.notae-db-grid-data-row.is-row-color-gray .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-gray .notae-db-cell-input {
+  color: #6b7280;
+}
+
+.notae-db-grid-data-row.is-row-color-brown td,
+.notae-db-grid-data-row.is-row-color-brown .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-brown .notae-db-cell-input {
+  color: #92400e;
+}
+
+.notae-db-grid-data-row.is-row-color-orange td,
+.notae-db-grid-data-row.is-row-color-orange .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-orange .notae-db-cell-input {
+  color: #ea580c;
+}
+
+.notae-db-grid-data-row.is-row-color-yellow td,
+.notae-db-grid-data-row.is-row-color-yellow .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-yellow .notae-db-cell-input {
+  color: #ca8a04;
+}
+
+.notae-db-grid-data-row.is-row-color-green td,
+.notae-db-grid-data-row.is-row-color-green .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-green .notae-db-cell-input {
+  color: #16a34a;
+}
+
+.notae-db-grid-data-row.is-row-color-blue td,
+.notae-db-grid-data-row.is-row-color-blue .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-blue .notae-db-cell-input {
+  color: #2563eb;
+}
+
+.notae-db-grid-data-row.is-row-color-purple td,
+.notae-db-grid-data-row.is-row-color-purple .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-purple .notae-db-cell-input {
+  color: #7c3aed;
+}
+
+.notae-db-grid-data-row.is-row-color-pink td,
+.notae-db-grid-data-row.is-row-color-pink .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-pink .notae-db-cell-input {
+  color: #db2777;
+}
+
+.notae-db-grid-data-row.is-row-color-red td,
+.notae-db-grid-data-row.is-row-color-red .notae-db-title-input,
+.notae-db-grid-data-row.is-row-color-red .notae-db-cell-input {
+  color: #dc2626;
 }
 
 .notae-db-grid-placeholder-row td {
@@ -3488,6 +3642,216 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   align-items: center;
   gap: 0.38rem;
   flex: 1 1 auto;
+}
+
+.notae-db-row-shell {
+  position: relative;
+  padding-left: 4.85rem;
+  isolation: isolate;
+}
+
+.notae-db-row-hover-controls {
+  position: absolute;
+  left: 0.08rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.16rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 120;
+}
+
+.notae-db-grid-data-row:hover .notae-db-row-hover-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.notae-db-row-hover-controls:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 320;
+}
+
+.notae-db-row-hover-controls.is-menu-open {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 320;
+}
+
+.notae-db-row-hover-control-form {
+  margin: 0;
+}
+
+.notae-db-row-hover-control {
+  border: 1px solid transparent;
+  border-radius: 0.32rem;
+  background: transparent;
+  color: var(--notae-muted);
+  width: 1.22rem;
+  height: 1.22rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notae-db-row-hover-control:hover {
+  border-color: var(--notae-border);
+  background: color-mix(in srgb, var(--notae-surface-muted) 80%, transparent);
+  color: var(--notae-text);
+}
+
+.notae-db-row-hover-control.is-dragging {
+  background: color-mix(in srgb, var(--notae-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--notae-accent) 42%, var(--notae-border));
+}
+
+.notae-db-row-more-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.notae-db-row-more-panel {
+  width: min(250px, 70vw);
+  padding: 0.45rem;
+  background: var(--notae-surface-raised);
+  box-shadow: 0 14px 34px rgba(28, 25, 23, 0.22);
+  z-index: 360;
+}
+
+.notae-db-row-more-panel.is-floating {
+  position: fixed;
+}
+
+.notae-db-row-more-actions {
+  display: grid;
+  gap: 0.3rem;
+  position: relative;
+  z-index: 1;
+}
+
+.notae-db-row-menu-form {
+  margin: 0;
+}
+
+.notae-db-row-menu-button {
+  width: 100%;
+  border: 1px solid var(--notae-border);
+  border-radius: 0.44rem;
+  background: var(--notae-surface);
+  color: var(--notae-text);
+  font-size: 0.76rem;
+  font-weight: 520;
+  padding: 0.35rem 0.48rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  text-align: left;
+  min-height: 1.9rem;
+}
+
+.notae-db-row-menu-button:hover {
+  background: color-mix(in srgb, var(--notae-surface-muted) 88%, transparent);
+}
+
+.notae-db-row-menu-button.is-active {
+  border-color: color-mix(in srgb, var(--notae-accent) 56%, var(--notae-border));
+  background: color-mix(in srgb, var(--notae-accent) 14%, transparent);
+}
+
+.notae-db-row-menu-button.is-danger {
+  color: #dc2626;
+}
+
+.notae-db-row-menu-icon {
+  width: 1.08rem;
+  height: 1.08rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--notae-border) 88%, transparent);
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--notae-surface-muted) 65%, transparent);
+  color: var(--notae-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.notae-db-row-menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.notae-db-row-menu-color-swatch {
+  width: 1.02rem;
+  height: 1.02rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.24rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border) 86%, transparent);
+  background: color-mix(in srgb, var(--notae-surface-muted) 70%, transparent);
+  flex-shrink: 0;
+}
+
+.notae-db-row-menu-color-swatch.is-default {
+  background: #f5f5f4;
+}
+
+.notae-db-row-menu-color-swatch.is-gray {
+  background: #9ca3af;
+}
+
+.notae-db-row-menu-color-swatch.is-brown {
+  background: #92400e;
+}
+
+.notae-db-row-menu-color-swatch.is-orange {
+  background: #ea580c;
+}
+
+.notae-db-row-menu-color-swatch.is-yellow {
+  background: #f59e0b;
+}
+
+.notae-db-row-menu-color-swatch.is-green {
+  background: #16a34a;
+}
+
+.notae-db-row-menu-color-swatch.is-blue {
+  background: #2563eb;
+}
+
+.notae-db-row-menu-color-swatch.is-purple {
+  background: #7c3aed;
+}
+
+.notae-db-row-menu-color-swatch.is-pink {
+  background: #db2777;
+}
+
+.notae-db-row-menu-color-swatch.is-red {
+  background: #dc2626;
+}
+
+.notae-db-row-menu-color-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.26rem;
+}
+
+.notae-db-row-more-panel[hidden] {
+  display: none !important;
 }
 
 .notae-db-title-primary {
@@ -3550,6 +3914,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   min-width: 1.55rem;
   height: 1.55rem;
   padding: 0;
+  cursor: pointer;
 }
 
 .notae-db-row-link-action.is-create {
@@ -4587,6 +4952,32 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   background: #f8f7f6;
   color: #a8a29e;
   border-color: #ecebea;
+}
+
+@media (max-width: 1380px) {
+  .notae-settings-shell {
+    grid-template-columns: 206px minmax(0, 1fr);
+  }
+
+  .notae-settings-section h2 {
+    font-size: 1.62rem;
+    line-height: 1.1;
+  }
+
+  .notae-pref-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 0.46rem;
+  }
+
+  .notae-pref-control-form {
+    width: 100%;
+  }
+
+  .notae-pref-select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .notae-pref-toggle {
@@ -5654,6 +6045,15 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   border-radius: 0.45rem;
   font-size: 0.74rem;
   padding: 0.36rem 0.46rem;
+  color: var(--notae-text);
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.notae-options-input:focus,
+.notae-options-input:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--notae-accent) 58%, #bfdbfe);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--notae-accent) 20%, transparent);
 }
 
 .notae-options-list {
@@ -6743,7 +7143,7 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   font-size: 0.74rem;
 }
 
-@media (max-width: 1360px) {
+@media (max-width: 1180px) {
   .notae-shell {
     grid-template-columns: 236px minmax(0, 1fr);
   }
@@ -6985,8 +7385,6 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .notae-ai-compose {
@@ -7587,6 +7985,22 @@ body.notae-theme-dark .notae-actions-move-select {
   border-color: var(--notae-border);
 }
 
+body.notae-theme-dark .notae-options-input {
+  background: #1f252c;
+  color: var(--notae-text);
+  border-color: var(--notae-border);
+}
+
+body.notae-theme-dark .notae-options-input::placeholder {
+  color: color-mix(in srgb, var(--notae-muted) 88%, transparent);
+}
+
+body.notae-theme-dark .notae-main,
+body.notae-theme-dark .notae-content,
+body.notae-theme-dark .notae-content-scroll {
+  background-image: none;
+}
+
 body.notae-theme-dark .notae-options-panel,
 body.notae-theme-dark .notae-comments-panel {
   background: var(--notae-surface-raised);
@@ -7619,6 +8033,22 @@ body.notae-theme-dark .notae-options-list-item {
 
   body.notae-theme-system .notae-actions-section {
     border-top-color: var(--notae-border);
+  }
+
+  body.notae-theme-system .notae-options-input {
+    background: #1f252c;
+    color: var(--notae-text);
+    border-color: var(--notae-border);
+  }
+
+  body.notae-theme-system .notae-options-input::placeholder {
+    color: color-mix(in srgb, var(--notae-muted) 88%, transparent);
+  }
+
+  body.notae-theme-system .notae-main,
+  body.notae-theme-system .notae-content,
+  body.notae-theme-system .notae-content-scroll {
+    background-image: none;
   }
 
   body.notae-theme-system .notae-actions-font-button {

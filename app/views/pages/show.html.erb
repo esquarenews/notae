@@ -3,7 +3,7 @@
 <% content_for :topbar_privacy, @page.permission_mode.humanize %>
 <% content_for :content_class, "notae-content-page" %>
 <% content_for :topbar_actions do %>
-  <span class="notae-topbar-meta">Edited <%= time_ago_in_words(@page.updated_at) %> ago</span>
+  <span id="page_topbar_edited_at" class="notae-topbar-meta">Edited <%= time_ago_in_words(@page.updated_at) %> ago</span>
   <% unless @page.locked? %>
     <% if @page_favorite.present? %>
       <%= button_to page_favorite_path(workspace_slug: @workspace.slug, page_id: @page.id),

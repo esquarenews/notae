@@ -16,6 +16,11 @@ module Api
 
       def authenticate_api_token!
         raw_token = extracted_api_token
+        if raw_token.blank? || raw_token.length > 512
+          render_error(code: "unauthorized", message: "Valid bearer token required", status: :unauthorized)
+          return
+        end
+
         @current_api_token = ApiToken.active.find_by(token: raw_token)
 
         if @current_api_token.blank?

@@ -1,6 +1,8 @@
 require "base64"
 
 class ShareLink < ApplicationRecord
+  encrypts :token, deterministic: true
+
   belongs_to :workspace
   belongs_to :page
   belongs_to :created_by, class_name: "User"

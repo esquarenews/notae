@@ -7,6 +7,8 @@ RSpec.describe "Blocks", type: :request do
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Editor")
     block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    page.update_column(:updated_at, 2.hours.ago)
+    previous_page_updated_at = page.reload.updated_at
     sign_in owner
 
     patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
@@ -24,6 +26,9 @@ RSpec.describe "Blocks", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response).not_to be_redirect
     expect(block.reload.block_type).to eq("heading_1")
+    expect(page.reload.updated_at).to be > previous_page_updated_at
+    payload = JSON.parse(response.body)
+    expect(payload["page_updated_at"]).to be_present
   end
 
   it "formats @date mentions using the user date preference" do

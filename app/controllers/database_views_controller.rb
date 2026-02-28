@@ -17,6 +17,7 @@ class DatabaseViewsController < ApplicationController
         id: @database.id,
         view_id: @database_view.id,
         view_settings: params[:view_settings].presence,
+        view_settings_section: params[:view_settings_section].presence,
         actions_menu: params[:actions_menu].presence
       ), notice: "View saved."
     else
@@ -34,6 +35,7 @@ class DatabaseViewsController < ApplicationController
         id: @database.id,
         view_id: @database_view.id,
         view_settings: params[:view_settings].presence,
+        view_settings_section: params[:view_settings_section].presence,
         actions_menu: params[:actions_menu].presence
       ), notice: "View updated."
     else
@@ -49,6 +51,7 @@ class DatabaseViewsController < ApplicationController
       id: @database.id,
       view_id: @database_view.id,
       view_settings: params[:view_settings].presence,
+      view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence
     ), notice: "Default view set."
   end

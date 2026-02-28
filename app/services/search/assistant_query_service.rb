@@ -254,7 +254,7 @@ module Search
     end
 
     def document_context_entries
-      page = accessible_pages_scope.find_by(id: current_page_id)
+      page = current_workspace_pages_scope.find_by(id: current_page_id)
       return [] if page.blank?
 
       text = [ page.title, page.blocks.active.ordered.pluck(:search_text).join("\n") ].join("\n").squish
@@ -413,7 +413,11 @@ module Search
       return @current_page if defined?(@current_page)
       return @current_page = nil if current_page_id.blank?
 
-      @current_page = accessible_pages_scope.find_by(id: current_page_id)
+      @current_page = current_workspace_pages_scope.find_by(id: current_page_id)
+    end
+
+    def current_workspace_pages_scope
+      accessible_pages_scope.where(workspace_id: workspace.id)
     end
 
     def target_block_text

@@ -23,9 +23,10 @@ class BlocksController < ApplicationController
 
     if source_block.update(block_update_params)
       touched_blocks = sync_synced_group(source_block)
+      touched_at = touch_pages_for_blocks!(touched_blocks)
       touched_blocks.each { |touched_block| broadcast_block_update(touched_block) }
       respond_to do |format|
-        format.json { render json: serialized_block(@block.reload), status: :ok }
+        format.json { render json: serialized_block(@block.reload, page_updated_at: touched_at), status: :ok }
         format.html { redirect_to page_path(workspace_slug: @workspace.slug, id: @page.id), notice: "Block updated." }
       end
     else
@@ -169,13 +170,22 @@ class BlocksController < ApplicationController
     )
   end
 
-  def serialized_block(block)
+  def serialized_block(block, page_updated_at: nil)
     {
       id: block.id,
       block_type: block.block_type,
       content_json: block.content_json,
-      updated_at: block.updated_at&.iso8601(6)
+      updated_at: block.updated_at&.iso8601(6),
+      page_updated_at: page_updated_at&.iso8601(6)
     }
+  end
+
+  def touch_pages_for_blocks!(blocks)
+    page_ids = blocks.filter_map(&:page_id)
+    page_ids << @page.id
+    touched_at = Time.current
+    Page.where(id: page_ids.uniq).update_all(updated_at: touched_at)
+    touched_at
   end
 
   def source_block_for_update(block)

@@ -5,7 +5,7 @@ class DbCell < ApplicationRecord
   has_paper_trail
 
   belongs_to :workspace
-  belongs_to :db_row
+  belongs_to :db_row, touch: true
   belongs_to :db_property
 
   validates :db_property_id, uniqueness: { scope: :db_row_id }

@@ -1,6 +1,8 @@
 require "base64"
 
 class ApiToken < ApplicationRecord
+  encrypts :token, deterministic: true
+
   belongs_to :user
 
   validates :name, presence: true

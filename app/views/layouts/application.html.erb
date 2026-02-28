@@ -52,11 +52,8 @@
             <div class="notae-topbar-actions">
               <% if content_for?(:topbar_actions) %>
                 <%= yield :topbar_actions %>
-              <% else %>
-                <span class="notae-topbar-meta">Edited just now</span>
-                <button type="button" class="notae-chip-button">Share</button>
-                <button type="button" class="notae-inline-icon-button" aria-label="Favorite">☆</button>
-                <button type="button" class="notae-inline-icon-button" aria-label="More">⋯</button>
+              <% elsif content_for?(:topbar_meta) %>
+                <span class="notae-topbar-meta"><%= yield :topbar_meta %></span>
               <% end %>
             </div>
           </header>

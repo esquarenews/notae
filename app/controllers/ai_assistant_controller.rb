@@ -117,12 +117,22 @@ class AiAssistantController < ApplicationController
     answer = @ai_assistant_response&.answer.presence || @ai_assistant_notice.presence
     return if answer.blank?
 
-    sources = Array(@ai_assistant_response&.sources).map do |source|
-      source.slice(:index, :title, :kind, :url, :workspace_name)
+    sources = Array(@ai_assistant_response&.sources).filter_map do |source|
+      normalized_source = source.respond_to?(:with_indifferent_access) ? source.with_indifferent_access : source
+      safe_url = sanitized_source_url(normalized_source[:url])
+      next if safe_url.blank?
+
+      {
+        index: normalized_source[:index],
+        title: normalized_source[:title],
+        kind: normalized_source[:kind],
+        url: safe_url,
+        workspace_name: normalized_source[:workspace_name]
+      }
     end
     page_id = policy_scope(Page).active.where(workspace_id: @workspace.id).find_by(id: @ai_assistant_current_page_id)&.id
 
-    AiConversation.create!(
+    conversation_attributes = {
       user: current_user,
       workspace: @workspace,
       page_id: page_id,
@@ -131,8 +141,29 @@ class AiAssistantController < ApplicationController
       prompt: @ai_assistant_prompt,
       answer: answer,
       sources: sources
+    }
+    if AiConversation.column_names.include?("model")
+      conversation_attributes[:model] = @ai_assistant_response&.model.presence || "unknown"
+    end
+
+    AiConversation.create!(
+      conversation_attributes
     )
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.warn("AI conversation persist failed for workspace=#{@workspace.id}: #{e.message}")
+  end
+
+  def sanitized_source_url(raw_url)
+    value = raw_url.to_s.strip
+    return nil if value.blank?
+    return nil unless value.start_with?("/")
+    return nil if value.start_with?("//")
+
+    parsed = URI.parse(value)
+    return nil if parsed.scheme.present? || parsed.host.present?
+
+    value
+  rescue URI::InvalidURIError
+    nil
   end
 end

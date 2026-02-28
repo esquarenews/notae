@@ -7,7 +7,7 @@ class DbProperty < ApplicationRecord
   enum :property_type, { text: 0, number: 1, date: 2, checkbox: 3, select: 4 }, default: :text, scopes: false
 
   belongs_to :workspace
-  belongs_to :database
+  belongs_to :database, touch: true
 
   has_many :db_cells, dependent: :destroy
 
