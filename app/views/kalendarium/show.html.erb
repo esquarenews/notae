@@ -232,7 +232,11 @@
                     <% end_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
                     <% start_minutes = (start_local.hour * 60) + start_local.min %>
                     <% end_minutes = (end_local.hour * 60) + end_local.min %>
-                    <% end_minutes += 1_440 if end_minutes <= start_minutes %>
+                    <% if end_local.to_date > start_local.to_date || end_minutes < start_minutes %>
+                      <% end_minutes += 1_440 %>
+                    <% elsif end_minutes == start_minutes %>
+                      <% end_minutes = start_minutes + 30 %>
+                    <% end %>
                     <% clamped_start = start_minutes.clamp(0, 1_439) %>
                     <% clamped_end = [end_minutes, 1_440].min %>
                     <% duration_minutes = [clamped_end - clamped_start, 30].max %>
@@ -342,7 +346,11 @@
                         <% end_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
                         <% start_minutes = (start_local.hour * 60) + start_local.min %>
                         <% end_minutes = (end_local.hour * 60) + end_local.min %>
-                        <% end_minutes += 1_440 if end_minutes <= start_minutes %>
+                        <% if end_local.to_date > start_local.to_date || end_minutes < start_minutes %>
+                          <% end_minutes += 1_440 %>
+                        <% elsif end_minutes == start_minutes %>
+                          <% end_minutes = start_minutes + 30 %>
+                        <% end %>
                         <% clamped_start = start_minutes.clamp(0, 1_439) %>
                         <% clamped_end = [end_minutes, 1_440].min %>
                         <% duration_minutes = [clamped_end - clamped_start, 30].max %>

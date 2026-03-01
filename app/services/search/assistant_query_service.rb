@@ -27,7 +27,18 @@ module Search
     SEARCH_MODEL = "gpt-4o-mini"
     WRITING_MODEL = "gpt-4.1-mini"
     GENERAL_MODEL = "gpt-4.1-mini"
+    CALENDAR_DIRECT_MODEL = "calendar-direct-v1"
     MAX_CONTEXT_ITEMS = 12
+    CALENDAR_EVENT_LIMIT = 40
+    WEEKDAY_INDEX_BY_NAME = {
+      "sunday" => 0,
+      "monday" => 1,
+      "tuesday" => 2,
+      "wednesday" => 3,
+      "thursday" => 4,
+      "friday" => 5,
+      "saturday" => 6
+    }.freeze
 
     attr_reader :unavailable_reason
 
@@ -53,6 +64,9 @@ module Search
       if writing_intent?(resolved_intent)
         return generate_writing_response(resolved_scope: resolved_scope, resolved_intent: resolved_intent)
       end
+
+      calendar_response = calendar_agenda_response(resolved_scope: resolved_scope, resolved_intent: resolved_intent)
+      return calendar_response if calendar_response.present?
 
       context_entries = build_context_entries(resolved_scope)
       if use_general_knowledge_response?(resolved_scope: resolved_scope, context_entries: context_entries)
@@ -170,6 +184,255 @@ module Search
         auto_insert: resolved_intent == INTENT_COMPOSE,
         model: WRITING_MODEL
       )
+    end
+
+    def calendar_agenda_response(resolved_scope:, resolved_intent:)
+      return nil unless resolved_intent == INTENT_SEARCH
+
+      normalized_prompt = prompt.downcase
+      return nil unless calendar_schedule_request?(normalized_prompt)
+
+      window = calendar_query_window(normalized_prompt)
+      events = calendar_events_for_window(resolved_scope: resolved_scope, window: window)
+      if events.empty?
+        return Response.new(
+          answer: "No appointments found for #{window[:label]}.",
+          sources: [],
+          scope: resolved_scope,
+          intent: resolved_intent,
+          auto_insert: false,
+          model: CALENDAR_DIRECT_MODEL
+        )
+      end
+
+      context_entries = events.first(MAX_CONTEXT_ITEMS).each_with_index.map do |event, index|
+        calendar_context_entry_for_event(event: event, index: index + 1, resolved_scope: resolved_scope)
+      end
+      answer_lines = context_entries.map { |entry| "- #{entry[:excerpt]} [#{entry[:index]}]" }
+      answer_text = [ "Appointments for #{window[:label]}:", *answer_lines ].join("\n")
+      used_sources = context_entries.map { |entry| entry.slice(:index, :title, :kind, :url, :workspace_name) }
+
+      Response.new(
+        answer: answer_text,
+        sources: used_sources,
+        scope: resolved_scope,
+        intent: resolved_intent,
+        auto_insert: false,
+        model: CALENDAR_DIRECT_MODEL
+      )
+    end
+
+    def calendar_schedule_request?(normalized_prompt)
+      return false if normalized_prompt.blank?
+
+      schedule_keyword = /\b(appointment|appointments|meeting|meetings|event|events|schedule|scheduled|agenda|calendar|activity|activities)\b/
+      request_patterns = [
+        /\bwhat do i have\b/,
+        /\bwhat(?:'s| is) on\b/,
+        /\bwhat (appointments|meetings|events)\b/,
+        /\bshow (me )?(my )?(appointments|meetings|events|schedule|calendar|agenda)\b/,
+        /\blist (my )?(appointments|meetings|events|schedule|calendar|agenda)\b/,
+        /\bdo i have (any )?(appointments|meetings|events)\b/,
+        /\bwhich (appointments|meetings|events)\b/
+      ]
+      request_keyword = /\b(what|which|show|list|tell|any)\b/
+
+      request_patterns.any? { |pattern| normalized_prompt.match?(pattern) } ||
+        (normalized_prompt.match?(schedule_keyword) && normalized_prompt.match?(request_keyword))
+    end
+
+    def calendar_query_window(normalized_prompt)
+      today = Time.current.in_time_zone(user_time_zone).to_date
+      if normalized_prompt.match?(/\btomorrow\b/)
+        date = today + 1
+        return day_window_for(date: date, label: "tomorrow (#{format_calendar_date(date)})")
+      end
+      if normalized_prompt.match?(/\btoday\b|\btonight\b/)
+        return day_window_for(date: today, label: "today (#{format_calendar_date(today)})")
+      end
+      if normalized_prompt.match?(/\bthis week\b/)
+        start_date = today.beginning_of_week(calendar_week_start_day)
+        end_date = start_date + 6
+        return range_window_for(
+          start_date: start_date,
+          end_date_exclusive: start_date + 7,
+          label: "this week (#{format_calendar_date_range(start_date, end_date)})"
+        )
+      end
+      if normalized_prompt.match?(/\bnext week\b/)
+        start_date = today.beginning_of_week(calendar_week_start_day) + 7
+        end_date = start_date + 6
+        return range_window_for(
+          start_date: start_date,
+          end_date_exclusive: start_date + 7,
+          label: "next week (#{format_calendar_date_range(start_date, end_date)})"
+        )
+      end
+      if normalized_prompt.match?(/\bthis month\b/)
+        start_date = today.beginning_of_month
+        end_date_exclusive = start_date.next_month
+        return range_window_for(
+          start_date: start_date,
+          end_date_exclusive: end_date_exclusive,
+          label: "this month (#{start_date.strftime('%B %Y')})"
+        )
+      end
+      if normalized_prompt.match?(/\bnext month\b/)
+        start_date = today.beginning_of_month.next_month
+        end_date_exclusive = start_date.next_month
+        return range_window_for(
+          start_date: start_date,
+          end_date_exclusive: end_date_exclusive,
+          label: "next month (#{start_date.strftime('%B %Y')})"
+        )
+      end
+
+      explicit_date = explicit_date_from_prompt(normalized_prompt, today: today)
+      return day_window_for(date: explicit_date, label: format_calendar_date(explicit_date)) if explicit_date.present?
+
+      weekday_date = weekday_date_from_prompt(normalized_prompt, today: today)
+      return day_window_for(date: weekday_date, label: format_calendar_date(weekday_date)) if weekday_date.present?
+
+      upcoming_start_date = today
+      upcoming_end_date = upcoming_start_date + 6
+      range_window_for(
+        start_date: upcoming_start_date,
+        end_date_exclusive: upcoming_start_date + 7,
+        label: "the next 7 days (#{format_calendar_date_range(upcoming_start_date, upcoming_end_date)})"
+      )
+    end
+
+    def day_window_for(date:, label:)
+      range_window_for(start_date: date, end_date_exclusive: date + 1, label: label)
+    end
+
+    def range_window_for(start_date:, end_date_exclusive:, label:)
+      start_local = user_time_zone.local(start_date.year, start_date.month, start_date.day)
+      end_local = user_time_zone.local(end_date_exclusive.year, end_date_exclusive.month, end_date_exclusive.day)
+
+      {
+        range_start_utc: start_local.utc,
+        range_end_utc: end_local.utc,
+        label: label
+      }
+    end
+
+    def explicit_date_from_prompt(normalized_prompt, today:)
+      if (iso_match = normalized_prompt.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/))
+        return Date.new(iso_match[1].to_i, iso_match[2].to_i, iso_match[3].to_i)
+      end
+
+      date_match = normalized_prompt.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/)
+      return nil unless date_match
+
+      first = date_match[1].to_i
+      second = date_match[2].to_i
+      year = normalized_year(value: date_match[3], fallback: today.year)
+
+      candidates = []
+      candidates << safe_build_date(year: year, month: second, day: first)
+      candidates << safe_build_date(year: year, month: first, day: second)
+      candidates.compact!
+      return nil if candidates.empty?
+
+      candidates.sort_by { |candidate| [ candidate < today ? 1 : 0, (candidate - today).abs ] }.first
+    end
+
+    def safe_build_date(year:, month:, day:)
+      Date.new(year, month, day)
+    rescue Date::Error
+      nil
+    end
+
+    def normalized_year(value:, fallback:)
+      return fallback if value.blank?
+
+      year = value.to_i
+      return year + 2000 if value.to_s.length == 2
+
+      year
+    end
+
+    def weekday_date_from_prompt(normalized_prompt, today:)
+      day_name = WEEKDAY_INDEX_BY_NAME.keys.find { |name| normalized_prompt.match?(/\b(?:this|next)?\s*#{name}\b/) }
+      return nil if day_name.blank?
+
+      target_wday = WEEKDAY_INDEX_BY_NAME.fetch(day_name)
+      if normalized_prompt.match?(/\bthis #{day_name}\b/)
+        start_of_week = today.beginning_of_week(calendar_week_start_day)
+        candidate = start_of_week + ((target_wday - start_of_week.wday) % 7)
+        return candidate >= today ? candidate : candidate + 7
+      end
+
+      days_ahead = (target_wday - today.wday) % 7
+      days_ahead = 7 if days_ahead.zero?
+      candidate = today + days_ahead
+      candidate += 7 if normalized_prompt.match?(/\bnext #{day_name}\b/)
+      candidate
+    end
+
+    def calendar_events_for_window(resolved_scope:, window:)
+      scope = accessible_kalendarium_events_scope.includes(:workspace, :kalendarium_calendar).where.not(status: "cancelled")
+      scope = scope.where(workspace_id: workspace.id) unless resolved_scope == SCOPE_ACCOUNT
+
+      scope.for_range(window[:range_start_utc], window[:range_end_utc])
+           .order(:starts_at_utc)
+           .limit(CALENDAR_EVENT_LIMIT)
+    end
+
+    def calendar_context_entry_for_event(event:, index:, resolved_scope:)
+      {
+        index: index,
+        kind: "Kalendarium event",
+        title: event.title,
+        excerpt: calendar_event_excerpt(event: event, resolved_scope: resolved_scope),
+        workspace_name: event.workspace.name,
+        url: Rails.application.routes.url_helpers.kalendarium_path(
+          workspace_slug: event.workspace.slug,
+          view: "day",
+          date: event.starts_at_utc.in_time_zone(user_time_zone).to_date.iso8601,
+          anchor: "kalendarium_event_#{event.id}"
+        )
+      }
+    end
+
+    def calendar_event_excerpt(event:, resolved_scope:)
+      starts_at_local = event.starts_at_utc.in_time_zone(user_time_zone)
+      ends_at_local = event.ends_at_utc.in_time_zone(user_time_zone)
+      time_label =
+        if event.all_day?
+          "All day"
+        elsif starts_at_local.to_date == ends_at_local.to_date
+          "#{starts_at_local.strftime('%a %-d %b %Y %H:%M')} to #{ends_at_local.strftime('%H:%M')}"
+        else
+          "#{starts_at_local.strftime('%a %-d %b %Y %H:%M')} to #{ends_at_local.strftime('%a %-d %b %Y %H:%M')}"
+        end
+
+      details = []
+      details << "Calendar: #{event.kalendarium_calendar.name}" if event.kalendarium_calendar&.name.present?
+      details << "Location: #{event.location}" if event.location.present?
+      details << "Status: #{event.status.titleize}" if event.status.present? && event.status != "confirmed"
+      if resolved_scope == SCOPE_ACCOUNT && event.workspace_id != workspace.id
+        details << "Workspace: #{event.workspace.name}"
+      end
+
+      [ "#{time_label} - #{event.title}", details.join("; ").presence ].compact.join(" (") + (details.present? ? ")" : "")
+    end
+
+    def format_calendar_date(date)
+      date.strftime("%A %-d %B %Y")
+    end
+
+    def format_calendar_date_range(start_date, end_date)
+      "#{format_calendar_date(start_date)} to #{format_calendar_date(end_date)}"
+    end
+
+    def calendar_week_start_day
+      user.start_week_on_monday? ? :monday : :sunday
+    end
+
+    def user_time_zone
+      @user_time_zone ||= ActiveSupport::TimeZone[user.time_zone] || Time.zone || ActiveSupport::TimeZone["UTC"]
     end
 
     def use_general_knowledge_response?(resolved_scope:, context_entries:)

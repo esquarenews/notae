@@ -228,6 +228,7 @@ export default class extends Controller {
 
     this.shellElement.classList.toggle("is-ai-rail-collapsed", collapsed)
     this.setPreference("notae-ai-rail-collapsed", collapsed)
+    this.notifyLayoutChange()
   }
 
   setOverlayOpen(open) {
@@ -235,6 +236,7 @@ export default class extends Controller {
 
     this.shellElement.classList.toggle("is-ai-rail-overlay-open", open)
     this.syncFloatingControls()
+    this.notifyLayoutChange()
   }
 
   restoreRailState() {
@@ -374,5 +376,11 @@ export default class extends Controller {
     if (this.hasOverlayTarget) {
       this.overlayTarget.hidden = !expanded
     }
+  }
+
+  notifyLayoutChange() {
+    window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("notae:layout-changed"))
+    })
   }
 }

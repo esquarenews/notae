@@ -33,21 +33,28 @@
 
     <section class="notae-settings-section">
       <h2>Calendar connections</h2>
-      <p class="notae-pref-description">Google uses OAuth tokens, iCloud uses CalDAV credentials (Apple ID + app-specific password), and ICS uses read-only feed URLs.</p>
+      <p class="notae-pref-description">Google can be connected with OAuth (recommended), iCloud uses CalDAV credentials (Apple ID + app-specific password), and ICS uses read-only feed URLs.</p>
+      <%= form_with url: google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug),
+                    method: :get,
+                    class: "notae-kalendarium-connection-form" do %>
+        <%= text_field_tag :label, "Google calendar", placeholder: "Google connection label", required: true, class: "notae-auth-input" %>
+        <%= select_tag :owner_scope,
+                       options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
+                       class: "notae-auth-input" %>
+        <%= submit_tag "Connect Google with OAuth", class: "notae-chip-button" %>
+      <% end %>
       <%= form_with model: KalendariumConnection.new,
                     url: kalendarium_connections_path(workspace_slug: @workspace.slug),
                     class: "notae-kalendarium-connection-form" do |form| %>
         <%= form.text_field :label, placeholder: "Connection label", required: true, class: "notae-auth-input" %>
         <%= form.select :provider,
-                        options_for_select([["Google", "google"], ["Apple/iCloud CalDAV (iOS)", "icloud_caldav"], ["ICS feed", "ics"]]),
+                        options_for_select([["Apple/iCloud CalDAV (iOS)", "icloud_caldav"], ["ICS feed", "ics"]]),
                         {},
                         class: "notae-auth-input" %>
         <%= select_tag "kalendarium_connection[owner_scope]",
                        options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
                        class: "notae-auth-input" %>
         <%= form.text_field :remote_account_id, placeholder: "Remote account id (optional)", class: "notae-auth-input" %>
-        <%= form.password_field :access_token, placeholder: "Access token (Google)", class: "notae-auth-input" %>
-        <%= form.password_field :refresh_token, placeholder: "Refresh token (Google)", class: "notae-auth-input" %>
         <%= form.text_field :provider_username, placeholder: "CalDAV username (Apple ID email)", class: "notae-auth-input" %>
         <%= form.password_field :provider_password, placeholder: "CalDAV password (app-specific)", class: "notae-auth-input" %>
         <%= form.url_field :ics_url, placeholder: "ICS feed URL (for ICS provider only)", class: "notae-auth-input" %>
@@ -69,6 +76,13 @@
                 <% end %>
               </div>
               <div class="notae-kalendarium-connection-actions">
+                <% if connection.provider == "google" %>
+                  <%= button_to "Authorize Google",
+                                google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug),
+                                method: :get,
+                                params: { connection_id: connection.id },
+                                class: "notae-chip-button" %>
+                <% end %>
                 <%= button_to "Sync", sync_kalendarium_connection_path(workspace_slug: @workspace.slug, id: connection.id), method: :post, class: "notae-chip-button" %>
                 <%= button_to(connection.enabled? ? "Disable" : "Enable",
                               kalendarium_connection_path(workspace_slug: @workspace.slug, id: connection.id),

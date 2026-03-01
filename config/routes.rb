@@ -49,6 +49,7 @@ Rails.application.routes.draw do
         post :sync
       end
       collection do
+        get :google_authorize
         get :google_callback
         get :icloud_callback
       end
@@ -166,6 +167,7 @@ Rails.application.routes.draw do
   post "invitations/:token/accept", to: "invitations#accept", as: :accept_invitation
   get "s/:token", to: "public/pages#show", as: :public_share
   get "g/:token", to: "public/databases#show", as: :public_database_share
+  get "kalendarium/google/callback", to: "kalendarium_connections#google_callback", as: :kalendarium_google_callback
 
   mount Sidekiq::Web => "/sidekiq" if Rails.env.development?
 end

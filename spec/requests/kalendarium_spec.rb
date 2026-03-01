@@ -121,6 +121,39 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("date=2026-03-18&amp;view=day")
   end
 
+  it "renders equal start/end timeline events using a minimum slot height" do
+    user, workspace, calendar = build_stack(suffix: "equal-time-timeline")
+    user.update!(time_zone: "UTC")
+    sign_in user
+
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Equal time event",
+      starts_at_utc: Time.zone.parse("2026-03-01 11:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 12:00:00")
+    )
+    event.update_column(:ends_at_utc, event.starts_at_utc)
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+
+    day_doc = Nokogiri::HTML.parse(response.body)
+    day_card = day_doc.at_css("#kalendarium_event_#{event.id}")
+    expect(day_card).to be_present
+    expect(day_card["style"]).to include("height: 28.0px;")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+
+    week_doc = Nokogiri::HTML.parse(response.body)
+    week_card = week_doc.at_css("#kalendarium_event_#{event.id}")
+    expect(week_card).to be_present
+    expect(week_card["style"]).to include("height: 28.0px;")
+  end
+
   it "renders separate calendar and project dropdown filters that preserve each other state" do
     user, workspace, calendar = build_stack(suffix: "separate-filters")
     sign_in user

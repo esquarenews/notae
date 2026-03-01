@@ -19,15 +19,15 @@ module Kalendarium
 
     def adapter
       @adapter ||= case connection.provider
-                   when "google"
-                     Kalendarium::Providers::GoogleAdapter.new(connection: connection)
-                   when "icloud_caldav"
-                     Kalendarium::Providers::IcloudCaldavAdapter.new(connection: connection)
-                   when "ics"
-                     Kalendarium::Providers::IcsAdapter.new(connection: connection)
-                   else
-                     Kalendarium::Providers::BaseAdapter.new(connection: connection)
-                   end
+      when "google"
+        Kalendarium::Providers::GoogleAdapter.new(connection: connection)
+      when "icloud_caldav"
+        Kalendarium::Providers::IcloudCaldavAdapter.new(connection: connection)
+      when "ics"
+        Kalendarium::Providers::IcsAdapter.new(connection: connection)
+      else
+        Kalendarium::Providers::BaseAdapter.new(connection: connection)
+      end
     end
   end
 end

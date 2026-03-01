@@ -9,6 +9,14 @@ export default class extends Controller {
   }
 
   connect() {
+    this.onLayoutChange = () => this.updateNowLine()
+    this.onScrollerScroll = () => this.updateNowLine()
+    window.addEventListener("resize", this.onLayoutChange)
+    window.addEventListener("notae:layout-changed", this.onLayoutChange)
+    if (this.hasScrollerTarget) {
+      this.scrollerTarget.addEventListener("scroll", this.onScrollerScroll, { passive: true })
+    }
+
     if (this.hasScrollerTarget && this.scrollerTarget.dataset.kalendariumTimelineInitialized !== "true") {
       const startHour = this.hasStartHourValue ? this.startHourValue : 5
       const slotHeight = this.hasSlotHeightValue ? this.slotHeightValue : 28
@@ -33,6 +41,12 @@ export default class extends Controller {
   }
 
   disconnect() {
+    window.removeEventListener("resize", this.onLayoutChange)
+    window.removeEventListener("notae:layout-changed", this.onLayoutChange)
+    if (this.hasScrollerTarget) {
+      this.scrollerTarget.removeEventListener("scroll", this.onScrollerScroll)
+    }
+
     if (this.nowTimer) {
       window.clearInterval(this.nowTimer)
       this.nowTimer = null
@@ -62,8 +76,42 @@ export default class extends Controller {
 
       line.style.top = `${topPixels.toFixed(2)}px`
       const label = line.querySelector(".notae-kalendarium-now-line-label")
-      if (label) label.textContent = `Now ${labelText}`
+      if (label) {
+        label.textContent = `Now ${labelText}`
+        this.positionNowLabel(label, line)
+      }
     })
+  }
+
+  positionNowLabel(label, line) {
+    label.classList.remove("is-left")
+    label.style.left = ""
+    label.style.maxWidth = ""
+
+    const scroller = this.hasScrollerTarget ? this.scrollerTarget : line.closest(".notae-kalendarium-timeline-scroller")
+    if (!scroller) return
+
+    const viewportPadding = 6
+    const scrollerRect = scroller.getBoundingClientRect()
+    const lineRect = line.getBoundingClientRect()
+    let labelRect = label.getBoundingClientRect()
+
+    // Keep the badge inside the visible scroll viewport when side rails narrow the timeline.
+    if (labelRect.right > scrollerRect.right - viewportPadding || labelRect.right > lineRect.right - 2) {
+      label.classList.add("is-left")
+      labelRect = label.getBoundingClientRect()
+    }
+
+    if (label.classList.contains("is-left") && labelRect.left < scrollerRect.left + viewportPadding) {
+      const shiftPixels = (scrollerRect.left + viewportPadding) - labelRect.left
+      label.style.left = `calc(0.42rem + ${shiftPixels.toFixed(2)}px)`
+      labelRect = label.getBoundingClientRect()
+    }
+
+    const availableWidth = scrollerRect.width - (viewportPadding * 2)
+    if (availableWidth > 0 && labelRect.width > availableWidth) {
+      label.style.maxWidth = `${Math.floor(availableWidth)}px`
+    }
   }
 
   currentZonedTime() {

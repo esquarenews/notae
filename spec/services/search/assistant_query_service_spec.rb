@@ -1,6 +1,122 @@
 require "rails_helper"
 
 RSpec.describe Search::AssistantQueryService do
+  it "returns exact calendar appointments for tomorrow without using an LLM round-trip" do
+    fixed_now = Time.utc(2026, 3, 1, 0, 0, 0)
+    allow(Time).to receive(:current).and_return(fixed_now)
+
+    user = User.create!(
+      email: "assistant-calendar-tomorrow@example.com",
+      password: "password123",
+      openai_api_key: "sk-test",
+      time_zone: "Australia/Melbourne"
+    )
+    workspace = Workspace.create!(name: "Assistant Calendar", slug: "assistant-calendar")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Family",
+      color_hex: "#3B82F6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local"
+    )
+
+    zone = ActiveSupport::TimeZone[user.time_zone]
+    tomorrow = Date.new(2026, 3, 2)
+    first_start = zone.local(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0)
+    first_end = first_start + 1.hour
+    all_day_start = zone.local(tomorrow.year, tomorrow.month, tomorrow.day)
+    all_day_end = all_day_start + 1.day
+    out_of_window_start = first_start - 2.days
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "Dentist appointment",
+      starts_at_utc: first_start.utc,
+      ends_at_utc: first_end.utc,
+      location: "CBD Clinic",
+      created_by: user,
+      updated_by: user
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "School holiday",
+      starts_at_utc: all_day_start.utc,
+      ends_at_utc: all_day_end.utc,
+      all_day: true,
+      created_by: user,
+      updated_by: user
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "Do not include",
+      starts_at_utc: out_of_window_start.utc,
+      ends_at_utc: (out_of_window_start + 1.hour).utc,
+      created_by: user,
+      updated_by: user
+    )
+
+    expect(Openai::ResponsesClient).not_to receive(:generate_text_with_usage)
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "What appointments do I have tomorrow?",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+    ).call
+
+    expect(response).to be_present
+    expect(response.model).to eq(Search::AssistantQueryService::CALENDAR_DIRECT_MODEL)
+    expect(response.answer).to include("Appointments for tomorrow")
+    expect(response.answer).to include("Dentist appointment")
+    expect(response.answer).to include("School holiday")
+    expect(response.answer).to include("09:00")
+    expect(response.answer).to include("All day")
+    expect(response.answer).not_to include("Do not include")
+    expect(response.sources.length).to eq(2)
+    expect(response.sources.map { |source| source[:title] }).to contain_exactly("Dentist appointment", "School holiday")
+  end
+
+  it "returns an explicit no-appointments response for empty calendar windows" do
+    fixed_now = Time.utc(2026, 3, 1, 0, 0, 0)
+    allow(Time).to receive(:current).and_return(fixed_now)
+
+    user = User.create!(
+      email: "assistant-calendar-empty@example.com",
+      password: "password123",
+      openai_api_key: "sk-test",
+      time_zone: "Australia/Melbourne"
+    )
+    workspace = Workspace.create!(name: "Assistant Calendar Empty", slug: "assistant-calendar-empty")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Personal",
+      color_hex: "#3B82F6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local"
+    )
+
+    expect(Openai::ResponsesClient).not_to receive(:generate_text_with_usage)
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "What appointments do I have tomorrow?",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+    ).call
+
+    expect(response).to be_present
+    expect(response.model).to eq(Search::AssistantQueryService::CALENDAR_DIRECT_MODEL)
+    expect(response.answer).to include("No appointments found for tomorrow")
+    expect(response.sources).to eq([])
+  end
+
   it "returns a cited answer for workspace scope questions" do
     user = User.create!(email: "assistant-workspace@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Assistant Workspace", slug: "assistant-workspace")

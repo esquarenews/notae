@@ -567,7 +567,7 @@ module Kalendarium
           http.request(request)
         end
 
-        if [301, 302, 307, 308].include?(response.code.to_i) && response["Location"].present?
+        if [ 301, 302, 307, 308 ].include?(response.code.to_i) && response["Location"].present?
           redirected_uri = URI.join(uri.to_s, response["Location"])
           return perform_request(method: method, uri: redirected_uri, body: body, depth: depth, redirects: redirects + 1)
         end
