@@ -5,7 +5,7 @@
   <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
 <% end %>
 
-<section class="notae-settings-shell">
+<section class="notae-settings-shell" data-controller="auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :people %>
 
   <div class="notae-settings-content">
@@ -38,7 +38,7 @@
           <%= form_with model: @workspace, url: workspace_people_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
             <label class="notae-pref-toggle">
               <%= form.check_box :join_link_enabled,
-                                 { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                                 { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                  "1",
                                  "0" %>
               <span class="notae-pref-toggle-track"></span>

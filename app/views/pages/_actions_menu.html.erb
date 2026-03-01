@@ -1,19 +1,47 @@
-<details id="page-actions-menu" class="notae-actions-menu" data-shell-target="actionsMenu" <%= "open" if params[:actions_menu].to_s == "open" %>>
-  <summary class="notae-chip-button notae-actions-trigger">
+<details id="page-actions-menu"
+         class="notae-actions-menu"
+         data-controller="actions-menu"
+         data-shell-target="actionsMenu"
+         data-shell-actions-menu
+         <%= "open" if params[:actions_menu].to_s == "open" %>>
+  <summary class="notae-chip-button notae-actions-trigger" aria-label="Actions">
     <span class="notae-actions-trigger-icon" aria-hidden="true">⚡</span>
-    <span>Actions</span>
+    <span class="notae-actions-trigger-label">Actions</span>
   </summary>
 
-  <div class="notae-actions-panel <%= "is-page-locked" if page.locked? %>" data-shell-actions-panel>
-    <input type="search"
-           class="notae-options-input notae-actions-search"
-           placeholder="Search actions..."
-           autocomplete="off"
-           data-action="input->shell#filterActionsMenu">
+  <div class="notae-actions-panel <%= "is-page-locked" if page.locked? %>"
+       data-shell-actions-panel
+       data-actions-menu-target="panel">
+    <div class="notae-actions-mobile-panes">
+      <div class="notae-actions-mobile-pane is-nav">
+        <div class="notae-actions-mobile-nav" data-actions-menu-target="nav" hidden>
+          <p class="notae-actions-mobile-nav-title">Actions</p>
+          <div class="notae-actions-mobile-nav-list" data-actions-menu-target="navList"></div>
+        </div>
+      </div>
 
-    <textarea class="notae-actions-copy-buffer" data-shell-page-content><%= page_plain_text.presence || page.title %></textarea>
+      <div class="notae-actions-mobile-pane is-detail">
+        <div class="notae-actions-mobile-detail-head" data-actions-menu-target="detailHead" hidden>
+          <button type="button"
+                  class="notae-chip-button notae-actions-mobile-back"
+                  data-action="actions-menu#showList">
+            ← Back
+          </button>
+          <p class="notae-actions-mobile-detail-title" data-actions-menu-target="detailTitle">Actions</p>
+        </div>
 
-    <section class="notae-actions-section is-lock-controls">
+        <input type="search"
+               class="notae-options-input notae-actions-search"
+               placeholder="Search actions..."
+               autocomplete="off"
+               data-actions-menu-target="search"
+               data-action="input->shell#filterActionsMenu">
+
+        <textarea class="notae-actions-copy-buffer" data-shell-page-content><%= page_plain_text.presence || page.title %></textarea>
+
+        <section class="notae-actions-section is-lock-controls"
+                 data-actions-menu-target="section"
+                 data-actions-menu-label="Access">
       <% if page.locked? %>
         <p class="notae-actions-locked-note">Page is locked. Other actions are unavailable.</p>
       <% end %>
@@ -40,9 +68,12 @@
           </button>
         <% end %>
       </div>
-    </section>
+        </section>
 
-    <section class="notae-actions-section" data-shell-actions-section>
+        <section class="notae-actions-section"
+                 data-shell-actions-section
+                 data-actions-menu-target="section"
+                 data-actions-menu-label="Style">
       <div class="notae-actions-font-grid">
         <% [
           [ "default", "Default", "Ag" ],
@@ -64,9 +95,12 @@
           <% end %>
         <% end %>
       </div>
-    </section>
+        </section>
 
-    <section class="notae-actions-section" data-shell-actions-section>
+        <section class="notae-actions-section"
+                 data-shell-actions-section
+                 data-actions-menu-target="section"
+                 data-actions-menu-label="Page actions">
       <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="copy link">
         <button type="button" class="notae-actions-row-button" data-action="click->shell#copyPageLink">
           <span class="notae-actions-row-icon">🔗</span>
@@ -132,9 +166,12 @@
           </button>
         <% end %>
       </div>
-    </section>
+        </section>
 
-    <section class="notae-actions-section" data-shell-actions-section>
+        <section class="notae-actions-section"
+                 data-shell-actions-section
+                 data-actions-menu-target="section"
+                 data-actions-menu-label="View and editing">
       <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="small text">
         <%= form_with model: page,
                       url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
@@ -213,9 +250,12 @@
           <span class="notae-actions-row-meta">⌘Z</span>
         </button>
       </div>
-    </section>
+        </section>
 
-    <section class="notae-actions-section" data-shell-actions-section>
+        <section class="notae-actions-section"
+                 data-shell-actions-section
+                 data-actions-menu-target="section"
+                 data-actions-menu-label="Advanced">
       <div class="notae-actions-row is-disabled" data-shell-action-item data-shell-action-terms="import">
         <button type="button" class="notae-actions-row-button" disabled>
           <span class="notae-actions-row-icon">↓</span>
@@ -307,12 +347,14 @@
           <span class="notae-actions-row-label">Open in Mac app</span>
         </button>
       </div>
-    </section>
+        </section>
 
-    <footer class="notae-actions-footer">
-      <p>Word count: <%= page_word_count %> words</p>
-      <p>Last edited by <%= page.created_by.email %></p>
-      <p><%= page.updated_at.strftime("%b %-d at %-I:%M %p") %></p>
-    </footer>
+        <footer class="notae-actions-footer" data-actions-menu-target="footer">
+          <p>Word count: <%= page_word_count %> words</p>
+          <p>Last edited by <%= page.created_by.email %></p>
+          <p><%= page.updated_at.strftime("%b %-d at %-I:%M %p") %></p>
+        </footer>
+      </div>
+    </div>
   </div>
 </details>

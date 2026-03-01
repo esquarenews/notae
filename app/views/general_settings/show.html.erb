@@ -5,7 +5,7 @@
   <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
 <% end %>
 
-<section class="notae-settings-shell">
+<section class="notae-settings-shell" data-controller="auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :general %>
 
   <div class="notae-settings-content">
@@ -29,7 +29,7 @@
                               maxlength: 65,
                               required: true,
                               disabled: !can_update,
-                              onchange: "this.form.requestSubmit()" %>
+                              data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
 
@@ -51,7 +51,7 @@
                                       checked: selected,
                                       class: "notae-general-icon-radio",
                                       disabled: !can_update,
-                                      onchange: "this.form.requestSubmit()" %>
+                                      data: { action: "change->auto-submit#submit" } %>
                 <span class="notae-general-icon-glyph"><%= icon %></span>
               </label>
             <% end %>
@@ -61,7 +61,7 @@
                                     checked: @workspace.icon.blank?,
                                     class: "notae-general-icon-radio",
                                     disabled: !can_update,
-                                    onchange: "this.form.requestSubmit()" %>
+                                    data: { action: "change->auto-submit#submit" } %>
               <span class="notae-general-icon-glyph">None</span>
             </label>
           </div>
@@ -82,7 +82,7 @@
                                {
                                  class: "notae-pref-toggle-input",
                                  disabled: !can_update,
-                                 onchange: "this.form.requestSubmit()"
+                                 data: { action: "change->auto-submit#submit" }
                                },
                                "1",
                                "0" %>

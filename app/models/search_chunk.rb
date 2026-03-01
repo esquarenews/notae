@@ -1,7 +1,8 @@
 class SearchChunk < ApplicationRecord
   SOURCE_PAGE = "page"
   SOURCE_DB_ROW = "db_row"
-  SOURCE_TYPES = [ SOURCE_PAGE, SOURCE_DB_ROW ].freeze
+  SOURCE_KALENDARIUM_EVENT = "kalendarium_event"
+  SOURCE_TYPES = [ SOURCE_PAGE, SOURCE_DB_ROW, SOURCE_KALENDARIUM_EVENT ].freeze
 
   EMBEDDING_MODEL = "text-embedding-3-small"
 
@@ -9,6 +10,7 @@ class SearchChunk < ApplicationRecord
   belongs_to :page, optional: true
   belongs_to :db_row, optional: true
   belongs_to :database, optional: true
+  belongs_to :kalendarium_event, optional: true
 
   validates :source_type, inclusion: { in: SOURCE_TYPES }
   validates :source_id, presence: true

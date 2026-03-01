@@ -5,7 +5,17 @@
   <% recent_meetings = workspace ? ui_sidebar_recent_meetings : [] %>
   <% recent_favorites = workspace ? ui_sidebar_recent_favorites : [] %>
   <% recent_workspaces = ui_sidebar_recent_workspaces(limit: 6) %>
+  <% nav_workspace = workspace || recent_workspaces.first %>
   <% can_create_workspace = policy(Workspace.new).create? %>
+  <div class="notae-sidebar-dock" aria-hidden="true">
+    <button type="button"
+            class="notae-sidebar-dock-toggle"
+            data-action="click->shell#toggleSidebarCollapse"
+            aria-label="Expand sidebar">☰</button>
+    <div class="notae-sidebar-dock-icons"></div>
+  </div>
+
+  <div class="notae-sidebar-main">
   <div class="notae-sidebar-header">
     <div class="notae-user-chip notae-workspace-chip">
       <span class="notae-user-avatar"><%= workspace ? workspace.display_icon : current_user.email.first.upcase %></span>
@@ -88,6 +98,11 @@
       <% else %>
         <%= link_to "＋", new_workspace_path, class: "notae-icon-link", title: "New workspace", data: { action: "click->shell#close" } %>
       <% end %>
+      <button type="button"
+              class="notae-sidebar-collapse-toggle"
+              data-action="click->shell#toggleSidebarCollapse"
+              aria-label="Minimize sidebar"
+              title="Minimize sidebar">◂</button>
       <button type="button" class="notae-sidebar-close" data-action="click->shell#close" aria-label="Close sidebar">✕</button>
     </div>
   </div>
@@ -102,18 +117,22 @@
                   (workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
                   class: notae_sidebar_link_classes(workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
                   data: { action: "click->shell#close" } %>
-      <% if workspace %>
+      <% if nav_workspace %>
         <%= link_to "Notifications",
-                    workspace_notifications_path(workspace_slug: workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: workspace.slug)),
+                    workspace_notifications_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: nav_workspace.slug)),
                     data: { action: "click->shell#close" } %>
         <%= link_to "Library",
-                    workspace_library_path(workspace_slug: workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_library_path(workspace_slug: workspace.slug)),
+                    workspace_library_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_library_path(workspace_slug: nav_workspace.slug)),
+                    data: { action: "click->shell#close" } %>
+        <%= link_to "Kalendārium",
+                    kalendarium_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(kalendarium_path(workspace_slug: nav_workspace.slug)),
                     data: { action: "click->shell#close" } %>
         <%= link_to "AI Conversation History",
-                    workspace_ai_conversation_history_path(workspace_slug: workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: workspace.slug)),
+                    workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug)),
                     data: { action: "click->shell#close" } %>
       <% end %>
     </nav>
@@ -284,5 +303,6 @@
                   destroy_user_session_path,
                   method: :delete,
                   class: "notae-sidebar-link notae-sidebar-signout" %>
+  </div>
   </div>
 </aside>

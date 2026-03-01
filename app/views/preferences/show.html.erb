@@ -5,7 +5,7 @@
   <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
 <% end %>
 
-<section class="notae-settings-shell" data-controller="preferences">
+<section class="notae-settings-shell" data-controller="preferences auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :preferences %>
 
   <div class="notae-settings-content">
@@ -22,7 +22,7 @@
                           options_for_select(User::THEME_OPTIONS, @user.theme_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
 
@@ -34,7 +34,7 @@
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :reduce_ai_loader_motion,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -56,7 +56,7 @@
                           options_for_select(User::LANGUAGE_OPTIONS, @user.language_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
 
@@ -68,7 +68,7 @@
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :show_text_direction_controls,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -86,7 +86,7 @@
                           options_for_select(User::START_WEEK_OPTIONS, @user.start_week_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
 
@@ -100,7 +100,7 @@
                           options_for_select(User::DATE_FORMAT_OPTIONS, @user.date_format_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
 
@@ -142,7 +142,7 @@
                           {},
                           class: "notae-pref-select",
                           disabled: @user.auto_time_zone?,
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
           <% unless @user.auto_time_zone? %>
             <%= form.hidden_field :auto_time_zone, value: "0" %>
           <% end %>
@@ -161,7 +161,7 @@
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :open_links_in_desktop_app,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -189,7 +189,7 @@
                           options_for_select(User::OPEN_ON_START_OPTIONS, @user.open_on_start_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
     </section>
@@ -207,7 +207,7 @@
                           options_for_select(User::COOKIE_SETTINGS_OPTIONS, @user.cookie_settings_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
 
@@ -219,7 +219,7 @@
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :show_view_history,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -235,7 +235,7 @@
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :profile_discoverability,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>

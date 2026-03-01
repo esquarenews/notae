@@ -1,4 +1,16 @@
 class User < ApplicationRecord
+  SMTP_SETTING_FIELDS = %w[
+    smtp_address
+    smtp_port
+    smtp_domain
+    smtp_username
+    smtp_password
+    smtp_authentication
+    smtp_enable_starttls_auto
+    smtp_from_name
+    smtp_from_email
+  ].freeze
+
   encrypts :openai_api_key
   encrypts :smtp_username
   encrypts :smtp_password
@@ -99,6 +111,13 @@ class User < ApplicationRecord
   has_many :favorites, dependent: :destroy
   has_many :ai_usage_logs, dependent: :destroy
   has_many :ai_conversations, dependent: :destroy
+  has_many :kalendarium_connections, as: :owner, dependent: :destroy
+  has_many :created_kalendarium_connections, class_name: "KalendariumConnection", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
+  has_many :created_kalendarium_calendars, class_name: "KalendariumCalendar", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
+  has_many :created_kalendarium_projects, class_name: "KalendariumProject", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
+  has_many :created_kalendarium_events, class_name: "KalendariumEvent", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
+  has_many :updated_kalendarium_events, class_name: "KalendariumEvent", foreign_key: :updated_by_id, inverse_of: :updated_by, dependent: :destroy
+  has_many :kalendarium_write_proposals, dependent: :destroy
 
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
@@ -149,6 +168,7 @@ class User < ApplicationRecord
   validates :ai_search_answer_rate_limit_per_minute, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
   validates :time_zone, presence: true
   validate :time_zone_supported
+  validate :calendar_extra_time_zones_supported
 
   def self.time_zone_options
     ActiveSupport::TimeZone.all.map { |zone| [ "(GMT#{zone.formatted_offset}) #{zone.name}", zone.name ] }
@@ -209,6 +229,10 @@ class User < ApplicationRecord
     ai_search_answer_rate_limit_per_minute.to_i
   end
 
+  def calendar_extra_time_zone_list
+    Array(calendar_extra_time_zones).map(&:to_s).reject(&:blank?).uniq
+  end
+
   private
 
   def time_zone_supported
@@ -220,6 +244,7 @@ class User < ApplicationRecord
 
   def smtp_settings_complete_if_any
     return unless smtp_settings_started?
+    return unless smtp_settings_change_submitted?
 
     errors.add(:smtp_address, "can't be blank") if smtp_address.blank?
     errors.add(:smtp_port, "can't be blank") if smtp_port.blank?
@@ -245,6 +270,18 @@ class User < ApplicationRecord
       smtp_from_name,
       smtp_from_email
     ].any?(&:present?)
+  end
+
+  def smtp_settings_change_submitted?
+    SMTP_SETTING_FIELDS.any? { |field| will_save_change_to_attribute?(field) } ||
+      smtp_password.to_s.present?
+  end
+
+  def calendar_extra_time_zones_supported
+    invalid_time_zones = calendar_extra_time_zone_list.reject { |zone_name| ActiveSupport::TimeZone[zone_name].present? }
+    return if invalid_time_zones.empty?
+
+    errors.add(:calendar_extra_time_zones, "contains unsupported time zones")
   end
 
   def encrypted_value_present?(attribute_name)

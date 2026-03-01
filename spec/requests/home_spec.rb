@@ -30,5 +30,6 @@ RSpec.describe "Home", type: :request do
     expect(response.body).to include("Visible")
     expect(response.body).not_to include("Hidden")
     expect(response.body).to include("New workspace")
+    expect(response.body).to include("Kalendārium")
   end
 end

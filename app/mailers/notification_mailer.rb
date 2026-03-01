@@ -19,6 +19,30 @@ class NotificationMailer < ApplicationMailer
     mail(mail_attributes)
   end
 
+  def calendar_reminder_notification
+    @notification = params[:notification]
+    @recipient = @notification.recipient
+    @actor = @notification.actor
+    @workspace = @notification.workspace
+    @event = @notification.notifiable.is_a?(KalendariumEvent) ? @notification.notifiable : nil
+    @reminder_url =
+      if @event.present?
+        kalendarium_url(workspace_slug: @workspace.slug, view: "day", date: @event.starts_at_utc.to_date, anchor: "kalendarium_event_#{@event.id}")
+      else
+        workspace_url(workspace_slug: @workspace.slug)
+      end
+
+    mail_attributes = {
+      to: @recipient.email,
+      subject: "Reminder: #{@event&.title || 'Kalendarium event'}",
+      from: mail_from_value
+    }
+    delivery_options = smtp_delivery_options
+    mail_attributes[:delivery_method_options] = delivery_options if delivery_options.present?
+
+    mail(mail_attributes)
+  end
+
   private
 
   def resolve_page(comment)

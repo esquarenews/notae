@@ -255,6 +255,9 @@ RSpec.describe "Pages", type: :request do
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"))
     follow_redirect!
     expect(response.body).to match(/id="page-actions-menu"[^>]*open/)
+    expect(response.body).to include("notae-actions-mobile-panes")
+    expect(response.body).to include("notae-actions-mobile-nav")
+    expect(response.body).to include("notae-actions-mobile-back")
 
     patch permissions_page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open"),
           params: { page: { permission_mode: "shared_to_workspace" } }
@@ -262,6 +265,9 @@ RSpec.describe "Pages", type: :request do
     follow_redirect!
     expect(response.body).to match(/id="page-options-menu"[^>]*open/)
     expect(response.body).to include("⚙")
+    expect(response.body).to include("notae-options-mobile-panes")
+    expect(response.body).to include("notae-options-mobile-nav")
+    expect(response.body).to include("notae-options-mobile-back")
   end
 
   it "updates page title from the clean page header" do

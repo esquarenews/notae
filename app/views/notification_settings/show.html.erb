@@ -5,7 +5,7 @@
   <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
 <% end %>
 
-<section class="notae-settings-shell">
+<section class="notae-settings-shell" data-controller="auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :notifications %>
 
   <div class="notae-settings-content">
@@ -20,7 +20,7 @@
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :meeting_notify_join_transcribing,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -36,7 +36,7 @@
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :meeting_notify_transcribed,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -52,7 +52,7 @@
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :meeting_notify_summarized,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -74,7 +74,7 @@
                           options_for_select(User::CHANNEL_NOTIFICATION_OPTIONS, @user.slack_notification_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
     </section>
@@ -92,7 +92,7 @@
                           options_for_select(User::CHANNEL_NOTIFICATION_OPTIONS, @user.discord_notification_preference),
                           {},
                           class: "notae-pref-select",
-                          onchange: "this.form.requestSubmit()" %>
+                          data: { action: "change->auto-submit#submit" } %>
         <% end %>
       </div>
     </section>
@@ -108,7 +108,7 @@
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :email_notify_activity,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -124,7 +124,7 @@
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :email_notify_always_send,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -140,7 +140,7 @@
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :email_notify_page_updates,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>
@@ -156,7 +156,7 @@
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :email_notify_workspace_digest,
-                               { class: "notae-pref-toggle-input", onchange: "this.form.requestSubmit()" },
+                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>

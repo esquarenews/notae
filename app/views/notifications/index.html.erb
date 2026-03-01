@@ -16,14 +16,27 @@
         <li class="notae-workspace-home-list-item notae-utility-notification-item">
           <div class="notae-utility-result-head">
             <span class="notae-utility-link">
-              <%= notification.actor.email %> mentioned you
+              <% if notification.notification_type == "calendar_reminder" %>
+                Reminder from <%= notification.workspace.name %>
+              <% else %>
+                <%= notification.actor.email %> mentioned you
+              <% end %>
             </span>
             <% if notification.read_at.nil? %>
               <span class="notae-utility-kind">Unread</span>
             <% end %>
           </div>
 
-          <% if notification.notifiable.is_a?(Comment) %>
+          <% if notification.notification_type == "calendar_reminder" && notification.notifiable.is_a?(KalendariumEvent) %>
+            <% event = notification.notifiable %>
+            <p class="notae-utility-copy">
+              <strong><%= event.title %></strong>
+              · <%= event.starts_at_utc.in_time_zone(current_user.time_zone).strftime("%b %-d %H:%M") %>
+            </p>
+            <%= link_to "Open Kalendārium",
+                        kalendarium_path(workspace_slug: @workspace.slug, view: "day", date: event.starts_at_utc.to_date, anchor: "kalendarium_event_#{event.id}"),
+                        class: "notae-utility-link notae-utility-mini-link" %>
+          <% elsif notification.notifiable.is_a?(Comment) %>
             <p class="notae-utility-copy"><%= notification.notifiable.body %></p>
             <% commentable = notification.notifiable.commentable %>
             <% if commentable.is_a?(Page) %>

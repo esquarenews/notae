@@ -10,21 +10,46 @@ export default class extends Controller {
     "usageDrawer",
     "intentInput",
     "targetBlockInput",
-    "insertPayload"
+    "insertPayload",
+    "floatingToggle",
+    "overlay"
   ]
 
   connect() {
     this.shellElement = this.element.closest(".notae-shell")
+    this.railViewportQuery = window.matchMedia("(max-width: 1180px)")
+    this.visualViewport = window.visualViewport || null
+    this.onRailViewportChange = () => this.handleRailViewportChange()
     this.prefillEventHandler = (event) => this.applyPrefill(event.detail || {})
+    if (typeof this.railViewportQuery.addEventListener === "function") {
+      this.railViewportQuery.addEventListener("change", this.onRailViewportChange)
+    } else {
+      this.railViewportQuery.addListener(this.onRailViewportChange)
+    }
+    if (this.visualViewport && typeof this.visualViewport.addEventListener === "function") {
+      this.visualViewport.addEventListener("resize", this.onRailViewportChange)
+    }
     window.addEventListener("notae:ai-prefill", this.prefillEventHandler)
     this.restoreRailState()
+    this.handleRailViewportChange()
     this.restoreUsageState()
     this.queueThreadScroll()
     this.applyInsertPayload()
   }
 
   disconnect() {
+    if (this.railViewportQuery) {
+      if (typeof this.railViewportQuery.removeEventListener === "function") {
+        this.railViewportQuery.removeEventListener("change", this.onRailViewportChange)
+      } else {
+        this.railViewportQuery.removeListener(this.onRailViewportChange)
+      }
+    }
+    if (this.visualViewport && typeof this.visualViewport.removeEventListener === "function") {
+      this.visualViewport.removeEventListener("resize", this.onRailViewportChange)
+    }
     window.removeEventListener("notae:ai-prefill", this.prefillEventHandler)
+    if (this.shellElement) this.shellElement.classList.remove("is-ai-compact-viewport")
   }
 
   async copyResult(event) {
@@ -125,7 +150,23 @@ export default class extends Controller {
 
   toggleRail(event) {
     event.preventDefault()
+
+    if (this.compactViewport()) {
+      this.setOverlayOpen(!this.overlayOpen())
+      return
+    }
+
     this.setRailCollapsed(!this.railCollapsed())
+  }
+
+  toggleFloatingRail(event) {
+    event.preventDefault()
+    this.setOverlayOpen(!this.overlayOpen())
+  }
+
+  closeFloatingRail(event) {
+    event.preventDefault()
+    this.setOverlayOpen(false)
   }
 
   appendPendingUserMessage(text) {
@@ -168,6 +209,12 @@ export default class extends Controller {
     return this.shellElement.classList.contains("is-ai-rail-collapsed")
   }
 
+  overlayOpen() {
+    if (!this.shellElement) return false
+
+    return this.shellElement.classList.contains("is-ai-rail-overlay-open")
+  }
+
   setUsageExpanded(expanded) {
     if (!this.hasUsageToggleTarget || !this.hasUsageDrawerTarget) return
 
@@ -181,6 +228,13 @@ export default class extends Controller {
 
     this.shellElement.classList.toggle("is-ai-rail-collapsed", collapsed)
     this.setPreference("notae-ai-rail-collapsed", collapsed)
+  }
+
+  setOverlayOpen(open) {
+    if (!this.shellElement) return
+
+    this.shellElement.classList.toggle("is-ai-rail-overlay-open", open)
+    this.syncFloatingControls()
   }
 
   restoreRailState() {
@@ -224,7 +278,11 @@ export default class extends Controller {
     if (this.hasIntentInputTarget) this.intentInputTarget.value = String(detail.intent || "")
     if (this.hasTargetBlockInputTarget) this.targetBlockInputTarget.value = String(detail.targetBlockId || "")
 
-    this.setRailCollapsed(false)
+    if (this.compactViewport()) {
+      this.setOverlayOpen(true)
+    } else {
+      this.setRailCollapsed(false)
+    }
     this.promptInputTarget.focus()
 
     if (detail.autoSubmit) {
@@ -277,5 +335,44 @@ export default class extends Controller {
 
     delete window.notaeAiPendingInsertion
     this.insertPayloadTarget.remove()
+  }
+
+  handleRailViewportChange() {
+    const compact = this.compactViewport()
+    if (this.shellElement) this.shellElement.classList.toggle("is-ai-compact-viewport", compact)
+
+    if (!compact) {
+      this.setOverlayOpen(false)
+      this.restoreRailState()
+      return
+    }
+
+    this.syncFloatingControls()
+  }
+
+  compactViewport() {
+    const width = this.viewportWidth()
+    if (typeof width === "number") return width <= 1180
+    if (this.railViewportQuery) return this.railViewportQuery.matches
+
+    return window.innerWidth <= 1180
+  }
+
+  viewportWidth() {
+    const visualWidth = this.visualViewport?.width
+    if (typeof visualWidth === "number" && visualWidth > 0) return visualWidth
+    if (typeof window.innerWidth === "number" && window.innerWidth > 0) return window.innerWidth
+
+    return null
+  }
+
+  syncFloatingControls() {
+    const expanded = this.overlayOpen()
+    if (this.hasFloatingToggleTarget) {
+      this.floatingToggleTarget.setAttribute("aria-expanded", expanded ? "true" : "false")
+    }
+    if (this.hasOverlayTarget) {
+      this.overlayTarget.hidden = !expanded
+    }
   }
 }

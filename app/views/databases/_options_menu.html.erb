@@ -1,17 +1,37 @@
 <details id="database-options-menu"
          class="notae-options-menu"
-         data-controller="copy-text"
+         data-controller="copy-text options-menu"
          data-shell-options-menu
          data-shell-target="optionsMenu"
          <%= "open" if params[:options_menu].to_s == "open" %>>
-  <summary class="notae-chip-button notae-actions-trigger">
+  <summary class="notae-chip-button notae-actions-trigger" aria-label="Options">
     <span class="notae-actions-trigger-icon" aria-hidden="true">⚙</span>
-    <span>Options</span>
+    <span class="notae-actions-trigger-label">Options</span>
   </summary>
-  <div class="notae-options-panel">
-    <% share_link_route_params = view_params.except(:id).merge(workspace_slug: workspace.slug, database_id: database.id) %>
-    <% if can_manage_database_permissions %>
-      <section class="notae-options-section">
+  <div class="notae-options-panel" data-options-menu-target="panel">
+    <div class="notae-options-mobile-panes">
+      <div class="notae-options-mobile-pane is-nav">
+        <div class="notae-options-mobile-nav" data-options-menu-target="nav" hidden>
+          <p class="notae-options-mobile-nav-title">Options</p>
+          <div class="notae-options-mobile-nav-list" data-options-menu-target="navList"></div>
+        </div>
+      </div>
+
+      <div class="notae-options-mobile-pane is-detail">
+        <div class="notae-options-mobile-detail-head" data-options-menu-target="detailHead" hidden>
+          <button type="button"
+                  class="notae-chip-button notae-options-mobile-back"
+                  data-action="options-menu#showList">
+            ← Back
+          </button>
+          <p class="notae-options-mobile-detail-title" data-options-menu-target="detailTitle">Options</p>
+        </div>
+
+        <% share_link_route_params = view_params.except(:id).merge(workspace_slug: workspace.slug, database_id: database.id) %>
+        <% if can_manage_database_permissions %>
+          <section class="notae-options-section"
+                   data-options-menu-target="section"
+                   data-options-menu-label="Permissions">
         <h3>Permissions</h3>
         <%= form_with model: database,
                       url: permissions_database_path(view_params.merge(options_menu: "open")),
@@ -48,7 +68,9 @@
         <% end %>
       </section>
 
-      <section class="notae-options-section">
+          <section class="notae-options-section"
+                   data-options-menu-target="section"
+                   data-options-menu-label="Public share links">
         <h3>Public share links</h3>
         <%= form_with model: DatabaseShareLink.new,
                       url: database_share_links_path(share_link_route_params.merge(options_menu: "open")),
@@ -75,10 +97,12 @@
         <% else %>
           <p class="notae-options-empty">No active links.</p>
         <% end %>
-      </section>
-    <% end %>
+          </section>
+        <% end %>
 
-    <section class="notae-options-section">
+        <section class="notae-options-section"
+                 data-options-menu-target="section"
+                 data-options-menu-label="Export">
       <h3>Export</h3>
       <div class="notae-options-inline-actions">
         <%= link_to "CSV",
@@ -86,9 +110,11 @@
                     class: "notae-chip-button" %>
       </div>
       <p class="notae-options-empty">CSV export is generated on demand.</p>
-    </section>
+        </section>
 
-    <section class="notae-options-section">
+        <section class="notae-options-section"
+                 data-options-menu-target="section"
+                 data-options-menu-label="Templates">
       <h3>Templates</h3>
       <% if can_create_database %>
         <%= form_with url: duplicate_database_path(workspace_slug: workspace.slug, id: database.id, options_menu: "open"),
@@ -101,9 +127,11 @@
       <% else %>
         <p class="notae-options-empty">You do not have permission to duplicate this grid.</p>
       <% end %>
-    </section>
+        </section>
 
-    <section class="notae-options-section">
+        <section class="notae-options-section"
+                 data-options-menu-target="section"
+                 data-options-menu-label="Archived rows">
       <h3>Archived rows</h3>
       <% if archived_rows.any? %>
         <ul class="notae-options-list">
@@ -121,9 +149,11 @@
       <% else %>
         <p class="notae-options-empty">No archived rows.</p>
       <% end %>
-    </section>
+        </section>
 
-    <section class="notae-options-section">
+        <section class="notae-options-section"
+                 data-options-menu-target="section"
+                 data-options-menu-label="Links">
       <h3>Links</h3>
       <ul class="notae-options-list">
         <li class="notae-options-list-item">
@@ -136,6 +166,8 @@
           </button>
         </li>
       </ul>
-    </section>
+        </section>
+      </div>
+    </div>
   </div>
 </details>

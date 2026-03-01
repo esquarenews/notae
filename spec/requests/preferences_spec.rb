@@ -17,6 +17,9 @@ RSpec.describe "Preferences", type: :request do
     expect(response.body).to include("Privacy")
     expect(response.body).to include("Reduce Notae AI loader motion")
     expect(response.body).to include("Future implementation")
+    expect(response.body).to include("notae-settings-mobile-accordion")
+    expect(response.body).to include("notae-settings-mobile-trigger")
+    expect(response.body).to include("notae-settings-nav-body")
   end
 
   it "updates preference values for the signed-in user" do
@@ -60,6 +63,26 @@ RSpec.describe "Preferences", type: :request do
     expect(user.cookie_settings_preference).to eq("strict")
     expect(user.show_view_history).to be(false)
     expect(user.profile_discoverability).to be(false)
+  end
+
+  it "still updates preferences when legacy SMTP settings are incomplete" do
+    user = User.create!(email: "preferences-smtp-legacy@example.com", password: "password123")
+    user.update_columns(
+      smtp_address: "smtp.example.com",
+      smtp_port: 587,
+      smtp_username: "mailer@example.com",
+      smtp_from_email: "mailer@example.com"
+    )
+    workspace = Workspace.create!(name: "Prefs smtp legacy", slug: "prefs-smtp-legacy")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_preferences_path(workspace_slug: workspace.slug),
+          params: { user: { theme_preference: "dark" } }
+
+    expect(response).to redirect_to(workspace_preferences_path(workspace_slug: workspace.slug))
+    expect(flash[:alert]).to be_blank
+    expect(user.reload.theme_preference).to eq("dark")
   end
 
   it "rejects unsupported time zones" do

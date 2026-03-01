@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_28_113000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -316,6 +316,118 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
     t.index ["workspace_id"], name: "index_invitations_on_workspace_id"
   end
 
+  create_table "kalendarium_calendars", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "color_hex", default: "#3B82F6", null: false
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.boolean "default_for_projects", default: false, null: false
+    t.boolean "enabled", default: true, null: false
+    t.uuid "kalendarium_connection_id"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "name", null: false
+    t.string "provider"
+    t.boolean "read_only", default: false, null: false
+    t.string "remote_id"
+    t.string "source_kind", default: "local", null: false
+    t.string "time_zone", default: "UTC", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["kalendarium_connection_id", "remote_id"], name: "index_kalendarium_calendars_on_connection_and_remote_id", unique: true, where: "(remote_id IS NOT NULL)"
+    t.index ["workspace_id", "enabled"], name: "index_kalendarium_calendars_on_workspace_and_enabled"
+  end
+
+  create_table "kalendarium_connections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "access_token"
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.boolean "enabled", default: true, null: false
+    t.text "ics_url"
+    t.string "label", null: false
+    t.text "last_error"
+    t.datetime "last_synced_at"
+    t.uuid "owner_id", null: false
+    t.string "owner_type", null: false
+    t.string "provider", null: false
+    t.text "provider_password"
+    t.text "provider_username"
+    t.text "refresh_token"
+    t.string "remote_account_id"
+    t.jsonb "scopes_json", default: [], null: false
+    t.jsonb "settings_json", default: {}, null: false
+    t.string "status", default: "connected", null: false
+    t.text "sync_cursor"
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["owner_type", "owner_id"], name: "index_kalendarium_connections_on_owner"
+    t.index ["workspace_id", "enabled"], name: "index_kalendarium_connections_on_workspace_and_enabled"
+    t.index ["workspace_id", "owner_type", "owner_id", "provider", "label"], name: "index_kalendarium_connections_uniqueness", unique: true
+  end
+
+  create_table "kalendarium_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "all_day", default: false, null: false
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.text "description"
+    t.datetime "ends_at_utc", null: false
+    t.string "etag"
+    t.uuid "kalendarium_calendar_id", null: false
+    t.uuid "kalendarium_project_id"
+    t.datetime "last_synced_at"
+    t.uuid "linked_db_row_id"
+    t.uuid "linked_page_id"
+    t.string "location"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.integer "reminder_offsets_minutes", default: [], null: false, array: true
+    t.string "remote_event_id"
+    t.text "rrule"
+    t.integer "sequence", default: 0, null: false
+    t.string "source_kind", default: "local", null: false
+    t.datetime "starts_at_utc", null: false
+    t.string "status", default: "confirmed", null: false
+    t.string "title", null: false
+    t.string "uid"
+    t.datetime "updated_at", null: false
+    t.uuid "updated_by_id", null: false
+    t.string "visibility", default: "default", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["kalendarium_calendar_id", "remote_event_id"], name: "index_kalendarium_events_on_calendar_and_remote_id", unique: true, where: "(remote_event_id IS NOT NULL)"
+    t.index ["kalendarium_calendar_id", "starts_at_utc"], name: "index_kalendarium_events_on_calendar_and_starts_at"
+    t.index ["workspace_id", "starts_at_utc"], name: "index_kalendarium_events_on_workspace_and_starts_at"
+  end
+
+  create_table "kalendarium_projects", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "archived_at"
+    t.string "color_hex", default: "#8B5CF6", null: false
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.uuid "kalendarium_calendar_id"
+    t.uuid "linked_page_id"
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["workspace_id", "archived_at"], name: "index_kalendarium_projects_on_workspace_and_archived_at"
+    t.index ["workspace_id", "slug"], name: "index_kalendarium_projects_on_workspace_id_and_slug", unique: true
+  end
+
+  create_table "kalendarium_write_proposals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "applied_at"
+    t.datetime "created_at", null: false
+    t.text "error_message"
+    t.datetime "expires_at"
+    t.uuid "kalendarium_event_id"
+    t.string "operation", null: false
+    t.jsonb "payload_json", default: {}, null: false
+    t.string "proposed_by", default: "api", null: false
+    t.datetime "rejected_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["user_id", "created_at"], name: "index_kalendarium_write_proposals_on_user_and_created_at"
+    t.index ["workspace_id", "status"], name: "index_kalendarium_write_proposals_on_workspace_and_status"
+  end
+
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "role", default: 0, null: false
@@ -463,6 +575,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
     t.uuid "db_row_id"
     t.jsonb "embedding", default: [], null: false
     t.string "embedding_model"
+    t.uuid "kalendarium_event_id"
     t.uuid "page_id"
     t.uuid "source_id", null: false
     t.string "source_type", null: false
@@ -473,6 +586,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
     t.index ["content_hash"], name: "index_search_chunks_on_content_hash"
     t.index ["database_id"], name: "index_search_chunks_on_database_id"
     t.index ["db_row_id"], name: "index_search_chunks_on_db_row_id"
+    t.index ["kalendarium_event_id"], name: "index_search_chunks_on_kalendarium_event_id"
     t.index ["page_id"], name: "index_search_chunks_on_page_id"
     t.index ["source_type", "source_id", "chunk_index"], name: "idx_search_chunks_on_source_and_index", unique: true
     t.index ["workspace_id", "source_type"], name: "idx_search_chunks_on_workspace_and_source_type"
@@ -519,6 +633,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
     t.decimal "ai_search_daily_budget_usd", precision: 12, scale: 4, default: "1.5", null: false
     t.integer "ai_search_semantic_rate_limit_per_minute", default: 24, null: false
     t.boolean "auto_time_zone", default: true, null: false
+    t.jsonb "calendar_extra_time_zones", default: [], null: false
     t.string "cookie_settings_preference", default: "customize", null: false
     t.datetime "created_at", null: false
     t.string "date_format_preference", default: "relative", null: false
@@ -628,6 +743,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
   add_foreign_key "invitations", "users", column: "accepted_by_id"
   add_foreign_key "invitations", "users", column: "invited_by_id"
   add_foreign_key "invitations", "workspaces"
+  add_foreign_key "kalendarium_calendars", "kalendarium_connections"
+  add_foreign_key "kalendarium_calendars", "users", column: "created_by_id"
+  add_foreign_key "kalendarium_calendars", "workspaces"
+  add_foreign_key "kalendarium_connections", "users", column: "created_by_id"
+  add_foreign_key "kalendarium_connections", "workspaces"
+  add_foreign_key "kalendarium_events", "db_rows", column: "linked_db_row_id"
+  add_foreign_key "kalendarium_events", "kalendarium_calendars"
+  add_foreign_key "kalendarium_events", "kalendarium_projects"
+  add_foreign_key "kalendarium_events", "pages", column: "linked_page_id"
+  add_foreign_key "kalendarium_events", "users", column: "created_by_id"
+  add_foreign_key "kalendarium_events", "users", column: "updated_by_id"
+  add_foreign_key "kalendarium_events", "workspaces"
+  add_foreign_key "kalendarium_projects", "kalendarium_calendars"
+  add_foreign_key "kalendarium_projects", "pages", column: "linked_page_id"
+  add_foreign_key "kalendarium_projects", "users", column: "created_by_id"
+  add_foreign_key "kalendarium_projects", "workspaces"
+  add_foreign_key "kalendarium_write_proposals", "kalendarium_events"
+  add_foreign_key "kalendarium_write_proposals", "users"
+  add_foreign_key "kalendarium_write_proposals", "workspaces"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
   add_foreign_key "notifications", "users", column: "actor_id"
@@ -654,6 +788,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_100002) do
   add_foreign_key "pages", "workspaces"
   add_foreign_key "search_chunks", "databases"
   add_foreign_key "search_chunks", "db_rows"
+  add_foreign_key "search_chunks", "kalendarium_events"
   add_foreign_key "search_chunks", "pages"
   add_foreign_key "search_chunks", "workspaces"
   add_foreign_key "share_link_views", "pages"

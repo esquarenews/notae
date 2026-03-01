@@ -1,0 +1,109 @@
+<% calendar_options = (Array(local_assigns[:calendars]) + [event.kalendarium_calendar]).compact.uniq(&:id) %>
+<% project_options = Array(local_assigns[:projects]) %>
+<% timeline = local_assigns.fetch(:timeline, false) %>
+<% timeline_style = local_assigns[:timeline_style] %>
+<% selected_offsets = Array(event.reminder_offsets_minutes).map(&:to_i) %>
+<% starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone) %>
+<% ends_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
+
+<article id="kalendarium_event_<%= event.id %>"
+         class="notae-kalendarium-event-card <%= "is-timeline" if timeline %>"
+         style="--kal-color: <%= event.kalendarium_calendar.color_hex %>;<%= " #{timeline_style}" if timeline_style.present? %>"
+         data-controller="kalendarium-event-modal">
+  <header>
+    <strong><%= event.title %></strong>
+    <div class="notae-kalendarium-event-header-actions">
+      <span><%= starts_local.strftime("%H:%M") %> - <%= ends_local.strftime("%H:%M") %></span>
+      <button type="button"
+              class="notae-inline-icon-button notae-kalendarium-event-edit-button"
+              aria-label="Edit event"
+              data-action="kalendarium-event-modal#open">✎</button>
+    </div>
+  </header>
+
+  <% if event.location.present? %>
+    <p><%= event.location %></p>
+  <% end %>
+  <% if event.description.present? %>
+    <p><%= truncate(event.description, length: 120) %></p>
+  <% end %>
+
+  <% if event.linked_page.present? %>
+    <div class="notae-kalendarium-event-links">
+      <%= link_to "📄 Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+    </div>
+  <% end %>
+
+  <dialog class="notae-danger-modal notae-kalendarium-event-modal"
+          data-kalendarium-event-modal-target="dialog"
+          data-action="click->kalendarium-event-modal#backdropClose">
+    <div class="notae-danger-modal-panel notae-kalendarium-event-modal-panel">
+      <div class="notae-danger-modal-header">
+        <h3>Edit event</h3>
+        <button type="button"
+                class="notae-inline-icon-button"
+                aria-label="Close edit event dialog"
+                data-action="kalendarium-event-modal#close">✕</button>
+      </div>
+
+      <%= form_with model: event,
+                    url: kalendarium_event_path(workspace_slug: workspace.slug, id: event.id),
+                    method: :patch,
+                    class: "notae-kalendarium-event-modal-form" do |form| %>
+        <%= hidden_field_tag :view, view %>
+        <%= hidden_field_tag :date, date %>
+        <%= form.text_field :title, placeholder: "Event title", required: true, class: "notae-auth-input" %>
+        <%= form.select :kalendarium_calendar_id,
+                        options_from_collection_for_select(calendar_options, :id, :name, event.kalendarium_calendar_id),
+                        {},
+                        class: "notae-auth-input" %>
+        <%= form.select :kalendarium_project_id,
+                        options_for_select([["No project", ""]] + project_options.map { |project| [project.name, project.id] }, event.kalendarium_project_id),
+                        {},
+                        class: "notae-auth-input" %>
+        <%= form.datetime_local_field :starts_at_local,
+                                      value: starts_local.strftime("%Y-%m-%dT%H:%M"),
+                                      class: "notae-auth-input" %>
+        <%= form.datetime_local_field :ends_at_local,
+                                      value: ends_local.strftime("%Y-%m-%dT%H:%M"),
+                                      class: "notae-auth-input" %>
+        <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
+        <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
+        <div class="notae-kalendarium-reminders">
+          <% [[10, "10m"], [30, "30m"], [60, "1h"], [1440, "1d"]].each do |minutes, label| %>
+            <label class="notae-options-checkbox">
+              <%= check_box_tag "kalendarium_event[reminder_offsets_minutes][]", minutes, selected_offsets.include?(minutes) %>
+              <span><%= label %></span>
+            </label>
+          <% end %>
+        </div>
+        <% if event.linked_page.present? %>
+          <div class="notae-kalendarium-event-links">
+            <%= link_to "Open linked Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+            <button type="submit"
+                    name="kalendarium_event[linked_page_action]"
+                    value="clear"
+                    class="notae-chip-button">Unlink Nota</button>
+          </div>
+        <% else %>
+          <button type="submit"
+                  name="kalendarium_event[linked_page_action]"
+                  value="create_page"
+                  class="notae-chip-button">Create linked Nota</button>
+        <% end %>
+        <div class="notae-danger-modal-actions">
+          <button type="button" class="notae-chip-button" data-action="kalendarium-event-modal#close">Cancel</button>
+          <%= form.submit "Save changes", class: "notae-chip-button" %>
+        </div>
+      <% end %>
+
+      <div class="notae-kalendarium-event-modal-delete">
+        <%= button_to "Delete event",
+                      kalendarium_event_path(workspace_slug: workspace.slug, id: event.id, view: view, date: date),
+                      method: :delete,
+                      class: "notae-chip-button notae-chip-danger",
+                      form: { data: { turbo_confirm: "Delete this event?" } } %>
+      </div>
+    </div>
+  </dialog>
+</article>

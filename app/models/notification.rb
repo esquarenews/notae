@@ -1,5 +1,5 @@
 class Notification < ApplicationRecord
-  TYPES = %w[mention].freeze
+  TYPES = %w[mention calendar_reminder].freeze
 
   belongs_to :workspace
   belongs_to :recipient, class_name: "User"

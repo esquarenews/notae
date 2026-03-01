@@ -1,0 +1,16 @@
+Reminder from <%= @workspace.name %>.
+
+<% if @event.present? %>
+<%= @event.title %>
+<%= @event.starts_at_utc.in_time_zone(@recipient.time_zone).strftime("%b %-d, %Y %H:%M") %> - <%= @event.ends_at_utc.in_time_zone(@recipient.time_zone).strftime("%H:%M") %>
+<% if @event.location.present? %>
+Location: <%= @event.location %>
+<% end %>
+<% if @event.description.present? %>
+Notes:
+<%= @event.description %>
+<% end %>
+<% end %>
+
+Open Kalendārium:
+<%= @reminder_url %>

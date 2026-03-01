@@ -15,7 +15,7 @@ module Search
     def call
       return [] if query.blank?
 
-      merge_and_rank_results(page_results + block_results + db_row_results + semantic_chunk_results)
+      merge_and_rank_results(page_results + block_results + db_row_results + kalendarium_event_results + semantic_chunk_results)
     end
 
     private
@@ -76,6 +76,29 @@ module Search
       end
     end
 
+    def kalendarium_event_results
+      Pundit.policy_scope!(user, KalendariumEvent)
+            .for_workspace(workspace)
+            .search_full_text(query)
+            .includes(:kalendarium_project)
+            .limit(15)
+            .map do |event|
+        event_date = event.starts_at_utc.in_time_zone(user.time_zone).strftime("%b %-d %H:%M")
+        Result.new(
+          kind: "Kalendarium event",
+          title: event.title,
+          excerpt: highlighted_excerpt([ event.description, event.location, event.kalendarium_project&.name, event_date ].compact.join(" · ")),
+          url: Rails.application.routes.url_helpers.kalendarium_path(
+            workspace_slug: workspace.slug,
+            view: "day",
+            date: event.starts_at_utc.to_date.iso8601,
+            anchor: "kalendarium_event_#{event.id}"
+          ),
+          score: 18
+        )
+      end
+    end
+
     def semantic_chunk_results
       return [] unless user.openai_api_key_configured?
       return [] unless semantic_ai_allowed?
@@ -121,10 +144,12 @@ module Search
     def accessible_semantic_chunks_scope
       page_ids = Pundit.policy_scope!(user, Page).for_workspace(workspace).active.select(:id)
       row_ids = Pundit.policy_scope!(user, DbRow).for_workspace(workspace).active.select(:id)
+      event_ids = Pundit.policy_scope!(user, KalendariumEvent).for_workspace(workspace).select(:id)
       workspace_scope = SearchChunk.for_workspace(workspace)
 
       workspace_scope.where(page_id: page_ids)
                      .or(workspace_scope.where(db_row_id: row_ids))
+                     .or(workspace_scope.where(kalendarium_event_id: event_ids))
     end
 
     def embed_query
@@ -175,6 +200,20 @@ module Search
           title: chunk.db_row.title.presence || database&.name || "Row",
           excerpt: highlighted_excerpt(chunk.text),
           url: Rails.application.routes.url_helpers.database_path(workspace_slug: workspace.slug, id: chunk.database_id, anchor: "row_#{chunk.db_row_id}"),
+          score: 30 + (similarity * 12)
+        )
+      elsif chunk.kalendarium_event.present?
+        event = chunk.kalendarium_event
+        Result.new(
+          kind: "Kalendarium event",
+          title: event.title,
+          excerpt: highlighted_excerpt(chunk.text),
+          url: Rails.application.routes.url_helpers.kalendarium_path(
+            workspace_slug: workspace.slug,
+            view: "day",
+            date: event.starts_at_utc.to_date.iso8601,
+            anchor: "kalendarium_event_#{event.id}"
+          ),
           score: 30 + (similarity * 12)
         )
       end

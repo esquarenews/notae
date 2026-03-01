@@ -10,6 +10,10 @@ module Search
       new(source_type: SearchChunk::SOURCE_DB_ROW, source_record: db_row).index!
     end
 
+    def self.index_kalendarium_event!(kalendarium_event:)
+      new(source_type: SearchChunk::SOURCE_KALENDARIUM_EVENT, source_record: kalendarium_event).index!
+    end
+
     def self.delete_source!(source_type:, source_id:)
       SearchChunk.for_source(source_type, source_id).delete_all
     end
@@ -46,6 +50,8 @@ module Search
         source_record.present? && !source_record.archived?
       when SearchChunk::SOURCE_DB_ROW
         source_record.present? && source_record.archived_at.nil?
+      when SearchChunk::SOURCE_KALENDARIUM_EVENT
+        source_record.present?
       else
         false
       end
@@ -61,6 +67,8 @@ module Search
         page_text
       when SearchChunk::SOURCE_DB_ROW
         db_row_text
+      when SearchChunk::SOURCE_KALENDARIUM_EVENT
+        kalendarium_event_text
       else
         ""
       end
@@ -75,6 +83,18 @@ module Search
       [ source_record.title, source_record.search_text ].join("\n").squish
     end
 
+    def kalendarium_event_text
+      details = [
+        source_record.title,
+        source_record.description,
+        source_record.location,
+        source_record.kalendarium_project&.name,
+        source_record.linked_page&.title,
+        source_record.linked_db_row&.title
+      ].compact
+      details.join("\n").squish
+    end
+
     def upsert_chunk!(chunk_text:, chunk_index:)
       hash = Digest::SHA256.hexdigest(chunk_text)
       chunk = SearchChunk.find_or_initialize_by(source_type: source_type, source_id: source_id, chunk_index: chunk_index)
@@ -84,6 +104,7 @@ module Search
         page_id: page_id_for_chunk,
         db_row_id: db_row_id_for_chunk,
         database_id: database_id_for_chunk,
+        kalendarium_event_id: kalendarium_event_id_for_chunk,
         text: chunk_text,
         token_count: chunk_text.split(/\s+/).size,
         content_hash: hash
@@ -110,6 +131,12 @@ module Search
 
     def database_id_for_chunk
       return source_record.database_id if source_type == SearchChunk::SOURCE_DB_ROW
+
+      nil
+    end
+
+    def kalendarium_event_id_for_chunk
+      return source_record.id if source_type == SearchChunk::SOURCE_KALENDARIUM_EVENT
 
       nil
     end

@@ -36,9 +36,30 @@ Rails.application.routes.draw do
     patch "settings/connections", to: "connection_settings#update"
     get "settings/notifications", to: "notification_settings#show", as: :workspace_notification_settings
     patch "settings/notifications", to: "notification_settings#update"
+    get "settings/kalendarium", to: "kalendarium_settings#show", as: :workspace_kalendarium_settings
+    patch "settings/kalendarium", to: "kalendarium_settings#update"
     get "notifications", to: "notifications#index", as: :workspace_notifications
     patch "notifications/:id/read", to: "notifications#mark_read", as: :read_workspace_notification
     post "invitations", to: "invitations#create", as: :workspace_invitations
+    get "kalendarium", to: "kalendarium#show", as: :kalendarium
+    resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy]
+    resources :kalendarium_projects, path: "kalendarium/projects", only: %i[create update]
+    resources :kalendarium_connections, path: "kalendarium/connections", only: %i[create update destroy] do
+      member do
+        post :sync
+      end
+      collection do
+        get :google_callback
+        get :icloud_callback
+      end
+    end
+    resources :kalendarium_calendars, path: "kalendarium/calendars", only: %i[update]
+    resources :kalendarium_write_proposals, path: "kalendarium/write_proposals", only: %i[create] do
+      member do
+        post :confirm
+        post :reject
+      end
+    end
     resources :memberships, only: :update
     resources :databases, only: %i[show create update destroy] do
       member do
@@ -127,6 +148,16 @@ Rails.application.routes.draw do
           resources :blocks, only: %i[index show create update]
         end
         resources :databases, only: %i[index show create update]
+        namespace :kalendarium do
+          resources :calendars, only: :index
+          resources :events, only: :index
+          resources :write_proposals, only: :create do
+            member do
+              post :confirm
+              post :reject
+            end
+          end
+        end
       end
     end
   end

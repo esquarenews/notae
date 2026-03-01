@@ -4,6 +4,9 @@ export default class extends Controller {
   static targets = ["createMenu", "actionsMenu", "optionsMenu", "workspaceDialog", "workspaceNameInput", "workspaceSlugInput"]
 
   connect() {
+    this.sidebarViewportQuery = window.matchMedia("(max-width: 960px)")
+    this.visualViewport = window.visualViewport || null
+    this.onSidebarViewportChange = () => this.handleSidebarViewportChange()
     this.onKeydown = (event) => {
       if (event.key === "Escape") {
         this.closeCreateMenu()
@@ -12,17 +15,37 @@ export default class extends Controller {
       }
     }
     this.onWindowClick = (event) => this.handleWindowClick(event)
+    if (typeof this.sidebarViewportQuery.addEventListener === "function") {
+      this.sidebarViewportQuery.addEventListener("change", this.onSidebarViewportChange)
+    } else {
+      this.sidebarViewportQuery.addListener(this.onSidebarViewportChange)
+    }
+    if (this.visualViewport && typeof this.visualViewport.addEventListener === "function") {
+      this.visualViewport.addEventListener("resize", this.onSidebarViewportChange)
+    }
     window.addEventListener("keydown", this.onKeydown)
     window.addEventListener("click", this.onWindowClick)
+    this.handleSidebarViewportChange()
   }
 
   disconnect() {
+    if (this.sidebarViewportQuery) {
+      if (typeof this.sidebarViewportQuery.removeEventListener === "function") {
+        this.sidebarViewportQuery.removeEventListener("change", this.onSidebarViewportChange)
+      } else {
+        this.sidebarViewportQuery.removeListener(this.onSidebarViewportChange)
+      }
+    }
+    if (this.visualViewport && typeof this.visualViewport.removeEventListener === "function") {
+      this.visualViewport.removeEventListener("resize", this.onSidebarViewportChange)
+    }
     window.removeEventListener("keydown", this.onKeydown)
     window.removeEventListener("click", this.onWindowClick)
     this.unlockBody()
     this.closeCreateMenu()
     this.closeActionsMenu()
     this.closeOptionsMenu()
+    this.element.classList.remove("is-mobile-viewport")
   }
 
   toggle() {
@@ -46,6 +69,71 @@ export default class extends Controller {
 
   unlockBody() {
     document.body.classList.remove("notae-sidebar-open")
+  }
+
+  toggleSidebarCollapse(event) {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (this.mobileSidebarViewport()) {
+      this.toggle()
+      return
+    }
+
+    this.setSidebarCollapsed(!this.sidebarCollapsed())
+  }
+
+  sidebarCollapsed() {
+    return this.element.classList.contains("is-sidebar-collapsed")
+  }
+
+  setSidebarCollapsed(collapsed, { persist = true } = {}) {
+    this.element.classList.toggle("is-sidebar-collapsed", collapsed)
+
+    if (collapsed) {
+      this.element.classList.remove("sidebar-open")
+      this.unlockBody()
+    }
+
+    if (persist) this.setPreference("notae-sidebar-collapsed", collapsed)
+  }
+
+  restoreSidebarCollapsedState() {
+    if (this.mobileSidebarViewport()) {
+      this.element.classList.remove("is-sidebar-collapsed")
+      return
+    }
+
+    this.setSidebarCollapsed(this.preference("notae-sidebar-collapsed"), { persist: false })
+  }
+
+  handleSidebarViewportChange() {
+    const mobile = this.mobileSidebarViewport()
+    this.element.classList.toggle("is-mobile-viewport", mobile)
+
+    if (mobile) {
+      this.element.classList.remove("is-sidebar-collapsed")
+      return
+    }
+
+    this.element.classList.remove("sidebar-open")
+    this.unlockBody()
+    this.restoreSidebarCollapsedState()
+  }
+
+  mobileSidebarViewport() {
+    const width = this.viewportWidth()
+    if (typeof width === "number") return width <= 960
+    if (this.sidebarViewportQuery) return this.sidebarViewportQuery.matches
+    return window.innerWidth <= 960
+  }
+
+  viewportWidth() {
+    const visualWidth = this.visualViewport?.width
+    if (typeof visualWidth === "number" && visualWidth > 0) return visualWidth
+    if (typeof window.innerWidth === "number" && window.innerWidth > 0) return window.innerWidth
+
+    return null
   }
 
   toggleCreateMenu(event) {
@@ -276,6 +364,22 @@ export default class extends Controller {
     url.searchParams.delete(paramKey)
     const suffix = `${url.pathname}${url.search}${url.hash}`
     window.history.replaceState({}, "", suffix)
+  }
+
+  preference(key) {
+    try {
+      return window.localStorage.getItem(key) === "true"
+    } catch (_error) {
+      return false
+    }
+  }
+
+  setPreference(key, value) {
+    try {
+      window.localStorage.setItem(key, value ? "true" : "false")
+    } catch (_error) {
+      // no-op if storage is unavailable
+    }
   }
 
   noop(event) {

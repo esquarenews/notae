@@ -8,7 +8,28 @@
 <% ai_prompt_value = "" %>
 <% ai_rail_conversations = Array(@ai_rail_conversations) %>
 
-<aside class="notae-ai-rail" data-controller="ai-rail">
+<div class="notae-ai-rail-shell" data-controller="ai-rail">
+  <button type="button"
+          class="notae-ai-floating-toggle"
+          data-ai-rail-target="floatingToggle"
+          data-action="click->ai-rail#toggleFloatingRail"
+          aria-label="Open AI assistant"
+          aria-expanded="false">
+    <%= render "shared/ai_loader_icon",
+               variant: current_user.ai_loader_style,
+               state: "static",
+               size: 18,
+               reduced_motion: current_user.reduce_ai_loader_motion? %>
+  </button>
+
+  <button type="button"
+          class="notae-ai-rail-overlay"
+          data-ai-rail-target="overlay"
+          data-action="click->ai-rail#closeFloatingRail"
+          aria-label="Close AI assistant panel"
+          hidden></button>
+
+  <aside class="notae-ai-rail">
   <button type="button"
           class="notae-ai-rail-reopen"
           data-action="click->ai-rail#toggleRail"
@@ -207,4 +228,5 @@
       </div>
     </div>
   <% end %>
-</aside>
+  </aside>
+</div>

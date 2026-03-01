@@ -5,7 +5,7 @@
   <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
 <% end %>
 
-<section class="notae-settings-shell">
+<section class="notae-settings-shell" data-controller="auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :notae_ai %>
 
   <div class="notae-settings-content">
@@ -98,7 +98,7 @@
                                       value,
                                       checked: selected,
                                       class: "notae-ai-loader-option-radio",
-                                      onchange: "this.form.requestSubmit()" %>
+                                      data: { action: "change->auto-submit#submit" } %>
                 <span class="notae-ai-loader-option-title"><%= label %></span>
               </span>
               <span class="notae-ai-loader-option-copy"><%= User::AI_LOADER_STYLE_DESCRIPTIONS[value] %></span>

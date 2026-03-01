@@ -13,6 +13,10 @@ module Search
       workspace.db_rows.find_each do |db_row|
         Search::ChunkIndexingService.index_db_row!(db_row: db_row)
       end
+
+      workspace.kalendarium_events.find_each do |kalendarium_event|
+        Search::ChunkIndexingService.index_kalendarium_event!(kalendarium_event: kalendarium_event)
+      end
     end
   end
 end

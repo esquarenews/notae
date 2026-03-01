@@ -14,6 +14,7 @@ class DbRow < ApplicationRecord
   belongs_to :linked_page, class_name: "Page", optional: true
   has_many :db_cells, dependent: :destroy
   has_many :search_chunks, dependent: :destroy
+  has_many :kalendarium_events, foreign_key: :linked_db_row_id, dependent: :nullify
 
   validates :title, presence: true
   validates :position, numericality: { greater_than: 0, only_integer: true }

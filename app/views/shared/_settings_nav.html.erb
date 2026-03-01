@@ -1,8 +1,21 @@
-<aside class="notae-settings-nav">
+<aside class="notae-settings-nav" data-controller="auto-submit">
   <% settings_workspace_slug = params[:settings_workspace_slug].to_s %>
   <% workspace_section_item = %i[general people import].include?(active_item) ? active_item : :general %>
   <% workspace_options = policy_scope(Workspace).where.not(slug: [ nil, "" ]).order(updated_at: :desc).to_a %>
   <% selected_workspace = workspace_options.find { |candidate_workspace| candidate_workspace.slug == settings_workspace_slug } || workspace %>
+  <% active_item_labels = {
+       preferences: "Preferences",
+       notifications: "Notifications",
+       connections: "Connections",
+       general: "General",
+       people: "People",
+       import: "Import",
+       notae_ai: "Notae AI",
+       ai_analytics: "AI Analytics",
+       kalendarium: "Kalendarium"
+     } %>
+  <% active_nav_key = active_item.respond_to?(:to_sym) ? active_item.to_sym : nil %>
+  <% active_nav_label = active_item_labels[active_nav_key] || "Settings" %>
   <% workspace_route_for = lambda do |candidate_workspace|
        case workspace_section_item
        when :people
@@ -15,6 +28,14 @@
      end %>
   <% workspace_nav_options = workspace_options
        .map { |candidate_workspace| [candidate_workspace.name, workspace_route_for.call(candidate_workspace)] } %>
+
+  <details class="notae-settings-mobile-accordion">
+    <summary class="notae-settings-mobile-trigger">
+      <span class="notae-settings-mobile-trigger-label"><%= active_nav_label %></span>
+      <span class="notae-settings-mobile-trigger-caret">▾</span>
+    </summary>
+    <div class="notae-settings-mobile-accordion-panel">
+      <div class="notae-settings-nav-body">
 
   <p class="notae-settings-nav-group">Account</p>
   <div class="notae-settings-nav-user">
@@ -49,7 +70,7 @@
     <%= select_tag :workspace_nav_picker,
                    options_for_select(workspace_nav_options, workspace_route_for.call(selected_workspace)),
                    class: "notae-options-input",
-                   onchange: "window.location.href=this.value" %>
+                   data: { action: "change->auto-submit#navigate" } %>
   </div>
   <%= link_to workspace_general_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
               class: [ "notae-settings-nav-item", ("active" if active_item == :general) ].compact.join(" ") do %>
@@ -86,6 +107,13 @@
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M6 16v-5"/><path d="M10 16V8"/><path d="M14 16v-2"/><path d="M18 16V5"/></svg>
       <span>AI Analytics</span>
+    </span>
+  <% end %>
+  <%= link_to workspace_kalendarium_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :kalendarium) ].compact.join(" ") do %>
+    <span class="notae-settings-nav-item-label">
+      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+      <span>Kalendārium</span>
     </span>
   <% end %>
   <span class="notae-settings-nav-item is-disabled">
@@ -129,4 +157,7 @@
     </span>
     <em>Future</em>
   </span>
+      </div>
+    </div>
+  </details>
 </aside>

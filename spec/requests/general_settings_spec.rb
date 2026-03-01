@@ -24,7 +24,8 @@ RSpec.describe "General settings", type: :request do
     document = Nokogiri::HTML(response.body)
     workspace_picker = document.at_css(".notae-settings-workspace-picker select[name='workspace_nav_picker']")
     expect(workspace_picker).to be_present
-    expect(workspace_picker["onchange"]).to eq("window.location.href=this.value")
+    expect(workspace_picker["onchange"]).to be_nil
+    expect(workspace_picker["data-action"]).to eq("change->auto-submit#navigate")
     picker_options = workspace_picker.css("option").map { |option| [ option.text.strip, option["value"] ] }
     expect(picker_options).to include(
       [ workspace.name, workspace_general_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug) ],
