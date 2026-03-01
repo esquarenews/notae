@@ -34,15 +34,37 @@
     <section class="notae-settings-section">
       <h2>Calendar connections</h2>
       <p class="notae-pref-description">Google can be connected with OAuth (recommended), iCloud uses CalDAV credentials (Apple ID + app-specific password), and ICS uses read-only feed URLs.</p>
-      <%= form_with url: google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug),
-                    method: :get,
-                    class: "notae-kalendarium-connection-form" do %>
-        <%= text_field_tag :label, "Google calendar", placeholder: "Google connection label", required: true, class: "notae-auth-input" %>
-        <%= select_tag :owner_scope,
-                       options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
-                       class: "notae-auth-input" %>
-        <%= submit_tag "Connect Google with OAuth", class: "notae-chip-button" %>
+      <% unless @google_oauth_configured %>
+        <p class="notae-page-subtle">
+          Google OAuth is not configured on the server.
+          Set <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code>, then restart Rails.
+        </p>
       <% end %>
+      <div class="notae-kalendarium-connection-form"
+           data-controller="google-oauth-connect"
+           data-google-oauth-connect-url-value="<%= google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug) %>">
+        <%= text_field_tag :google_oauth_label,
+                           "Google calendar",
+                           placeholder: "Google connection label",
+                           required: true,
+                           class: "notae-auth-input",
+                           data: { google_oauth_connect_target: "label" } %>
+        <%= select_tag :google_oauth_owner_scope,
+                       options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
+                       class: "notae-auth-input",
+                       data: { google_oauth_connect_target: "ownerScope" } %>
+        <% if @google_oauth_configured %>
+          <%= link_to "Connect Google with OAuth",
+                      google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug, owner_scope: "user", label: "Google calendar"),
+                      class: "notae-chip-button",
+                      data: {
+                        turbo: false,
+                        action: "click->google-oauth-connect#navigate"
+                      } %>
+        <% else %>
+          <button type="button" class="notae-chip-button" disabled>Connect Google with OAuth</button>
+        <% end %>
+      </div>
       <%= form_with model: KalendariumConnection.new,
                     url: kalendarium_connections_path(workspace_slug: @workspace.slug),
                     class: "notae-kalendarium-connection-form" do |form| %>
@@ -77,11 +99,10 @@
               </div>
               <div class="notae-kalendarium-connection-actions">
                 <% if connection.provider == "google" %>
-                  <%= button_to "Authorize Google",
-                                google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug),
-                                method: :get,
-                                params: { connection_id: connection.id },
-                                class: "notae-chip-button" %>
+                  <%= link_to "Authorize Google",
+                              google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug, connection_id: connection.id),
+                              class: "notae-chip-button",
+                              data: { turbo: false } %>
                 <% end %>
                 <%= button_to "Sync", sync_kalendarium_connection_path(workspace_slug: @workspace.slug, id: connection.id), method: :post, class: "notae-chip-button" %>
                 <%= button_to(connection.enabled? ? "Disable" : "Enable",

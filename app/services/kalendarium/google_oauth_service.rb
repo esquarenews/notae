@@ -12,9 +12,13 @@ module Kalendarium
 
     class Error < StandardError; end
 
+    def self.configured?
+      resolved_client_id.present? && resolved_client_secret.present?
+    end
+
     def initialize(client_id: nil, client_secret: nil)
-      @client_id = client_id.to_s.strip.presence || ENV["GOOGLE_OAUTH_CLIENT_ID"].to_s.strip.presence || ENV["GOOGLE_CLIENT_ID"].to_s.strip.presence
-      @client_secret = client_secret.to_s.strip.presence || ENV["GOOGLE_OAUTH_CLIENT_SECRET"].to_s.strip.presence || ENV["GOOGLE_CLIENT_SECRET"].to_s.strip.presence
+      @client_id = client_id.to_s.strip.presence || self.class.resolved_client_id
+      @client_secret = client_secret.to_s.strip.presence || self.class.resolved_client_secret
       raise Error, "Google OAuth client id is not configured. Set GOOGLE_OAUTH_CLIENT_ID." if @client_id.blank?
       raise Error, "Google OAuth client secret is not configured. Set GOOGLE_OAUTH_CLIENT_SECRET." if @client_secret.blank?
     end
@@ -82,6 +86,36 @@ module Kalendarium
     private
 
     attr_reader :client_id, :client_secret
+
+    def self.resolved_client_id
+      ENV["GOOGLE_OAUTH_CLIENT_ID"].to_s.strip.presence ||
+        ENV["GOOGLE_CLIENT_ID"].to_s.strip.presence ||
+        credentials_value(%i[google oauth_client_id], %i[google_oauth client_id], %i[google_oauth_client_id])
+    end
+
+    def self.resolved_client_secret
+      ENV["GOOGLE_OAUTH_CLIENT_SECRET"].to_s.strip.presence ||
+        ENV["GOOGLE_CLIENT_SECRET"].to_s.strip.presence ||
+        credentials_value(%i[google oauth_client_secret], %i[google_oauth client_secret], %i[google_oauth_client_secret])
+    end
+
+    def self.credentials_value(*dig_paths)
+      credentials = Rails.application.credentials
+
+      dig_paths.each do |path|
+        value = if path.length == 1
+                  credentials[path.first]
+                else
+                  credentials.dig(*path)
+                end
+        normalized = value.to_s.strip
+        return normalized if normalized.present?
+      end
+
+      nil
+    rescue StandardError
+      nil
+    end
 
     def parse_json(raw_body)
       body = raw_body.to_s

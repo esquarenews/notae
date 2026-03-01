@@ -36,6 +36,8 @@ RSpec.describe "Kalendarium settings", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Connect Google with OAuth")
+    expect(response.body).to include("data-controller=\"google-oauth-connect\"")
+    expect(response.body).to include("Google OAuth is not configured on the server.")
     expect(response.body).not_to include("Access token (Google)")
     expect(response.body).not_to include("Refresh token (Google)")
     expect(response.body).not_to include(">Google</option>")

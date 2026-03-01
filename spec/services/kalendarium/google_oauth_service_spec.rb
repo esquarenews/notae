@@ -1,6 +1,24 @@
 require "rails_helper"
 
 RSpec.describe Kalendarium::GoogleOauthService do
+  def with_google_env(overrides)
+    keys = %w[
+      GOOGLE_OAUTH_CLIENT_ID
+      GOOGLE_OAUTH_CLIENT_SECRET
+      GOOGLE_CLIENT_ID
+      GOOGLE_CLIENT_SECRET
+    ]
+    original = keys.index_with { |key| ENV[key] }
+    keys.each { |key| ENV.delete(key) }
+    overrides.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    keys.each do |key|
+      original_value = original[key]
+      original_value.nil? ? ENV.delete(key) : ENV[key] = original_value
+    end
+  end
+
   it "builds a Google OAuth authorization URL with expected params" do
     service = described_class.new(client_id: "google-client", client_secret: "google-secret")
     url = service.authorization_url(
@@ -48,5 +66,15 @@ RSpec.describe Kalendarium::GoogleOauthService do
     expect do
       service.exchange_code!(code: "bad-code", redirect_uri: "https://example.com/oauth/callback")
     end.to raise_error(Kalendarium::GoogleOauthService::Error, /Google token exchange failed \(400\)/)
+  end
+
+  it "detects configuration from Rails credentials when env vars are missing" do
+    credentials = { google: { oauth_client_id: "cred-client-id", oauth_client_secret: "cred-client-secret" } }
+    allow(Rails.application).to receive(:credentials).and_return(credentials)
+
+    with_google_env({}) do
+      expect(described_class.configured?).to be(true)
+      expect { described_class.new }.not_to raise_error
+    end
   end
 end

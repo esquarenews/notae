@@ -8,6 +8,7 @@ class KalendariumSettingsController < ApplicationController
     @connections = policy_scope(KalendariumConnection).for_workspace(@workspace).includes(:kalendarium_calendars).order(created_at: :desc)
     @calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).order(:name)
     @time_zone_options = User.time_zone_options
+    @google_oauth_configured = Kalendarium::GoogleOauthService.configured?
   end
 
   def update
