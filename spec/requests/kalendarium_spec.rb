@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Kalendarium", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+
   def build_stack(suffix:)
     user = User.create!(email: "kal-request-#{suffix}@example.com", password: "password123")
     workspace = Workspace.create!(name: "Kal Request #{suffix}", slug: "kal-request-#{suffix}")
@@ -30,6 +32,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("Month")
     expect(response.body).to include("Year")
     expect(response.body).to include("Project")
+    expect(response.body).to include("data-controller=\"kalendarium-focus\"")
+    expect(response.body).to include("notae-kalendarium-sidebar-accordion-summary")
   end
 
   it "renders day and week timelines with hourly rails and half-hour markers" do
@@ -48,17 +52,125 @@ RSpec.describe "Kalendarium", type: :request do
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("<h2>Sunday, 1 March 2026</h2>")
     expect(response.body).to include("data-kalendarium-timeline-start-hour-value=\"5\"")
     expect(response.body).to include("05:00")
     expect(response.body).to include("20:00")
     expect(response.body).to include("notae-kalendarium-time-half")
+    expect(response.body).to include("notae-kalendarium-now-line")
+    expect(response.body).to include("data-kalendarium-timeline-time-zone-value=")
     expect(response.body).to include("aria-label=\"Edit event\"")
+    expect(response.body).to include("kalendarium-event-modal#openView")
+    expect(response.body).to include("Event details")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-kalendarium-week-header-days")
     expect(response.body).to include("notae-kalendarium-week-columns")
     expect(response.body).to include("notae-kalendarium-week-day-label")
+    expect(response.body).to include("notae-kalendarium-timeline-scroller-week")
+    expect(response.body).to include("data-now-date=\"2026-03-01\"")
+    expect(response.body).to include("data-kalendarium-day-focus=\"true\"")
+    expect(response.body).to include("data-day-date=\"2026-03-01\"")
+    expect(response.body).to include("click-&gt;kalendarium-focus#selectDay")
+    expect(response.body).to include("data-kalendarium-focus-target=\"viewLink\"")
+    expect(response.body).to include("data-kalendarium-focus-target=\"weekTrack\"")
+    expect(response.body).to include("notae-kalendarium-day-focus-link is-selected")
+    expect(response.body).to include("notae-kalendarium-week-day-track is-selected")
+    expect(response.body).to include("date=2026-03-01&amp;view=day")
+
+    travel_to Time.zone.parse("2026-03-15 09:30:00") do
+      get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01")
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Month view · March 2026")
+      expect(response.body).to include("data-kalendarium-day-focus=\"true\"")
+      expect(response.body).to include("data-day-date=\"2026-03-15\"")
+      expect(response.body).to include("notae-kalendarium-month-cell is-today")
+      expect(response.body).to include("notae-kalendarium-month-cell is-selected")
+      expect(response.body).to include("notae-kalendarium-month-day-focus-link is-today")
+      expect(response.body).to include("notae-kalendarium-month-day-focus-link is-selected")
+      expect(response.body).to include("date=2026-03-01&amp;view=day")
+
+      get kalendarium_path(workspace_slug: workspace.slug, view: "year", date: "2026-03-01")
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("<h2>2026</h2>")
+      expect(response.body).to include("data-day-date=\"2026-03-15\"")
+      expect(response.body).to include("notae-kalendarium-year-day is-today")
+      expect(response.body).to include("notae-kalendarium-year-day is-selected")
+    end
+  end
+
+  it "keeps the selected date when switching to day view from month and week" do
+    user, workspace, = build_stack(suffix: "selected-date-switch")
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-15")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-month-cell is-selected")
+    expect(response.body).to include("notae-kalendarium-month-day-focus-link is-selected")
+    expect(response.body).to include("date=2026-03-15&amp;view=day")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-15")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("<h2>Sunday, 15 March 2026</h2>")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-18")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-day-focus-link is-selected")
+    expect(response.body).to include("notae-kalendarium-week-day-track is-selected")
+    expect(response.body).to include("date=2026-03-18&amp;view=day")
+  end
+
+  it "renders separate calendar and project dropdown filters that preserve each other state" do
+    user, workspace, calendar = build_stack(suffix: "separate-filters")
+    sign_in user
+
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Client Work",
+      color_hex: "#8B5CF6"
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "month",
+      date: "2026-03-01",
+      calendar_ids: [ calendar.id ],
+      project_id: project.id
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Calendars (1)")
+    expect(response.body).to include("Projects (Client Work)")
+    expect(response.body).to include("class=\"notae-kalendarium-calendar-filter\"")
+    expect(response.body).to include("class=\"notae-kalendarium-project-filter\"")
+    expect(response.body).to include("name=\"calendar_ids[]\"")
+    expect(response.body).to include("name=\"project_id\"")
+    expect(response.body).to include("All projects")
+  end
+
+  it "respects monday week-start preference for week, month, and year views" do
+    user, workspace, = build_stack(suffix: "week-start-monday")
+    user.update!(start_week_on_monday: true)
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("data-day-date=\"2026-02-23\"")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-month-weekday\">Mon</div>")
+    expect(response.body).to include("notae-kalendarium-month-weekday\">Sun</div>")
+    expect(response.body).to include("data-day-date=\"2026-02-23\"")
+    expect(response.body).not_to include("data-day-date=\"2026-02-22\"")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "year", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-year-weekday\">M</span>")
+    expect(response.body).to include("data-day-date=\"2025-12-29\"")
+    expect(response.body).not_to include("data-day-date=\"2025-12-28\"")
   end
 
   it "creates a project and auto-creates a matching calendar" do
@@ -145,5 +257,36 @@ RSpec.describe "Kalendarium", type: :request do
     expect do
       delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: { view: "day", date: "2026-03-01" }
     end.to change(KalendariumEvent, :count).by(-1)
+  end
+
+  it "does not render cancelled events in calendar views" do
+    user, workspace, calendar = build_stack(suffix: "cancelled-filter")
+    sign_in user
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Visible event",
+      status: "confirmed",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Cancelled event",
+      status: "cancelled",
+      starts_at_utc: Time.zone.parse("2026-03-01 11:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 12:00:00")
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Visible event")
+    expect(response.body).not_to include("Cancelled event")
   end
 end

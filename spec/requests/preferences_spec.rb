@@ -17,7 +17,9 @@ RSpec.describe "Preferences", type: :request do
     expect(response.body).to include("Privacy")
     expect(response.body).to include("Reduce Notae AI loader motion")
     expect(response.body).to include("Future implementation")
-    expect(response.body).to include("notae-settings-mobile-accordion")
+    expect(response.body).to include("<details class=\"notae-settings-mobile-accordion\"")
+    expect(response.body).to include("data-controller=\"settings-nav\"")
+    expect(response.body).to include(" open>")
     expect(response.body).to include("notae-settings-mobile-trigger")
     expect(response.body).to include("notae-settings-nav-body")
   end

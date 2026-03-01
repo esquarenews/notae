@@ -7,10 +7,6 @@ module Kalendarium
       return if connection.blank?
 
       Kalendarium::ConnectionSyncService.new(connection: connection).call
-
-      connection.kalendarium_calendars.find_each do |calendar|
-        Kalendarium::SyncCalendarJob.perform_later(calendar.id)
-      end
     end
   end
 end

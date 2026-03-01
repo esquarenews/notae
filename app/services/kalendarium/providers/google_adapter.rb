@@ -1,7 +1,8 @@
 module Kalendarium
   module Providers
     class GoogleAdapter < BaseAdapter
-      def sync!
+      def sync!(calendar: nil)
+        calendar
         return true if connection.access_token.present?
 
         raise "Google access token missing"

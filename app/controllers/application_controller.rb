@@ -167,7 +167,7 @@ class ApplicationController < ActionController::Base
   end
 
   def encryption_bootstrap_secret
-    configured_secret = Rails.application.secret_key_base.to_s.presence || ENV["SECRET_KEY_BASE"].to_s.presence
+    configured_secret = ENV["SECRET_KEY_BASE"].to_s.presence || Rails.application.credentials.secret_key_base.to_s.presence
     return configured_secret if configured_secret.present?
     return "notae-active-record-encryption-fallback-#{Rails.env}" unless Rails.env.production?
 

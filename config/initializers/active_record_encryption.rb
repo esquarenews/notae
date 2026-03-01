@@ -1,11 +1,22 @@
 require "openssl"
 
 Rails.application.configure do
-  secret = Rails.application.secret_key_base.to_s
-  secret = ENV["SECRET_KEY_BASE"].to_s if secret.blank?
+  running_assets_task = begin
+    if defined?(::Rake) && ::Rake.respond_to?(:application) && ::Rake.application
+      Array(::Rake.application.top_level_tasks).any? { |task| task.to_s.start_with?("assets:") }
+    else
+      Array(ARGV).any? { |arg| arg.to_s.start_with?("assets:") }
+    end
+  rescue StandardError
+    Array(ARGV).any? { |arg| arg.to_s.start_with?("assets:") }
+  end
+  secret = ENV["SECRET_KEY_BASE"].to_s
+  secret = Rails.application.credentials.secret_key_base.to_s if secret.blank?
+  secret = ENV["SECRET_KEY_BASE_DUMMY"].to_s if secret.blank?
+
   if secret.blank?
-    if Rails.env.production?
-      raise "Missing SECRET_KEY_BASE for Active Record encryption setup in production"
+    if Rails.env.production? && !running_assets_task
+      raise "Missing SECRET_KEY_BASE for Active Record encryption setup in production (or provide credentials.secret_key_base)"
     end
 
     secret = "notae-active-record-encryption-fallback-#{Rails.env}"

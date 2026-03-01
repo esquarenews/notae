@@ -9,7 +9,7 @@ module Kalendarium
       connection = calendar.kalendarium_connection
       return if connection.blank? || !connection.enabled?
 
-      Kalendarium::ConnectionSyncService.new(connection: connection).call
+      Kalendarium::ConnectionSyncService.new(connection: connection, calendar: calendar).call
     end
   end
 end

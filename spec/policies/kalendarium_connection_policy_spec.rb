@@ -41,7 +41,7 @@ RSpec.describe KalendariumConnectionPolicy do
       provider: "icloud_caldav",
       label: "Owner iCloud",
       provider_username: "owner@example.com",
-      provider_password: "secret"
+      provider_password: "aaaa-bbbb-cccc-dddd"
     )
 
     expect(described_class.new(owner, connection).show?).to be(true)

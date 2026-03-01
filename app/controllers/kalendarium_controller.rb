@@ -9,6 +9,9 @@ class KalendariumController < ApplicationController
 
     @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "month"
     @selected_date = parse_selected_date
+    @week_start_day = week_start_day
+    @weekday_labels = ordered_weekday_labels
+    @year_weekday_labels = @weekday_labels.map { |label| label.first }
     @projects = policy_scope(KalendariumProject).for_workspace(@workspace).active.order(:name).to_a
     @selected_project_id = params[:project_id].to_s.presence
 
@@ -23,6 +26,7 @@ class KalendariumController < ApplicationController
                 .for_workspace(@workspace)
                 .includes(:kalendarium_calendar, :kalendarium_project, :linked_page)
                 .where(kalendarium_calendar_id: @visible_calendars.map(&:id))
+                .where.not(status: "cancelled")
                 .for_range(range_start, range_end)
                 .order(:starts_at_utc)
     if @selected_project_id.present?
@@ -86,27 +90,36 @@ class KalendariumController < ApplicationController
     when "day"
       [ @selected_date.beginning_of_day, @selected_date.end_of_day ]
     when "week"
-      week_start = @selected_date.beginning_of_week(current_user.start_week_on_monday? ? :monday : :sunday)
+      week_start = @selected_date.beginning_of_week(week_start_day)
       [ week_start.beginning_of_day, (week_start + 6.days).end_of_day ]
     when "year"
       [ @selected_date.beginning_of_year.beginning_of_day, @selected_date.end_of_year.end_of_day ]
     when "project"
       [ @selected_date.beginning_of_month.beginning_of_day, (@selected_date + 90.days).end_of_day ]
     else
-      month_start = @selected_date.beginning_of_month.beginning_of_week(:sunday)
-      month_end = @selected_date.end_of_month.end_of_week(:sunday)
+      month_start = @selected_date.beginning_of_month.beginning_of_week(week_start_day)
+      month_end = @selected_date.end_of_month.end_of_week(week_start_day)
       [ month_start.beginning_of_day, month_end.end_of_day ]
     end
   end
 
   def build_week_days
-    week_start = @selected_date.beginning_of_week(current_user.start_week_on_monday? ? :monday : :sunday)
+    week_start = @selected_date.beginning_of_week(week_start_day)
     (0..6).map { |offset| week_start + offset.days }
   end
 
   def build_month_days
-    start_date = @selected_date.beginning_of_month.beginning_of_week(:sunday)
-    end_date = @selected_date.end_of_month.end_of_week(:sunday)
+    start_date = @selected_date.beginning_of_month.beginning_of_week(week_start_day)
+    end_date = @selected_date.end_of_month.end_of_week(week_start_day)
     (start_date..end_date).to_a
+  end
+
+  def week_start_day
+    current_user.start_week_on_monday? ? :monday : :sunday
+  end
+
+  def ordered_weekday_labels
+    base_day = Date.current.beginning_of_week(week_start_day)
+    (0..6).map { |offset| (base_day + offset.days).strftime("%a") }
   end
 end

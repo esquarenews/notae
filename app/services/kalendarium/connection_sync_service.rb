@@ -1,11 +1,12 @@
 module Kalendarium
   class ConnectionSyncService
-    def initialize(connection:)
+    def initialize(connection:, calendar: nil)
       @connection = connection
+      @calendar = calendar
     end
 
     def call
-      adapter.sync!
+      adapter.sync!(calendar: calendar)
       connection.update!(status: "connected", last_synced_at: Time.current, last_error: nil)
     rescue StandardError => error
       connection.update!(status: "sync_error", last_error: error.message)
@@ -14,7 +15,7 @@ module Kalendarium
 
     private
 
-    attr_reader :connection
+    attr_reader :connection, :calendar
 
     def adapter
       @adapter ||= case connection.provider

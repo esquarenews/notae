@@ -6,7 +6,10 @@
   <%= link_to "Settings", workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
 <% end %>
 
-<section class="notae-kalendarium">
+<section class="notae-kalendarium"
+         data-controller="kalendarium-focus"
+         data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
+         data-kalendarium-focus-view-value="<%= @view %>">
   <header class="notae-kalendarium-head notae-auth-card">
     <div class="notae-kalendarium-head-top">
       <h1>Kalendārium</h1>
@@ -23,8 +26,16 @@
                       when "year" then @selected_date + 1.year
                       else @selected_date + 1.month
                       end %>
+        <% selected_date_label = case @view
+                                 when "day"
+                                   @selected_date.strftime("%A, %-d %B %Y")
+                                 when "year"
+                                   @selected_date.strftime("%Y")
+                                 else
+                                   @selected_date.strftime("%b %-d, %Y")
+                                 end %>
         <%= link_to "←", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: previous_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids), class: "notae-chip-button" %>
-        <span class="notae-kalendarium-date-label"><%= @selected_date.strftime("%b %-d, %Y") %></span>
+        <span class="notae-kalendarium-date-label" data-kalendarium-focus-target="dateLabel"><%= selected_date_label %></span>
         <%= link_to "→", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: next_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids), class: "notae-chip-button" %>
         <%= link_to "Today", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: Date.current, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids), class: "notae-chip-button" %>
       </div>
@@ -35,104 +46,161 @@
         <% KalendariumController::VIEW_OPTIONS.each do |view_option| %>
           <%= link_to view_option.titleize,
                       kalendarium_path(workspace_slug: @workspace.slug, view: view_option, date: @selected_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids),
-                      class: ["notae-chip-button", ("is-active" if @view == view_option)].compact.join(" ") %>
+                      class: ["notae-chip-button", ("is-active" if @view == view_option)].compact.join(" "),
+                      data: { kalendarium_focus_target: "viewLink", view_option: view_option } %>
         <% end %>
       </div>
 
-      <%= form_with url: kalendarium_path(workspace_slug: @workspace.slug), method: :get, class: "notae-kalendarium-calendar-filter" do |form| %>
-        <%= hidden_field_tag :view, @view %>
-        <%= hidden_field_tag :date, @selected_date %>
-        <%= hidden_field_tag :project_id, @selected_project_id %>
-        <details>
-          <summary class="notae-chip-button">Calendars (<%= @selected_calendar_ids.size %>)</summary>
-          <div class="notae-kalendarium-calendar-popover">
-            <% @all_calendars.each do |calendar| %>
-              <label class="notae-options-checkbox">
-                <%= check_box_tag "calendar_ids[]", calendar.id, @selected_calendar_ids.include?(calendar.id.to_s) %>
-                <span class="notae-kalendarium-dot" style="--kal-color: <%= calendar.color_hex %>"></span>
-                <span><%= calendar.name %></span>
-              </label>
-            <% end %>
-            <div class="notae-kalendarium-calendar-popover-actions">
-              <%= submit_tag "Apply", class: "notae-chip-button" %>
+      <div class="notae-kalendarium-filter-controls">
+        <%= form_with url: kalendarium_path(workspace_slug: @workspace.slug), method: :get, class: "notae-kalendarium-calendar-filter" do |form| %>
+          <%= hidden_field_tag :view, @view %>
+          <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
+          <%= hidden_field_tag :project_id, @selected_project_id %>
+          <details>
+            <summary class="notae-chip-button">Calendars (<%= @selected_calendar_ids.size %>)</summary>
+            <div class="notae-kalendarium-calendar-popover">
+              <% @all_calendars.each do |calendar| %>
+                <label class="notae-options-checkbox">
+                  <%= check_box_tag "calendar_ids[]", calendar.id, @selected_calendar_ids.include?(calendar.id.to_s) %>
+                  <span class="notae-kalendarium-dot" style="--kal-color: <%= calendar.color_hex %>"></span>
+                  <span><%= calendar.name %></span>
+                </label>
+              <% end %>
+              <div class="notae-kalendarium-calendar-popover-actions">
+                <%= submit_tag "Apply", class: "notae-chip-button" %>
+              </div>
             </div>
-          </div>
-        </details>
-      <% end %>
+          </details>
+        <% end %>
+
+        <% selected_project = @projects.find { |project| project.id.to_s == @selected_project_id } %>
+        <% selected_project_label = selected_project&.name || "All" %>
+        <%= form_with url: kalendarium_path(workspace_slug: @workspace.slug), method: :get, class: "notae-kalendarium-project-filter" do |form| %>
+          <%= hidden_field_tag :view, @view %>
+          <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
+          <% @selected_calendar_ids.each do |calendar_id| %>
+            <%= hidden_field_tag "calendar_ids[]", calendar_id %>
+          <% end %>
+          <details>
+            <summary class="notae-chip-button">Projects (<%= selected_project_label %>)</summary>
+            <div class="notae-kalendarium-project-popover">
+              <% if @projects.any? %>
+                <label class="notae-options-checkbox">
+                  <%= radio_button_tag :project_id, "", @selected_project_id.blank? %>
+                  <span>All projects</span>
+                </label>
+                <% @projects.each do |project| %>
+                  <label class="notae-options-checkbox">
+                    <%= radio_button_tag :project_id, project.id, @selected_project_id == project.id.to_s %>
+                    <span><%= project.name %></span>
+                  </label>
+                <% end %>
+              <% else %>
+                <p class="notae-options-empty">No projects yet.</p>
+              <% end %>
+              <div class="notae-kalendarium-calendar-popover-actions">
+                <%= submit_tag "Apply", class: "notae-chip-button" %>
+              </div>
+            </div>
+          </details>
+        <% end %>
+      </div>
     </div>
   </header>
 
   <section class="notae-kalendarium-grid">
     <aside class="notae-kalendarium-sidebar notae-auth-card">
-      <h2>Create event</h2>
-      <%= form_with model: @new_event,
-                    url: kalendarium_events_path(workspace_slug: @workspace.slug),
-                    class: "notae-kalendarium-form" do |form| %>
-        <%= hidden_field_tag :view, @view %>
-        <%= hidden_field_tag :date, @selected_date %>
-        <%= form.text_field :title, placeholder: "Event title", required: true, class: "notae-auth-input" %>
-        <%= form.select :kalendarium_calendar_id,
-                        options_from_collection_for_select(@visible_calendars, :id, :name),
-                        {},
-                        class: "notae-auth-input" %>
-        <%= form.select :kalendarium_project_id,
-                        options_for_select([["No project", ""]] + @projects.map { |project| [project.name, project.id] }, @selected_project_id),
-                        {},
-                        class: "notae-auth-input" %>
-        <%= form.datetime_local_field :starts_at_local, value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"), class: "notae-auth-input" %>
-        <%= form.datetime_local_field :ends_at_local, value: @selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"), class: "notae-auth-input" %>
-        <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
-        <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
-        <div class="notae-kalendarium-reminders">
-          <% [[10, "10m"], [30, "30m"], [60, "1h"], [1440, "1d"]].each do |minutes, label| %>
-            <label class="notae-options-checkbox">
-              <%= check_box_tag "kalendarium_event[reminder_offsets_minutes][]", minutes, minutes == 10 %>
-              <span><%= label %></span>
-            </label>
-          <% end %>
+      <details class="notae-kalendarium-sidebar-accordion">
+        <summary class="notae-kalendarium-sidebar-accordion-summary">
+          <span>Create event</span>
+          <span class="notae-kalendarium-sidebar-accordion-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="notae-kalendarium-sidebar-accordion-body">
+          <div class="notae-kalendarium-sidebar-accordion-body-inner">
+            <%= form_with model: @new_event,
+                          url: kalendarium_events_path(workspace_slug: @workspace.slug),
+                          class: "notae-kalendarium-form" do |form| %>
+              <%= hidden_field_tag :view, @view %>
+              <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
+              <%= form.text_field :title, placeholder: "Event title", required: true, class: "notae-auth-input" %>
+              <%= form.select :kalendarium_calendar_id,
+                              options_from_collection_for_select(@visible_calendars, :id, :name),
+                              {},
+                              class: "notae-auth-input" %>
+              <%= form.select :kalendarium_project_id,
+                              options_for_select([["No project", ""]] + @projects.map { |project| [project.name, project.id] }, @selected_project_id),
+                              {},
+                              class: "notae-auth-input" %>
+              <%= form.datetime_local_field :starts_at_local, value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"), class: "notae-auth-input" %>
+              <%= form.datetime_local_field :ends_at_local, value: @selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"), class: "notae-auth-input" %>
+              <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
+              <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
+              <div class="notae-kalendarium-reminders">
+                <% [[10, "10m"], [30, "30m"], [60, "1h"], [1440, "1d"]].each do |minutes, label| %>
+                  <label class="notae-options-checkbox">
+                    <%= check_box_tag "kalendarium_event[reminder_offsets_minutes][]", minutes, minutes == 10 %>
+                    <span><%= label %></span>
+                  </label>
+                <% end %>
+              </div>
+              <%= form.hidden_field :linked_page_action, value: "" %>
+              <%= form.submit "Create", class: "notae-chip-button" %>
+            <% end %>
+          </div>
         </div>
-        <%= form.hidden_field :linked_page_action, value: "" %>
-        <%= form.submit "Create", class: "notae-chip-button" %>
-      <% end %>
+      </details>
 
-      <h2>Create project</h2>
-      <%= form_with model: @new_project,
-                    url: kalendarium_projects_path(workspace_slug: @workspace.slug),
-                    class: "notae-kalendarium-form" do |form| %>
-        <%= form.text_field :name, placeholder: "Project name", required: true, class: "notae-auth-input" %>
-        <%= form.text_field :slug, placeholder: "project-slug", class: "notae-auth-input" %>
-        <%= form.color_field :color_hex, value: "#8B5CF6", class: "notae-auth-input" %>
-        <div class="notae-kalendarium-project-actions">
-          <%= button_tag "Quick link Nota", type: "submit", name: "kalendarium_project[linked_page_action]", value: "create_page", class: "notae-chip-button" %>
-          <%= form.submit "Create project", class: "notae-chip-button" %>
+      <details class="notae-kalendarium-sidebar-accordion">
+        <summary class="notae-kalendarium-sidebar-accordion-summary">
+          <span>Create project</span>
+          <span class="notae-kalendarium-sidebar-accordion-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="notae-kalendarium-sidebar-accordion-body">
+          <div class="notae-kalendarium-sidebar-accordion-body-inner">
+            <%= form_with model: @new_project,
+                          url: kalendarium_projects_path(workspace_slug: @workspace.slug),
+                          class: "notae-kalendarium-form" do |form| %>
+              <%= form.text_field :name, placeholder: "Project name", required: true, class: "notae-auth-input" %>
+              <%= form.text_field :slug, placeholder: "project-slug", class: "notae-auth-input" %>
+              <%= form.color_field :color_hex, value: "#8B5CF6", class: "notae-auth-input" %>
+              <div class="notae-kalendarium-project-actions">
+                <%= button_tag "Quick link Nota", type: "submit", name: "kalendarium_project[linked_page_action]", value: "create_page", class: "notae-chip-button" %>
+                <%= form.submit "Create project", class: "notae-chip-button" %>
+              </div>
+            <% end %>
+          </div>
         </div>
-      <% end %>
+      </details>
 
       <% if @time_zone_rail.any? %>
-        <h2>Time zones</h2>
-        <ul class="notae-kalendarium-timezones">
-          <% @time_zone_rail.each do |time_zone| %>
-            <% zone = ActiveSupport::TimeZone[time_zone] %>
-            <% next if zone.blank? %>
-            <li>
-              <strong><%= time_zone %></strong>
-              <span><%= Time.current.in_time_zone(zone).strftime("%H:%M") %></span>
-            </li>
-          <% end %>
-        </ul>
+        <section class="notae-kalendarium-timezones-section">
+          <h2>Time zones</h2>
+          <ul class="notae-kalendarium-timezones">
+            <% @time_zone_rail.each do |time_zone| %>
+              <% zone = ActiveSupport::TimeZone[time_zone] %>
+              <% next if zone.blank? %>
+              <li>
+                <strong><%= time_zone %></strong>
+                <span><%= Time.current.in_time_zone(zone).strftime("%H:%M") %></span>
+              </li>
+            <% end %>
+          </ul>
+        </section>
       <% end %>
     </aside>
 
     <div class="notae-kalendarium-main notae-auth-card">
+      <% today_local = Time.current.in_time_zone(current_user.time_zone).to_date %>
       <% if @view == "day" %>
-        <h2>Day view</h2>
+        <h2><%= @selected_date.strftime("%A, %-d %B %Y") %></h2>
         <% slot_height = 28 %>
         <% slots_per_day = 48 %>
         <% day_events = @events_by_day[@selected_date] || [] %>
         <div class="notae-kalendarium-timeline"
              data-controller="kalendarium-timeline"
              data-kalendarium-timeline-start-hour-value="5"
-             data-kalendarium-timeline-slot-height-value="<%= slot_height %>">
+             data-kalendarium-timeline-slot-height-value="<%= slot_height %>"
+             data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>">
           <div class="notae-kalendarium-timeline-scroller" data-kalendarium-timeline-target="scroller">
             <div class="notae-kalendarium-day-columns">
               <div class="notae-kalendarium-time-rail" aria-hidden="true">
@@ -151,6 +219,14 @@
                   <% end %>
                 </div>
                 <div class="notae-kalendarium-events-layer">
+                  <div class="notae-kalendarium-now-line"
+                       data-kalendarium-timeline-target="nowLine"
+                       data-now-date="<%= @selected_date.strftime("%Y-%m-%d") %>"
+                       aria-hidden="true"
+                       hidden>
+                    <span class="notae-kalendarium-now-line-label"
+                          data-kalendarium-timeline-target="nowLineLabel"></span>
+                  </div>
                   <% day_events.each do |event| %>
                     <% start_local = event.starts_at_utc.in_time_zone(current_user.time_zone) %>
                     <% end_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
@@ -187,19 +263,33 @@
         <div class="notae-kalendarium-week-timeline"
              data-controller="kalendarium-timeline"
              data-kalendarium-timeline-start-hour-value="5"
-             data-kalendarium-timeline-slot-height-value="<%= slot_height %>">
+             data-kalendarium-timeline-slot-height-value="<%= slot_height %>"
+             data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>">
           <div class="notae-kalendarium-week-header">
             <span class="notae-kalendarium-week-header-spacer" aria-hidden="true"></span>
             <div class="notae-kalendarium-week-header-days">
               <% @week_days.each do |day| %>
                 <div>
-                  <strong><%= day.strftime("%a") %></strong>
-                  <span><%= day.strftime("%-d %b") %></span>
+                  <%= link_to kalendarium_path(workspace_slug: @workspace.slug,
+                                               view: @view,
+                                               date: day,
+                                               project_id: @selected_project_id,
+                                               calendar_ids: @selected_calendar_ids),
+                              class: ["notae-kalendarium-day-focus-link", ("is-selected" if day == @selected_date)].compact.join(" "),
+                              data: {
+                                action: "click->kalendarium-focus#selectDay",
+                                kalendarium_focus_target: "dayLink",
+                                kalendarium_day_focus: true,
+                                day_date: day.strftime("%Y-%m-%d")
+                              } do %>
+                    <strong><%= day.strftime("%a") %></strong>
+                    <span><%= day.strftime("%-d %b") %></span>
+                  <% end %>
                 </div>
               <% end %>
             </div>
           </div>
-          <div class="notae-kalendarium-timeline-scroller" data-kalendarium-timeline-target="scroller">
+          <div class="notae-kalendarium-timeline-scroller notae-kalendarium-timeline-scroller-week" data-kalendarium-timeline-target="scroller">
             <div class="notae-kalendarium-week-body">
               <div class="notae-kalendarium-time-rail" aria-hidden="true">
                 <% 24.times do |hour| %>
@@ -212,11 +302,26 @@
               <div class="notae-kalendarium-week-columns">
                 <% @week_days.each do |day| %>
                   <% day_events = @events_by_day[day] || [] %>
-                  <div class="notae-kalendarium-week-day-track"
+                  <div class="<%= ["notae-kalendarium-week-day-track", ("is-selected" if day == @selected_date)].compact.join(" ") %>"
+                       data-kalendarium-focus-target="weekTrack"
+                       data-day-date="<%= day.strftime("%Y-%m-%d") %>"
                        style="--kal-slot-height: <%= slot_height %>px; --kal-slots-per-day: <%= slots_per_day %>;">
                     <header class="notae-kalendarium-week-day-label">
-                      <strong><%= day.strftime("%a") %></strong>
-                      <span><%= day.strftime("%-d %b") %></span>
+                      <%= link_to kalendarium_path(workspace_slug: @workspace.slug,
+                                                   view: @view,
+                                                   date: day,
+                                                   project_id: @selected_project_id,
+                                                   calendar_ids: @selected_calendar_ids),
+                                  class: ["notae-kalendarium-day-focus-link", ("is-selected" if day == @selected_date)].compact.join(" "),
+                                  data: {
+                                    action: "click->kalendarium-focus#selectDay",
+                                    kalendarium_focus_target: "dayLink",
+                                    kalendarium_day_focus: true,
+                                    day_date: day.strftime("%Y-%m-%d")
+                                  } do %>
+                        <strong><%= day.strftime("%a") %></strong>
+                        <span><%= day.strftime("%-d %b") %></span>
+                      <% end %>
                     </header>
                     <div class="notae-kalendarium-slot-grid" aria-hidden="true">
                       <% slots_per_day.times do |slot| %>
@@ -224,6 +329,14 @@
                       <% end %>
                     </div>
                     <div class="notae-kalendarium-events-layer">
+                      <div class="notae-kalendarium-now-line"
+                           data-kalendarium-timeline-target="nowLine"
+                           data-now-date="<%= day.strftime("%Y-%m-%d") %>"
+                           aria-hidden="true"
+                           hidden>
+                        <span class="notae-kalendarium-now-line-label"
+                              data-kalendarium-timeline-target="nowLineLabel"></span>
+                      </div>
                       <% day_events.each do |event| %>
                         <% start_local = event.starts_at_utc.in_time_zone(current_user.time_zone) %>
                         <% end_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
@@ -253,14 +366,50 @@
           </div>
         </div>
       <% elsif @view == "year" %>
-        <h2>Year view</h2>
+        <h2><%= @selected_date.strftime("%Y") %></h2>
         <div class="notae-kalendarium-year-grid">
           <% @year_months.each do |month_date| %>
             <% month_count = @events.count { |event| event.starts_at_utc.in_time_zone(current_user.time_zone).month == month_date.month } %>
-            <%= link_to kalendarium_path(workspace_slug: @workspace.slug, view: "month", date: month_date, calendar_ids: @selected_calendar_ids), class: "notae-kalendarium-year-card" do %>
-              <strong><%= month_date.strftime("%B") %></strong>
-              <span><%= pluralize(month_count, "event") %></span>
-            <% end %>
+            <% month_grid_start = month_date.beginning_of_month.beginning_of_week(@week_start_day) %>
+            <% month_grid_end = month_date.end_of_month.end_of_week(@week_start_day) %>
+            <article class="notae-kalendarium-year-card">
+              <header class="notae-kalendarium-year-card-header">
+                <%= link_to month_date.strftime("%B"),
+                            kalendarium_path(workspace_slug: @workspace.slug,
+                                             view: "month",
+                                             date: month_date,
+                                             project_id: @selected_project_id,
+                                             calendar_ids: @selected_calendar_ids),
+                            class: "notae-kalendarium-year-month-link" %>
+                <span><%= pluralize(month_count, "event") %></span>
+              </header>
+              <div class="notae-kalendarium-year-month-grid">
+                <% @year_weekday_labels.each do |weekday| %>
+                  <span class="notae-kalendarium-year-weekday"><%= weekday %></span>
+                <% end %>
+                <% (month_grid_start..month_grid_end).each do |day| %>
+                  <% in_month = day.month == month_date.month %>
+                  <%= link_to day.day,
+                              kalendarium_path(workspace_slug: @workspace.slug,
+                                               view: "year",
+                                               date: day,
+                                               project_id: @selected_project_id,
+                                               calendar_ids: @selected_calendar_ids),
+                              class: [
+                                "notae-kalendarium-year-day",
+                                ("is-outside-month" unless in_month),
+                                ("is-today" if day == today_local),
+                                ("is-selected" if day == @selected_date)
+                              ].compact.join(" "),
+                              data: {
+                                action: "click->kalendarium-focus#selectDay",
+                                kalendarium_focus_target: "dayLink",
+                                kalendarium_day_focus: true,
+                                day_date: day.strftime("%Y-%m-%d")
+                              } %>
+                <% end %>
+              </div>
+            </article>
           <% end %>
         </div>
       <% elsif @view == "project" %>
@@ -297,16 +446,32 @@
           <p class="notae-page-subtle">No projects yet.</p>
         <% end %>
       <% else %>
-        <h2>Month view</h2>
+        <h2>Month view · <%= @selected_date.strftime("%B %Y") %></h2>
         <div class="notae-kalendarium-month-grid">
-          <% %w[Sun Mon Tue Wed Thu Fri Sat].each do |label| %>
+          <% @weekday_labels.each do |label| %>
             <div class="notae-kalendarium-month-weekday"><%= label %></div>
           <% end %>
           <% @month_days.each do |day| %>
             <% day_events = @events_by_day[day] || [] %>
-            <section class="notae-kalendarium-month-cell">
+            <section class="<%= ["notae-kalendarium-month-cell", ("is-today" if day == today_local), ("is-selected" if day == @selected_date)].compact.join(" ") %>"
+                     data-kalendarium-focus-target="monthCell"
+                     data-day-date="<%= day.strftime("%Y-%m-%d") %>">
               <header>
-                <strong><%= day.day %></strong>
+                <strong>
+                  <%= link_to day.day,
+                              kalendarium_path(workspace_slug: @workspace.slug,
+                                               view: @view,
+                                               date: day,
+                                               project_id: @selected_project_id,
+                                               calendar_ids: @selected_calendar_ids),
+                              class: ["notae-kalendarium-month-day-focus-link", ("is-today" if day == today_local), ("is-selected" if day == @selected_date)].compact.join(" "),
+                              data: {
+                                action: "click->kalendarium-focus#selectDay",
+                                kalendarium_focus_target: "dayLink",
+                                kalendarium_day_focus: true,
+                                day_date: day.strftime("%Y-%m-%d")
+                              } %>
+                </strong>
                 <% if day_events.size > 3 %>
                   <span>+<%= day_events.size - 3 %> more</span>
                 <% end %>

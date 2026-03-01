@@ -8,13 +8,14 @@ class KalendariumConnectionsController < ApplicationController
     connection = KalendariumConnection.new(connection_params.merge(
       workspace: @workspace,
       owner: owner,
-      created_by: current_user
+      created_by: current_user,
+      status: "disconnected"
     ))
     authorize connection
 
     if connection.save
-      Kalendarium::SyncConnectionJob.perform_later(connection.id) if params[:sync_now].to_s == "1"
-      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), notice: "Calendar connection added."
+      flash_type, message = sync_connection_if_requested(connection, success_message: "Calendar connection added and synced.")
+      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), flash_type => message
     else
       redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: connection.errors.full_messages.to_sentence
     end
@@ -24,8 +25,8 @@ class KalendariumConnectionsController < ApplicationController
     authorize @connection
 
     if @connection.update(connection_params)
-      Kalendarium::SyncConnectionJob.perform_later(@connection.id) if params[:sync_now].to_s == "1"
-      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), notice: "Connection updated."
+      flash_type, message = sync_connection_if_requested(@connection, success_message: "Connection updated and synced.", fallback_message: "Connection updated.")
+      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), flash_type => message
     else
       redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: @connection.errors.full_messages.to_sentence
     end
@@ -68,7 +69,6 @@ class KalendariumConnectionsController < ApplicationController
       :provider,
       :label,
       :enabled,
-      :status,
       :remote_account_id,
       :access_token,
       :refresh_token,
@@ -83,5 +83,14 @@ class KalendariumConnectionsController < ApplicationController
     return @workspace if owner_scope == "workspace"
 
     current_user
+  end
+
+  def sync_connection_if_requested(connection, success_message:, fallback_message: "Calendar connection added.")
+    return [ :notice, fallback_message ] unless params[:sync_now].to_s == "1"
+
+    Kalendarium::ConnectionSyncService.new(connection: connection).call
+    [ :notice, success_message ]
+  rescue StandardError => error
+    [ :alert, "Connection saved but sync failed: #{error.message}" ]
   end
 end

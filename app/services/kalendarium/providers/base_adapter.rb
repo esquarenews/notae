@@ -5,8 +5,9 @@ module Kalendarium
         @connection = connection
       end
 
-      def sync!
+      def sync!(calendar: nil)
         # Adapter base intentionally no-op.
+        calendar
         true
       end
 
