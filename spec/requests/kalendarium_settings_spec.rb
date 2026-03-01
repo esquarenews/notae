@@ -36,8 +36,11 @@ RSpec.describe "Kalendarium settings", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Connect Google with OAuth")
-    expect(response.body).to include("data-controller=\"google-oauth-connect\"")
+    expect(response.body).to include("action=\"/w/#{workspace.slug}/kalendarium/connections/google_authorize\"")
+    expect(response.body).to include("data-turbo=\"false\"")
+    expect(response.body).to include("data-google-oauth-launch=\"true\"")
     expect(response.body).to include("Google OAuth is not configured on the server.")
+    expect(response.body).not_to include("Connect Google with OAuth</button>")
     expect(response.body).not_to include("Access token (Google)")
     expect(response.body).not_to include("Refresh token (Google)")
     expect(response.body).not_to include(">Google</option>")
@@ -122,7 +125,7 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(sync_service).to have_received(:call)
   end
 
-  it "redirects to Google OAuth with a signed state payload" do
+  it "returns a same-origin handoff page for Google OAuth with a signed state payload" do
     user, workspace = build_stack(suffix: "google-oauth-authorize")
     sign_in user
     oauth_service = instance_double(Kalendarium::GoogleOauthService)
@@ -142,8 +145,26 @@ RSpec.describe "Kalendarium settings", type: :request do
       label: "Team Google"
     }
 
-    expect(response).to have_http_status(:found)
-    expect(response.location).to include("accounts.google.com/o/oauth2")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Redirecting to Google OAuth")
+    expect(response.body).to include("accounts.google.com/o/oauth2")
+  end
+
+  it "renders a turbo-safe redirect page for Google OAuth requests intercepted by Turbo" do
+    user, workspace = build_stack(suffix: "google-oauth-turbo")
+    sign_in user
+    oauth_service = instance_double(Kalendarium::GoogleOauthService)
+    allow(Kalendarium::GoogleOauthService).to receive(:new).and_return(oauth_service)
+    allow(oauth_service).to receive(:authorization_url).and_return("https://accounts.google.com/o/oauth2/v2/auth?client_id=test")
+
+    get google_authorize_kalendarium_connections_path(workspace_slug: workspace.slug), headers: {
+      "Turbo-Visit" => "true",
+      "Accept" => "text/vnd.turbo-stream.html, text/html"
+    }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("http-equiv=\"refresh\"")
+    expect(response.body).to include("accounts.google.com/o/oauth2")
   end
 
   it "handles Google OAuth callback by creating connection, storing tokens, and syncing" do

@@ -69,6 +69,7 @@ class DatabasesController < ApplicationController
   def create
     @database = @workspace.databases.new(database_params)
     @database.created_by = current_user
+    apply_quick_create_name!
     authorize @database
 
     if @database.save
@@ -223,6 +224,25 @@ class DatabasesController < ApplicationController
 
   def database_params
     params.require(:database).permit(:name)
+  end
+
+  def apply_quick_create_name!
+    return unless params[:quick_create].to_s == "1"
+
+    base_name = @database.name.to_s.strip.presence || "Untitled grid"
+    @database.name = next_available_database_name(base_name)
+  end
+
+  def next_available_database_name(base_name)
+    return base_name unless @workspace.databases.exists?(name: base_name)
+
+    suffix = 2
+    loop do
+      candidate_name = "#{base_name} #{suffix}"
+      return candidate_name unless @workspace.databases.exists?(name: candidate_name)
+
+      suffix += 1
+    end
   end
 
   def database_update_params

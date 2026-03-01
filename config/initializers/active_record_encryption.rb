@@ -10,8 +10,20 @@ Rails.application.configure do
   rescue StandardError
     Array(ARGV).any? { |arg| arg.to_s.start_with?("assets:") }
   end
+
+  credentials_secret = begin
+    Rails.application.credentials.secret_key_base.to_s
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::EncryptedFile::MissingKeyError => error
+    if Rails.env.production? && ENV["SECRET_KEY_BASE"].blank?
+      raise error
+    end
+
+    Rails.logger.warn("[EncryptionConfig] Falling back without credentials.secret_key_base: #{error.class}: #{error.message}")
+    ""
+  end
+
   secret = ENV["SECRET_KEY_BASE"].to_s
-  secret = Rails.application.credentials.secret_key_base.to_s if secret.blank?
+  secret = credentials_secret if secret.blank?
   secret = ENV["SECRET_KEY_BASE_DUMMY"].to_s if secret.blank?
 
   if secret.blank?

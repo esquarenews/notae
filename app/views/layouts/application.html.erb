@@ -38,17 +38,17 @@
         <% end %>
 
         <div class="notae-main">
-          <header class="notae-topbar">
-            <div class="notae-topbar-leading">
-              <% unless embedded_shell %>
+          <header class="notae-topbar <%= "is-embedded-shell" if embedded_shell %>">
+            <% unless embedded_shell %>
+              <div class="notae-topbar-leading">
                 <button type="button" class="notae-mobile-toggle" data-action="shell#toggle" aria-label="Toggle sidebar">☰</button>
-              <% end %>
-              <div class="notae-topbar-title">
-                <span class="notae-topbar-page-icon"><%= content_for?(:topbar_page_icon) ? yield(:topbar_page_icon) : "📄" %></span>
-                <span><%= content_for(:title) || "New page" %></span>
-                <span class="notae-topbar-privacy"><%= content_for?(:topbar_privacy) ? yield(:topbar_privacy) : "Private" %></span>
+                <div class="notae-topbar-title">
+                  <span class="notae-topbar-page-icon"><%= content_for?(:topbar_page_icon) ? yield(:topbar_page_icon) : "📄" %></span>
+                  <span><%= content_for(:title) || "New page" %></span>
+                  <span class="notae-topbar-privacy"><%= content_for?(:topbar_privacy) ? yield(:topbar_privacy) : "Private" %></span>
+                </div>
               </div>
-            </div>
+            <% end %>
             <div class="notae-topbar-actions">
               <% if content_for?(:topbar_actions) %>
                 <%= yield :topbar_actions %>

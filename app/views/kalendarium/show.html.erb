@@ -56,9 +56,10 @@
           <%= hidden_field_tag :view, @view %>
           <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
           <%= hidden_field_tag :project_id, @selected_project_id %>
-          <details>
-            <summary class="notae-chip-button">Calendars (<%= @selected_calendar_ids.size %>)</summary>
-            <div class="notae-kalendarium-calendar-popover">
+          <details data-controller="floating-panel"
+                   data-action="toggle->floating-panel#toggle">
+            <summary class="notae-chip-button" data-floating-panel-target="summary">Calendars (<%= @selected_calendar_ids.size %>)</summary>
+            <div class="notae-kalendarium-calendar-popover" data-floating-panel-target="panel">
               <% @all_calendars.each do |calendar| %>
                 <label class="notae-options-checkbox">
                   <%= check_box_tag "calendar_ids[]", calendar.id, @selected_calendar_ids.include?(calendar.id.to_s) %>
@@ -81,9 +82,10 @@
           <% @selected_calendar_ids.each do |calendar_id| %>
             <%= hidden_field_tag "calendar_ids[]", calendar_id %>
           <% end %>
-          <details>
-            <summary class="notae-chip-button">Projects (<%= selected_project_label %>)</summary>
-            <div class="notae-kalendarium-project-popover">
+          <details data-controller="floating-panel"
+                   data-action="toggle->floating-panel#toggle">
+            <summary class="notae-chip-button" data-floating-panel-target="summary">Projects (<%= selected_project_label %>)</summary>
+            <div class="notae-kalendarium-project-popover" data-floating-panel-target="panel">
               <% if @projects.any? %>
                 <label class="notae-options-checkbox">
                   <%= radio_button_tag :project_id, "", @selected_project_id.blank? %>

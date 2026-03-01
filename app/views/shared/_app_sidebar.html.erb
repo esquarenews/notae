@@ -66,6 +66,7 @@
               <% if policy(Database.new(workspace: workspace)).create? %>
                 <li class="notae-create-menu-item">
                   <%= form_with model: Database.new, url: databases_path(workspace_slug: workspace.slug), class: "notae-create-menu-form" do |form| %>
+                    <%= hidden_field_tag :quick_create, "1" %>
                     <%= form.hidden_field :name, value: "Untitled grid" %>
                     <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
                       <span class="notae-create-menu-icon notae-create-menu-icon-database" aria-hidden="true">

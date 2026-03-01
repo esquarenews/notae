@@ -8,7 +8,7 @@ Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src :self
     policy.base_uri :self
-    policy.frame_ancestors :none
+    policy.frame_ancestors :self
     policy.form_action :self
     policy.object_src :none
     policy.script_src :self, :https

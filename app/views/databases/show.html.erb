@@ -1034,7 +1034,7 @@
                     title: "Close side peek" %>
       </div>
     </div>
-    <iframe src="<%= page_path(workspace_slug: @workspace.slug, id: @split_page.id, embedded: 1) %>"
+    <iframe src="<%= page_path(workspace_slug: @workspace.slug, id: @split_page.id, embedded: 1, only_path: true) %>"
             title="Linked page side peek"
             class="notae-db-split-frame"
             loading="lazy"></iframe>

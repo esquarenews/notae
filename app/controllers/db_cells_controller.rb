@@ -47,6 +47,8 @@ class DbCellsController < ApplicationController
   end
 
   def cell_redirect_location
+    split_page_id, split_source, split_row_id = split_params_for_cell_context
+
     path_params = {
       workspace_slug: @workspace.slug,
       id: @database.id,
@@ -59,12 +61,24 @@ class DbCellsController < ApplicationController
       filter_operator: params[:filter_operator],
       view_settings: params[:view_settings].presence,
       actions_menu: params[:actions_menu].presence,
-      split_page_id: params[:split_page_id],
-      split_source: params[:split_source],
-      split_row_id: params[:split_row_id]
+      split_page_id: split_page_id,
+      split_source: split_source,
+      split_row_id: split_row_id
     }.compact
     path_params[:anchor] = "row_#{@db_cell.db_row_id}" if @db_cell.present?
     database_path(path_params)
+  end
+
+  def split_params_for_cell_context
+    split_page_id = params[:split_page_id].presence
+    split_source = params[:split_source].presence
+    split_row_id = params[:split_row_id].presence
+
+    if split_source == "row" && split_row_id.present? && split_row_id != @db_cell.db_row_id.to_s
+      [ nil, nil, nil ]
+    else
+      [ split_page_id, split_source, split_row_id ]
+    end
   end
 
   def ensure_database_unlocked!

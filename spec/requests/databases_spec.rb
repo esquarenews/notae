@@ -16,6 +16,21 @@ RSpec.describe "Databases", type: :request do
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
   end
 
+  it "auto-suffixes quick-create untitled grid names when a collision exists" do
+    owner = User.create!(email: "database-quick-create-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Quick create tables", slug: "quick-create-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Database.create!(workspace: workspace, name: "Untitled grid")
+    sign_in owner
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: { quick_create: "1", database: { name: "Untitled grid" } }
+
+    created_database = workspace.databases.order(:created_at).last
+    expect(created_database.name).to eq("Untitled grid 2")
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: created_database.id))
+  end
+
   it "defines schema, creates rows, and edits cells inline" do
     owner = User.create!(email: "database-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables", slug: "tables")
@@ -811,6 +826,76 @@ RSpec.describe "Databases", type: :request do
     expect(row.reload.title).to eq("Untitled row")
   end
 
+  it "creates a new row directly below when row update requests create_next_row" do
+    owner = User.create!(email: "database-row-create-next-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row create next tables", slug: "row-create-next-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row create next DB")
+    first_row = DbRow.create!(workspace: workspace, database: database, title: "First row")
+    second_row = DbRow.create!(workspace: workspace, database: database, title: "Second row")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: first_row.id),
+          params: { db_row: { title: "Updated first row", create_next_row: "1" } }
+
+    created_row = database.db_rows.where.not(id: [ first_row.id, second_row.id ]).order(:created_at).last
+    expect(created_row).to be_present
+    expect(created_row.title).to eq("Untitled row")
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{created_row.id}"))
+    expect(first_row.reload.title).to eq("Updated first row")
+    expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])
+  end
+
+  it "closes a row-linked split pane when editing a different row title" do
+    owner = User.create!(email: "database-row-split-context-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row split context tables", slug: "row-split-context-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row split context DB")
+    linked_page = Page.create!(workspace: workspace, created_by: owner, title: "Linked context page")
+    split_row = DbRow.create!(workspace: workspace, database: database, title: "Split row", linked_page: linked_page)
+    edited_row = DbRow.create!(workspace: workspace, database: database, title: "Edited row")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: edited_row.id),
+          params: {
+            db_row: { title: "Edited row updated" },
+            split_page_id: linked_page.id,
+            split_source: "row",
+            split_row_id: split_row.id
+          }
+
+    expect(response).to redirect_to(
+      database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{edited_row.id}")
+    )
+    expect(edited_row.reload.title).to eq("Edited row updated")
+  end
+
+  it "closes a row-linked split pane when editing a cell in a different row" do
+    owner = User.create!(email: "database-cell-split-context-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Cell split context tables", slug: "cell-split-context-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Cell split context DB")
+    property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    linked_page = Page.create!(workspace: workspace, created_by: owner, title: "Linked split page")
+    split_row = DbRow.create!(workspace: workspace, database: database, title: "Split row", linked_page: linked_page)
+    edited_row = DbRow.create!(workspace: workspace, database: database, title: "Edited row")
+    edited_cell = DbCell.create!(workspace: workspace, db_row: edited_row, db_property: property, value_text: "Todo")
+    sign_in owner
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: edited_cell.id),
+          params: {
+            db_cell: { value_text: "Done" },
+            split_page_id: linked_page.id,
+            split_source: "row",
+            split_row_id: split_row.id
+          }
+
+    expect(response).to redirect_to(
+      database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{edited_row.id}")
+    )
+    expect(edited_cell.reload.value_text).to eq("Done")
+  end
+
   it "inserts a newly created row directly below the referenced row" do
     owner = User.create!(email: "database-row-insert-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row insert tables", slug: "row-insert-tables")
@@ -1060,6 +1145,41 @@ RSpec.describe "Databases", type: :request do
     expect(linked_row.css(".notae-db-row-link-action").first.text.strip).to eq("↗")
   end
 
+  it "renders row title editing and linked-nota creation as separate forms" do
+    owner = User.create!(email: "database-row-form-separation-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row form separation tables", slug: "row-form-separation-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row form separation DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Draft row")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    row_node = html.at_css("#row_#{row.id}")
+    expect(row_node).to be_present
+
+    title_form = row_node.at_css("form.notae-db-title-form-inline")
+    expect(title_form).to be_present
+    expect(title_form["data-controller"]).to eq("auto-submit")
+    expect(title_form["data-turbo"]).to eq("false")
+    title_input = title_form.at_css("input[name='db_row[title]']")
+    expect(title_input).to be_present
+    expect(title_input["onkeydown"]).to be_nil
+    expect(title_input["data-action"]).to include("change->auto-submit#submit")
+    create_next_submitter = title_form.at_css("button.notae-db-enter-submitter[name='db_row[create_next_row]'][value='1']")
+    expect(create_next_submitter).to be_present
+    expect(response.body).not_to include("Create next row")
+    expect(title_form.at_css("input[name='db_row[link_action]']")).to be_nil
+
+    create_link_form = row_node.at_css("form.notae-db-row-link-create-form")
+    expect(create_link_form).to be_present
+    create_link_action_input = create_link_form.at_css("input[name='db_row[link_action]']")
+    expect(create_link_action_input).to be_present
+    expect(create_link_action_input["value"]).to eq("create_page")
+  end
+
   it "creates and links a row directly from row creation actions" do
     owner = User.create!(email: "database-row-create-link-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row create link tables", slug: "row-create-link-tables")
@@ -1135,6 +1255,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include(linked_page.title)
     expect(response.body).to include("Unlink")
     expect(response.body).to include(page_path(workspace_slug: workspace.slug, id: linked_page.id, embedded: 1))
+    expect(response.body).not_to include("http://localhost:4000")
   end
 
   it "keeps the current grid link when an invalid page id is submitted" do
@@ -1168,6 +1289,8 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-shell-embedded")
     expect(response.body).not_to include("notae-ai-rail")
+    expect(response.body).not_to include("notae-topbar-title")
+    expect(response.headers["Content-Security-Policy"]).to include("frame-ancestors 'self'")
   end
 
   it "archives rows and excludes them from active database views" do

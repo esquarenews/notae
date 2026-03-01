@@ -8,7 +8,7 @@ RSpec.describe "Home", type: :request do
     expect(response.body).to include("<title>Notae</title>")
     expect(response.body).to include("Sign in")
     expect(response.headers["Content-Security-Policy"]).to include("default-src 'self'")
-    expect(response.headers["Content-Security-Policy"]).to include("frame-ancestors 'none'")
+    expect(response.headers["Content-Security-Policy"]).to include("frame-ancestors 'self'")
     expect(response.headers["X-Frame-Options"]).to eq("SAMEORIGIN")
     expect(response.headers["X-Content-Type-Options"]).to eq("nosniff")
     expect(response.headers["Referrer-Policy"]).to eq("strict-origin-when-cross-origin")

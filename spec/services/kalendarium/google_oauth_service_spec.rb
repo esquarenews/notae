@@ -77,4 +77,17 @@ RSpec.describe Kalendarium::GoogleOauthService do
       expect { described_class.new }.not_to raise_error
     end
   end
+
+  it "detects configuration from uppercase credential keys when env vars are missing" do
+    credentials = {
+      "GOOGLE_OAUTH_CLIENT_ID" => "cred-client-id",
+      "GOOGLE_OAUTH_CLIENT_SECRET" => "cred-client-secret"
+    }
+    allow(Rails.application).to receive(:credentials).and_return(credentials)
+
+    with_google_env({}) do
+      expect(described_class.configured?).to be(true)
+      expect { described_class.new }.not_to raise_error
+    end
+  end
 end

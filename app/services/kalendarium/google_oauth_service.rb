@@ -90,30 +90,55 @@ module Kalendarium
     def self.resolved_client_id
       ENV["GOOGLE_OAUTH_CLIENT_ID"].to_s.strip.presence ||
         ENV["GOOGLE_CLIENT_ID"].to_s.strip.presence ||
-        credentials_value(%i[google oauth_client_id], %i[google_oauth client_id], %i[google_oauth_client_id])
+        credentials_value(
+          %i[google oauth_client_id],
+          %i[google_oauth client_id],
+          %i[google_oauth_client_id],
+          [ "GOOGLE_OAUTH_CLIENT_ID" ]
+        )
     end
 
     def self.resolved_client_secret
       ENV["GOOGLE_OAUTH_CLIENT_SECRET"].to_s.strip.presence ||
         ENV["GOOGLE_CLIENT_SECRET"].to_s.strip.presence ||
-        credentials_value(%i[google oauth_client_secret], %i[google_oauth client_secret], %i[google_oauth_client_secret])
+        credentials_value(
+          %i[google oauth_client_secret],
+          %i[google_oauth client_secret],
+          %i[google_oauth_client_secret],
+          [ "GOOGLE_OAUTH_CLIENT_SECRET" ]
+        )
     end
 
     def self.credentials_value(*dig_paths)
       credentials = Rails.application.credentials
 
       dig_paths.each do |path|
-        value = if path.length == 1
-                  credentials[path.first]
-                else
-                  credentials.dig(*path)
-                end
+        value = credentials_lookup(credentials, Array(path))
         normalized = value.to_s.strip
         return normalized if normalized.present?
       end
 
       nil
     rescue StandardError
+      nil
+    end
+
+    def self.credentials_lookup(credentials, path)
+      path_options = [
+        path,
+        path.map { |segment| segment.respond_to?(:to_sym) ? segment.to_sym : segment },
+        path.map(&:to_s)
+      ].uniq
+
+      path_options.each do |candidate|
+        value = if candidate.length == 1
+                  credentials[candidate.first]
+                else
+                  credentials.dig(*candidate)
+                end
+        return value if value.present?
+      end
+
       nil
     end
 

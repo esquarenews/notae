@@ -50,11 +50,11 @@ class KalendariumConnectionsController < ApplicationController
 
     payload = build_google_oauth_state_payload
     state = google_state_verifier.generate(payload, expires_in: 20.minutes)
-    oauth_url = google_oauth_service.authorization_url(
+    @oauth_url = google_oauth_service.authorization_url(
       redirect_uri: google_callback_redirect_uri,
       state: state
     )
-    redirect_to oauth_url, allow_other_host: true
+    render :google_redirect, layout: false
   rescue ActiveRecord::RecordNotFound
     redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: "Google connection not found."
   rescue Kalendarium::GoogleOauthService::Error => error
@@ -245,4 +245,5 @@ class KalendariumConnectionsController < ApplicationController
       redirect_to root_path, alert: message
     end
   end
+
 end

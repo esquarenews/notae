@@ -10,6 +10,7 @@ class DbRowsController < ApplicationController
     @db_row.title = "Untitled row" if @db_row.title.blank?
     authorize @db_row
     apply_linked_page_update!
+    collapse_row_split_if_switching_context!(current_row_id: @db_row.id)
 
     if @db_row.errors.any?
       redirect_to database_redirect_location, alert: @db_row.errors.full_messages.to_sentence
@@ -34,6 +35,7 @@ class DbRowsController < ApplicationController
     authorize @db_row, :update?
     @db_row.assign_attributes(db_row_params)
     apply_linked_page_update!
+    collapse_row_split_if_switching_context!(current_row_id: @db_row.id)
     apply_row_style_update!
 
     if @db_row.errors.any?
@@ -44,7 +46,19 @@ class DbRowsController < ApplicationController
     @db_row.title = "Untitled row" if @db_row.title.blank?
 
     if @db_row.save
-      redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), notice: "Row updated."
+      next_row = create_next_row_requested? ? create_row_below!(@db_row) : nil
+
+      if create_next_row_requested? && next_row.blank?
+        redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: @db_row.errors.full_messages.to_sentence
+        return
+      end
+
+      if next_row.present?
+        close_row_split_for_row_switch!
+        redirect_to database_redirect_location(anchor: "row_#{next_row.id}"), notice: "Row updated."
+      else
+        redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), notice: "Row updated."
+      end
     else
       redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: @db_row.errors.full_messages.to_sentence
     end
@@ -118,6 +132,10 @@ class DbRowsController < ApplicationController
 
   def db_row_style_params
     params.fetch(:db_row, ActionController::Parameters.new).permit(:style_action, :text_color)
+  end
+
+  def create_next_row_requested?
+    ActiveModel::Type::Boolean.new.cast(params.dig(:db_row, :create_next_row))
   end
 
   def set_db_row
@@ -262,6 +280,47 @@ class DbRowsController < ApplicationController
       target_value: nil,
       target_index: reference_index + 1
     )
+  end
+
+  def collapse_row_split_if_switching_context!(current_row_id:)
+    return if @redirect_split_page_id.present? || @redirect_split_source.present?
+    return unless params[:split_source].to_s == "row"
+
+    split_row_id = params[:split_row_id].to_s.presence
+    return if split_row_id.blank?
+    return if current_row_id.present? && split_row_id == current_row_id.to_s
+
+    @clear_split_page = true
+    @redirect_split_page_id = nil
+    @redirect_split_source = nil
+    @redirect_split_row_id = nil
+  end
+
+  def close_row_split_for_row_switch!
+    return unless params[:split_source].to_s == "row"
+
+    @clear_split_page = true
+    @redirect_split_page_id = nil
+    @redirect_split_source = nil
+    @redirect_split_row_id = nil
+  end
+
+  def create_row_below!(reference_row)
+    row_candidate = @database.db_rows.new(workspace: @workspace, title: "Untitled row")
+    unless policy(row_candidate).create?
+      @db_row.errors.add(:base, "You are not authorized to create rows in this grid.")
+      return nil
+    end
+
+    unless row_candidate.save
+      @db_row.errors.add(:base, row_candidate.errors.full_messages.to_sentence)
+      return nil
+    end
+
+    insert_row_after_reference!(row_candidate, reference_row.id)
+    seed_cells_for_row(row_candidate)
+    clear_row_sorting_preferences!
+    row_candidate
   end
 
   def duplicate_row!(row)

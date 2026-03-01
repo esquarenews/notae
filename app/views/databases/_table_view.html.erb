@@ -227,12 +227,21 @@
                       <%= form_with model: row,
                                     url: row_update_path,
                                     method: :patch,
-                                    class: "notae-db-title-form notae-db-title-form-inline" do |form| %>
-                        <%= form.text_field :title,
-                                            value: row.title,
-                                            class: "notae-db-title-input",
-                                            placeholder: "Enter name",
-                                            onchange: "this.form.requestSubmit()" %>
+                                    class: "notae-db-title-form notae-db-title-form-inline",
+                                    data: { controller: "auto-submit", turbo: false } do |form| %>
+                      <%= form.text_field :title,
+                                        value: row.title,
+                                        class: "notae-db-title-input",
+                                        placeholder: "Enter name",
+                                        data: { action: "change->auto-submit#submit" } %>
+                      <%= form.button "",
+                                      type: "submit",
+                                      class: "notae-db-enter-submitter",
+                                      name: "db_row[create_next_row]",
+                                      value: "1",
+                                      style: "position:absolute;left:-9999px;width:1px;height:1px;padding:0;border:0;overflow:hidden;",
+                                      tabindex: "-1",
+                                      aria: { hidden: true } %>
                       <% end %>
                     <% else %>
                       <span class="notae-db-title-text"><%= row.title.presence || linked_page.title %></span>
@@ -249,17 +258,30 @@
                     <%= form_with model: row,
                                   url: row_update_path,
                                   method: :patch,
-                                  class: "notae-db-title-form notae-db-title-form-inline" do |form| %>
-                      <%= form.text_field :title,
-                                          value: row.title,
-                                          class: "notae-db-title-input",
-                                          placeholder: "Enter name",
-                                          onchange: "this.form.requestSubmit()" %>
+                                  class: "notae-db-title-form notae-db-title-form-inline",
+                                  data: { controller: "auto-submit", turbo: false } do |form| %>
+                    <%= form.text_field :title,
+                                        value: row.title,
+                                        class: "notae-db-title-input",
+                                        placeholder: "Enter name",
+                                        data: { action: "change->auto-submit#submit" } %>
+                    <%= form.button "",
+                                    type: "submit",
+                                    class: "notae-db-enter-submitter",
+                                    name: "db_row[create_next_row]",
+                                    value: "1",
+                                    style: "position:absolute;left:-9999px;width:1px;height:1px;padding:0;border:0;overflow:hidden;",
+                                    tabindex: "-1",
+                                    aria: { hidden: true } %>
+                    <% end %>
+                    <%= form_with model: row,
+                                  url: row_update_path,
+                                  method: :patch,
+                                  class: "notae-db-row-link-create-form" do |form| %>
+                      <%= form.hidden_field :link_action, value: "create_page" %>
                       <%= form.button "+",
                                       type: "submit",
                                       class: "notae-db-row-link-action is-create",
-                                      name: "db_row[link_action]",
-                                      value: "create_page",
                                       title: "Create linked Nota",
                                       aria: { label: "Create linked Nota" } %>
                     <% end %>
@@ -297,7 +319,8 @@
                                   id: db_cell.id
                                 }.merge(row_params)
                               ),
-                              method: :patch do |form| %>
+                              method: :patch,
+                              data: { controller: "auto-submit" } do |form| %>
                   <% field_classes = "notae-db-cell-input" %>
                   <% if db_property.checkbox? %>
                     <label class="notae-db-checkbox-wrap">
@@ -305,7 +328,7 @@
                                          {
                                            checked: db_cell.value_text == "true",
                                            class: "h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400",
-                                           onchange: "this.form.requestSubmit()"
+                                           data: { action: "change->auto-submit#submit" }
                                          },
                                          "true",
                                          "false" %>
@@ -316,19 +339,19 @@
                                           id: "db_cell_#{db_cell.id}_value_text",
                                           step: "any",
                                           class: field_classes,
-                                          onchange: "this.form.requestSubmit()" %>
+                                          data: { action: "change->auto-submit#submit" } %>
                   <% elsif db_property.date? %>
                     <%= form.date_field :value_text,
                                         value: db_cell.value_text,
                                         id: "db_cell_#{db_cell.id}_value_text",
                                         class: field_classes,
-                                        onchange: "this.form.requestSubmit()" %>
+                                        data: { action: "change->auto-submit#submit" } %>
                   <% else %>
                     <% input_options = {
                       value: db_cell.value_text,
                       id: "db_cell_#{db_cell.id}_value_text",
                       class: field_classes,
-                      onchange: "this.form.requestSubmit()"
+                      data: { action: "change->auto-submit#submit" }
                     } %>
                     <% if db_property.select? %>
                       <% input_options[:list] = "db_property_#{db_property.id}_options" %>
