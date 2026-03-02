@@ -28,6 +28,9 @@ RSpec.describe "Workspace home styling", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-workspace-home")
     expect(response.body).to include("notae-workspace-home-search")
+    expect(response.body).to include("notae-workspace-home-banner")
+    expect(response.body).to include("notae-workspace-home-banner-svg")
+    expect(response.body).to include("notae-workspace-home-banner-inner")
     expect(response.body).to include("notae-workspace-page-card")
     expect(response.body).to include("notae-workspace-page-card-cover")
     expect(response.body).to include("🚀")
@@ -58,16 +61,19 @@ RSpec.describe "Workspace home styling", type: :request do
     travel_to(Time.zone.local(2026, 2, 25, 9, 0, 0)) do
       get workspace_path(workspace.slug)
       expect(response.body).to include("Good morning")
+      expect(response.body).to include("notae-workspace-home-banner--morning")
     end
 
     travel_to(Time.zone.local(2026, 2, 25, 14, 0, 0)) do
       get workspace_path(workspace.slug)
       expect(response.body).to include("Good afternoon")
+      expect(response.body).to include("notae-workspace-home-banner--afternoon")
     end
 
     travel_to(Time.zone.local(2026, 2, 25, 20, 0, 0)) do
       get workspace_path(workspace.slug)
       expect(response.body).to include("Good evening")
+      expect(response.body).to include("notae-workspace-home-banner--evening")
     end
   end
 
@@ -87,5 +93,18 @@ RSpec.describe "Workspace home styling", type: :request do
 
     get workspace_path(workspace.slug)
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+  end
+
+  it "does not duplicate workspace name in hero metadata when slug matches" do
+    owner = User.create!(email: "workspace-home-meta-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Test Space", slug: "test-space")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("<p class=\"notae-page-subtle\">Test Space</p>")
+    expect(response.body).not_to include("Test Space · test-space")
   end
 end

@@ -7,6 +7,7 @@ class WorkspaceHomeController < ApplicationController
     redirect_to_last_visited_page and return if open_last_visited_page?
 
     @time_greeting = greeting_for(Time.zone.now)
+    @hero_banner_period = banner_period_for(Time.zone.now)
     @invitation = Invitation.new
     @new_page = Page.new
     @new_database = Database.new
@@ -36,6 +37,14 @@ class WorkspaceHomeController < ApplicationController
     return "Good afternoon" if hour < 18
 
     "Good evening"
+  end
+
+  def banner_period_for(time)
+    hour = time.hour
+    return "morning" if hour < 12
+    return "afternoon" if hour < 18
+
+    "evening"
   end
 
   def open_last_visited_page?

@@ -1,22 +1,56 @@
 <% content_for :title, @workspace.name %>
+<% content_for :content_class, "notae-content-page notae-content-home" %>
 
-<section class="notae-workspace-home">
-  <header class="notae-workspace-home-hero">
-    <p class="notae-page-subtle">Workspace home</p>
-    <h1><%= @time_greeting %></h1>
-    <p class="notae-page-subtle"><%= @workspace.name %> · <%= @workspace.slug %></p>
-  </header>
+<section class="notae-workspace-home notae-workspace-home--landing">
+  <div class="notae-workspace-home-banner notae-workspace-home-banner--<%= @hero_banner_period %>">
+    <svg class="notae-workspace-home-banner-svg" viewBox="0 0 860 260" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="notaeWorkspaceHomeBannerGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="var(--notae-home-banner-primary)" stop-opacity="0.32" />
+          <stop offset="50%" stop-color="var(--notae-home-banner-secondary)" stop-opacity="0.24" />
+          <stop offset="100%" stop-color="var(--notae-home-banner-accent)" stop-opacity="0.12" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="860" height="260" fill="url(#notaeWorkspaceHomeBannerGlow)" />
+      <path d="M-30 120 C120 80, 220 150, 370 118 C530 82, 640 156, 890 112"
+            fill="none"
+            stroke="var(--notae-home-banner-secondary)"
+            stroke-width="2"
+            stroke-opacity="0.36" />
+      <path d="M-30 170 C110 220, 250 120, 430 178 C570 220, 740 128, 890 170"
+            fill="none"
+            stroke="var(--notae-home-banner-primary)"
+            stroke-width="1.6"
+            stroke-opacity="0.3" />
+      <circle cx="720" cy="56" r="54" fill="var(--notae-home-banner-accent)" fill-opacity="0.18" />
+      <circle cx="176" cy="38" r="28" fill="var(--notae-home-banner-secondary)" fill-opacity="0.12" />
+      <circle cx="500" cy="94" r="12" fill="var(--notae-home-banner-primary)" fill-opacity="0.22" />
+    </svg>
 
-  <section class="notae-auth-card notae-home-card">
-    <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search" do |form| %>
-      <%= form.text_field :q, placeholder: "Search Notarum, blocks, and rows", class: "notae-auth-input" %>
-      <%= form.submit "Search", class: "notae-chip-button" %>
-      <%= link_to "Notifications (#{@unread_notifications_count})",
-                  workspace_notifications_path(workspace_slug: @workspace.slug),
-                  class: "notae-chip-button" %>
-    <% end %>
-  </section>
+    <div class="notae-workspace-home-banner-inner">
+      <header class="notae-workspace-home-hero">
+        <p class="notae-page-subtle">Workspace home</p>
+        <h1><%= @time_greeting %></h1>
+        <% workspace_name = @workspace.name.to_s.strip %>
+        <% workspace_slug = @workspace.slug.to_s.strip %>
+        <% slug_duplicates_name = workspace_slug.casecmp?(workspace_name) || workspace_slug == workspace_name.parameterize %>
+        <% workspace_meta = slug_duplicates_name ? workspace_name : "#{workspace_name} · #{workspace_slug}" %>
+        <p class="notae-page-subtle"><%= workspace_meta %></p>
+      </header>
 
+      <section class="notae-auth-card notae-home-card">
+        <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search" do |form| %>
+          <%= form.text_field :q, placeholder: "Search Notarum, blocks, and rows", class: "notae-auth-input" %>
+          <%= form.submit "Search", class: "notae-chip-button" %>
+          <%= link_to "Notifications (#{@unread_notifications_count})",
+                      workspace_notifications_path(workspace_slug: @workspace.slug),
+                      class: "notae-chip-button" %>
+        <% end %>
+      </section>
+    </div>
+  </div>
+
+  <div class="notae-workspace-home-body">
   <section class="notae-workspace-home-grid">
     <% if policy(Page.new(workspace: @workspace)).create? %>
       <div class="notae-auth-card notae-home-card">
@@ -148,4 +182,5 @@
       </ul>
     </section>
   <% end %>
+  </div>
 </section>

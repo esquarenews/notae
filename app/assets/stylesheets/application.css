@@ -306,6 +306,14 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   opacity: 0.6;
 }
 
+body.notae-theme-dark .notae-workspace-home-banner::after {
+  background: linear-gradient(180deg, rgba(16, 18, 20, 0) 0%, var(--notae-bg) 100%);
+}
+
+body.notae-theme-dark .notae-workspace-home-banner-svg {
+  opacity: 0.4;
+}
+
 @media (prefers-color-scheme: dark) {
   body.notae-theme-system .notae-sidebar,
   body.notae-theme-system .notae-topbar,
@@ -469,6 +477,14 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 
   body.notae-theme-system .notae-workspace-page-card-cover-fallback {
     opacity: 0.6;
+  }
+
+  body.notae-theme-system .notae-workspace-home-banner::after {
+    background: linear-gradient(180deg, rgba(16, 18, 20, 0) 0%, var(--notae-bg) 100%);
+  }
+
+  body.notae-theme-system .notae-workspace-home-banner-svg {
+    opacity: 0.4;
   }
 
   body.notae-theme-system .notae-ai-usage-card {
@@ -1116,6 +1132,12 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
 }
 
 .notae-content.notae-content-page {
+  max-width: none;
+  margin: 0;
+  padding: 0 0 1.9rem;
+}
+
+.notae-content.notae-content-home {
   max-width: none;
   margin: 0;
   padding: 0 0 1.9rem;
@@ -4737,6 +4759,94 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   padding: 0.22rem 0 1.1rem;
 }
 
+.notae-workspace-home--landing {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 0 1.1rem;
+}
+
+.notae-workspace-home-body {
+  width: min(860px, calc(100% - 1.2rem));
+  margin: 0 auto;
+  display: grid;
+  gap: 0.72rem;
+}
+
+.notae-workspace-home-banner {
+  --notae-home-banner-primary: #38bdf8;
+  --notae-home-banner-secondary: #60a5fa;
+  --notae-home-banner-accent: #f9a8d4;
+  position: relative;
+  width: 100%;
+  margin: -0.08rem 0 0;
+  padding: 0.36rem 0 0.55rem;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.notae-workspace-home-banner > * {
+  position: relative;
+  z-index: 1;
+}
+
+.notae-workspace-home-banner-inner {
+  width: min(860px, calc(100% - 1.2rem));
+  margin: 0 auto;
+}
+
+.notae-workspace-home-banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(32vw, 340px);
+  height: 100%;
+  background: linear-gradient(90deg, rgba(248, 247, 245, 0) 0%, var(--notae-bg) 96%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.notae-workspace-home-banner::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  background: linear-gradient(180deg, rgba(248, 247, 245, 0) 0%, var(--notae-bg) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.notae-workspace-home-banner-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.56;
+  z-index: 0;
+}
+
+.notae-workspace-home-banner--morning {
+  --notae-home-banner-primary: #f59e0b;
+  --notae-home-banner-secondary: #f97316;
+  --notae-home-banner-accent: #fbcfe8;
+}
+
+.notae-workspace-home-banner--afternoon {
+  --notae-home-banner-primary: #22d3ee;
+  --notae-home-banner-secondary: #3b82f6;
+  --notae-home-banner-accent: #7dd3fc;
+}
+
+.notae-workspace-home-banner--evening {
+  --notae-home-banner-primary: #818cf8;
+  --notae-home-banner-secondary: #a78bfa;
+  --notae-home-banner-accent: #f472b6;
+}
+
 .notae-workspace-home-hero h1 {
   margin: 0.08rem 0 0;
   font-size: clamp(2.1rem, 4.3vw, 3.25rem);
@@ -7921,6 +8031,21 @@ body.notae-theme-dark .notae-workspace-page-card-cover-fallback {
   .notae-workspace-home-search,
   .notae-workspace-home-invite-form {
     grid-template-columns: 1fr;
+  }
+
+  .notae-workspace-home-banner {
+    margin-inline: 0;
+    padding-inline: 0;
+    border-radius: 0;
+  }
+
+  .notae-workspace-home-banner-inner,
+  .notae-workspace-home-body {
+    width: min(860px, calc(100% - 1rem));
+  }
+
+  .notae-workspace-home-banner::before {
+    width: min(40vw, 240px);
   }
 
   .notae-settings-shell {
