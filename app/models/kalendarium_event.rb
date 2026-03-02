@@ -1,9 +1,19 @@
+require "uri"
+
 class KalendariumEvent < ApplicationRecord
   include PgSearch::Model
 
   SOURCE_KINDS = %w[local provider].freeze
   STATUSES = %w[confirmed tentative cancelled].freeze
   VISIBILITIES = %w[default private public].freeze
+  SEARCH_REINDEX_CHANGE_KEYS = %w[
+    title
+    description
+    location
+    kalendarium_project_id
+    linked_page_id
+    linked_db_row_id
+  ].freeze
 
   belongs_to :workspace
   belongs_to :kalendarium_calendar
@@ -36,7 +46,7 @@ class KalendariumEvent < ApplicationRecord
                     trigram: {}
                   }
 
-  after_commit :enqueue_search_chunk_reindex, on: %i[create update]
+  after_commit :enqueue_search_chunk_reindex, on: %i[create update], if: :search_chunk_reindex_required?
   after_commit :remove_search_chunks, on: :destroy
   before_validation :normalize_reminder_offsets
 
@@ -44,7 +54,38 @@ class KalendariumEvent < ApplicationRecord
     starts_at_utc.to_date..ends_at_utc.to_date
   end
 
+  def meeting_join_url
+    raw = metadata_json.to_h["meeting_join_url"].to_s.strip
+    return raw if valid_http_url?(raw)
+
+    nil
+  end
+
+  def invitees
+    Array(metadata_json.to_h["invitees"]).filter_map do |raw_invitee|
+      next unless raw_invitee.is_a?(Hash)
+
+      email = raw_invitee["email"].to_s.strip.presence
+      name = raw_invitee["name"].to_s.strip.presence
+      status = raw_invitee["status"].to_s.strip.presence
+      next if email.blank? && name.blank?
+
+      {
+        "email" => email,
+        "name" => name,
+        "status" => status
+      }.compact
+    end
+  end
+
   private
+
+  def valid_http_url?(raw_url)
+    uri = URI.parse(raw_url.to_s)
+    uri.is_a?(URI::HTTP) && uri.host.present?
+  rescue URI::InvalidURIError
+    false
+  end
 
   def ends_after_starts
     return if starts_at_utc.blank? || ends_at_utc.blank?
@@ -74,5 +115,11 @@ class KalendariumEvent < ApplicationRecord
 
   def remove_search_chunks
     Search::ChunkIndexingService.delete_source!(source_type: SearchChunk::SOURCE_KALENDARIUM_EVENT, source_id: id)
+  end
+
+  def search_chunk_reindex_required?
+    return true if previous_changes.key?("id")
+
+    (previous_changes.keys & SEARCH_REINDEX_CHANGE_KEYS).any?
   end
 end

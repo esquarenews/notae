@@ -221,6 +221,38 @@ RSpec.describe "AI Assistant", type: :request do
     expect(captured_prompts.first).not_to include("Title=External Doc")
   end
 
+  it "caps AI rail conversation rendering to the latest entries for page responsiveness" do
+    user = User.create!(email: "ai-assistant-rail-cap@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Assistant Rail Cap", slug: "ai-assistant-rail-cap")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    limit = ApplicationController::AI_RAIL_CONVERSATION_LIMIT
+    total = limit + 5
+    total.times do |index|
+      AiConversation.create!(
+        user: user,
+        workspace: workspace,
+        prompt: "rail-cap-prompt-#{index}",
+        answer: "rail-cap-answer-#{index}",
+        scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+        status: AiConversation::STATUS_SUCCESS,
+        created_at: (total - index).minutes.ago
+      )
+    end
+
+    sign_in user
+    get workspace_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    prompt_nodes = document.css(".notae-ai-message.is-user .notae-ai-message-body")
+    rendered_prompts = prompt_nodes.map(&:text)
+
+    expect(rendered_prompts.count).to eq(limit)
+    expect(rendered_prompts).to include("rail-cap-prompt-#{total - 1}")
+    expect(rendered_prompts).not_to include("rail-cap-prompt-0")
+  end
+
   it "renders only internal source links in AI conversation history" do
     user = User.create!(email: "ai-assistant-source-links@example.com", password: "password123")
     workspace = Workspace.create!(name: "AI Assistant Source Links", slug: "ai-assistant-source-links")

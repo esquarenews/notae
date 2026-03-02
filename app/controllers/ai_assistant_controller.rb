@@ -26,7 +26,11 @@ class AiAssistantController < ApplicationController
     record_ai_conversation!
     @ai_rail_workspace = @workspace
     @ai_rail_current_page_id = @ai_assistant_current_page_id
-    @ai_rail_conversations = recent_ai_conversations_for(user: current_user, window: 1.week, limit: 60).to_a.reverse
+    @ai_rail_conversations = recent_ai_conversations_for(
+      user: current_user,
+      window: 1.week,
+      limit: ai_rail_conversation_limit
+    ).to_a.reverse
     @ai_usage_panel = build_ai_usage_panel(user: current_user, workspace: @workspace)
     @ai_conversations = recent_ai_conversations_for(user: current_user, window: 1.week, limit: 300).to_a
 

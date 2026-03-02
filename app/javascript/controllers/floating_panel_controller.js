@@ -9,11 +9,23 @@ export default class extends Controller {
 
   connect() {
     this.boundReposition = this.reposition.bind(this)
+    this.boundLayoutChange = this.scheduleDeferredReposition.bind(this)
+    this.layoutRootElement = this.element.closest(".notae-shell")
+    this.repositionTimeout = null
+    window.addEventListener("notae:layout-changed", this.boundLayoutChange)
+    if (this.layoutRootElement) {
+      this.layoutRootElement.addEventListener("transitionend", this.boundLayoutChange)
+    }
   }
 
   disconnect() {
     this.teardownListeners()
     this.resetPanelStyles()
+    this.clearDeferredReposition()
+    window.removeEventListener("notae:layout-changed", this.boundLayoutChange)
+    if (this.layoutRootElement) {
+      this.layoutRootElement.removeEventListener("transitionend", this.boundLayoutChange)
+    }
   }
 
   toggle() {
@@ -22,6 +34,7 @@ export default class extends Controller {
     if (this.element.open) {
       this.setupListeners()
       this.reposition()
+      this.scheduleDeferredReposition()
       return
     }
 
@@ -71,6 +84,17 @@ export default class extends Controller {
     panel.style.visibility = ""
   }
 
+  scheduleDeferredReposition() {
+    if (!this.element.open) return
+
+    this.clearDeferredReposition()
+    window.requestAnimationFrame(() => this.reposition())
+    this.repositionTimeout = window.setTimeout(() => {
+      this.reposition()
+      this.repositionTimeout = null
+    }, 260)
+  }
+
   setupListeners() {
     window.addEventListener("resize", this.boundReposition)
     window.addEventListener("scroll", this.boundReposition, true)
@@ -90,6 +114,13 @@ export default class extends Controller {
     panel.style.left = ""
     panel.style.maxHeight = ""
     panel.style.visibility = ""
+  }
+
+  clearDeferredReposition() {
+    if (!this.repositionTimeout) return
+
+    window.clearTimeout(this.repositionTimeout)
+    this.repositionTimeout = null
   }
 
   syncOpenStateClass() {

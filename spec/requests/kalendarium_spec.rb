@@ -1,7 +1,12 @@
 require "rails_helper"
 
 RSpec.describe "Kalendarium", type: :request do
+  include ActiveJob::TestHelper
   include ActiveSupport::Testing::TimeHelpers
+
+  before do
+    clear_enqueued_jobs
+  end
 
   def build_stack(suffix:)
     user = User.create!(email: "kal-request-#{suffix}@example.com", password: "password123")
@@ -34,6 +39,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("Project")
     expect(response.body).to include("data-controller=\"kalendarium-focus\"")
     expect(response.body).to include("notae-kalendarium-sidebar-accordion-summary")
+    expect(response.body).to include("name=\"kalendarium_workspace\"")
+    expect(response.body).to include("aria-label=\"Refresh calendars\"")
   end
 
   it "renders day and week timelines with hourly rails and half-hour markers" do
@@ -98,6 +105,62 @@ RSpec.describe "Kalendarium", type: :request do
       expect(response.body).to include("notae-kalendarium-year-day is-today")
       expect(response.body).to include("notae-kalendarium-year-day is-selected")
     end
+  end
+
+  it "keeps month event cards and overflow labels inside each day cell" do
+    user, workspace, calendar = build_stack(suffix: "month-cell-overflow-containment")
+    sign_in user
+
+    4.times do |index|
+      KalendariumEvent.create!(
+        workspace: workspace,
+        kalendarium_calendar: calendar,
+        created_by: user,
+        updated_by: user,
+        title: "Event #{index + 1}",
+        description: "very-long-unbroken-content-#{'x' * 120}",
+        starts_at_utc: Time.zone.parse("2026-03-01 #{format('%02d', 8 + index)}:00:00"),
+        ends_at_utc: Time.zone.parse("2026-03-01 #{format('%02d', 9 + index)}:00:00")
+      )
+    end
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-month-events")
+    expect(response.body).to include("notae-kalendarium-month-overflow-label")
+    expect(response.body).to include("+1 more")
+  end
+
+  it "shows invitees and join links when meeting metadata is available" do
+    user, workspace, calendar = build_stack(suffix: "meeting-metadata-render")
+    sign_in user
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Team sync",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:30:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:30:00"),
+      metadata_json: {
+        "meeting_join_url" => "https://meet.google.com/abc-defg-hij",
+        "invitees" => [
+          { "name" => "Alex", "email" => "alex@example.com", "status" => "accepted" },
+          { "email" => "sam@example.com" }
+        ]
+      }
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Join meeting")
+    expect(response.body).to include("https://meet.google.com/abc-defg-hij")
+    expect(response.body).to include("Invitees")
+    expect(response.body).to include("Alex")
+    expect(response.body).to include("sam@example.com")
   end
 
   it "keeps the selected date when switching to day view from month and week" do
@@ -181,9 +244,261 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("data-controller=\"floating-panel\"")
     expect(response.body).to include("data-floating-panel-target=\"summary\"")
     expect(response.body).to include("data-floating-panel-target=\"panel\"")
+    expect(response.body).to include("class=\"notae-kalendarium-sidebar-accordion-summary\">Create event</summary>")
+    expect(response.body).to include("class=\"notae-kalendarium-sidebar-accordion-summary\">Create project</summary>")
+    expect(response.body).not_to include("notae-kalendarium-sidebar-accordion-chevron")
     expect(response.body).to include("name=\"calendar_ids[]\"")
     expect(response.body).to include("name=\"project_id\"")
     expect(response.body).to include("All projects")
+  end
+
+  it "persists calendar selections when navigating away and returning to kalendarium" do
+    user, workspace, calendar = build_stack(suffix: "persisted-calendar-filter")
+    sign_in user
+
+    secondary_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Secondary",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider"
+    )
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Primary event",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: secondary_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Secondary event",
+      starts_at_utc: Time.zone.parse("2026-03-01 11:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 12:00:00")
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-03-01",
+      calendar_filter_applied: "1",
+      calendar_ids: [ calendar.id ]
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Calendars (1)")
+    expect(response.body).to include("Primary event")
+    expect(response.body).not_to include("Secondary event")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Calendars (1)")
+    expect(response.body).to include("Primary event")
+    expect(response.body).not_to include("Secondary event")
+  end
+
+  it "self-heals stale calendar selections after calendars are recreated" do
+    user, workspace, calendar = build_stack(suffix: "stale-calendar-selection")
+    user.update!(time_zone: "UTC")
+    sign_in user
+
+    secondary_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Secondary",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider"
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-03-01",
+      calendar_filter_applied: "1",
+      calendar_ids: [ calendar.id ]
+    )
+
+    calendar.destroy!
+    secondary_calendar.destroy!
+
+    replacement_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Replacement",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      enabled: true
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: replacement_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Replacement event",
+      starts_at_utc: Time.utc(2026, 3, 1, 12, 0, 0),
+      ends_at_utc: Time.utc(2026, 3, 1, 13, 0, 0)
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Calendars (1)")
+    expect(response.body).to include("Replacement event")
+  end
+
+  it "runs connection sync immediately from the refresh action" do
+    user, workspace, calendar = build_stack(suffix: "refresh-action")
+    sign_in user
+
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Public feed",
+      ics_url: "https://example.com/feed.ics",
+      enabled: true,
+      status: "connected"
+    )
+    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).with(connection: connection).and_return(sync_service)
+
+    post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+      view: "month",
+      date: "2026-03-01",
+      calendar_ids: [ calendar.id ]
+    }
+
+    expect(response).to redirect_to(
+      kalendarium_path(workspace_slug: workspace.slug, view: "month", date: Date.parse("2026-03-01"), calendar_ids: [ calendar.id.to_s ])
+    )
+    expect(flash[:notice]).to include("Refresh completed for 1 connection")
+    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
+    expect(sync_service).to have_received(:call)
+  end
+
+  it "runs refresh once per active connection and skips disabled ones" do
+    user, workspace, calendar = build_stack(suffix: "refresh-queue-count")
+    sign_in user
+
+    connection_one = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Feed one",
+      ics_url: "https://example.com/one.ics",
+      enabled: true,
+      status: "connected"
+    )
+    connection_two = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Feed two",
+      ics_url: "https://example.com/two.ics",
+      enabled: true,
+      status: "connected"
+    )
+    KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Disabled feed",
+      ics_url: "https://example.com/disabled.ics",
+      enabled: false,
+      status: "disconnected"
+    )
+    sync_service_one = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    sync_service_two = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).with(connection: connection_one).and_return(sync_service_one)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).with(connection: connection_two).and_return(sync_service_two)
+
+    post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+      view: "month",
+      date: "2026-03-01",
+      calendar_ids: [ calendar.id ]
+    }
+
+    expect(response).to redirect_to(
+      kalendarium_path(workspace_slug: workspace.slug, view: "month", date: Date.parse("2026-03-01"), calendar_ids: [ calendar.id.to_s ])
+    )
+    expect(flash[:notice]).to include("Refresh completed for 2 connections")
+    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection_one)
+    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection_two)
+    expect(sync_service_one).to have_received(:call)
+    expect(sync_service_two).to have_received(:call)
+  end
+
+  it "shows an alert when refresh is triggered with no active connections" do
+    user, workspace, calendar = build_stack(suffix: "refresh-no-connections")
+    sign_in user
+
+    post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+      view: "month",
+      date: "2026-03-01",
+      calendar_ids: [ calendar.id ]
+    }
+
+    expect(response).to redirect_to(
+      kalendarium_path(workspace_slug: workspace.slug, view: "month", date: Date.parse("2026-03-01"), calendar_ids: [ calendar.id.to_s ])
+    )
+    expect(flash[:alert]).to include("No connected calendars are available to refresh.")
+  end
+
+  it "shows google and icloud calendars together while excluding project calendars from the calendar filter" do
+    user, workspace, calendar = build_stack(suffix: "provider-filter-split")
+    sign_in user
+
+    calendar.update!(name: "Google Team", provider: "google")
+    KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "iCloud Family",
+      provider: "icloud_caldav",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider"
+    )
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project Hidden Calendar",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Project-only event",
+      starts_at_utc: Time.zone.parse("2026-03-10 10:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-10 11:00:00")
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Project-only event")
+    document = Nokogiri::HTML.parse(response.body)
+    filter_labels = document.css(".notae-kalendarium-calendar-filter .notae-options-checkbox span").map(&:text)
+    expect(filter_labels).to include("Google Team")
+    expect(filter_labels).to include("iCloud Family")
+    expect(filter_labels).not_to include("Project Hidden Calendar")
   end
 
   it "respects monday week-start preference for week, month, and year views" do
@@ -207,6 +522,62 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-year-weekday\">M</span>")
     expect(response.body).to include("data-day-date=\"2025-12-29\"")
     expect(response.body).not_to include("data-day-date=\"2025-12-28\"")
+  end
+
+  it "renders all-day events in a top strip and staggers overlapping timed events" do
+    user, workspace, calendar = build_stack(suffix: "all-day-overlap")
+    sign_in user
+
+    all_day_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "All day planning",
+      all_day: true,
+      starts_at_utc: Time.zone.parse("2026-03-01 00:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 23:59:00")
+    )
+    first_overlap = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Overlap one",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:30:00")
+    )
+    second_overlap = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Overlap two",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:15:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:45:00")
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-all-day-strip")
+
+    day_doc = Nokogiri::HTML.parse(response.body)
+    all_day_card = day_doc.at_css("#kalendarium_event_#{all_day_event.id}")
+    expect(all_day_card["class"]).to include("is-all-day")
+    expect(all_day_card["class"]).not_to include("is-timeline")
+
+    first_card = day_doc.at_css("#kalendarium_event_#{first_overlap.id}")
+    second_card = day_doc.at_css("#kalendarium_event_#{second_overlap.id}")
+    expect(first_card["class"]).to include("is-timeline")
+    expect(second_card["class"]).to include("is-timeline")
+    expect(first_card["style"]).to include("left: calc(")
+    expect(first_card["style"]).to include("width: calc(")
+    expect(second_card["style"]).to include("left: calc(")
+    expect(second_card["style"]).to include("width: calc(")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-all-day-strip")
   end
 
   it "creates a project and auto-creates a matching calendar" do
@@ -293,6 +664,174 @@ RSpec.describe "Kalendarium", type: :request do
     expect do
       delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: { view: "day", date: "2026-03-01" }
     end.to change(KalendariumEvent, :count).by(-1)
+  end
+
+  it "syncs provider-backed events to remote on create, update and delete" do
+    user, workspace, = build_stack(suffix: "provider-event-sync")
+    sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Google sync",
+      access_token: "token",
+      enabled: true,
+      status: "connected"
+    )
+    provider_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "primary",
+      name: "Google primary",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+
+    create_sync_service = instance_double(Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    update_sync_service = instance_double(Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    delete_sync_service = instance_double(Kalendarium::ProviderEventSyncService, delete_remote!: true)
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).and_return(
+      create_sync_service,
+      update_sync_service,
+      delete_sync_service
+    )
+
+    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+      view: "day",
+      date: "2026-03-01",
+      kalendarium_event: {
+        kalendarium_calendar_id: provider_calendar.id,
+        title: "Provider event",
+        starts_at_local: "2026-03-01T10:00",
+        ends_at_local: "2026-03-01T11:00"
+      }
+    }
+    event = KalendariumEvent.order(:created_at).last
+    expect(create_sync_service).to have_received(:upsert_remote!)
+
+    patch kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: {
+      view: "day",
+      date: "2026-03-01",
+      kalendarium_event: {
+        title: "Provider event updated",
+        starts_at_local: "2026-03-01T10:30",
+        ends_at_local: "2026-03-01T11:30"
+      }
+    }
+    expect(update_sync_service).to have_received(:upsert_remote!)
+
+    delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: {
+      view: "day",
+      date: "2026-03-01"
+    }
+    expect(delete_sync_service).to have_received(:delete_remote!)
+  end
+
+  it "marks provider-backed events as pending remote sync when immediate write fails" do
+    user, workspace, = build_stack(suffix: "provider-sync-pending")
+    sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Google sync",
+      access_token: "token",
+      enabled: true,
+      status: "connected"
+    )
+    provider_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "primary",
+      name: "Google primary",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+
+    provider_sync = instance_double(Kalendarium::ProviderEventSyncService)
+    allow(provider_sync).to receive(:upsert_remote!).and_raise(RuntimeError, "Insufficient permissions")
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).and_return(provider_sync)
+
+    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+      view: "day",
+      date: "2026-03-01",
+      kalendarium_event: {
+        kalendarium_calendar_id: provider_calendar.id,
+        title: "Provider sync pending",
+        starts_at_local: "2026-03-01T10:00",
+        ends_at_local: "2026-03-01T11:00"
+      }
+    }
+
+    event = KalendariumEvent.order(:created_at).last
+    expect(flash[:alert]).to include("Event saved locally, but remote sync failed")
+    expect(event.metadata_json["pending_remote_sync"]).to eq(true)
+    expect(event.metadata_json["pending_remote_sync_error"]).to include("Insufficient permissions")
+  end
+
+  it "does not delete a provider-backed event locally when remote delete fails" do
+    user, workspace, = build_stack(suffix: "provider-delete-fail")
+    sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Google sync",
+      access_token: "token",
+      enabled: true,
+      status: "connected"
+    )
+    provider_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "primary",
+      name: "Google primary",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: provider_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Provider delete failure",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "remote-event-1"
+    )
+
+    sync_service = instance_double(Kalendarium::ProviderEventSyncService)
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).and_return(sync_service)
+    allow(sync_service).to receive(:delete_remote!).and_raise(RuntimeError, "Google Calendar request failed (500): Upstream error")
+
+    expect do
+      delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: {
+        view: "day",
+        date: "2026-03-01"
+      }
+    end.not_to change(KalendariumEvent, :count)
+
+    expect(flash[:alert]).to include("Could not delete remote event")
+    expect(event.reload).to be_present
   end
 
   it "does not render cancelled events in calendar views" do

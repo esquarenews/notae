@@ -34,6 +34,7 @@
     <section class="notae-settings-section">
       <h2>Calendar connections</h2>
       <p class="notae-pref-description">Google can be connected with OAuth (recommended), iCloud uses CalDAV credentials (Apple ID + app-specific password), and ICS uses read-only feed URLs.</p>
+      <p class="notae-pref-description">Scope controls: choose <strong>This workspace</strong> for local-only visibility, or <strong>All workspaces</strong> to create an independent copy in each accessible workspace.</p>
       <% unless @google_oauth_configured %>
         <p class="notae-page-subtle">
           Google OAuth is not configured on the server.
@@ -54,7 +55,8 @@
                     local: true,
                     html: {
                       class: "notae-kalendarium-connection-form",
-                      "data-turbo": "false",
+                      "data-controller": "google-oauth-launch",
+                      "data-action": "submit->google-oauth-launch#submit",
                       "data-google-oauth-launch": "true"
                     } do %>
         <%= text_field_tag :label,
@@ -64,6 +66,9 @@
                            class: "notae-auth-input" %>
         <%= select_tag :owner_scope,
                        options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
+                       class: "notae-auth-input" %>
+        <%= select_tag :workspace_scope,
+                       options_for_select([["This workspace", "this_workspace"], ["All workspaces", "all_workspaces"]], "this_workspace"),
                        class: "notae-auth-input" %>
         <%= submit_tag "Connect Google with OAuth", class: "notae-chip-button" %>
       <% end %>
@@ -77,6 +82,9 @@
                         class: "notae-auth-input" %>
         <%= select_tag "kalendarium_connection[owner_scope]",
                        options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
+                       class: "notae-auth-input" %>
+        <%= select_tag :workspace_scope,
+                       options_for_select([["This workspace", "this_workspace"], ["All workspaces", "all_workspaces"]], "this_workspace"),
                        class: "notae-auth-input" %>
         <%= form.text_field :remote_account_id, placeholder: "Remote account id (optional)", class: "notae-auth-input" %>
         <%= form.text_field :provider_username, placeholder: "CalDAV username (Apple ID email)", class: "notae-auth-input" %>
@@ -94,6 +102,11 @@
               <div>
                 <strong><%= connection.label %></strong>
                 <p><%= connection.provider %> · <%= connection.shared_connection? ? "Workspace shared" : "Personal" %></p>
+                <p>
+                  Scope:
+                  <%= connection.settings_json.to_h["workspace_scope"] == "all_workspaces" ? "All workspaces" : "This workspace" %>
+                  · Workspace: <%= connection.workspace.name %>
+                </p>
                 <p>Status: <%= connection.status %> <% if connection.last_synced_at.present? %>· Last sync <%= time_ago_in_words(connection.last_synced_at) %> ago<% end %></p>
                 <% if connection.last_error.present? %>
                   <p class="notae-page-subtle"><%= connection.last_error %></p>
@@ -122,6 +135,39 @@
         </ul>
       <% else %>
         <p class="notae-page-subtle">No calendar connections yet.</p>
+      <% end %>
+
+      <% if @external_connections.any? %>
+        <h3>Add existing connection to this workspace</h3>
+        <p class="notae-pref-description">Reuse a connection from another workspace without affecting its original workspace.</p>
+        <ul class="notae-kalendarium-connections-list">
+          <% @external_connections.each do |connection| %>
+            <li>
+              <div>
+                <strong><%= connection.label %></strong>
+                <p><%= connection.provider %> · from <%= connection.workspace.name %></p>
+                <p>
+                  Scope:
+                  <%= connection.settings_json.to_h["workspace_scope"] == "all_workspaces" ? "All workspaces" : "This workspace" %>
+                </p>
+              </div>
+              <div class="notae-kalendarium-connection-actions">
+                <%= button_to "Add to #{@workspace.name}",
+                              kalendarium_connections_path(workspace_slug: @workspace.slug),
+                              method: :post,
+                              params: {
+                                source_connection_id: connection.id,
+                                kalendarium_connection: {
+                                  owner_scope: (connection.shared_connection? ? "workspace" : "user")
+                                },
+                                workspace_scope: "this_workspace",
+                                sync_now: "1"
+                              },
+                              class: "notae-chip-button" %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
       <% end %>
     </section>
 

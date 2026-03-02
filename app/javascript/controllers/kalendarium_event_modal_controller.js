@@ -10,8 +10,9 @@ export default class extends Controller {
   openView(event) {
     if (event) {
       if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return
+      if (event.type === "keydown" && this.hasDialogTarget && this.dialogTarget.open) return
+      if (this.interactiveTarget(event.target)) return
       if (event.type === "click" && this.hasDialogTarget && this.dialogTarget.contains(event.target)) return
-      if (event.type === "click" && this.interactiveTarget(event.target)) return
       event.preventDefault()
     }
 

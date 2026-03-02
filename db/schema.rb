@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_28_113000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -345,6 +345,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_28_113000) do
     t.string "label", null: false
     t.text "last_error"
     t.datetime "last_synced_at"
+    t.text "oauth_client_id"
+    t.text "oauth_client_secret"
     t.uuid "owner_id", null: false
     t.string "owner_type", null: false
     t.string "provider", null: false

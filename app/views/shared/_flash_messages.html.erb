@@ -1,0 +1,18 @@
+<%
+flash_messages = flash.to_hash.each_with_object([]) do |(type, raw_message), messages|
+  Array(raw_message).each do |message|
+    text = message.to_s.strip
+    messages << [ type.to_s, text ] if text.present?
+  end
+end
+flash_messages.sort_by! { |(type, _message)| type == "alert" ? 0 : 1 }
+%>
+
+<% if flash_messages.any? %>
+  <div class="notae-flash-stack">
+    <% flash_messages.each do |type, message| %>
+      <% palette = type == "alert" ? "notae-flash alert" : "notae-flash notice" %>
+      <p class="<%= palette %>"><%= message %></p>
+    <% end %>
+  </div>
+<% end %>

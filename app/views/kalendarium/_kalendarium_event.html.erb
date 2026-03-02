@@ -2,12 +2,19 @@
 <% project_options = Array(local_assigns[:projects]) %>
 <% timeline = local_assigns.fetch(:timeline, false) %>
 <% timeline_style = local_assigns[:timeline_style] %>
+<% compact = local_assigns.fetch(:compact, false) %>
+<% all_day_badge = local_assigns.fetch(:all_day, event.all_day?) %>
 <% selected_offsets = Array(event.reminder_offsets_minutes).map(&:to_i) %>
 <% starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone) %>
 <% ends_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
+<% invitees = event.invitees %>
+<% invitee_labels = invitees.map { |invitee| invitee["name"].presence || invitee["email"] }.compact %>
+<% invitee_preview = invitee_labels.first(3).join(", ") %>
+<% invitee_extra_count = [invitee_labels.length - 3, 0].max %>
+<% meeting_join_url = event.meeting_join_url %>
 
 <article id="kalendarium_event_<%= event.id %>"
-         class="notae-kalendarium-event-card <%= "is-timeline" if timeline %>"
+         class="notae-kalendarium-event-card <%= "is-timeline" if timeline %> <%= "is-compact" if compact %> <%= "is-all-day" if all_day_badge %>"
          style="--kal-color: <%= event.kalendarium_calendar.color_hex %>;<%= " #{timeline_style}" if timeline_style.present? %>"
          data-controller="kalendarium-event-modal"
          data-action="click->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
@@ -17,7 +24,7 @@
   <header>
     <strong><%= event.title %></strong>
     <div class="notae-kalendarium-event-header-actions">
-      <span><%= starts_local.strftime("%H:%M") %> - <%= ends_local.strftime("%H:%M") %></span>
+      <span><%= all_day_badge ? "All day" : "#{starts_local.strftime("%H:%M")} - #{ends_local.strftime("%H:%M")}" %></span>
       <button type="button"
               class="notae-inline-icon-button notae-kalendarium-event-edit-button"
               aria-label="Edit event"
@@ -25,16 +32,28 @@
     </div>
   </header>
 
-  <% if event.location.present? %>
+  <% if !compact && event.location.present? %>
     <p><%= event.location %></p>
   <% end %>
-  <% if event.description.present? %>
+  <% if !compact && event.description.present? %>
     <p><%= truncate(event.description, length: 120) %></p>
   <% end %>
 
-  <% if event.linked_page.present? %>
+  <% if !compact && invitee_labels.any? %>
+    <p class="notae-kalendarium-event-meta">
+      Invitees:
+      <%= invitee_preview %><%= invitee_extra_count.positive? ? " +#{invitee_extra_count}" : "" %>
+    </p>
+  <% end %>
+
+  <% if !compact && (event.linked_page.present? || meeting_join_url.present?) %>
     <div class="notae-kalendarium-event-links">
-      <%= link_to "📄 Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+      <% if meeting_join_url.present? %>
+        <%= link_to "Join meeting", meeting_join_url, class: "notae-utility-link", target: "_blank", rel: "noopener noreferrer" %>
+      <% end %>
+      <% if event.linked_page.present? %>
+        <%= link_to "📄 Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+      <% end %>
     </div>
   <% end %>
 
@@ -84,15 +103,32 @@
               <dd><%= simple_format(h(event.description), {}, wrapper_tag: "div") %></dd>
             </div>
           <% end %>
+          <% if invitee_labels.any? %>
+            <div>
+              <dt>Invitees</dt>
+              <dd><%= invitee_labels.join(", ") %></dd>
+            </div>
+          <% end %>
+          <% if meeting_join_url.present? %>
+            <div>
+              <dt>Meeting link</dt>
+              <dd><%= link_to meeting_join_url, meeting_join_url, class: "notae-utility-link", target: "_blank", rel: "noopener noreferrer" %></dd>
+            </div>
+          <% end %>
           <div>
             <dt>Status</dt>
             <dd><%= event.status.titleize %></dd>
           </div>
         </dl>
 
-        <% if event.linked_page.present? %>
+        <% if event.linked_page.present? || meeting_join_url.present? %>
           <div class="notae-kalendarium-event-links notae-kalendarium-event-view-links">
-            <%= link_to "Open linked Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+            <% if meeting_join_url.present? %>
+              <%= link_to "Join meeting", meeting_join_url, class: "notae-utility-link", target: "_blank", rel: "noopener noreferrer" %>
+            <% end %>
+            <% if event.linked_page.present? %>
+              <%= link_to "Open linked Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+            <% end %>
           </div>
         <% end %>
 

@@ -42,6 +42,7 @@ Rails.application.routes.draw do
     patch "notifications/:id/read", to: "notifications#mark_read", as: :read_workspace_notification
     post "invitations", to: "invitations#create", as: :workspace_invitations
     get "kalendarium", to: "kalendarium#show", as: :kalendarium
+    post "kalendarium/refresh", to: "kalendarium#refresh", as: :refresh_kalendarium
     resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy]
     resources :kalendarium_projects, path: "kalendarium/projects", only: %i[create update]
     resources :kalendarium_connections, path: "kalendarium/connections", only: %i[create update destroy] do

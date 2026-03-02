@@ -1,4 +1,5 @@
 require "uri"
+require "json"
 
 class KalendariumConnection < ApplicationRecord
   PROVIDERS = %w[google icloud_caldav ics].freeze
@@ -9,6 +10,8 @@ class KalendariumConnection < ApplicationRecord
   encrypts :provider_username
   encrypts :provider_password
   encrypts :ics_url
+  encrypts :oauth_client_id
+  encrypts :oauth_client_secret
 
   belongs_to :workspace
   belongs_to :owner, polymorphic: true
@@ -33,6 +36,14 @@ class KalendariumConnection < ApplicationRecord
 
   def user_connection?
     owner_type == "User"
+  end
+
+  def google_tokens_configured?
+    credential_value_usable?(access_token) || credential_value_usable?(refresh_token)
+  end
+
+  def icloud_credentials_configured?
+    credential_value_usable?(provider_username) && credential_value_usable?(provider_password)
   end
 
   private
@@ -72,6 +83,8 @@ class KalendariumConnection < ApplicationRecord
     self.ics_url = ics_url.to_s.strip.presence
     self.access_token = access_token.to_s.strip.presence
     self.refresh_token = refresh_token.to_s.strip.presence
+    self.oauth_client_id = oauth_client_id.to_s.strip.presence
+    self.oauth_client_secret = oauth_client_secret.to_s.strip.presence
     self.remote_account_id = remote_account_id.to_s.strip.presence
   end
 
@@ -82,5 +95,27 @@ class KalendariumConnection < ApplicationRecord
     stripped = value.strip
     stripped = stripped.gsub(/\s+/, "") if provider == "icloud_caldav"
     stripped.presence
+  end
+
+  def credential_value_usable?(raw_value)
+    value = raw_value.to_s.strip
+    return false if value.blank?
+    return false if serialized_encryption_payload?(value)
+
+    true
+  end
+
+  def serialized_encryption_payload?(value)
+    parsed = JSON.parse(value)
+    return false unless parsed.is_a?(Hash)
+
+    payload = parsed["p"]
+    header = parsed["h"]
+    payload.present? &&
+      header.is_a?(Hash) &&
+      header["iv"].present? &&
+      header["at"].present?
+  rescue JSON::ParserError
+    false
   end
 end

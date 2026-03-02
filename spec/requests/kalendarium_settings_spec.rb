@@ -2,6 +2,12 @@ require "rails_helper"
 require "cgi"
 
 RSpec.describe "Kalendarium settings", type: :request do
+  include ActiveJob::TestHelper
+
+  before do
+    clear_enqueued_jobs
+  end
+
   def build_stack(suffix:)
     user = User.create!(email: "kal-settings-#{suffix}@example.com", password: "password123")
     workspace = Workspace.create!(name: "Kal Settings #{suffix}", slug: "kal-settings-#{suffix}")
@@ -17,6 +23,9 @@ RSpec.describe "Kalendarium settings", type: :request do
     get workspace_kalendarium_settings_path(workspace_slug: workspace.slug)
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Kalendārium display")
+    expect(response.body).to match(/class="notae-content notae-content-scroll[^"]*"/)
+    expect(response.body).not_to include("notae-content-wide")
+    expect(response.body).to include("<section class=\"notae-settings-shell\"")
 
     patch workspace_kalendarium_settings_path(workspace_slug: workspace.slug), params: {
       user: {
@@ -37,13 +46,16 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Connect Google with OAuth")
     expect(response.body).to include("action=\"/w/#{workspace.slug}/kalendarium/connections/google_authorize\"")
-    expect(response.body).to include("data-turbo=\"false\"")
+    expect(response.body).to include("data-controller=\"google-oauth-launch\"")
+    expect(response.body).to include("submit-&gt;google-oauth-launch#submit")
     expect(response.body).to include("data-google-oauth-launch=\"true\"")
     expect(response.body).to include("Google OAuth is not configured on the server.")
     expect(response.body).not_to include("Connect Google with OAuth</button>")
     expect(response.body).not_to include("Access token (Google)")
     expect(response.body).not_to include("Refresh token (Google)")
     expect(response.body).not_to include(">Google</option>")
+    expect(response.headers["Content-Security-Policy"]).to include("form-action 'self'")
+    expect(response.headers["Content-Security-Policy"]).to include("https://accounts.google.com")
   end
 
   it "creates workspace-shared connections from settings form values and syncs immediately" do
@@ -69,6 +81,112 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(connection.ics_url).to eq("https://example.com/team.ics")
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
     expect(sync_service).to have_received(:call)
+  end
+
+  it "creates per-workspace copies when adding a connection from another workspace" do
+    user, workspace = build_stack(suffix: "source-copy-target")
+    source_workspace = Workspace.create!(name: "Kal Settings source-copy", slug: "kal-settings-source-copy")
+    Membership.create!(workspace: source_workspace, user: user, role: :owner)
+    sign_in user
+
+    source_connection = KalendariumConnection.create!(
+      workspace: source_workspace,
+      owner: source_workspace,
+      created_by: user,
+      provider: "ics",
+      label: "Shared feed",
+      ics_url: "https://example.com/shared.ics",
+      enabled: true,
+      status: "connected",
+      settings_json: { "workspace_scope" => "this_workspace" }
+    )
+    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
+
+    post kalendarium_connections_path(workspace_slug: workspace.slug), params: {
+      source_connection_id: source_connection.id,
+      owner_scope: "workspace",
+      workspace_scope: "this_workspace",
+      sync_now: "1"
+    }
+
+    copied_connection = KalendariumConnection.find_by!(
+      workspace: workspace,
+      owner: workspace,
+      provider: "ics",
+      label: "Shared feed"
+    )
+    expect(copied_connection.id).not_to eq(source_connection.id)
+    expect(copied_connection.ics_url).to eq("https://example.com/shared.ics")
+    expect(copied_connection.settings_json["source_connection_id"]).to eq(source_connection.id)
+    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: copied_connection)
+  end
+
+  it "creates connections for all accessible workspaces when all-workspaces scope is selected" do
+    user, workspace = build_stack(suffix: "all-workspaces-target")
+    second_workspace = Workspace.create!(name: "Kal Settings all-workspaces-second", slug: "kal-settings-all-workspaces-second")
+    Membership.create!(workspace: second_workspace, user: user, role: :owner)
+    sign_in user
+
+    post kalendarium_connections_path(workspace_slug: workspace.slug), params: {
+      kalendarium_connection: {
+        owner_scope: "workspace",
+        provider: "ics",
+        label: "All workspaces feed",
+        ics_url: "https://example.com/all-workspaces.ics",
+        enabled: "1"
+      },
+      workspace_scope: "all_workspaces",
+      sync_now: "0"
+    }
+
+    primary_connection = KalendariumConnection.find_by!(
+      workspace: workspace,
+      owner: workspace,
+      provider: "ics",
+      label: "All workspaces feed"
+    )
+    secondary_connection = KalendariumConnection.find_by!(
+      workspace: second_workspace,
+      owner: second_workspace,
+      provider: "ics",
+      label: "All workspaces feed"
+    )
+    expect(primary_connection.settings_json["workspace_scope"]).to eq("all_workspaces")
+    expect(secondary_connection.settings_json["workspace_scope"]).to eq("all_workspaces")
+  end
+
+  it "deletes a connection from one workspace without affecting another workspace copy" do
+    user, workspace = build_stack(suffix: "delete-isolation-target")
+    second_workspace = Workspace.create!(name: "Kal Settings delete-isolation-second", slug: "kal-settings-delete-isolation-second")
+    Membership.create!(workspace: second_workspace, user: user, role: :owner)
+    sign_in user
+
+    target_connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: workspace,
+      created_by: user,
+      provider: "ics",
+      label: "Delete isolation feed",
+      ics_url: "https://example.com/delete-isolation.ics",
+      enabled: true,
+      status: "connected"
+    )
+    sibling_connection = KalendariumConnection.create!(
+      workspace: second_workspace,
+      owner: second_workspace,
+      created_by: user,
+      provider: "ics",
+      label: "Delete isolation feed",
+      ics_url: "https://example.com/delete-isolation.ics",
+      enabled: true,
+      status: "connected"
+    )
+
+    delete kalendarium_connection_path(workspace_slug: workspace.slug, id: target_connection.id)
+
+    expect(KalendariumConnection.exists?(target_connection.id)).to be(false)
+    expect(KalendariumConnection.exists?(sibling_connection.id)).to be(true)
   end
 
   it "creates an iCloud CalDAV connection with credentials and syncs immediately" do
@@ -125,7 +243,7 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(sync_service).to have_received(:call)
   end
 
-  it "returns a same-origin handoff page for Google OAuth with a signed state payload" do
+  it "redirects directly to Google OAuth with a signed state payload" do
     user, workspace = build_stack(suffix: "google-oauth-authorize")
     sign_in user
     oauth_service = instance_double(Kalendarium::GoogleOauthService)
@@ -145,12 +263,11 @@ RSpec.describe "Kalendarium settings", type: :request do
       label: "Team Google"
     }
 
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Redirecting to Google OAuth")
-    expect(response.body).to include("accounts.google.com/o/oauth2")
+    expect(response).to have_http_status(:found)
+    expect(response.headers["Location"]).to include("accounts.google.com/o/oauth2")
   end
 
-  it "renders a turbo-safe redirect page for Google OAuth requests intercepted by Turbo" do
+  it "redirects to Google OAuth for Turbo requests without rendering a handoff page" do
     user, workspace = build_stack(suffix: "google-oauth-turbo")
     sign_in user
     oauth_service = instance_double(Kalendarium::GoogleOauthService)
@@ -162,12 +279,11 @@ RSpec.describe "Kalendarium settings", type: :request do
       "Accept" => "text/vnd.turbo-stream.html, text/html"
     }
 
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("http-equiv=\"refresh\"")
-    expect(response.body).to include("accounts.google.com/o/oauth2")
+    expect(response).to have_http_status(:found)
+    expect(response.headers["Location"]).to include("accounts.google.com/o/oauth2")
   end
 
-  it "handles Google OAuth callback by creating connection, storing tokens, and syncing" do
+  it "handles Google OAuth callback by creating connection, storing tokens, and syncing immediately" do
     user, workspace = build_stack(suffix: "google-oauth-callback")
     sign_in user
     state = Rails.application.message_verifier("kalendarium_google_oauth_state").generate(
@@ -182,11 +298,13 @@ RSpec.describe "Kalendarium settings", type: :request do
     oauth_service = instance_double(Kalendarium::GoogleOauthService, exchange_code!: {
       access_token: "oauth-access",
       refresh_token: "oauth-refresh",
-      scope: "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events.readonly",
+      scope: "https://www.googleapis.com/auth/calendar",
       token_type: "Bearer",
       expires_in: 3600
     })
     allow(Kalendarium::GoogleOauthService).to receive(:new).and_return(oauth_service)
+    allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_id).and_return("oauth-client-id")
+    allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_secret).and_return("oauth-client-secret")
     sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
     allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
 
@@ -201,7 +319,11 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(connection.label).to eq("Workspace Google")
     expect(connection.access_token).to eq("oauth-access")
     expect(connection.refresh_token).to eq("oauth-refresh")
-    expect(connection.scopes_json).to include("https://www.googleapis.com/auth/calendar.readonly")
+    expect(connection.oauth_client_id).to eq("oauth-client-id")
+    expect(connection.oauth_client_secret).to eq("oauth-client-secret")
+    expect(connection.status).to eq("connected")
+    expect(connection.enabled).to be(true)
+    expect(connection.scopes_json).to include("https://www.googleapis.com/auth/calendar")
     expect(connection.settings_json["google_token_type"]).to eq("Bearer")
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
     expect(sync_service).to have_received(:call)
@@ -209,7 +331,7 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(flash[:notice]).to eq("Google calendar connected and synced.")
   end
 
-  it "handles Google OAuth callback by updating an existing Google connection" do
+  it "handles Google OAuth callback by updating an existing Google connection and syncing immediately" do
     user, workspace = build_stack(suffix: "google-oauth-update")
     sign_in user
     connection = KalendariumConnection.create!(
@@ -232,11 +354,13 @@ RSpec.describe "Kalendarium settings", type: :request do
     oauth_service = instance_double(Kalendarium::GoogleOauthService, exchange_code!: {
       access_token: "new-access-token",
       refresh_token: nil,
-      scope: "https://www.googleapis.com/auth/calendar.readonly",
+      scope: "https://www.googleapis.com/auth/calendar",
       token_type: "Bearer",
       expires_in: 1800
     })
     allow(Kalendarium::GoogleOauthService).to receive(:new).and_return(oauth_service)
+    allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_id).and_return("oauth-client-id")
+    allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_secret).and_return("oauth-client-secret")
     sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
     allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
 
@@ -246,10 +370,66 @@ RSpec.describe "Kalendarium settings", type: :request do
     }
 
     expect(response).to redirect_to(workspace_kalendarium_settings_path(workspace_slug: workspace.slug))
-    expect(connection.reload.access_token).to eq("new-access-token")
+    connection.reload
+    expect(connection.access_token).to eq("new-access-token")
     expect(connection.refresh_token).to eq("existing-refresh-token")
+    expect(connection.oauth_client_id).to eq("oauth-client-id")
+    expect(connection.oauth_client_secret).to eq("oauth-client-secret")
+    expect(connection.status).to eq("connected")
+    expect(connection.enabled).to be(true)
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
     expect(sync_service).to have_received(:call)
+  end
+
+  it "runs immediate sync from the connection sync action" do
+    user, workspace = build_stack(suffix: "sync-action-queue")
+    sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: workspace,
+      created_by: user,
+      provider: "google",
+      label: "Sync me",
+      access_token: "token",
+      refresh_token: "refresh-token",
+      enabled: true,
+      status: "connected"
+    )
+
+    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).with(connection: connection).and_return(sync_service)
+
+    post sync_kalendarium_connection_path(workspace_slug: workspace.slug, id: connection.id)
+
+    expect(response).to redirect_to(workspace_kalendarium_settings_path(workspace_slug: workspace.slug))
+    expect(flash[:notice]).to eq("Sync completed.")
+    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
+    expect(sync_service).to have_received(:call)
+  end
+
+  it "uses the bulk destroy service for deleting a calendar connection" do
+    user, workspace = build_stack(suffix: "destroy-action-service")
+    sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: workspace,
+      created_by: user,
+      provider: "google",
+      label: "Delete me",
+      access_token: "token",
+      refresh_token: "refresh-token",
+      enabled: true,
+      status: "connected"
+    )
+    destroy_service = instance_double(Kalendarium::ConnectionDestroyService, call: true)
+    allow(Kalendarium::ConnectionDestroyService).to receive(:new).with(connection: connection).and_return(destroy_service)
+
+    delete kalendarium_connection_path(workspace_slug: workspace.slug, id: connection.id)
+
+    expect(Kalendarium::ConnectionDestroyService).to have_received(:new).with(connection: connection)
+    expect(destroy_service).to have_received(:call)
+    expect(response).to redirect_to(workspace_kalendarium_settings_path(workspace_slug: workspace.slug))
+    expect(flash[:notice]).to eq("Connection removed.")
   end
 
   it "rejects iCloud CalDAV connection when username/password are missing" do

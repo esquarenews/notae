@@ -6,6 +6,7 @@ class KalendariumSettingsController < ApplicationController
     authorize @workspace, :show?
 
     @connections = policy_scope(KalendariumConnection).for_workspace(@workspace).includes(:kalendarium_calendars).order(created_at: :desc)
+    @external_connections = resolve_external_connections
     @calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).order(:name)
     @time_zone_options = User.time_zone_options
     @google_oauth_configured = Kalendarium::GoogleOauthService.configured?
@@ -85,5 +86,23 @@ class KalendariumSettingsController < ApplicationController
         value.to_s.strip.present?
       end
     end
+  end
+
+  def resolve_external_connections
+    local_signatures = @connections.map { |connection| connection_signature(connection) }.to_set
+
+    policy_scope(KalendariumConnection)
+      .where.not(workspace_id: @workspace.id)
+      .includes(:workspace)
+      .order(:label, :created_at)
+      .reject { |connection| local_signatures.include?(connection_signature(connection)) }
+  end
+
+  def connection_signature(connection)
+    [
+      connection.provider.to_s,
+      connection.label.to_s,
+      connection.shared_connection? ? "workspace" : "user"
+    ]
   end
 end

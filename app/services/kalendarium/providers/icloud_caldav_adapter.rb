@@ -41,6 +41,9 @@ module Kalendarium
         principal_href = fetch_current_user_principal_href
         home_href = fetch_calendar_home_href(principal_href)
         remote_calendars = fetch_remote_calendars(home_href)
+        if remote_calendars.empty?
+          raise "No calendars were returned from iCloud CalDAV. Existing calendars were preserved."
+        end
 
         synced_remote_ids = remote_calendars.map do |remote_calendar|
           local_calendar = upsert_remote_calendar(remote_calendar)
@@ -81,13 +84,17 @@ module Kalendarium
           end
         end
 
+        if seen_remote_event_ids.empty? && calendar.kalendarium_events.where(source_kind: "provider").exists?
+          raise "No events were returned for #{calendar.name}. Existing events were preserved."
+        end
+
         cancel_stale_provider_events(calendar: calendar, seen_remote_event_ids: seen_remote_event_ids)
       end
 
       def ensure_credentials!
-        return if connection.provider_username.present? && connection.provider_password.present?
+        return if connection.icloud_credentials_configured?
 
-        raise "iCloud CalDAV credentials are missing"
+        raise "iCloud CalDAV credentials are missing or no longer decryptable. Re-enter the Apple ID email and app-specific password."
       end
 
       def ensure_calendar_belongs_to_connection!(calendar)
@@ -198,6 +205,8 @@ module Kalendarium
                     <c:prop name="STATUS" />
                     <c:prop name="SEQUENCE" />
                     <c:prop name="CLASS" />
+                    <c:prop name="ATTENDEE" />
+                    <c:prop name="URL" />
                     <c:prop name="RECURRENCE-ID" />
                     <c:prop name="RRULE" />
                   </c:comp>
@@ -232,6 +241,7 @@ module Kalendarium
       def upsert_remote_calendar(remote_calendar)
         calendar = connection.kalendarium_calendars.find_or_initialize_by(remote_id: remote_calendar[:href])
         time_zone_name = normalize_time_zone_name(remote_calendar[:time_zone_hint]) || normalize_time_zone_name(connection.created_by&.time_zone) || "UTC"
+        metadata = calendar.metadata_json.to_h
 
         calendar.workspace = connection.workspace
         calendar.provider = connection.provider
@@ -242,7 +252,12 @@ module Kalendarium
         calendar.read_only = true
         calendar.source_kind = "provider"
         calendar.enabled = true if calendar.new_record?
-        calendar.metadata_json = calendar.metadata_json.to_h.merge(
+        if metadata["auto_disabled_missing"] == true
+          calendar.enabled = true
+          metadata.delete("auto_disabled_missing")
+          metadata.delete("auto_disabled_missing_at")
+        end
+        calendar.metadata_json = metadata.merge(
           "ctag" => remote_calendar[:ctag].to_s.presence,
           "subscribed" => remote_calendar[:subscribed]
         ).compact
@@ -251,12 +266,20 @@ module Kalendarium
       end
 
       def disable_missing_provider_calendars(synced_remote_ids)
+        return if synced_remote_ids.blank?
+
         scope = connection.kalendarium_calendars.where(source_kind: "provider")
-        scope = synced_remote_ids.any? ? scope.where.not(remote_id: synced_remote_ids) : scope
+        scope = scope.where.not(remote_id: synced_remote_ids)
         scope.find_each do |calendar|
           next unless calendar.enabled?
 
-          calendar.update!(enabled: false)
+          calendar.update!(
+            enabled: false,
+            metadata_json: calendar.metadata_json.to_h.merge(
+              "auto_disabled_missing" => true,
+              "auto_disabled_missing_at" => Time.current.iso8601
+            )
+          )
         end
       end
 
@@ -281,6 +304,8 @@ module Kalendarium
         event.last_synced_at = Time.current
         event.metadata_json = event.metadata_json.to_h.merge(
           "remote_href" => remote_href.to_s.presence,
+          "meeting_join_url" => event_payload[:meeting_join_url],
+          "invitees" => event_payload[:invitees].presence,
           "provider" => connection.provider
         ).compact
         event.save!
@@ -381,7 +406,9 @@ module Kalendarium
           rrule: field_value(fields, "RRULE"),
           sequence: field_value(fields, "SEQUENCE").to_i,
           status: field_value(fields, "STATUS"),
-          visibility: field_value(fields, "CLASS")
+          visibility: field_value(fields, "CLASS"),
+          meeting_join_url: extract_ical_meeting_join_url(fields),
+          invitees: parse_ical_attendees(fields)
         }
       end
 
@@ -500,6 +527,51 @@ module Kalendarium
         value = raw_value.to_s.strip
         value = fallback if value.blank?
         value.length > limit ? "#{value[0, limit - 3]}..." : value
+      end
+
+      def extract_ical_meeting_join_url(fields)
+        candidates = []
+        candidates << field_value(fields, "URL")
+        candidates << first_url_in_text(field_value(fields, "LOCATION"))
+        candidates << first_url_in_text(field_value(fields, "DESCRIPTION"))
+
+        candidates.filter_map { |value| normalized_http_url(value) }.first
+      end
+
+      def parse_ical_attendees(fields)
+        Array(fields["ATTENDEE"]).filter_map do |entry|
+          next unless entry.is_a?(Hash)
+
+          value = entry[:value].to_s.strip
+          params = entry[:params].to_h
+          email = value.sub(/\Amailto:/i, "").strip.presence
+          name = params["CN"].to_s.strip.presence
+          status = params["PARTSTAT"].to_s.strip.downcase.presence
+          next if email.blank? && name.blank?
+
+          {
+            "email" => email,
+            "name" => name,
+            "status" => status
+          }.compact
+        end
+      end
+
+      def first_url_in_text(value)
+        value.to_s[%r{https?://[^\s<>()]+}]
+      end
+
+      def normalized_http_url(value)
+        raw = value.to_s.strip
+        return nil if raw.blank?
+
+        uri = URI.parse(raw)
+        return nil unless uri.is_a?(URI::HTTP)
+        return nil if uri.host.blank?
+
+        uri.to_s
+      rescue URI::InvalidURIError
+        nil
       end
 
       def extract_calendar_time_zone_hint(raw_value)

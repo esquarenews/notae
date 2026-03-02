@@ -1,6 +1,8 @@
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
 
+  AI_RAIL_CONVERSATION_LIMIT = 20
+
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
@@ -88,11 +90,11 @@ class ApplicationController < ActionController::Base
     return unless user_signed_in?
 
     @ai_rail_conversations = with_optional_schema_fallback(default: [], feature: "AI conversations") do
-      recent_ai_conversations_for(user: current_user, window: 1.week, limit: 60).to_a.reverse
+      recent_ai_conversations_for(user: current_user, window: 1.week, limit: ai_rail_conversation_limit).to_a.reverse
     end
   end
 
-  def recent_ai_conversations_for(user:, window: 1.week, limit: 60)
+  def recent_ai_conversations_for(user:, window: 1.week, limit: nil)
     return AiConversation.none unless data_source_available?("ai_conversations")
 
     workspace_ids = policy_scope(Workspace).select(:id)
@@ -100,9 +102,13 @@ class ApplicationController < ActionController::Base
       .for_user(user)
       .where(workspace_id: workspace_ids)
       .where(created_at: window.ago..Time.current)
-      .includes(:workspace, :page)
+      .includes(:workspace)
       .recent_first
-      .limit(limit)
+      .limit(limit || ai_rail_conversation_limit)
+  end
+
+  def ai_rail_conversation_limit
+    AI_RAIL_CONVERSATION_LIMIT
   end
 
   def build_ai_usage_panel(user:, workspace:)
@@ -148,12 +154,21 @@ class ApplicationController < ActionController::Base
   end
 
   def ensure_active_record_encryption_keys
-    secret = encryption_bootstrap_secret
-    return if secret.blank?
+    primary_key = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].presence ||
+                  credentials_active_record_encryption_value(:primary_key)
+    deterministic_key = ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].presence ||
+                        credentials_active_record_encryption_value(:deterministic_key)
+    key_derivation_salt = ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].presence ||
+                          credentials_active_record_encryption_value(:key_derivation_salt)
 
-    primary_key = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].presence || derive_encryption_key(secret, "primary")
-    deterministic_key = ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].presence || derive_encryption_key(secret, "deterministic")
-    key_derivation_salt = ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].presence || derive_encryption_key(secret, "salt")
+    if primary_key.blank? || deterministic_key.blank? || key_derivation_salt.blank?
+      secret = encryption_bootstrap_secret
+      return if secret.blank?
+
+      primary_key ||= derive_encryption_key(secret, "primary")
+      deterministic_key ||= derive_encryption_key(secret, "deterministic")
+      key_derivation_salt ||= derive_encryption_key(secret, "salt")
+    end
 
     [ Rails.application.config.active_record.encryption, ActiveRecord::Encryption.config ].each do |encryption_config|
       next if encryption_config.has_primary_key? && encryption_config.has_deterministic_key? && encryption_config.has_key_derivation_salt?
@@ -167,10 +182,32 @@ class ApplicationController < ActionController::Base
   end
 
   def encryption_bootstrap_secret
-    configured_secret = ENV["SECRET_KEY_BASE"].to_s.presence || Rails.application.credentials.secret_key_base.to_s.presence
+    configured_secret = ENV["ACTIVE_RECORD_ENCRYPTION_BOOTSTRAP_SECRET"].to_s.presence ||
+                        ENV["SECRET_KEY_BASE"].to_s.presence ||
+                        safe_credentials_secret_key_base
     return configured_secret if configured_secret.present?
     return "notae-active-record-encryption-fallback-#{Rails.env}" unless Rails.env.production?
 
+    nil
+  end
+
+  def safe_credentials_secret_key_base
+    Rails.application.credentials.secret_key_base.to_s.presence
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage,
+         ActiveSupport::EncryptedFile::MissingKeyError,
+         ArgumentError
+    nil
+  end
+
+  def credentials_active_record_encryption_value(key_name)
+    config_hash = Rails.application.credentials[:active_record_encryption]
+    return nil unless config_hash.respond_to?(:[])
+
+    value = config_hash[key_name] || config_hash[key_name.to_s]
+    value.to_s.strip.presence
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage,
+         ActiveSupport::EncryptedFile::MissingKeyError,
+         ArgumentError
     nil
   end
 

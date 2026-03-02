@@ -36,7 +36,7 @@ RSpec.describe Kalendarium::GoogleOauthService do
     expect(query["response_type"]).to eq([ "code" ])
     expect(query["access_type"]).to eq([ "offline" ])
     expect(query["state"]).to eq([ "signed-state-token" ])
-    expect(query["scope"].first).to include("calendar.readonly")
+    expect(query["scope"].first).to include("/auth/calendar")
   end
 
   it "exchanges code for tokens" do
@@ -44,7 +44,7 @@ RSpec.describe Kalendarium::GoogleOauthService do
     response = instance_double(Net::HTTPResponse, code: "200", body: {
       access_token: "access-token",
       refresh_token: "refresh-token",
-      scope: "https://www.googleapis.com/auth/calendar.readonly",
+      scope: "https://www.googleapis.com/auth/calendar",
       token_type: "Bearer",
       expires_in: 3600
     }.to_json)

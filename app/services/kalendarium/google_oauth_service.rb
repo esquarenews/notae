@@ -6,7 +6,7 @@ module Kalendarium
   class GoogleOauthService
     AUTHORIZATION_ENDPOINT = URI("https://accounts.google.com/o/oauth2/v2/auth")
     TOKEN_ENDPOINT = URI("https://oauth2.googleapis.com/token")
-    CALENDAR_READONLY_SCOPE = "https://www.googleapis.com/auth/calendar.readonly".freeze
+    CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar".freeze
     REQUEST_OPEN_TIMEOUT_SECONDS = 10
     REQUEST_TIMEOUT_SECONDS = 30
 
@@ -29,7 +29,7 @@ module Kalendarium
         client_id: client_id,
         redirect_uri: redirect_uri.to_s,
         response_type: "code",
-        scope: CALENDAR_READONLY_SCOPE,
+        scope: CALENDAR_SCOPE,
         access_type: "offline",
         prompt: "consent",
         include_granted_scopes: "true",
@@ -134,11 +134,25 @@ module Kalendarium
         value = if candidate.length == 1
                   credentials[candidate.first]
                 else
-                  credentials.dig(*candidate)
+                  safe_nested_value(credentials, *candidate)
                 end
         return value if value.present?
       end
 
+      nil
+    end
+
+    def self.safe_nested_value(source, *keys)
+      keys.reduce(source) do |current, key|
+        break nil unless current.respond_to?(:[])
+
+        if current.is_a?(Hash)
+          current[key] || current[key.to_s] || current[key.to_sym]
+        else
+          current[key]
+        end
+      end
+    rescue StandardError
       nil
     end
 

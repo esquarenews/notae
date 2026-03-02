@@ -5,6 +5,7 @@ export default class extends Controller {
   static values = {
     startHour: Number,
     slotHeight: Number,
+    allDayOffset: Number,
     timeZone: String
   }
 
@@ -27,10 +28,10 @@ export default class extends Controller {
 
       if (canFocusNow) {
         const minutesIntoDay = (now.hour * 60) + now.minute
-        const rawTop = ((minutesIntoDay / 30.0) * slotHeight) - (this.scrollerTarget.clientHeight * 0.35)
+        const rawTop = this.allDayOffsetForScroll() + ((minutesIntoDay / 30.0) * slotHeight) - (this.scrollerTarget.clientHeight * 0.35)
         this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
       } else {
-        this.scrollerTarget.scrollTop = fallbackTop
+        this.scrollerTarget.scrollTop = this.allDayOffsetForScroll() + fallbackTop
       }
 
       this.scrollerTarget.dataset.kalendariumTimelineInitialized = "true"
@@ -112,6 +113,15 @@ export default class extends Controller {
     if (availableWidth > 0 && labelRect.width > availableWidth) {
       label.style.maxWidth = `${Math.floor(availableWidth)}px`
     }
+  }
+
+  allDayOffsetForScroll() {
+    if (!this.hasAllDayOffsetValue) return 0
+
+    const parsed = Number.parseFloat(this.allDayOffsetValue)
+    if (Number.isNaN(parsed) || parsed <= 0) return 0
+
+    return parsed
   }
 
   currentZonedTime() {

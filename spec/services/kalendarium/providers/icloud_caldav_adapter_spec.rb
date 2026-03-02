@@ -24,7 +24,7 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
 
     expect do
       described_class.new(connection: connection).sync!
-    end.to raise_error(RuntimeError, "iCloud CalDAV credentials are missing")
+    end.to raise_error(RuntimeError, "iCloud CalDAV credentials are missing or no longer decryptable. Re-enter the Apple ID email and app-specific password.")
   end
 
   it "upserts calendars/events and cancels stale provider events" do
@@ -94,6 +94,9 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
             SUMMARY:Dentist
             DESCRIPTION:Routine checkup
             LOCATION:Clinic
+            URL:https://meet.google.com/abc-defg-hij
+            ATTENDEE;CN=Alex;PARTSTAT=ACCEPTED:mailto:alex@example.com
+            ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:sam@example.com
             DTSTART:20260303T090000Z
             DTEND:20260303T100000Z
             STATUS:CONFIRMED
@@ -131,6 +134,11 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     expect(imported_event.etag).to eq("\"etag-1\"")
     expect(imported_event.sequence).to eq(3)
     expect(imported_event.source_kind).to eq("provider")
+    expect(imported_event.metadata_json["meeting_join_url"]).to eq("https://meet.google.com/abc-defg-hij")
+    expect(imported_event.metadata_json["invitees"]).to include(
+      { "email" => "alex@example.com", "name" => "Alex", "status" => "accepted" },
+      { "email" => "sam@example.com", "status" => "needs-action" }
+    )
 
     all_day_event = calendar.kalendarium_events.find_by(remote_event_id: "event-uid-2::2026-03-04T00:00:00.000000Z")
     expect(all_day_event).to be_present
@@ -140,6 +148,137 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
 
     expect(stale_event.reload.status).to eq("cancelled")
     expect(stale_calendar.reload.enabled).to be(false)
+  end
+
+  it "fails sync when iCloud returns no calendars and preserves existing data" do
+    user, workspace, connection = build_stack(suffix: "empty-calendars")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: true,
+      enabled: true
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "Keep me",
+      starts_at_utc: Time.zone.parse("2026-03-05 10:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-05 11:00:00"),
+      source_kind: "provider",
+      remote_event_id: "keep-uid",
+      created_by: user,
+      updated_by: user,
+      reminder_offsets_minutes: [ 10 ]
+    )
+
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:fetch_current_user_principal_href).and_return("/123/principal/")
+    allow(adapter).to receive(:fetch_calendar_home_href).with("/123/principal/").and_return("/123/calendars/")
+    allow(adapter).to receive(:fetch_remote_calendars).with("/123/calendars/").and_return([])
+
+    expect do
+      adapter.sync!
+    end.to raise_error(RuntimeError, /No calendars were returned from iCloud CalDAV/)
+
+    expect(calendar.reload.enabled).to be(true)
+    expect(event.reload.status).to eq("confirmed")
+  end
+
+  it "fails sync when calendar parsing returns no events for a populated provider calendar" do
+    user, workspace, connection = build_stack(suffix: "empty-events")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: true,
+      enabled: true
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "Keep me too",
+      starts_at_utc: Time.zone.parse("2026-03-08 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-08 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "keep-event-uid",
+      created_by: user,
+      updated_by: user,
+      reminder_offsets_minutes: [ 10 ]
+    )
+
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:fetch_calendar_event_payloads).and_return(
+      [
+        {
+          href: "/123/calendars/home/event-empty.ics",
+          etag: "\"etag-empty\"",
+          calendar_data: <<~ICS
+            BEGIN:VCALENDAR
+            PRODID:-//Example//No Events//EN
+            END:VCALENDAR
+          ICS
+        }
+      ]
+    )
+
+    expect do
+      adapter.sync!(calendar: calendar)
+    end.to raise_error(RuntimeError, /No events were returned for Home/)
+
+    expect(event.reload.status).to eq("confirmed")
+  end
+
+  it "re-enables calendars that were auto-disabled after a missing-calendar sync" do
+    user, workspace, connection = build_stack(suffix: "re-enable-auto-disabled")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: true,
+      enabled: false,
+      metadata_json: { "auto_disabled_missing" => true, "auto_disabled_missing_at" => Time.current.iso8601 }
+    )
+
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:fetch_current_user_principal_href).and_return("/123/principal/")
+    allow(adapter).to receive(:fetch_calendar_home_href).with("/123/principal/").and_return("/123/calendars/")
+    allow(adapter).to receive(:fetch_remote_calendars).with("/123/calendars/").and_return(
+      [
+        {
+          href: "/123/calendars/home/",
+          name: "Home",
+          color_hex: "#3B82F6",
+          ctag: "ctag-home",
+          time_zone_hint: "UTC"
+        }
+      ]
+    )
+    allow(adapter).to receive(:fetch_calendar_event_payloads).and_return([])
+
+    adapter.sync!
+
+    expect(calendar.reload.enabled).to be(true)
+    expect(calendar.metadata_json["auto_disabled_missing"]).to be_nil
+    expect(calendar.metadata_json["auto_disabled_missing_at"]).to be_nil
   end
 
   it "syncs only the provided calendar when calendar parameter is given" do

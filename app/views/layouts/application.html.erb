@@ -59,10 +59,7 @@
           </header>
 
           <main class="notae-content notae-content-scroll <%= content_for?(:content_class) ? yield(:content_class) : "" %>">
-            <% flash.each do |type, message| %>
-              <% palette = type.to_s == "alert" ? "notae-flash alert" : "notae-flash notice" %>
-              <p class="<%= palette %>"><%= message %></p>
-            <% end %>
+            <%= render "shared/flash_messages" %>
             <%= yield %>
           </main>
         </div>
@@ -104,10 +101,7 @@
       </div>
     <% else %>
       <main class="notae-auth-shell">
-        <% flash.each do |type, message| %>
-          <% palette = type.to_s == "alert" ? "notae-flash alert" : "notae-flash notice" %>
-          <p class="<%= palette %>"><%= message %></p>
-        <% end %>
+        <%= render "shared/flash_messages" %>
         <%= yield %>
       </main>
     <% end %>

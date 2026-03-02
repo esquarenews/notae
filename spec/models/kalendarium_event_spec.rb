@@ -36,7 +36,7 @@ RSpec.describe KalendariumEvent, type: :model do
     expect(event.errors[:ends_at_utc]).to include("must be after start time")
   end
 
-  it "queues chunk reindexing after save" do
+  it "queues chunk reindexing only for searchable changes" do
     user, workspace, calendar = build_workspace_stack(suffix: "reindex")
     allow(Search::IndexKalendariumEventJob).to receive(:perform_later)
 
@@ -50,9 +50,33 @@ RSpec.describe KalendariumEvent, type: :model do
       updated_by: user,
       reminder_offsets_minutes: [ 10 ]
     )
-    event.update!(title: "Kickoff updated")
+    expect(Search::IndexKalendariumEventJob).to have_received(:perform_later).with(event.id).once
 
-    expect(Search::IndexKalendariumEventJob).to have_received(:perform_later).with(event.id).at_least(:once)
+    event.update!(last_synced_at: Time.current + 2.minutes, updated_by: user)
+    expect(Search::IndexKalendariumEventJob).to have_received(:perform_later).with(event.id).once
+
+    event.update!(title: "Kickoff updated")
+    expect(Search::IndexKalendariumEventJob).to have_received(:perform_later).with(event.id).twice
+  end
+
+  it "tracks searchable field changes for reindex decisions" do
+    user, workspace, calendar = build_workspace_stack(suffix: "reindex-keys")
+    event = described_class.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "Search keys",
+      starts_at_utc: 1.day.from_now,
+      ends_at_utc: 1.day.from_now + 1.hour,
+      created_by: user,
+      updated_by: user,
+      reminder_offsets_minutes: [ 10 ]
+    )
+
+    event.update!(updated_by: user, last_synced_at: Time.current + 5.minutes)
+    expect(event.send(:search_chunk_reindex_required?)).to be(false)
+
+    event.update!(description: "Updated searchable description", updated_by: user)
+    expect(event.send(:search_chunk_reindex_required?)).to be(true)
   end
 
   it "removes indexed chunks when destroyed" do
@@ -81,5 +105,34 @@ RSpec.describe KalendariumEvent, type: :model do
     expect do
       event.destroy!
     end.to change { SearchChunk.where(source_type: SearchChunk::SOURCE_KALENDARIUM_EVENT, source_id: event.id).count }.from(1).to(0)
+  end
+
+  it "normalizes meeting metadata for invitees and join links" do
+    user, workspace, calendar = build_workspace_stack(suffix: "meeting-metadata")
+    event = described_class.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "Standup",
+      starts_at_utc: 1.day.from_now,
+      ends_at_utc: 1.day.from_now + 30.minutes,
+      created_by: user,
+      updated_by: user,
+      metadata_json: {
+        "meeting_join_url" => "https://meet.google.com/abc-defg-hij",
+        "invitees" => [
+          { "name" => "Alex", "email" => "alex@example.com", "status" => "accepted" },
+          { "name" => "", "email" => "sam@example.com" },
+          { "name" => "", "email" => "" }
+        ]
+      }
+    )
+
+    expect(event.meeting_join_url).to eq("https://meet.google.com/abc-defg-hij")
+    expect(event.invitees).to eq(
+      [
+        { "name" => "Alex", "email" => "alex@example.com", "status" => "accepted" },
+        { "email" => "sam@example.com" }
+      ]
+    )
   end
 end

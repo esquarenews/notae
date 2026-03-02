@@ -30,8 +30,9 @@ class KalendariumEventsController < ApplicationController
     authorize @event
 
     if @event.save
-      enqueue_sync_if_external(@event)
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), notice: "Event created."
+      sync_warning = sync_event_to_provider(@event)
+      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+                  flash: event_success_flash("Event created.", sync_warning)
     else
       redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: @event.errors.full_messages.to_sentence
     end
@@ -73,8 +74,9 @@ class KalendariumEventsController < ApplicationController
     apply_linked_nota_action!(@event, event_params[:linked_page_action])
 
     if @event.save
-      enqueue_sync_if_external(@event)
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), notice: "Event updated."
+      sync_warning = sync_event_to_provider(@event)
+      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+                  flash: event_success_flash("Event updated.", sync_warning)
     else
       redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: @event.errors.full_messages.to_sentence
     end
@@ -82,10 +84,13 @@ class KalendariumEventsController < ApplicationController
 
   def destroy
     authorize @event
-    calendar = @event.kalendarium_calendar
-    @event.destroy!
-    Kalendarium::SyncCalendarJob.perform_later(calendar.id) if calendar.kalendarium_connection.present?
+    delete_warning = delete_event_from_provider(@event)
+    if delete_warning.present?
+      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: delete_warning
+      return
+    end
 
+    @event.destroy!
     redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), notice: "Event deleted."
   end
 
@@ -144,9 +149,48 @@ class KalendariumEventsController < ApplicationController
     end
   end
 
-  def enqueue_sync_if_external(event)
-    return if event.kalendarium_calendar.kalendarium_connection.blank?
+  def event_success_flash(success_message, sync_warning)
+    return { notice: success_message } if sync_warning.blank?
 
-    Kalendarium::SyncCalendarJob.perform_later(event.kalendarium_calendar_id)
+    {
+      notice: success_message,
+      alert: sync_warning
+    }
+  end
+
+  def sync_event_to_provider(event)
+    return nil if event.kalendarium_calendar.kalendarium_connection.blank?
+
+    Kalendarium::ProviderEventSyncService.new(event: event).upsert_remote!
+    clear_pending_sync_marker!(event)
+    nil
+  rescue StandardError => error
+    mark_pending_sync!(event, error: error)
+    "Event saved locally, but remote sync failed: #{error.message}"
+  end
+
+  def delete_event_from_provider(event)
+    return nil if event.kalendarium_calendar.kalendarium_connection.blank?
+
+    Kalendarium::ProviderEventSyncService.new(event: event).delete_remote!
+    nil
+  rescue StandardError => error
+    "Could not delete remote event: #{error.message}. Local event was not deleted."
+  end
+
+  def mark_pending_sync!(event, error:)
+    metadata = event.metadata_json.to_h
+    metadata["pending_remote_sync"] = true
+    metadata["pending_remote_sync_error"] = error.message.to_s.truncate(300)
+    event.update_columns(metadata_json: metadata, updated_at: Time.current)
+  end
+
+  def clear_pending_sync_marker!(event)
+    metadata = event.metadata_json.to_h
+    removed_pending = metadata.delete("pending_remote_sync")
+    removed_error = metadata.delete("pending_remote_sync_error")
+    return unless removed_pending || removed_error
+
+    event.update_columns(metadata_json: metadata, updated_at: Time.current)
   end
 end

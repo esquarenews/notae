@@ -9,7 +9,8 @@ Rails.application.configure do
     policy.default_src :self
     policy.base_uri :self
     policy.frame_ancestors :self
-    policy.form_action :self
+    # Allow OAuth form redirects to Google's authorization endpoint.
+    policy.form_action :self, "https://accounts.google.com"
     policy.object_src :none
     policy.script_src :self, :https
     policy.style_src :self, :https, :unsafe_inline
