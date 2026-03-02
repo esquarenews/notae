@@ -13,16 +13,20 @@ class KalendariumController < ApplicationController
   def show
     authorize @workspace, :show?
 
-    @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "month"
+    @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week"
     @selected_date = parse_selected_date
+    @show_year_daily_events = ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     @week_start_day = week_start_day
     @weekday_labels = ordered_weekday_labels
     @year_weekday_labels = @weekday_labels.map { |label| label.first }
     @projects = policy_scope(KalendariumProject).for_workspace(@workspace).active.order(:name).to_a
-    @selected_project_id = params[:project_id].to_s.presence
+    @archived_projects = policy_scope(KalendariumProject).for_workspace(@workspace).archived.order(archived_at: :desc, name: :asc).to_a
+    @selected_project_id = selected_active_project_id
+    active_project_ids = @projects.map(&:id)
+    active_project_calendar_ids = @projects.map(&:kalendarium_calendar_id).compact
 
     @all_calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).order(:name).to_a
-    @project_calendars = @all_calendars.select { |calendar| calendar.source_kind == "project" }
+    @project_calendars = @all_calendars.select { |calendar| calendar.source_kind == "project" && active_project_calendar_ids.include?(calendar.id) }
     @calendar_filter_calendars = @all_calendars.reject { |calendar| calendar.source_kind == "project" }
     @selected_calendar_ids = resolve_selected_calendar_ids(@calendar_filter_calendars)
     @visible_calendars = @calendar_filter_calendars.select { |calendar| @selected_calendar_ids.include?(calendar.id.to_s) }
@@ -38,6 +42,11 @@ class KalendariumController < ApplicationController
                 .where.not(status: "cancelled")
                 .for_range(range_start, range_end)
                 .order(:starts_at_utc)
+    if active_project_ids.any?
+      @events = @events.where("kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)", active_project_ids)
+    else
+      @events = @events.where(kalendarium_project_id: nil)
+    end
     if @selected_project_id.present?
       @events = @events.where(kalendarium_project_id: @selected_project_id)
     end
@@ -113,6 +122,14 @@ class KalendariumController < ApplicationController
     Date.current
   end
 
+  def selected_active_project_id
+    requested_id = params[:project_id].to_s.presence
+    return nil if requested_id.blank?
+
+    active_ids = @projects.map { |project| project.id.to_s }
+    active_ids.include?(requested_id) ? requested_id : nil
+  end
+
   def resolve_selected_calendar_ids(calendars)
     allowed_ids = calendars.map { |calendar| calendar.id.to_s }
     requested_ids = Array(params[:calendar_ids]).map(&:to_s).reject(&:blank?)
@@ -182,7 +199,7 @@ class KalendariumController < ApplicationController
   def kalendarium_redirect_params
     {
       workspace_slug: @workspace.slug,
-      view: VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "month",
+      view: VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week",
       date: parse_selected_date
     }.tap do |redirect_params|
       project_id = params[:project_id].to_s.presence
@@ -193,6 +210,8 @@ class KalendariumController < ApplicationController
 
       time_zones = Array(params[:tz]).map(&:to_s).reject(&:blank?)
       redirect_params[:tz] = time_zones if time_zones.any?
+
+      redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     end
   end
 

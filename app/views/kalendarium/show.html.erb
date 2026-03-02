@@ -14,6 +14,7 @@
     <div class="notae-kalendarium-head-top">
       <h1>Kalendārium</h1>
       <div class="notae-kalendarium-nav-buttons">
+        <% year_daily_events_param = @show_year_daily_events ? "1" : nil %>
         <% previous_date = case @view
                           when "day" then @selected_date - 1.day
                           when "week" then @selected_date - 1.week
@@ -34,10 +35,10 @@
                                  else
                                    @selected_date.strftime("%b %-d, %Y")
                                  end %>
-        <%= link_to "←", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: previous_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids), class: "notae-chip-button" %>
+        <%= link_to "←", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: previous_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids, year_daily_events: year_daily_events_param), class: "notae-chip-button" %>
         <span class="notae-kalendarium-date-label" data-kalendarium-focus-target="dateLabel"><%= selected_date_label %></span>
-        <%= link_to "→", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: next_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids), class: "notae-chip-button" %>
-        <%= link_to "Today", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: Date.current, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids), class: "notae-chip-button" %>
+        <%= link_to "→", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: next_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids, year_daily_events: year_daily_events_param), class: "notae-chip-button" %>
+        <%= link_to "Today", kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: Date.current, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids, year_daily_events: year_daily_events_param), class: "notae-chip-button" %>
       </div>
     </div>
 
@@ -45,7 +46,7 @@
       <div class="notae-kalendarium-view-switch">
         <% KalendariumController::VIEW_OPTIONS.each do |view_option| %>
           <%= link_to view_option.titleize,
-                      kalendarium_path(workspace_slug: @workspace.slug, view: view_option, date: @selected_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids),
+                      kalendarium_path(workspace_slug: @workspace.slug, view: view_option, date: @selected_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids, year_daily_events: year_daily_events_param),
                       class: ["notae-chip-button", ("is-active" if @view == view_option)].compact.join(" "),
                       data: { kalendarium_focus_target: "viewLink", view_option: view_option } %>
         <% end %>
@@ -58,7 +59,8 @@
                         view: @view,
                         date: @selected_date,
                         project_id: @selected_project_id,
-                        calendar_ids: @selected_calendar_ids
+                        calendar_ids: @selected_calendar_ids,
+                        year_daily_events: year_daily_events_param
                       },
                       class: "notae-chip-button notae-kalendarium-refresh-button",
                       title: "Refresh calendars",
@@ -73,14 +75,15 @@
                  kalendarium_path(
                    workspace_slug: workspace_option.slug,
                    view: @view,
-                   date: @selected_date
+                   date: @selected_date,
+                   year_daily_events: year_daily_events_param
                  )
                ]
              end %>
           <%= select_tag :kalendarium_workspace,
                          options_for_select(
                            workspace_options,
-                           kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: @selected_date)
+                           kalendarium_path(workspace_slug: @workspace.slug, view: @view, date: @selected_date, year_daily_events: year_daily_events_param)
                          ),
                          class: "notae-chip-button notae-kalendarium-workspace-select",
                          data: { action: "change->auto-submit#navigate" },
@@ -91,6 +94,7 @@
           <%= hidden_field_tag :view, @view %>
           <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
           <%= hidden_field_tag :project_id, @selected_project_id %>
+          <%= hidden_field_tag :year_daily_events, year_daily_events_param %>
           <%= hidden_field_tag :calendar_filter_applied, "1" %>
           <details data-controller="floating-panel"
                    data-action="toggle->floating-panel#toggle">
@@ -115,6 +119,7 @@
         <%= form_with url: kalendarium_path(workspace_slug: @workspace.slug), method: :get, class: "notae-kalendarium-project-filter" do |form| %>
           <%= hidden_field_tag :view, @view %>
           <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
+          <%= hidden_field_tag :year_daily_events, year_daily_events_param %>
           <% @selected_calendar_ids.each do |calendar_id| %>
             <%= hidden_field_tag "calendar_ids[]", calendar_id %>
           <% end %>
@@ -128,10 +133,38 @@
                   <span>All projects</span>
                 </label>
                 <% @projects.each do |project| %>
-                  <label class="notae-options-checkbox">
-                    <%= radio_button_tag :project_id, project.id, @selected_project_id == project.id.to_s %>
-                    <span><%= project.name %></span>
-                  </label>
+                  <div class="notae-kalendarium-project-option-row">
+                    <label class="notae-options-checkbox">
+                      <%= radio_button_tag :project_id, project.id, @selected_project_id == project.id.to_s %>
+                      <span><%= project.name %></span>
+                    </label>
+                    <div class="notae-kalendarium-project-option-actions">
+                      <%= link_to "Archive",
+                                  archive_kalendarium_project_path(
+                                    workspace_slug: @workspace.slug,
+                                    id: project.id,
+                                    view: @view,
+                                    date: @selected_date,
+                                    project_id: @selected_project_id,
+                                    calendar_ids: @selected_calendar_ids,
+                                    year_daily_events: year_daily_events_param
+                                  ),
+                                  class: "notae-kalendarium-project-action-link",
+                                  data: { turbo_method: :patch, turbo_confirm: "Archive #{project.name}?" } %>
+                      <%= link_to "Delete",
+                                  kalendarium_project_path(
+                                    workspace_slug: @workspace.slug,
+                                    id: project.id,
+                                    view: @view,
+                                    date: @selected_date,
+                                    project_id: @selected_project_id,
+                                    calendar_ids: @selected_calendar_ids,
+                                    year_daily_events: year_daily_events_param
+                                  ),
+                                  class: "notae-kalendarium-project-action-link is-danger",
+                                  data: { turbo_method: :delete, turbo_confirm: "Delete #{project.name}? This removes the project and unassigns its events." } %>
+                    </div>
+                  </div>
                 <% end %>
               <% else %>
                 <p class="notae-options-empty">No projects yet.</p>
@@ -141,6 +174,20 @@
               </div>
             </div>
           </details>
+        <% end %>
+        <% if @view == "year" %>
+          <%= form_with url: kalendarium_path(workspace_slug: @workspace.slug), method: :get, class: "notae-kalendarium-year-toggle", data: { controller: "auto-submit" } do |form| %>
+            <%= hidden_field_tag :view, @view %>
+            <%= hidden_field_tag :date, @selected_date %>
+            <%= hidden_field_tag :project_id, @selected_project_id %>
+            <% @selected_calendar_ids.each do |calendar_id| %>
+              <%= hidden_field_tag "calendar_ids[]", calendar_id %>
+            <% end %>
+            <label class="notae-kalendarium-year-toggle-label">
+              <%= check_box_tag :year_daily_events, "1", @show_year_daily_events, data: { action: "change->auto-submit#submit" } %>
+              <span>Show daily events</span>
+            </label>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -154,7 +201,11 @@
           <div class="notae-kalendarium-sidebar-accordion-body-inner">
             <%= form_with model: @new_event,
                           url: kalendarium_events_path(workspace_slug: @workspace.slug),
-                          class: "notae-kalendarium-form" do |form| %>
+                          class: "notae-kalendarium-form",
+                          data: {
+                            controller: "kalendarium-event-form",
+                            kalendarium_event_form_enforce_future_end_value: true
+                          } do |form| %>
               <%= hidden_field_tag :view, @view %>
               <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
               <%= form.text_field :title, placeholder: "Event title", required: true, class: "notae-auth-input" %>
@@ -166,18 +217,31 @@
                               options_for_select([["No project", ""]] + @projects.map { |project| [project.name, project.id] }, @selected_project_id),
                               {},
                               class: "notae-auth-input" %>
-              <%= form.datetime_local_field :starts_at_local, value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"), class: "notae-auth-input" %>
-              <%= form.datetime_local_field :ends_at_local, value: @selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"), class: "notae-auth-input" %>
+              <%= form.datetime_local_field :starts_at_local,
+                                            value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"),
+                                            class: "notae-auth-input",
+                                            data: {
+                                              kalendarium_event_form_target: "startInput",
+                                              action: "change->kalendarium-event-form#startChanged"
+                                            } %>
+              <%= form.datetime_local_field :ends_at_local,
+                                            value: @selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"),
+                                            min: Time.current.in_time_zone(current_user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+                                            class: "notae-auth-input",
+                                            data: {
+                                              kalendarium_event_form_target: "endInput",
+                                              action: "change->kalendarium-event-form#endChanged"
+                                            } %>
+              <label class="notae-options-checkbox">
+                <%= form.check_box :all_day,
+                                   data: {
+                                     kalendarium_event_form_target: "allDayInput",
+                                     action: "change->kalendarium-event-form#toggleAllDay"
+                                   } %>
+                <span>All day</span>
+              </label>
               <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
               <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
-              <div class="notae-kalendarium-reminders">
-                <% [[10, "10m"], [30, "30m"], [60, "1h"], [1440, "1d"]].each do |minutes, label| %>
-                  <label class="notae-options-checkbox">
-                    <%= check_box_tag "kalendarium_event[reminder_offsets_minutes][]", minutes, minutes == 10 %>
-                    <span><%= label %></span>
-                  </label>
-                <% end %>
-              </div>
               <%= form.hidden_field :linked_page_action, value: "" %>
               <%= form.submit "Create", class: "notae-chip-button" %>
             <% end %>
@@ -314,7 +378,8 @@
                                                view: @view,
                                                date: day,
                                                project_id: @selected_project_id,
-                                               calendar_ids: @selected_calendar_ids),
+                                               calendar_ids: @selected_calendar_ids,
+                                               year_daily_events: year_daily_events_param),
                               class: ["notae-kalendarium-day-focus-link", ("is-selected" if day == @selected_date)].compact.join(" "),
                               data: {
                                 action: "click->kalendarium-focus#selectDay",
@@ -353,7 +418,8 @@
                                                    view: @view,
                                                    date: day,
                                                    project_id: @selected_project_id,
-                                                   calendar_ids: @selected_calendar_ids),
+                                                   calendar_ids: @selected_calendar_ids,
+                                                   year_daily_events: year_daily_events_param),
                                   class: ["notae-kalendarium-day-focus-link", ("is-selected" if day == @selected_date)].compact.join(" "),
                                   data: {
                                     action: "click->kalendarium-focus#selectDay",
@@ -426,7 +492,8 @@
                                              view: "month",
                                              date: month_date,
                                              project_id: @selected_project_id,
-                                             calendar_ids: @selected_calendar_ids),
+                                             calendar_ids: @selected_calendar_ids,
+                                             year_daily_events: year_daily_events_param),
                             class: "notae-kalendarium-year-month-link" %>
                 <span><%= pluralize(month_count, "event") %></span>
               </header>
@@ -436,24 +503,36 @@
                 <% end %>
                 <% (month_grid_start..month_grid_end).each do |day| %>
                   <% in_month = day.month == month_date.month %>
-                  <%= link_to day.day,
-                              kalendarium_path(workspace_slug: @workspace.slug,
+                  <% day_events = @show_year_daily_events ? (@events_by_day[day] || []) : [] %>
+                  <% first_day_event = day_events.first %>
+                  <% hidden_day_event_count = [day_events.size - 1, 0].max %>
+                  <% first_event_color = first_day_event&.kalendarium_calendar&.color_hex.presence || "#3b82f6" %>
+                  <%= link_to kalendarium_path(workspace_slug: @workspace.slug,
                                                view: "year",
                                                date: day,
                                                project_id: @selected_project_id,
-                                               calendar_ids: @selected_calendar_ids),
+                                               calendar_ids: @selected_calendar_ids,
+                                               year_daily_events: year_daily_events_param),
                               class: [
                                 "notae-kalendarium-year-day",
                                 ("is-outside-month" unless in_month),
                                 ("is-today" if day == today_local),
-                                ("is-selected" if day == @selected_date)
+                                ("is-selected" if day == @selected_date),
+                                ("has-event-label" if first_day_event.present?)
                               ].compact.join(" "),
                               data: {
                                 action: "click->kalendarium-focus#selectDay",
                                 kalendarium_focus_target: "dayLink",
                                 kalendarium_day_focus: true,
                                 day_date: day.strftime("%Y-%m-%d")
-                              } %>
+                              } do %>
+                    <span class="notae-kalendarium-year-day-number"><%= day.day %></span>
+                    <% if first_day_event.present? %>
+                      <span class="notae-kalendarium-year-day-event-label" style="--kal-year-event-color: <%= first_event_color %>;">
+                        <%= truncate(first_day_event.title.to_s, length: 18) %><%= hidden_day_event_count.positive? ? " +#{hidden_day_event_count}" : "" %>
+                      </span>
+                    <% end %>
+                  <% end %>
                 <% end %>
               </div>
             </article>
@@ -466,8 +545,22 @@
             <% @projects.each do |project| %>
               <article class="notae-kalendarium-project-card">
                 <header>
-                  <span class="notae-kalendarium-dot" style="--kal-color: <%= project.color_hex %>"></span>
-                  <strong><%= project.name %></strong>
+                  <div class="notae-kalendarium-project-card-title">
+                    <span class="notae-kalendarium-dot" style="--kal-color: <%= project.color_hex %>"></span>
+                    <strong><%= project.name %></strong>
+                  </div>
+                  <div class="notae-kalendarium-project-card-actions">
+                    <%= button_to "Archive",
+                                  archive_kalendarium_project_path(workspace_slug: @workspace.slug, id: project.id, view: @view, date: @selected_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids),
+                                  method: :patch,
+                                  class: "notae-chip-button",
+                                  form: { data: { turbo_confirm: "Archive #{project.name}?" } } %>
+                    <%= button_to "Delete",
+                                  kalendarium_project_path(workspace_slug: @workspace.slug, id: project.id, view: @view, date: @selected_date, project_id: @selected_project_id, calendar_ids: @selected_calendar_ids),
+                                  method: :delete,
+                                  class: "notae-chip-button notae-chip-danger",
+                                  form: { data: { turbo_confirm: "Delete #{project.name}? This removes the project and unassigns its events." } } %>
+                  </div>
                 </header>
                 <% project_events = @events.select { |event| event.kalendarium_project_id == project.id } %>
                 <% if project.linked_page.present? %>
@@ -489,8 +582,54 @@
               </article>
             <% end %>
           </div>
+          <% if @archived_projects.any? %>
+            <section class="notae-kalendarium-archived-projects">
+              <h3>Archived projects</h3>
+              <ul class="notae-kalendarium-archived-project-list">
+                <% @archived_projects.each do |project| %>
+                  <li>
+                    <span><%= project.name %></span>
+                    <div class="notae-kalendarium-project-card-actions">
+                      <%= button_to "Restore",
+                                    unarchive_kalendarium_project_path(workspace_slug: @workspace.slug, id: project.id, view: @view, date: @selected_date, calendar_ids: @selected_calendar_ids),
+                                    method: :patch,
+                                    class: "notae-chip-button" %>
+                      <%= button_to "Delete",
+                                    kalendarium_project_path(workspace_slug: @workspace.slug, id: project.id, view: @view, date: @selected_date, calendar_ids: @selected_calendar_ids),
+                                    method: :delete,
+                                    class: "notae-chip-button notae-chip-danger",
+                                    form: { data: { turbo_confirm: "Delete archived project #{project.name}?" } } %>
+                    </div>
+                  </li>
+                <% end %>
+              </ul>
+            </section>
+          <% end %>
         <% else %>
           <p class="notae-page-subtle">No projects yet.</p>
+          <% if @archived_projects.any? %>
+            <section class="notae-kalendarium-archived-projects">
+              <h3>Archived projects</h3>
+              <ul class="notae-kalendarium-archived-project-list">
+                <% @archived_projects.each do |project| %>
+                  <li>
+                    <span><%= project.name %></span>
+                    <div class="notae-kalendarium-project-card-actions">
+                      <%= button_to "Restore",
+                                    unarchive_kalendarium_project_path(workspace_slug: @workspace.slug, id: project.id, view: @view, date: @selected_date, calendar_ids: @selected_calendar_ids),
+                                    method: :patch,
+                                    class: "notae-chip-button" %>
+                      <%= button_to "Delete",
+                                    kalendarium_project_path(workspace_slug: @workspace.slug, id: project.id, view: @view, date: @selected_date, calendar_ids: @selected_calendar_ids),
+                                    method: :delete,
+                                    class: "notae-chip-button notae-chip-danger",
+                                    form: { data: { turbo_confirm: "Delete archived project #{project.name}?" } } %>
+                    </div>
+                  </li>
+                <% end %>
+              </ul>
+            </section>
+          <% end %>
         <% end %>
       <% else %>
         <h2>Month view · <%= @selected_date.strftime("%B %Y") %></h2>
@@ -510,7 +649,8 @@
                                                view: @view,
                                                date: day,
                                                project_id: @selected_project_id,
-                                               calendar_ids: @selected_calendar_ids),
+                                               calendar_ids: @selected_calendar_ids,
+                                               year_daily_events: year_daily_events_param),
                               class: ["notae-kalendarium-month-day-focus-link", ("is-today" if day == today_local), ("is-selected" if day == @selected_date)].compact.join(" "),
                               data: {
                                 action: "click->kalendarium-focus#selectDay",

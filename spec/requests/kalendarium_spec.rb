@@ -41,6 +41,12 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-sidebar-accordion-summary")
     expect(response.body).to include("name=\"kalendarium_workspace\"")
     expect(response.body).to include("aria-label=\"Refresh calendars\"")
+    expect(response.body).to include("notae-kalendarium-week-header-days")
+    expect(response.body).to include("name=\"kalendarium_event[all_day]\"")
+    expect(response.body).not_to include(">10m</span>")
+    document = Nokogiri::HTML.parse(response.body)
+    active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
+    expect(active_view_link).to be_present
   end
 
   it "renders day and week timelines with hourly rails and half-hour markers" do
@@ -130,6 +136,44 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-month-events")
     expect(response.body).to include("notae-kalendarium-month-overflow-label")
     expect(response.body).to include("+1 more")
+  end
+
+  it "shows optional daily event labels in year view when toggled on" do
+    user, workspace, calendar = build_stack(suffix: "year-daily-event-labels")
+    sign_in user
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Salesforce Weekly Team Standup",
+      starts_at_utc: Time.zone.parse("2026-03-25 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-25 10:00:00")
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "year", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Show daily events")
+    expect(response.body).not_to include("notae-kalendarium-year-day-event-label")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "year", date: "2026-03-01", year_daily_events: "1")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-kalendarium-year-day-event-label")
+    document = Nokogiri::HTML.parse(response.body)
+    day_link = document.at_css("a.notae-kalendarium-year-day[data-day-date='2026-03-25']")
+    expect(day_link).to be_present
+    expect(day_link.at_css(".notae-kalendarium-year-day-number")&.text.to_s.strip).to eq("25")
+    event_label = day_link.at_css(".notae-kalendarium-year-day-event-label")
+    expect(event_label).to be_present
+    expect(event_label.text).to include("Salesforce")
+    expect(event_label["style"]).to include("kal-year-event-color")
+    toggle_checkbox = document.at_css("input[type='checkbox'][name='year_daily_events'][value='1']")
+    expect(toggle_checkbox).to be_present
+    expect(toggle_checkbox["checked"]).to eq("checked")
+    expect(day_link["href"]).to include("year_daily_events=1")
   end
 
   it "shows invitees and join links when meeting metadata is available" do
@@ -250,6 +294,16 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("name=\"calendar_ids[]\"")
     expect(response.body).to include("name=\"project_id\"")
     expect(response.body).to include("All projects")
+
+    document = Nokogiri::HTML.parse(response.body)
+    option_row = document.at_css(".notae-kalendarium-project-option-row")
+    expect(option_row).to be_present
+    archive_link = option_row.at_css("a[data-turbo-method='patch']")
+    delete_link = option_row.at_css("a[data-turbo-method='delete']")
+    expect(archive_link).to be_present
+    expect(delete_link).to be_present
+    expect(archive_link["href"]).to include("/kalendarium/projects/#{project.id}/archive")
+    expect(delete_link["href"]).to include("/kalendarium/projects/#{project.id}")
   end
 
   it "persists calendar selections when navigating away and returning to kalendarium" do
@@ -480,9 +534,18 @@ RSpec.describe "Kalendarium", type: :request do
       time_zone: "UTC",
       source_kind: "project"
     )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project Hidden",
+      slug: "project-hidden",
+      color_hex: "#8B5CF6",
+      kalendarium_calendar: project_calendar
+    )
     KalendariumEvent.create!(
       workspace: workspace,
       kalendarium_calendar: project_calendar,
+      kalendarium_project: project,
       created_by: user,
       updated_by: user,
       title: "Project-only event",
@@ -600,16 +663,148 @@ RSpec.describe "Kalendarium", type: :request do
     expect(project.kalendarium_calendar.color_hex).to eq("#8B5CF6")
   end
 
-  it "creates events with optional quick Nota links and rejects invalid times" do
+  it "archives a project, hides it from active views, and disables its project calendar" do
+    user, workspace, calendar = build_stack(suffix: "project-archive")
+    sign_in user
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project calendar",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "project",
+      enabled: true
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Archived soon",
+      slug: "archived-soon",
+      color_hex: "#8B5CF6",
+      kalendarium_calendar: project_calendar
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Project event to hide",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+    )
+
+    patch archive_kalendarium_project_path(workspace_slug: workspace.slug, id: project.id), params: {
+      view: "day",
+      date: "2026-03-01"
+    }
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01"))
+    expect(project.reload).to be_archived
+    expect(project_calendar.reload.enabled).to be(false)
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01")
+    document = Nokogiri::HTML.parse(response.body)
+    project_filter_labels = document.css(".notae-kalendarium-project-popover .notae-options-checkbox span").map(&:text)
+    expect(project_filter_labels).not_to include("Archived soon")
+    expect(response.body).to include("Archived projects")
+    expect(response.body).to include("Archived soon")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+    expect(response.body).not_to include("Project event to hide")
+    expect(response.body).to include("Projects (All)")
+  end
+
+  it "restores an archived project and re-enables its project calendar" do
+    user, workspace, = build_stack(suffix: "project-unarchive")
+    sign_in user
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project calendar",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "project",
+      enabled: false
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Bring back",
+      slug: "bring-back",
+      color_hex: "#8B5CF6",
+      kalendarium_calendar: project_calendar,
+      archived_at: 2.days.ago
+    )
+
+    patch unarchive_kalendarium_project_path(workspace_slug: workspace.slug, id: project.id), params: {
+      view: "project",
+      date: "2026-03-01"
+    }
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01", project_id: project.id))
+    expect(project.reload.archived_at).to be_nil
+    expect(project_calendar.reload.enabled).to be(true)
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01")
+    expect(response.body).to include("Bring back")
+  end
+
+  it "deletes a project, unassigns its events, and disables its project calendar" do
+    user, workspace, calendar = build_stack(suffix: "project-delete")
+    sign_in user
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Delete calendar",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "project",
+      enabled: true
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Delete me",
+      slug: "delete-me",
+      color_hex: "#8B5CF6",
+      kalendarium_calendar: project_calendar
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Project event to unassign",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+    )
+
+    delete kalendarium_project_path(workspace_slug: workspace.slug, id: project.id), params: {
+      view: "project",
+      date: "2026-03-01"
+    }
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01"))
+    expect(KalendariumProject.where(id: project.id)).to be_empty
+    expect(event.reload.kalendarium_project_id).to be_nil
+    expect(project_calendar.reload.enabled).to be(false)
+  end
+
+  it "creates all-day events with optional quick Nota links and rejects invalid or past end times" do
     user, workspace, calendar = build_stack(suffix: "event-create")
     sign_in user
 
+    future_start = 2.days.from_now.change(hour: 10, min: 0, sec: 0)
+    future_end = future_start + 1.hour
     post kalendarium_events_path(workspace_slug: workspace.slug), params: {
       kalendarium_event: {
         kalendarium_calendar_id: calendar.id,
         title: "Planning",
-        starts_at_local: "2026-03-01T10:00",
-        ends_at_local: "2026-03-01T11:00",
+        starts_at_local: future_start.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        ends_at_local: future_end.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        all_day: "1",
         linked_page_action: "create_page",
         reminder_offsets_minutes: %w[10 30]
       }
@@ -618,7 +813,10 @@ RSpec.describe "Kalendarium", type: :request do
     created_event = KalendariumEvent.order(:created_at).last
     expect(created_event.title).to eq("Planning")
     expect(created_event.linked_page).to be_present
+    expect(created_event.all_day).to be(true)
     expect(created_event.reminder_offsets_minutes).to eq([ 10, 30 ])
+    expect(created_event.starts_at_utc.in_time_zone(user.time_zone).strftime("%H:%M")).to eq("00:00")
+    expect(created_event.ends_at_utc.in_time_zone(user.time_zone).strftime("%H:%M")).to eq("23:59")
 
     expect do
       post kalendarium_events_path(workspace_slug: workspace.slug), params: {
@@ -632,6 +830,21 @@ RSpec.describe "Kalendarium", type: :request do
     end.not_to change(KalendariumEvent, :count)
 
     expect(flash[:alert]).to include("must be valid")
+
+    past_start = 2.hours.ago.change(sec: 0)
+    past_end = 1.hour.ago.change(sec: 0)
+    expect do
+      post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+        kalendarium_event: {
+          kalendarium_calendar_id: calendar.id,
+          title: "Already finished",
+          starts_at_local: past_start.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+          ends_at_local: past_end.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
+        }
+      }
+    end.not_to change(KalendariumEvent, :count)
+
+    expect(flash[:alert]).to include("must be in the future")
   end
 
   it "updates and deletes events via kalendarium event endpoints" do
@@ -669,6 +882,8 @@ RSpec.describe "Kalendarium", type: :request do
   it "syncs provider-backed events to remote on create, update and delete" do
     user, workspace, = build_stack(suffix: "provider-event-sync")
     sign_in user
+    create_start = 2.days.from_now.change(hour: 10, min: 0, sec: 0)
+    create_end = create_start + 1.hour
     connection = KalendariumConnection.create!(
       workspace: workspace,
       owner: user,
@@ -708,8 +923,8 @@ RSpec.describe "Kalendarium", type: :request do
       kalendarium_event: {
         kalendarium_calendar_id: provider_calendar.id,
         title: "Provider event",
-        starts_at_local: "2026-03-01T10:00",
-        ends_at_local: "2026-03-01T11:00"
+        starts_at_local: create_start.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        ends_at_local: create_end.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
       }
     }
     event = KalendariumEvent.order(:created_at).last
@@ -736,6 +951,8 @@ RSpec.describe "Kalendarium", type: :request do
   it "marks provider-backed events as pending remote sync when immediate write fails" do
     user, workspace, = build_stack(suffix: "provider-sync-pending")
     sign_in user
+    create_start = 2.days.from_now.change(hour: 10, min: 0, sec: 0)
+    create_end = create_start + 1.hour
     connection = KalendariumConnection.create!(
       workspace: workspace,
       owner: user,
@@ -770,8 +987,8 @@ RSpec.describe "Kalendarium", type: :request do
       kalendarium_event: {
         kalendarium_calendar_id: provider_calendar.id,
         title: "Provider sync pending",
-        starts_at_local: "2026-03-01T10:00",
-        ends_at_local: "2026-03-01T11:00"
+        starts_at_local: create_start.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        ends_at_local: create_end.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
       }
     }
 

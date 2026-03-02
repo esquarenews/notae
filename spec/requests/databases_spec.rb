@@ -660,6 +660,87 @@ RSpec.describe "Databases", type: :request do
     expect(visible_headers).not_to include("Hidden column")
   end
 
+  it "persists resized table column widths in the active grid view" do
+    owner = User.create!(email: "database-column-width-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Column width tables", slug: "column-width-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Column width DB")
+    property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    patch database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id),
+          params: {
+            database_view: {
+              column_widths: {
+                "name" => "420",
+                "property_#{property.id}" => "310",
+                "property_invalid" => "520",
+                "name_invalid" => "999"
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(view.reload.config_json["column_widths"]).to eq(
+      "name" => 420,
+      "property_#{property.id}" => 310
+    )
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    name_col = html.at_css("col[data-column-key='name']")
+    property_col = html.at_css("col[data-column-key='property_#{property.id}']")
+    expect(name_col).to be_present
+    expect(property_col).to be_present
+    expect(name_col["style"]).to include("width: 420px")
+    expect(property_col["style"]).to include("width: 310px")
+  end
+
+  it "clamps resized table column widths to allowed limits" do
+    owner = User.create!(email: "database-column-width-clamp-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Column width clamp tables", slug: "column-width-clamp-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Column width clamp DB")
+    property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    patch database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id),
+          params: {
+            database_view: {
+              column_widths: {
+                "name" => "20",
+                "property_#{property.id}" => "5000"
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(view.reload.config_json["column_widths"]).to eq(
+      "name" => 180,
+      "property_#{property.id}" => 960
+    )
+  end
+
   it "does not render a header eye icon for property visibility" do
     owner = User.create!(email: "database-property-eye-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Property eye tables", slug: "property-eye-tables")

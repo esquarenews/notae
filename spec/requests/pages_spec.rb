@@ -146,6 +146,29 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("data-shell-target=\"workspaceDialog\"")
   end
 
+  it "renders iconized sidebar links and collapsed dock quick links" do
+    owner = User.create!(email: "page-sidebar-icon-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Sidebar icons", slug: "sidebar-icons")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-sidebar-link-content")
+    expect(response.body).to include("notae-sidebar-nav-icon")
+    expect(response.body).to include("notae-sidebar-link-label\">Home")
+    expect(response.body).to include("notae-sidebar-link-label\">Kalendārium")
+    expect(response.body).to include("notae-sidebar-link-label\">AI Conversation History")
+    expect(response.body).to include("notae-sidebar-link-label\">Settings")
+    expect(response.body).to include("notae-sidebar-link-label\">Trash")
+
+    doc = Nokogiri::HTML.parse(response.body)
+    dock_links = doc.css(".notae-sidebar-dock-link")
+    expect(dock_links.size).to be >= 7
+    expect(dock_links.map { |link| link["title"] }).to include("Home", "Search", "Library", "Kalendārium", "Settings")
+  end
+
   it "keeps create redirects working even if another workspace has a blank slug" do
     owner = User.create!(email: "page-create-blank-slug-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Create target", slug: "create-target")

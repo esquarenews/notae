@@ -44,7 +44,12 @@ Rails.application.routes.draw do
     get "kalendarium", to: "kalendarium#show", as: :kalendarium
     post "kalendarium/refresh", to: "kalendarium#refresh", as: :refresh_kalendarium
     resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy]
-    resources :kalendarium_projects, path: "kalendarium/projects", only: %i[create update]
+    resources :kalendarium_projects, path: "kalendarium/projects", only: %i[create update destroy] do
+      member do
+        patch :archive
+        patch :unarchive
+      end
+    end
     resources :kalendarium_connections, path: "kalendarium/connections", only: %i[create update destroy] do
       member do
         post :sync

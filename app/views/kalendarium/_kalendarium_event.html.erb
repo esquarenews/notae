@@ -4,7 +4,6 @@
 <% timeline_style = local_assigns[:timeline_style] %>
 <% compact = local_assigns.fetch(:compact, false) %>
 <% all_day_badge = local_assigns.fetch(:all_day, event.all_day?) %>
-<% selected_offsets = Array(event.reminder_offsets_minutes).map(&:to_i) %>
 <% starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone) %>
 <% ends_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
 <% invitees = event.invitees %>
@@ -142,7 +141,8 @@
         <%= form_with model: event,
                       url: kalendarium_event_path(workspace_slug: workspace.slug, id: event.id),
                       method: :patch,
-                      class: "notae-kalendarium-event-modal-form" do |form| %>
+                      class: "notae-kalendarium-event-modal-form",
+                      data: { controller: "kalendarium-event-form" } do |form| %>
           <%= hidden_field_tag :view, view %>
           <%= hidden_field_tag :date, date %>
           <%= form.text_field :title, placeholder: "Event title", required: true, class: "notae-auth-input" %>
@@ -156,20 +156,28 @@
                           class: "notae-auth-input" %>
           <%= form.datetime_local_field :starts_at_local,
                                         value: starts_local.strftime("%Y-%m-%dT%H:%M"),
-                                        class: "notae-auth-input" %>
+                                        class: "notae-auth-input",
+                                        data: {
+                                          kalendarium_event_form_target: "startInput",
+                                          action: "change->kalendarium-event-form#startChanged"
+                                        } %>
           <%= form.datetime_local_field :ends_at_local,
                                         value: ends_local.strftime("%Y-%m-%dT%H:%M"),
-                                        class: "notae-auth-input" %>
+                                        class: "notae-auth-input",
+                                        data: {
+                                          kalendarium_event_form_target: "endInput",
+                                          action: "change->kalendarium-event-form#endChanged"
+                                        } %>
+          <label class="notae-options-checkbox">
+            <%= form.check_box :all_day,
+                               data: {
+                                 kalendarium_event_form_target: "allDayInput",
+                                 action: "change->kalendarium-event-form#toggleAllDay"
+                               } %>
+            <span>All day</span>
+          </label>
           <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
           <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
-          <div class="notae-kalendarium-reminders">
-            <% [[10, "10m"], [30, "30m"], [60, "1h"], [1440, "1d"]].each do |minutes, label| %>
-              <label class="notae-options-checkbox">
-                <%= check_box_tag "kalendarium_event[reminder_offsets_minutes][]", minutes, selected_offsets.include?(minutes) %>
-                <span><%= label %></span>
-              </label>
-            <% end %>
-          </div>
           <% if event.linked_page.present? %>
             <div class="notae-kalendarium-event-links">
               <%= link_to "Open linked Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>

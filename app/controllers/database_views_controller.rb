@@ -30,16 +30,31 @@ class DatabaseViewsController < ApplicationController
 
     if @database_view.update(database_view_params)
       @database_view.set_as_default! if @database_view.default?
-      redirect_to database_path(
-        workspace_slug: @workspace.slug,
-        id: @database.id,
-        view_id: @database_view.id,
-        view_settings: params[:view_settings].presence,
-        view_settings_section: params[:view_settings_section].presence,
-        actions_menu: params[:actions_menu].presence
-      ), notice: "View updated."
+      respond_to do |format|
+        format.html do
+          redirect_to database_path(
+            workspace_slug: @workspace.slug,
+            id: @database.id,
+            view_id: @database_view.id,
+            view_settings: params[:view_settings].presence,
+            view_settings_section: params[:view_settings_section].presence,
+            actions_menu: params[:actions_menu].presence
+          ), notice: "View updated."
+        end
+        format.json do
+          render json: {
+            id: @database_view.id,
+            config_json: @database_view.config_json.to_h
+          }, status: :ok
+        end
+      end
     else
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @database_view.id), alert: @database_view.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.html do
+          redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @database_view.id), alert: @database_view.errors.full_messages.to_sentence
+        end
+        format.json { render json: { errors: @database_view.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
@@ -84,7 +99,8 @@ class DatabaseViewsController < ApplicationController
       :date_property_id,
       :conditional_color_mode,
       :conditional_color_property_id,
-      visible_property_ids: []
+      visible_property_ids: [],
+      column_widths: {}
     )
 
     config = @database_view&.config_json.to_h.deep_dup
@@ -109,6 +125,15 @@ class DatabaseViewsController < ApplicationController
         config.delete("visible_property_ids")
       else
         config["visible_property_ids"] = visible_ids
+      end
+    end
+
+    if permitted.key?(:column_widths)
+      column_widths = normalize_column_widths(permitted.delete(:column_widths))
+      if column_widths.empty?
+        config.delete("column_widths")
+      else
+        config["column_widths"] = column_widths
       end
     end
 
@@ -154,5 +179,37 @@ class DatabaseViewsController < ApplicationController
     else
       config[config_key] = normalized_value
     end
+  end
+
+  def normalize_column_widths(raw_widths)
+    return {} unless raw_widths.respond_to?(:to_h)
+
+    allowed_property_ids = policy_scope(DbProperty).for_database(@database).pluck(:id).map(&:to_s)
+    raw_widths.to_h.each_with_object({}) do |(key, value), widths|
+      column_key = key.to_s
+      minimum = minimum_width_for_column(column_key, allowed_property_ids)
+      next if minimum.nil?
+
+      width = parse_column_width(value)
+      next if width.nil?
+
+      widths[column_key] = width.clamp(minimum, 960)
+    end
+  end
+
+  def minimum_width_for_column(column_key, allowed_property_ids)
+    return 180 if column_key == "name"
+
+    property_id = column_key.delete_prefix("property_")
+    return nil unless property_id.present? && column_key.start_with?("property_")
+    return nil unless allowed_property_ids.include?(property_id)
+
+    120
+  end
+
+  def parse_column_width(value)
+    Integer(value.to_s, 10)
+  rescue ArgumentError, TypeError
+    nil
   end
 end

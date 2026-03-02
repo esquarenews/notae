@@ -16,6 +16,13 @@
 <% can_edit_grid = policy(@database).update? && !@database.locked? %>
 <% can_create_rows = policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
 <% new_row_form_id = "db_new_row_form_#{@database.id}" %>
+<% column_widths = @view_config.fetch("column_widths", {}).to_h.transform_values { |value| value.to_i } %>
+<% column_resize_enabled = can_edit_grid && @current_view.present? %>
+<% column_resize_update_url = if @current_view.present?
+  database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id)
+else
+  ""
+end %>
 <% row_color_options = [
   ["Default", "default"],
   ["Gray", "gray"],
@@ -29,17 +36,50 @@
   ["Red", "red"]
 ] %>
 
-<div class="notae-db-grid-wrap">
+<div class="notae-db-grid-wrap"
+     data-controller="db-column-resize"
+     data-db-column-resize-enabled-value="<%= column_resize_enabled %>"
+     data-db-column-resize-update-url-value="<%= column_resize_update_url %>"
+     data-db-column-resize-widths-value="<%= column_widths.to_json %>">
   <table class="notae-db-grid">
+    <colgroup>
+      <% name_width = column_widths["name"].to_i %>
+      <col data-db-column-resize-target="column"
+           data-column-key="name"
+           <% if name_width.positive? %>style="width: <%= name_width %>px; min-width: <%= name_width %>px;"<% end %>>
+      <% visible_properties.each do |db_property| %>
+        <% property_key = "property_#{db_property.id}" %>
+        <% property_width = column_widths[property_key].to_i %>
+        <col data-db-column-resize-target="column"
+             data-column-key="<%= property_key %>"
+             <% if property_width.positive? %>style="width: <%= property_width %>px; min-width: <%= property_width %>px;"<% end %>>
+      <% end %>
+      <col class="notae-db-grid-add-col-width">
+    </colgroup>
     <thead>
       <tr>
-        <th class="notae-db-grid-name-col">
+        <% name_width = column_widths["name"].to_i %>
+        <th class="notae-db-grid-name-col"
+            data-db-column-resize-target="header"
+            data-column-key="name"
+            <% if name_width.positive? %>style="width: <%= name_width %>px; min-width: <%= name_width %>px;"<% end %>>
           <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
+          <% if column_resize_enabled %>
+            <button type="button"
+                    class="notae-db-col-resize-handle"
+                    data-action="pointerdown->db-column-resize#startResize"
+                    aria-label="Resize Name column"
+                    title="Drag to resize column"></button>
+          <% end %>
         </th>
         <% visible_properties.each do |db_property| %>
           <% property_is_sorted = @sort_property&.id == db_property.id %>
           <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
-          <th>
+          <% property_key = "property_#{db_property.id}" %>
+          <% property_width = column_widths[property_key].to_i %>
+          <th data-db-column-resize-target="header"
+              data-column-key="<%= property_key %>"
+              <% if property_width.positive? %>style="width: <%= property_width %>px; min-width: <%= property_width %>px;"<% end %>>
             <div class="notae-db-grid-property-header">
               <%= link_to db_property.name,
                           database_path(
@@ -58,6 +98,13 @@
                 <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
               <% end %>
             </div>
+            <% if column_resize_enabled %>
+              <button type="button"
+                      class="notae-db-col-resize-handle"
+                      data-action="pointerdown->db-column-resize#startResize"
+                      aria-label="Resize <%= db_property.name %> column"
+                      title="Drag to resize column"></button>
+            <% end %>
           </th>
         <% end %>
         <th class="notae-db-grid-add-col">

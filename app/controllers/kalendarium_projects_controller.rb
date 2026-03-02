@@ -1,7 +1,7 @@
 class KalendariumProjectsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_project, only: :update
+  before_action :set_project, only: %i[update archive unarchive destroy]
 
   def create
     @project = KalendariumProject.new(project_params.merge(workspace: @workspace, created_by: current_user))
@@ -47,6 +47,47 @@ class KalendariumProjectsController < ApplicationController
     end
   end
 
+  def archive
+    authorize @project, :update?
+
+    ActiveRecord::Base.transaction do
+      @project.update!(archived_at: Time.current)
+      @project.kalendarium_calendar&.update!(enabled: false)
+    end
+
+    redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Project archived."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to kalendarium_path(kalendarium_redirect_params), alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def unarchive
+    authorize @project, :update?
+
+    ActiveRecord::Base.transaction do
+      @project.update!(archived_at: nil)
+      @project.kalendarium_calendar&.update!(enabled: true)
+    end
+
+    redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project", project_id: @project.id)), notice: "Project restored."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to kalendarium_path(kalendarium_redirect_params), alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def destroy
+    authorize @project, :update?
+
+    project_name = @project.name
+    calendar = @project.kalendarium_calendar
+    ActiveRecord::Base.transaction do
+      calendar&.update!(enabled: false)
+      @project.destroy!
+    end
+
+    redirect_to kalendarium_path(kalendarium_redirect_params), notice: "#{project_name} deleted."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to kalendarium_path(kalendarium_redirect_params), alert: error.record.errors.full_messages.to_sentence
+  end
+
   private
 
   def set_workspace
@@ -59,6 +100,20 @@ class KalendariumProjectsController < ApplicationController
 
   def project_params
     params.require(:kalendarium_project).permit(:name, :slug, :color_hex, :linked_page_id, :linked_page_action)
+  end
+
+  def kalendarium_redirect_params
+    {
+      workspace_slug: @workspace.slug,
+      view: params[:view].presence || "project",
+      date: params[:date].presence || Date.current
+    }.tap do |redirect_params|
+      calendar_ids = Array(params[:calendar_ids]).map(&:to_s).reject(&:blank?)
+      redirect_params[:calendar_ids] = calendar_ids if calendar_ids.any?
+      time_zones = Array(params[:tz]).map(&:to_s).reject(&:blank?)
+      redirect_params[:tz] = time_zones if time_zones.any?
+      redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
+    end
   end
 
   def apply_linked_nota_action!(project, action)

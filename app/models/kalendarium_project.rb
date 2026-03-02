@@ -11,6 +11,7 @@ class KalendariumProject < ApplicationRecord
   validates :color_hex, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
 
   scope :active, -> { where(archived_at: nil) }
+  scope :archived, -> { where.not(archived_at: nil) }
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
 
   before_validation :default_slug
