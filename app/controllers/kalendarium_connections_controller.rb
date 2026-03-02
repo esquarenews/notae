@@ -86,7 +86,7 @@ class KalendariumConnectionsController < ApplicationController
       redirect_uri: google_callback_redirect_uri
     )
     connections = upsert_google_connections_from_oauth!(oauth_payload: oauth_payload, token_data: token_data)
-    flash_type, message = queue_or_sync_google_connections(connections)
+    flash_type, message = enqueue_google_connection_syncs(connections)
     redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), flash_type => message
   rescue ActiveSupport::MessageVerifier::InvalidSignature
     redirect_for_google_callback_failure!("Google authorization state is invalid or expired. Please try again.")
@@ -235,19 +235,28 @@ class KalendariumConnectionsController < ApplicationController
     end
   end
 
-  def queue_or_sync_google_connections(connections)
-    success_message = if connections.size > 1
-      "Google calendar connected and synced for #{connections.size} workspaces."
-    else
-      "Google calendar connected and synced."
+  def enqueue_google_connection_syncs(connections)
+    enqueue_failures = []
+    enqueued_count = 0
+
+    connections.each do |connection|
+      Kalendarium::SyncConnectionJob.perform_later(connection.id)
+      enqueued_count += 1
+    rescue StandardError => error
+      enqueue_failures << "#{connection.label} (#{connection.workspace.name}): #{error.message}"
     end
 
-    sync_connections_if_requested(
-      connections,
-      success_message: success_message,
-      fallback_message: "Google calendar connected.",
-      force: true
-    )
+    if enqueue_failures.any?
+      if enqueued_count.zero?
+        [ :alert, "Google calendar connected, but initial sync could not be queued: #{enqueue_failures.join(' | ')}" ]
+      else
+        [ :alert, "Google calendar connected. Initial sync queued for #{enqueued_count}/#{connections.size} connections. #{enqueue_failures.join(' | ')}" ]
+      end
+    elsif connections.size > 1
+      [ :notice, "Google calendar connected. Initial sync queued for #{connections.size} workspaces." ]
+    else
+      [ :notice, "Google calendar connected. Initial sync queued." ]
+    end
   end
 
   def build_google_oauth_state_payload

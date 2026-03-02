@@ -283,7 +283,7 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(response.headers["Location"]).to include("accounts.google.com/o/oauth2")
   end
 
-  it "handles Google OAuth callback by creating connection, storing tokens, and syncing immediately" do
+  it "handles Google OAuth callback by creating connection, storing tokens, and queueing initial sync" do
     user, workspace = build_stack(suffix: "google-oauth-callback")
     sign_in user
     state = Rails.application.message_verifier("kalendarium_google_oauth_state").generate(
@@ -305,13 +305,12 @@ RSpec.describe "Kalendarium settings", type: :request do
     allow(Kalendarium::GoogleOauthService).to receive(:new).and_return(oauth_service)
     allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_id).and_return("oauth-client-id")
     allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_secret).and_return("oauth-client-secret")
-    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
-    allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
-
-    get kalendarium_google_callback_path, params: {
-      state: state,
-      code: "google-auth-code"
-    }
+    expect do
+      get kalendarium_google_callback_path, params: {
+        state: state,
+        code: "google-auth-code"
+      }
+    end.to have_enqueued_job(Kalendarium::SyncConnectionJob)
 
     connection = KalendariumConnection.order(:created_at).last
     expect(connection.owner).to eq(workspace)
@@ -325,13 +324,11 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(connection.enabled).to be(true)
     expect(connection.scopes_json).to include("https://www.googleapis.com/auth/calendar")
     expect(connection.settings_json["google_token_type"]).to eq("Bearer")
-    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
-    expect(sync_service).to have_received(:call)
     expect(response).to redirect_to(workspace_kalendarium_settings_path(workspace_slug: workspace.slug))
-    expect(flash[:notice]).to eq("Google calendar connected and synced.")
+    expect(flash[:notice]).to eq("Google calendar connected. Initial sync queued.")
   end
 
-  it "handles Google OAuth callback by updating an existing Google connection and syncing immediately" do
+  it "handles Google OAuth callback by updating an existing Google connection and queueing initial sync" do
     user, workspace = build_stack(suffix: "google-oauth-update")
     sign_in user
     connection = KalendariumConnection.create!(
@@ -361,13 +358,12 @@ RSpec.describe "Kalendarium settings", type: :request do
     allow(Kalendarium::GoogleOauthService).to receive(:new).and_return(oauth_service)
     allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_id).and_return("oauth-client-id")
     allow(Kalendarium::GoogleOauthService).to receive(:resolved_client_secret).and_return("oauth-client-secret")
-    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
-    allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
-
-    get kalendarium_google_callback_path, params: {
-      state: state,
-      code: "google-auth-code"
-    }
+    expect do
+      get kalendarium_google_callback_path, params: {
+        state: state,
+        code: "google-auth-code"
+      }
+    end.to have_enqueued_job(Kalendarium::SyncConnectionJob).with(connection.id)
 
     expect(response).to redirect_to(workspace_kalendarium_settings_path(workspace_slug: workspace.slug))
     connection.reload
@@ -377,8 +373,7 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(connection.oauth_client_secret).to eq("oauth-client-secret")
     expect(connection.status).to eq("connected")
     expect(connection.enabled).to be(true)
-    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
-    expect(sync_service).to have_received(:call)
+    expect(flash[:notice]).to eq("Google calendar connected. Initial sync queued.")
   end
 
   it "runs immediate sync from the connection sync action" do
