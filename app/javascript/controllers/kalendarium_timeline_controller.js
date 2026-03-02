@@ -10,6 +10,8 @@ export default class extends Controller {
   }
 
   connect() {
+    this.element.style.setProperty("--kal-all-day-offset", `${this.allDayOffsetForScroll()}px`)
+
     this.onLayoutChange = () => this.updateNowLine()
     this.onScrollerScroll = () => this.updateNowLine()
     window.addEventListener("resize", this.onLayoutChange)

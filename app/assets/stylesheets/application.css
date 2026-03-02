@@ -9498,16 +9498,25 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 .notae-kalendarium-time-rail {
   border-right: 1px solid var(--notae-border, #d6d3d1);
   background: color-mix(in srgb, var(--notae-surface, #fff) 95%, #0ea5e9 5%);
+  padding-top: var(--kal-all-day-offset, 0px);
+  box-sizing: border-box;
 }
 
 .notae-kalendarium-time-hour {
   position: relative;
   height: calc(var(--kal-slot-height) * 2);
-  padding: 0.08rem 0.45rem 0 0.4rem;
-  border-top: 1px solid color-mix(in srgb, var(--notae-border, #d6d3d1) 86%, transparent 14%);
+  border-top: 2px solid color-mix(in srgb, var(--notae-border, #d6d3d1) 92%, #57534e 8%);
   font-size: 0.72rem;
   font-weight: 600;
   color: #57534e;
+}
+
+.notae-kalendarium-time-hour > span:first-child {
+  position: absolute;
+  left: 0.4rem;
+  top: 0.08rem;
+  display: block;
+  line-height: 1;
 }
 
 .notae-kalendarium-time-half {
@@ -9515,8 +9524,8 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   left: 0.4rem;
   right: 0.45rem;
   top: var(--kal-slot-height);
-  border-top: 1px dashed color-mix(in srgb, var(--notae-border, #d6d3d1) 74%, transparent 26%);
-  opacity: 0.8;
+  border-top: 1px solid color-mix(in srgb, var(--notae-border, #d6d3d1) 56%, transparent 44%);
+  opacity: 0.55;
 }
 
 .notae-kalendarium-day-track,
@@ -9535,11 +9544,13 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 }
 
 .notae-kalendarium-slot-line {
-  border-top: 1px dashed color-mix(in srgb, var(--notae-border, #d6d3d1) 72%, transparent 28%);
+  border-top: 1px solid color-mix(in srgb, var(--notae-border, #d6d3d1) 56%, transparent 44%);
 }
 
 .notae-kalendarium-slot-line.is-hour {
+  border-top-width: 2px;
   border-top-style: solid;
+  border-top-color: color-mix(in srgb, var(--notae-border, #d6d3d1) 92%, #57534e 8%);
 }
 
 .notae-kalendarium-events-layer {
