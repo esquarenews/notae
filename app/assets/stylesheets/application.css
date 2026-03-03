@@ -3708,6 +3708,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   position: relative;
 }
 
+.notae-db-inline-details[open] {
+  z-index: 420;
+}
+
 .notae-db-inline-panel {
   position: absolute;
   top: calc(100% + 0.3rem);
@@ -3719,7 +3723,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   background: var(--notae-surface-raised);
   box-shadow: 0 10px 28px rgba(28, 25, 23, 0.15);
   padding: 0.48rem;
-  z-index: 50;
+  z-index: 430;
 }
 
 .notae-db-grid-add-col .notae-db-inline-panel {
@@ -3914,6 +3918,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-db-grid-data-row:has(.notae-db-row-more-menu[open]) {
   z-index: 180;
+}
+
+.notae-db-grid-data-row:has(.notae-db-row-link-chooser[open]) {
+  z-index: 280;
 }
 
 .notae-db-grid-data-row.is-overdue-highlight td {
