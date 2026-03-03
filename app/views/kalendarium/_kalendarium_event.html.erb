@@ -115,6 +115,17 @@
               <dd><%= link_to meeting_join_url, meeting_join_url, class: "notae-utility-link", target: "_blank", rel: "noopener noreferrer" %></dd>
             </div>
           <% end %>
+          <% if event.meeting_capture_enabled? %>
+            <div>
+              <dt>Capture</dt>
+              <dd>
+                Enabled
+                <% if event.latest_meeting_session.present? %>
+                  · <%= link_to "Latest session", workspace_meetings_path(workspace_slug: workspace.slug), class: "notae-utility-link" %>
+                <% end %>
+              </dd>
+            </div>
+          <% end %>
           <div>
             <dt>Status</dt>
             <dd><%= event.status.titleize %></dd>
@@ -176,6 +187,10 @@
                                  action: "change->kalendarium-event-form#toggleAllDay"
                                } %>
             <span>All day</span>
+          </label>
+          <label class="notae-options-checkbox">
+            <%= form.check_box :meeting_capture_enabled %>
+            <span>Record &amp; transcribe this event</span>
           </label>
           <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
           <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>

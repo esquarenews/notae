@@ -45,6 +45,12 @@
                     data: { action: "click->shell#close" } do %>
           <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
+        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+                    title: "Meetings",
+                    data: { action: "click->shell#close" } do %>
+          <%= notae_icon_svg(:meeting, css_class: "notae-sidebar-nav-icon") %>
+        <% end %>
         <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug),
                     class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "AI Conversation History",
@@ -91,6 +97,7 @@
                 <li class="notae-create-menu-item">
                   <%= form_with model: Page.new, url: pages_path(workspace_slug: workspace.slug), class: "notae-create-menu-form" do |form| %>
                     <%= form.hidden_field :title, value: "Meeting notes" %>
+                    <%= form.hidden_field :page_kind, value: "meeting_note" %>
                     <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
                       <%= notae_icon_svg(:meeting, css_class: "notae-create-menu-icon notae-create-menu-icon-meeting") %>
                       <span>New meeting</span>
@@ -197,6 +204,14 @@
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Kalendārium</span>
+          </span>
+        <% end %>
+        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace.slug)),
+                    data: { action: "click->shell#close" } do %>
+          <span class="notae-sidebar-link-content">
+            <%= notae_icon_svg(:meeting, css_class: "notae-sidebar-nav-icon") %>
+            <span class="notae-sidebar-link-label">Meetings</span>
           </span>
         <% end %>
         <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug),

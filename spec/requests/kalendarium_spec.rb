@@ -951,6 +951,50 @@ RSpec.describe "Kalendarium", type: :request do
     expect(flash[:alert]).to include("must be in the future")
   end
 
+  it "persists the event meeting capture toggle from create and update flows" do
+    user, workspace, calendar = build_stack(suffix: "event-capture-toggle")
+    sign_in user
+
+    start_at = 2.days.from_now.change(hour: 10, min: 0, sec: 0)
+    end_at = start_at + 1.hour
+    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+      kalendarium_event: {
+        kalendarium_calendar_id: calendar.id,
+        title: "Capture me",
+        starts_at_local: start_at.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        ends_at_local: end_at.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        meeting_capture_enabled: "1"
+      }
+    }
+
+    event = KalendariumEvent.order(:created_at).last
+    expect(event.meeting_capture_enabled).to be(true)
+
+    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+      kalendarium_event: {
+        kalendarium_calendar_id: calendar.id,
+        title: "Capture defaults off",
+        starts_at_local: (start_at + 1.day).in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        ends_at_local: (end_at + 1.day).in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
+      }
+    }
+
+    expect(KalendariumEvent.find_by!(title: "Capture defaults off").meeting_capture_enabled).to be(false)
+
+    patch kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: {
+      view: "day",
+      date: start_at.to_date.to_s,
+      kalendarium_event: {
+        meeting_capture_enabled: "0"
+      }
+    }
+
+    expect(event.reload.meeting_capture_enabled).to be(false)
+
+    get kalendarium_path(workspace_slug: workspace.slug)
+    expect(response.body).to include("Record &amp; transcribe this event")
+  end
+
   it "uses project calendars and project colors for project-linked events" do
     user, workspace, calendar = build_stack(suffix: "project-event-color")
     sign_in user

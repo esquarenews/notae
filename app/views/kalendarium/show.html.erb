@@ -241,6 +241,10 @@
                                    } %>
                 <span>All day</span>
               </label>
+              <label class="notae-options-checkbox">
+                <%= form.check_box :meeting_capture_enabled %>
+                <span>Record &amp; transcribe this event</span>
+              </label>
               <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
               <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
               <%= form.hidden_field :linked_page_action, value: "" %>

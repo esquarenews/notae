@@ -10799,6 +10799,107 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   max-width: 100%;
 }
 
+.notae-meetings-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.notae-meetings-hero h1 {
+  margin: 0 0 0.3rem;
+  color: var(--notae-heading-ink, #292524d4);
+}
+
+.notae-meetings-hero p {
+  margin: 0;
+  color: var(--notae-muted, #57534e);
+}
+
+.notae-meetings-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.notae-meetings-card {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.notae-meetings-card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--notae-heading-ink, #292524d4);
+}
+
+.notae-meetings-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.notae-meetings-recorder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.notae-meetings-sessions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.notae-meetings-session-item {
+  border: 1px solid var(--notae-border, #d6d3d1);
+  border-radius: 0.75rem;
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.38rem;
+  background: color-mix(in srgb, var(--notae-surface, #fff) 95%, #0ea5e9 5%);
+}
+
+.notae-meetings-session-item h3 {
+  margin: 0;
+  color: var(--notae-heading-ink, #292524d4);
+}
+
+.notae-meetings-session-item > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.notae-meetings-session-item p {
+  margin: 0;
+}
+
+.notae-meetings-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.notae-meetings-speaker-map {
+  margin-top: 0.25rem;
+  border-top: 1px dashed var(--notae-border, #d6d3d1);
+  padding-top: 0.4rem;
+}
+
+.notae-meetings-speaker-map-form {
+  margin-top: 0.4rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.notae-meetings-speaker-map-form label {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.notae-meetings-speaker-map-form label > span {
+  font-size: 0.78rem;
+  color: var(--notae-muted, #57534e);
+}
+
 @media (max-width: 1500px) {
   .notae-shell:not(.is-ai-compact-viewport):not(.is-ai-rail-collapsed) .notae-kalendarium-grid {
     grid-template-columns: 1fr;
@@ -10832,6 +10933,10 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   .notae-kalendarium-year-grid,
   .notae-kalendarium-project-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notae-meetings-layout {
+    grid-template-columns: 1fr;
   }
 
   .notae-kalendarium-month-grid {

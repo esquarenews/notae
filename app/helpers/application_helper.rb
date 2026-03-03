@@ -73,7 +73,7 @@ module ApplicationHelper
     policy_scope(Page)
       .for_workspace(workspace)
       .active
-      .where("pages.title ILIKE ?", "%meeting%")
+      .meeting_notes
       .order(updated_at: :desc)
       .limit(limit)
       .to_a

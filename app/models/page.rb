@@ -17,6 +17,7 @@ class Page < ApplicationRecord
     graphite-strata
   ].freeze
   FONT_STYLES = %w[default serif mono].freeze
+  PAGE_KINDS = %w[nota meeting_note].freeze
   ICON_SUGGESTIONS = %w[📄 ✨ 🧠 📝 📌 🧭 🚀 🗂️ 🌿 🌅].freeze
 
   attribute :permission_mode, :integer, default: 0
@@ -42,9 +43,11 @@ class Page < ApplicationRecord
   has_many :shared_users, through: :page_shares, source: :user
   has_many :outgoing_page_links, class_name: "PageLink", foreign_key: :source_page_id, dependent: :destroy
   has_many :incoming_page_links, class_name: "PageLink", foreign_key: :target_page_id, dependent: :destroy
+  has_many :meeting_sessions, dependent: :nullify
   has_one_attached :cover_image
 
   validates :title, presence: true
+  validates :page_kind, inclusion: { in: PAGE_KINDS }
   validates :font_style, inclusion: { in: FONT_STYLES }
   validates :cover_preset_key, inclusion: { in: COVER_PRESET_KEYS }, allow_blank: true
   validates :cover_focal_y,
@@ -59,6 +62,7 @@ class Page < ApplicationRecord
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
+  scope :meeting_notes, -> { where(page_kind: "meeting_note") }
 
   pg_search_scope :search_full_text,
                   against: :title,

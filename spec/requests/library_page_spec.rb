@@ -10,7 +10,7 @@ RSpec.describe "Library page", type: :request do
 
     recent_page = Page.create!(workspace: workspace, created_by: user, title: "Product brief")
     old_page = Page.create!(workspace: workspace, created_by: user, title: "Quarterly archive")
-    meeting_page = Page.create!(workspace: workspace, created_by: user, title: "Weekly meeting notes")
+    meeting_page = Page.create!(workspace: workspace, created_by: user, title: "Weekly meeting notes", page_kind: "meeting_note")
     main_database = Database.create!(workspace: workspace, name: "Roadmap DB")
     other_page = Page.create!(workspace: other_workspace, created_by: user, title: "Other workspace page")
     old_page.update_columns(updated_at: 9.days.ago, created_at: 9.days.ago)

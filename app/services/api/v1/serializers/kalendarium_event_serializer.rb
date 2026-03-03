@@ -19,6 +19,7 @@ module Api
             ends_at_utc: event.ends_at_utc&.iso8601(6),
             all_day: event.all_day,
             rrule: event.rrule,
+            meeting_capture_enabled: event.meeting_capture_enabled,
             status: event.status,
             visibility: event.visibility,
             source_kind: event.source_kind,

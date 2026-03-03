@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_03_181000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -378,6 +378,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
     t.uuid "linked_db_row_id"
     t.uuid "linked_page_id"
     t.string "location"
+    t.boolean "meeting_capture_enabled", default: false, null: false
     t.jsonb "metadata_json", default: {}, null: false
     t.integer "reminder_offsets_minutes", default: [], null: false, array: true
     t.string "remote_event_id"
@@ -394,6 +395,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
     t.uuid "workspace_id", null: false
     t.index ["kalendarium_calendar_id", "remote_event_id"], name: "index_kalendarium_events_on_calendar_and_remote_id", unique: true, where: "(remote_event_id IS NOT NULL)"
     t.index ["kalendarium_calendar_id", "starts_at_utc"], name: "index_kalendarium_events_on_calendar_and_starts_at"
+    t.index ["workspace_id", "meeting_capture_enabled", "starts_at_utc"], name: "index_kal_events_on_workspace_capture_starts_at"
     t.index ["workspace_id", "starts_at_utc"], name: "index_kalendarium_events_on_workspace_and_starts_at"
   end
 
@@ -428,6 +430,75 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
     t.uuid "workspace_id", null: false
     t.index ["user_id", "created_at"], name: "index_kalendarium_write_proposals_on_user_and_created_at"
     t.index ["workspace_id", "status"], name: "index_kalendarium_write_proposals_on_workspace_and_status"
+  end
+
+  create_table "meeting_bot_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.text "error_message"
+    t.datetime "finished_at"
+    t.datetime "last_heartbeat_at"
+    t.uuid "meeting_session_id", null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "provider", null: false
+    t.string "status", default: "queued", null: false
+    t.datetime "updated_at", null: false
+    t.string "worker_id"
+    t.index ["meeting_session_id"], name: "index_meeting_bot_runs_on_meeting_session_id"
+    t.index ["status", "created_at"], name: "index_meeting_bot_runs_on_status_created_at"
+  end
+
+  create_table "meeting_sessions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.jsonb "action_items_json", default: [], null: false
+    t.string "capture_mode", default: "upload", null: false
+    t.datetime "consent_warning_seen_at"
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.datetime "ended_at"
+    t.text "error_message"
+    t.text "join_url"
+    t.uuid "kalendarium_event_id"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.uuid "page_id"
+    t.datetime "processed_at"
+    t.string "provider", default: "local", null: false
+    t.datetime "started_at"
+    t.string "status", default: "scheduled", null: false
+    t.text "summary_markdown"
+    t.string "title", null: false
+    t.text "transcript_text"
+    t.datetime "updated_at", null: false
+    t.uuid "updated_by_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["created_at"], name: "index_meeting_sessions_on_created_at", order: :desc
+    t.index ["kalendarium_event_id"], name: "index_meeting_sessions_on_kalendarium_event_id"
+    t.index ["workspace_id", "status"], name: "index_meeting_sessions_on_workspace_id_and_status"
+  end
+
+  create_table "meeting_speaker_aliases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "display_name", null: false
+    t.string "email"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "source", default: "manual", null: false
+    t.string "speaker_fingerprint", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["workspace_id", "speaker_fingerprint"], name: "index_meeting_speaker_aliases_on_workspace_and_fingerprint", unique: true
+  end
+
+  create_table "meeting_utterances", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.float "confidence"
+    t.datetime "created_at", null: false
+    t.integer "ended_ms"
+    t.uuid "meeting_session_id", null: false
+    t.integer "position", null: false
+    t.string "speaker_key", null: false
+    t.string "speaker_name"
+    t.integer "started_ms"
+    t.text "text", null: false
+    t.datetime "updated_at", null: false
+    t.index ["meeting_session_id", "position"], name: "index_meeting_utterances_on_session_and_position", unique: true
   end
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -552,6 +623,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
     t.boolean "full_width", default: false, null: false
     t.string "icon"
     t.boolean "locked", default: false, null: false
+    t.string "page_kind", default: "nota", null: false
     t.uuid "parent_page_id"
     t.integer "permission_mode", default: 0, null: false
     t.boolean "remove_blocks", default: false, null: false
@@ -564,6 +636,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
     t.index ["parent_page_id"], name: "index_pages_on_parent_page_id"
     t.index ["title"], name: "index_pages_on_title", opclass: :gin_trgm_ops, using: :gin
     t.index ["workspace_id", "archived_at"], name: "index_pages_on_workspace_id_and_archived_at"
+    t.index ["workspace_id", "page_kind", "updated_at"], name: "index_pages_on_workspace_page_kind_updated_at"
     t.index ["workspace_id", "parent_page_id", "created_at"], name: "index_pages_tree_lookup"
     t.index ["workspace_id", "permission_mode"], name: "index_pages_on_workspace_id_and_permission_mode"
     t.index ["workspace_id"], name: "index_pages_on_workspace_id"
@@ -764,6 +837,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_024000) do
   add_foreign_key "kalendarium_write_proposals", "kalendarium_events"
   add_foreign_key "kalendarium_write_proposals", "users"
   add_foreign_key "kalendarium_write_proposals", "workspaces"
+  add_foreign_key "meeting_bot_runs", "meeting_sessions"
+  add_foreign_key "meeting_sessions", "kalendarium_events"
+  add_foreign_key "meeting_sessions", "pages"
+  add_foreign_key "meeting_sessions", "users", column: "created_by_id"
+  add_foreign_key "meeting_sessions", "users", column: "updated_by_id"
+  add_foreign_key "meeting_sessions", "workspaces"
+  add_foreign_key "meeting_speaker_aliases", "workspaces"
+  add_foreign_key "meeting_utterances", "meeting_sessions"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
   add_foreign_key "notifications", "users", column: "actor_id"

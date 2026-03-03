@@ -118,6 +118,8 @@ class User < ApplicationRecord
   has_many :created_kalendarium_events, class_name: "KalendariumEvent", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :updated_kalendarium_events, class_name: "KalendariumEvent", foreign_key: :updated_by_id, inverse_of: :updated_by, dependent: :destroy
   has_many :kalendarium_write_proposals, dependent: :destroy
+  has_many :created_meeting_sessions, class_name: "MeetingSession", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
+  has_many :updated_meeting_sessions, class_name: "MeetingSession", foreign_key: :updated_by_id, inverse_of: :updated_by, dependent: :destroy
 
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable

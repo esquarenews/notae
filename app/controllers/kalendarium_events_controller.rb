@@ -38,7 +38,7 @@ class KalendariumEventsController < ApplicationController
     end
 
     @event = KalendariumEvent.new(
-      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :all_day, :kalendarium_project_id).merge(
+      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :all_day, :kalendarium_project_id, :meeting_capture_enabled).merge(
         workspace: @workspace,
         kalendarium_calendar: calendar,
         kalendarium_project: project,
@@ -47,6 +47,7 @@ class KalendariumEventsController < ApplicationController
         starts_at_utc: starts_at_utc,
         ends_at_utc: ends_at_utc,
         all_day: all_day,
+        meeting_capture_enabled: event_params.key?(:meeting_capture_enabled) ? ActiveModel::Type::Boolean.new.cast(event_params[:meeting_capture_enabled]) : false,
         reminder_offsets_minutes: normalize_offsets(event_params[:reminder_offsets_minutes])
       )
     )
@@ -83,10 +84,11 @@ class KalendariumEventsController < ApplicationController
       @event.all_day
     end
     @event.assign_attributes(
-      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :kalendarium_calendar_id, :kalendarium_project_id, :all_day).merge(
+      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :kalendarium_calendar_id, :kalendarium_project_id, :all_day, :meeting_capture_enabled).merge(
         kalendarium_project: project,
         updated_by: current_user,
         all_day: all_day,
+        meeting_capture_enabled: event_params.key?(:meeting_capture_enabled) ? ActiveModel::Type::Boolean.new.cast(event_params[:meeting_capture_enabled]) : @event.meeting_capture_enabled,
         reminder_offsets_minutes: normalize_offsets(event_params[:reminder_offsets_minutes])
       )
     )
@@ -162,6 +164,7 @@ class KalendariumEventsController < ApplicationController
       :ends_at_local,
       :all_day,
       :rrule,
+      :meeting_capture_enabled,
       :linked_page_id,
       :linked_db_row_id,
       :linked_page_action,

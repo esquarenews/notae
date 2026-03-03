@@ -1,0 +1,178 @@
+<% content_for :title, "Meetings" %>
+<% content_for :topbar_page_icon, "🎙️" %>
+<% content_for :topbar_privacy, @workspace.name %>
+<% content_for :content_class, "notae-content-page" %>
+
+<section class="notae-meetings-page">
+  <header class="notae-auth-card notae-meetings-hero">
+    <h1>Meetings</h1>
+    <p>Capture online or in-person meetings, then generate speaker-separated transcripts, summary notes, and follow-up proposals.</p>
+  </header>
+
+  <div class="notae-meetings-layout">
+    <section class="notae-auth-card notae-meetings-card">
+      <h2>Start Online Capture</h2>
+      <p class="notae-doc-muted">Use this for Google Meet, Zoom, or Teams links.</p>
+
+      <%= form_with model: @meeting_session,
+                    url: meeting_sessions_path(workspace_slug: @workspace.slug),
+                    class: "notae-meetings-form" do |form| %>
+        <%= form.hidden_field :capture_mode, value: "online_bot" %>
+        <%= form.text_field :title, placeholder: "Session title", class: "notae-auth-input", required: true %>
+        <%= form.select :provider,
+                        options_for_select([["Google Meet", "google_meet"], ["Zoom", "zoom"], ["Teams", "teams"]], "google_meet"),
+                        {},
+                        class: "notae-auth-input" %>
+        <%= form.select :kalendarium_event_id,
+                        options_for_select([["Associate with event (optional)", ""]] + @upcoming_events.map { |event| ["#{event.title} (#{event.starts_at_utc.in_time_zone(current_user.time_zone).strftime('%a %-d %b %H:%M')})", event.id] }),
+                        {},
+                        class: "notae-auth-input" %>
+        <%= form.url_field :join_url, placeholder: "Meeting URL", class: "notae-auth-input", required: true %>
+        <label class="notae-options-checkbox">
+          <%= form.check_box :consent_warning_acknowledged, { checked: false }, "1", "0" %>
+          <span>I acknowledge consent requirements before recording.</span>
+        </label>
+        <%= form.submit "Start capture", class: "notae-chip-button" %>
+      <% end %>
+    </section>
+
+    <section class="notae-auth-card notae-meetings-card"
+             data-controller="meeting-capture">
+      <h2>In-Person Capture</h2>
+      <p class="notae-doc-muted">Record from this browser microphone or upload a file.</p>
+
+      <%= form_with model: @meeting_session,
+                    url: meeting_sessions_path(workspace_slug: @workspace.slug),
+                    class: "notae-meetings-form",
+                    html: { multipart: true } do |form| %>
+        <%= form.hidden_field :capture_mode,
+                              value: "upload",
+                              data: { meeting_capture_target: "captureMode" } %>
+        <%= form.hidden_field :provider, value: "local" %>
+        <%= form.text_field :title, placeholder: "Session title", class: "notae-auth-input", required: true %>
+        <%= form.select :kalendarium_event_id,
+                        options_for_select([["Associate with event (optional)", ""]] + @upcoming_events.map { |event| ["#{event.title} (#{event.starts_at_utc.in_time_zone(current_user.time_zone).strftime('%a %-d %b %H:%M')})", event.id] }),
+                        {},
+                        class: "notae-auth-input" %>
+        <%= form.file_field :capture_files,
+                            multiple: true,
+                            class: "notae-auth-input",
+                            accept: "audio/*,video/*",
+                            data: { meeting_capture_target: "fileInput" } %>
+        <div class="notae-meetings-recorder-actions">
+          <button type="button"
+                  class="notae-chip-button"
+                  data-action="meeting-capture#start"
+                  data-meeting-capture-target="startButton">Start mic recording</button>
+          <button type="button"
+                  class="notae-chip-button"
+                  data-action="meeting-capture#stop"
+                  data-meeting-capture-target="stopButton"
+                  disabled>Stop recording</button>
+        </div>
+        <p class="notae-doc-muted" data-meeting-capture-target="status">Recorder idle.</p>
+        <%= form.submit "Upload and process", class: "notae-chip-button" %>
+      <% end %>
+    </section>
+  </div>
+
+  <section class="notae-auth-card notae-meetings-card">
+    <h2>Recent Sessions</h2>
+    <% if @meeting_sessions.any? %>
+      <div class="notae-meetings-sessions">
+        <% @meeting_sessions.each do |session| %>
+          <article class="notae-meetings-session-item">
+            <header>
+              <h3><%= session.title %></h3>
+              <span class="notae-kalendarium-status-badge"><%= session.status.humanize %></span>
+            </header>
+            <p class="notae-doc-muted">
+              <%= session.capture_mode.humanize %> • <%= session.provider.humanize %> •
+              Created <%= time_ago_in_words(session.created_at) %> ago
+            </p>
+            <% if session.kalendarium_event.present? %>
+              <p class="notae-doc-muted">Event: <%= session.kalendarium_event.title %></p>
+            <% end %>
+            <% if session.page.present? %>
+              <p><%= link_to "Open linked Nota", page_path(workspace_slug: @workspace.slug, id: session.page_id), class: "notae-utility-link" %></p>
+            <% end %>
+            <% if session.error_message.present? %>
+              <p class="notae-form-error"><%= session.error_message %></p>
+            <% end %>
+
+            <div class="notae-meetings-session-actions">
+              <% if session.capture_mode == "online_bot" && session.status.in?(%w[scheduled joining]) %>
+                <%= button_to "Start",
+                              start_meeting_session_path(workspace_slug: @workspace.slug, id: session.id),
+                              method: :post,
+                              class: "notae-chip-button" %>
+              <% end %>
+              <% if session.status.in?(%w[recording joining uploading processing summarizing proposing]) %>
+                <%= button_to "Stop",
+                              stop_meeting_session_path(workspace_slug: @workspace.slug, id: session.id),
+                              method: :post,
+                              class: "notae-chip-button" %>
+              <% end %>
+              <%= button_to "Reprocess",
+                            reprocess_meeting_session_path(workspace_slug: @workspace.slug, id: session.id),
+                            method: :post,
+                            class: "notae-chip-button" %>
+            </div>
+
+            <% if session.meeting_utterances.any? %>
+              <details class="notae-meetings-speaker-map">
+                <summary>Speaker mapping</summary>
+                <%= form_with model: session,
+                              url: speakers_meeting_session_path(workspace_slug: @workspace.slug, id: session.id),
+                              method: :patch,
+                              class: "notae-meetings-speaker-map-form" do |form| %>
+                  <% session.meeting_utterances.map(&:speaker_key).uniq.each do |speaker_key| %>
+                    <label>
+                      <span><%= speaker_key %></span>
+                      <input type="text"
+                             name="meeting_session[speaker_map][<%= speaker_key %>]"
+                             value="<%= session.meeting_utterances.find { |utterance| utterance.speaker_key == speaker_key }&.speaker_name %>"
+                             class="notae-auth-input">
+                    </label>
+                  <% end %>
+                  <%= form.submit "Save names", class: "notae-chip-button" %>
+                <% end %>
+              </details>
+            <% end %>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="notae-doc-muted">No meeting sessions yet.</p>
+    <% end %>
+  </section>
+
+  <section class="notae-auth-card notae-meetings-card">
+    <h2>Action Proposals</h2>
+    <% if @pending_action_proposals.any? %>
+      <ul class="notae-kalendarium-proposal-list">
+        <% @pending_action_proposals.each do |proposal| %>
+          <% payload = proposal.payload_json.to_h %>
+          <li class="notae-kalendarium-proposal-item">
+            <div>
+              <strong><%= payload["title"].presence || "Untitled action" %></strong>
+              <p class="notae-doc-muted"><%= payload["description"].presence || "No description" %></p>
+            </div>
+            <div class="notae-kalendarium-proposal-actions">
+              <%= button_to "Confirm",
+                            confirm_kalendarium_write_proposal_path(workspace_slug: @workspace.slug, id: proposal.id, view: "week", date: Date.current),
+                            method: :post,
+                            class: "notae-chip-button" %>
+              <%= button_to "Reject",
+                            reject_kalendarium_write_proposal_path(workspace_slug: @workspace.slug, id: proposal.id, view: "week", date: Date.current),
+                            method: :post,
+                            class: "notae-chip-button" %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="notae-doc-muted">No pending action proposals.</p>
+    <% end %>
+  </section>
+</section>
