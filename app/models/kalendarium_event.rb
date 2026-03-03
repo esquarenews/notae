@@ -25,6 +25,7 @@ class KalendariumEvent < ApplicationRecord
 
   has_many :kalendarium_write_proposals, dependent: :nullify
   has_many :search_chunks, dependent: :destroy
+  has_many :meeting_sessions, dependent: :nullify
 
   validates :title, presence: true, length: { maximum: 200 }
   validates :starts_at_utc, presence: true
@@ -34,6 +35,7 @@ class KalendariumEvent < ApplicationRecord
   validates :source_kind, inclusion: { in: SOURCE_KINDS }
   validate :ends_after_starts
   validate :reminder_offsets_are_valid
+  validates :meeting_capture_enabled, inclusion: { in: [ true, false ] }
 
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
   scope :for_range, ->(range_start, range_end) { where("starts_at_utc < ? AND ends_at_utc > ?", range_end, range_start) }
@@ -76,6 +78,10 @@ class KalendariumEvent < ApplicationRecord
         "status" => status
       }.compact
     end
+  end
+
+  def latest_meeting_session
+    meeting_sessions.order(created_at: :desc).first
   end
 
   private

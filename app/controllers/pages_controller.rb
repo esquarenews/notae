@@ -194,7 +194,7 @@ class PagesController < ApplicationController
   end
 
   def page_params
-    params.require(:page).permit(:title, :parent_page_id)
+    params.require(:page).permit(:title, :parent_page_id, :page_kind)
   end
 
   def page_update_params

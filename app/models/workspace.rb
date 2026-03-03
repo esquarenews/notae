@@ -48,6 +48,8 @@ class Workspace < ApplicationRecord
   has_many :kalendarium_projects, dependent: :destroy
   has_many :kalendarium_events, dependent: :destroy
   has_many :kalendarium_write_proposals, dependent: :destroy
+  has_many :meeting_sessions, dependent: :destroy
+  has_many :meeting_speaker_aliases, dependent: :destroy
 
   scope :active, lambda {
     if column_names.include?("archived_at")

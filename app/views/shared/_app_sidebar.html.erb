@@ -6,6 +6,7 @@
   <% recent_favorites = workspace ? ui_sidebar_recent_favorites : [] %>
   <% recent_workspaces = ui_sidebar_recent_workspaces(limit: 6) %>
   <% nav_workspace = workspace || recent_workspaces.first %>
+  <% current_database_id = (controller_name == "databases" && action_name == "show") ? params[:id].presence : nil %>
   <% can_create_workspace = policy(Workspace.new).create? %>
   <div class="notae-sidebar-dock" aria-hidden="true">
     <button type="button"
@@ -43,6 +44,12 @@
                     title: "Kalendārium",
                     data: { action: "click->shell#close" } do %>
           <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
+        <% end %>
+        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+                    title: "Meetings",
+                    data: { action: "click->shell#close" } do %>
+          <%= notae_icon_svg(:meeting, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
         <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug),
                     class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
@@ -90,6 +97,7 @@
                 <li class="notae-create-menu-item">
                   <%= form_with model: Page.new, url: pages_path(workspace_slug: workspace.slug), class: "notae-create-menu-form" do |form| %>
                     <%= form.hidden_field :title, value: "Meeting notes" %>
+                    <%= form.hidden_field :page_kind, value: "meeting_note" %>
                     <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
                       <%= notae_icon_svg(:meeting, css_class: "notae-create-menu-icon notae-create-menu-icon-meeting") %>
                       <span>New meeting</span>
@@ -104,10 +112,33 @@
                     <%= form.hidden_field :name, value: "Untitled grid" %>
                     <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
                       <%= notae_icon_svg(:grid, css_class: "notae-create-menu-icon notae-create-menu-icon-database") %>
-                      <span>New grid</span>
+                      <span>Grid</span>
                     </button>
                   <% end %>
                 </li>
+                <li class="notae-create-menu-item">
+                  <%= form_with model: Database.new, url: databases_path(workspace_slug: workspace.slug), class: "notae-create-menu-form" do |form| %>
+                    <%= hidden_field_tag :quick_create, "1" %>
+                    <%= hidden_field_tag :template, "tasks" %>
+                    <%= form.hidden_field :name, value: "Tasks grid" %>
+                    <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
+                      <%= notae_icon_svg(:grid, css_class: "notae-create-menu-icon notae-create-menu-icon-database") %>
+                      <span>Tasks template</span>
+                    </button>
+                  <% end %>
+                </li>
+                <% if current_database_id.present? %>
+                  <li class="notae-create-menu-item">
+                    <%= form_with url: kanbanize_database_path(workspace_slug: workspace.slug, id: current_database_id),
+                                  method: :post,
+                                  class: "notae-create-menu-form" do %>
+                      <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
+                        <%= notae_icon_svg(:grid, css_class: "notae-create-menu-icon notae-create-menu-icon-database") %>
+                        <span>Kanban</span>
+                      </button>
+                    <% end %>
+                  </li>
+                <% end %>
               <% end %>
               <% if can_create_workspace %>
                 <li class="notae-create-menu-item">
@@ -173,6 +204,14 @@
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Kalendārium</span>
+          </span>
+        <% end %>
+        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace.slug)),
+                    data: { action: "click->shell#close" } do %>
+          <span class="notae-sidebar-link-content">
+            <%= notae_icon_svg(:meeting, css_class: "notae-sidebar-nav-icon") %>
+            <span class="notae-sidebar-link-label">Meetings</span>
           </span>
         <% end %>
         <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug),

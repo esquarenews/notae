@@ -159,6 +159,7 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("notae-sidebar-nav-icon")
     expect(response.body).to include("notae-sidebar-link-label\">Home")
     expect(response.body).to include("notae-sidebar-link-label\">Kalendārium")
+    expect(response.body).to include("notae-sidebar-link-label\">Meetings")
     expect(response.body).to include("notae-sidebar-link-label\">AI Conversation History")
     expect(response.body).to include("notae-sidebar-link-label\">Settings")
     expect(response.body).to include("notae-sidebar-link-label\">Trash")
@@ -166,7 +167,26 @@ RSpec.describe "Pages", type: :request do
     doc = Nokogiri::HTML.parse(response.body)
     dock_links = doc.css(".notae-sidebar-dock-link")
     expect(dock_links.size).to be >= 7
-    expect(dock_links.map { |link| link["title"] }).to include("Home", "Search", "Library", "Kalendārium", "Settings")
+    expect(dock_links.map { |link| link["title"] }).to include("Home", "Search", "Library", "Kalendārium", "Meetings", "Settings")
+  end
+
+  it "lists only explicit meeting-note pages in the sidebar meetings section" do
+    owner = User.create!(email: "page-sidebar-meeting-kind-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Sidebar meeting kind", slug: "sidebar-meeting-kind")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Page.create!(workspace: workspace, created_by: owner, title: "Weekly meeting notes", page_kind: "meeting_note")
+    Page.create!(workspace: workspace, created_by: owner, title: "Meeting prep checklist", page_kind: "nota")
+    sign_in owner
+
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    meetings_section = document.css(".notae-sidebar-section").find { |section| section.at_css(".notae-sidebar-label")&.text.to_s.strip == "Meetings" }
+    expect(meetings_section).to be_present
+    section_text = meetings_section.text
+    expect(section_text).to include("Weekly meeting notes")
+    expect(section_text).not_to include("Meeting prep checklist")
   end
 
   it "keeps create redirects working even if another workspace has a blank slug" do

@@ -16,6 +16,7 @@ Rails.application.routes.draw do
 
   scope "w/:workspace_slug" do
     get "/", to: "workspace_home#show", as: :workspace
+    get "meetings", to: "meetings#show", as: :workspace_meetings
     get "search", to: "searches#index", as: :workspace_search
     get "ai-conversation-history", to: "ai_conversation_histories#show", as: :workspace_ai_conversation_history
     get "library", to: "libraries#show", as: :workspace_library
@@ -44,6 +45,14 @@ Rails.application.routes.draw do
     post "invitations", to: "invitations#create", as: :workspace_invitations
     get "kalendarium", to: "kalendarium#show", as: :kalendarium
     post "kalendarium/refresh", to: "kalendarium#refresh", as: :refresh_kalendarium
+    resources :meeting_sessions, path: "meetings/sessions", only: %i[create update] do
+      member do
+        post :start
+        post :stop
+        post :reprocess
+        patch :speakers
+      end
+    end
     resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy]
     resources :kalendarium_projects, path: "kalendarium/projects", only: %i[create update destroy] do
       member do
@@ -72,6 +81,7 @@ Rails.application.routes.draw do
     resources :databases, only: %i[show create update destroy] do
       member do
         post :duplicate
+        post :kanbanize
         patch :archive
         patch :restore
         patch :permissions
@@ -166,6 +176,13 @@ Rails.application.routes.draw do
             end
           end
         end
+        namespace :meetings do
+          resources :sessions, only: %i[index show] do
+            member do
+              get :transcript
+            end
+          end
+        end
       end
     end
   end
@@ -175,6 +192,19 @@ Rails.application.routes.draw do
   get "s/:token", to: "public/pages#show", as: :public_share
   get "g/:token", to: "public/databases#show", as: :public_database_share
   get "kalendarium/google/callback", to: "kalendarium_connections#google_callback", as: :kalendarium_google_callback
+
+  namespace :internal do
+    resources :meeting_bot_runs, only: [] do
+      collection do
+        post :claim
+      end
+      member do
+        post :heartbeat
+        post :upload_complete
+        post :failed
+      end
+    end
+  end
 
   mount Sidekiq::Web => "/sidekiq" if Rails.env.development?
 end

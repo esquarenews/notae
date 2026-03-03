@@ -316,6 +316,29 @@
     </div>
 
     <div class="notae-db-viewbar-right">
+      <div class="notae-db-template-actions">
+        <% if can_create_database %>
+          <%= form_with model: Database.new, url: databases_path(workspace_slug: @workspace.slug), class: "notae-db-template-form" do |form| %>
+            <%= hidden_field_tag :quick_create, "1" %>
+            <%= form.hidden_field :name, value: "Untitled grid" %>
+            <%= form.submit "Grid", class: "notae-chip-button notae-db-template-button" %>
+          <% end %>
+          <%= form_with model: Database.new, url: databases_path(workspace_slug: @workspace.slug), class: "notae-db-template-form" do |form| %>
+            <%= hidden_field_tag :quick_create, "1" %>
+            <%= hidden_field_tag :template, "tasks" %>
+            <%= form.hidden_field :name, value: "Tasks grid" %>
+            <%= form.submit "Tasks", class: "notae-chip-button notae-db-template-button" %>
+          <% end %>
+        <% end %>
+        <%= form_with url: kanbanize_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                      method: :post,
+                      class: "notae-db-template-form" do %>
+          <%= button_tag "Kanban",
+                         type: "submit",
+                         class: "notae-chip-button notae-db-template-button",
+                         disabled: !can_edit_database %>
+        <% end %>
+      </div>
       <% if @current_view.present? %>
         <details id="database-actions-menu"
                  class="notae-actions-menu notae-db-actions-menu"
@@ -462,6 +485,26 @@
                     <span class="notae-actions-row-icon">⧉</span>
                     <span class="notae-actions-row-label">Duplicate</span>
                     <span class="notae-actions-row-meta">⌘D</span>
+                  </button>
+                <% end %>
+              </div>
+
+              <div class="notae-actions-row <%= "is-disabled" unless can_edit_database %>"
+                   data-shell-action-item
+                   data-shell-action-terms="kanban board status">
+                <% if can_edit_database %>
+                  <%= form_with url: kanbanize_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                                method: :post,
+                                class: "notae-actions-inline-form" do %>
+                    <button type="submit" class="notae-actions-row-button">
+                      <span class="notae-actions-row-icon">☷</span>
+                      <span class="notae-actions-row-label">Open as Kanban</span>
+                    </button>
+                  <% end %>
+                <% else %>
+                  <button type="button" class="notae-actions-row-button" disabled>
+                    <span class="notae-actions-row-icon">☷</span>
+                    <span class="notae-actions-row-label">Open as Kanban</span>
                   </button>
                 <% end %>
               </div>

@@ -140,7 +140,7 @@ class LibrariesController < ApplicationController
       .includes(:workspace, :created_by)
       .to_a
       .map do |page|
-        meeting = page.title.to_s.downcase.include?("meeting")
+        meeting = page.page_kind == "meeting_note"
         creator_email = page.created_by&.email || owner_email_lookup[page.workspace_id] || "—"
         {
           kind: meeting ? "meeting" : "page",

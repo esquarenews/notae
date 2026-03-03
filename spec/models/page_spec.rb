@@ -33,4 +33,13 @@ RSpec.describe Page, type: :model do
     expect { page.update!(title: "Updated") }.not_to raise_error
     expect(page.reload.title).to eq("Updated")
   end
+
+  it "supports explicit page kinds and meeting-note scope" do
+    owner = User.create!(email: "page-kind-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page kind", slug: "page-kind")
+    meeting_note = described_class.create!(workspace: workspace, created_by: owner, title: "Weekly sync", page_kind: "meeting_note")
+    described_class.create!(workspace: workspace, created_by: owner, title: "Regular note", page_kind: "nota")
+
+    expect(described_class.meeting_notes).to contain_exactly(meeting_note)
+  end
 end

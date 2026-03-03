@@ -31,6 +31,82 @@ RSpec.describe "Databases", type: :request do
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: created_database.id))
   end
 
+  it "creates a tasks template with task columns and default status options" do
+    owner = User.create!(email: "database-template-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Template tables", slug: "template-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: { quick_create: "1", template: "tasks", database: { name: "Tasks grid" } }
+
+    database = workspace.databases.order(:created_at).last
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.db_properties.order(:position).pluck(:name, :property_type)).to eq(
+      [
+        [ "Status", "select" ],
+        [ "Date created", "date" ],
+        [ "Due date", "date" ],
+        [ "Notes", "text" ]
+      ]
+    )
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('option value="not started"')
+    expect(response.body).to include('option value="planning"')
+    expect(response.body).to include('option value="started"')
+    expect(response.body).to include('option value="on hold"')
+    expect(response.body).to include('option value="complete"')
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: { db_row: { title: "Task one" } }
+
+    row = database.db_rows.order(:created_at).last
+    date_created_property = database.db_properties.find_by!(name: "Date created")
+    expect(row.db_cells.find_by!(db_property: date_created_property).value_text).to eq(Date.current.iso8601)
+  end
+
+  it "greys rows when status is complete and restores color when reopened" do
+    owner = User.create!(email: "database-status-color-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Status color tables", slug: "status-color-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Status colors")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Task row")
+    status_cell = DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+    sign_in owner
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: status_cell.id),
+          params: { db_cell: { value_text: "complete" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
+    expect(row.reload.row_text_color).to eq("gray")
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: status_cell.id),
+          params: { db_cell: { value_text: "started" } }
+    expect(row.reload.row_text_color).to eq("default")
+  end
+
+  it "converts a grid to kanban and groups by status" do
+    owner = User.create!(email: "database-kanbanize-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Kanbanize tables", slug: "kanbanize-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Kanbanize me")
+    sign_in owner
+
+    post kanbanize_database_path(workspace_slug: workspace.slug, id: database.id)
+
+    database.reload
+    board_view = database.database_views.find_by!(view_type: :board)
+    status_property = database.db_properties.find { |property| property.name == "Status" }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id))
+    expect(status_property).to be_present
+    expect(status_property.property_type).to eq("select")
+    expect(board_view.config_json["group_property_id"]).to eq(status_property.id)
+  end
+
   it "defines schema, creates rows, and edits cells inline" do
     owner = User.create!(email: "database-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables", slug: "tables")
@@ -308,6 +384,38 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body.index("Move me")).to be < response.body.index("Doing item")
+  end
+
+  it "renders non-grouped property values inside board cards" do
+    owner = User.create!(email: "database-board-details-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Board detail tables", slug: "board-detail-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Board details")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    notes_property = DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Card detail row")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-03-12")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: notes_property, value_text: "Follow up with vendor")
+    board_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Board details",
+      view_type: :board,
+      config_json: { "group_property_id" => status_property.id },
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Due date")
+    expect(response.body).to include("2026-03-12")
+    expect(response.body).to include("Notes")
+    expect(response.body).to include("Follow up with vendor")
   end
 
   it "renders board view with more than 500 rows" do

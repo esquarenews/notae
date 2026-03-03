@@ -21,6 +21,7 @@ class DbRowsController < ApplicationController
       insert_row_after_reference!(@db_row, params[:insert_after_id]) if params[:insert_after_id].present?
       seed_cells_for_row(@db_row)
       assign_date_value_to_row(@db_row)
+      assign_default_date_created_value_to_row(@db_row)
       clear_row_sorting_preferences! if params[:insert_after_id].present?
       if @redirect_split_source == "row" && @redirect_split_page_id.present?
         @redirect_split_row_id ||= @db_row.id
@@ -162,6 +163,20 @@ class DbRowsController < ApplicationController
       cell.value_text = date_value
     end.tap do |cell|
       cell.update!(value_text: date_value)
+    end
+  end
+
+  def assign_default_date_created_value_to_row(row)
+    date_created_property = policy_scope(DbProperty)
+                            .for_database(@database)
+                            .where(property_type: :date)
+                            .find { |property| property.name.to_s.strip.casecmp("date created").zero? }
+    return if date_created_property.blank?
+
+    row.db_cells.find_or_create_by!(db_property: date_created_property, workspace: @workspace) do |cell|
+      cell.value_text = Date.current.iso8601
+    end.tap do |cell|
+      cell.update!(value_text: Date.current.iso8601) if cell.value_text.blank?
     end
   end
 
@@ -319,6 +334,7 @@ class DbRowsController < ApplicationController
 
     insert_row_after_reference!(row_candidate, reference_row.id)
     seed_cells_for_row(row_candidate)
+    assign_default_date_created_value_to_row(row_candidate)
     clear_row_sorting_preferences!
     row_candidate
   end
