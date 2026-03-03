@@ -6,6 +6,7 @@
   <% recent_favorites = workspace ? ui_sidebar_recent_favorites : [] %>
   <% recent_workspaces = ui_sidebar_recent_workspaces(limit: 6) %>
   <% nav_workspace = workspace || recent_workspaces.first %>
+  <% current_database_id = (controller_name == "databases" && action_name == "show") ? params[:id].presence : nil %>
   <% can_create_workspace = policy(Workspace.new).create? %>
   <div class="notae-sidebar-dock" aria-hidden="true">
     <button type="button"
@@ -104,10 +105,33 @@
                     <%= form.hidden_field :name, value: "Untitled grid" %>
                     <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
                       <%= notae_icon_svg(:grid, css_class: "notae-create-menu-icon notae-create-menu-icon-database") %>
-                      <span>New grid</span>
+                      <span>Grid</span>
                     </button>
                   <% end %>
                 </li>
+                <li class="notae-create-menu-item">
+                  <%= form_with model: Database.new, url: databases_path(workspace_slug: workspace.slug), class: "notae-create-menu-form" do |form| %>
+                    <%= hidden_field_tag :quick_create, "1" %>
+                    <%= hidden_field_tag :template, "tasks" %>
+                    <%= form.hidden_field :name, value: "Tasks grid" %>
+                    <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
+                      <%= notae_icon_svg(:grid, css_class: "notae-create-menu-icon notae-create-menu-icon-database") %>
+                      <span>Tasks template</span>
+                    </button>
+                  <% end %>
+                </li>
+                <% if current_database_id.present? %>
+                  <li class="notae-create-menu-item">
+                    <%= form_with url: kanbanize_database_path(workspace_slug: workspace.slug, id: current_database_id),
+                                  method: :post,
+                                  class: "notae-create-menu-form" do %>
+                      <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
+                        <%= notae_icon_svg(:grid, css_class: "notae-create-menu-icon notae-create-menu-icon-database") %>
+                        <span>Kanban</span>
+                      </button>
+                    <% end %>
+                  </li>
+                <% end %>
               <% end %>
               <% if can_create_workspace %>
                 <li class="notae-create-menu-item">

@@ -9,6 +9,7 @@ class DbCellsController < ApplicationController
     authorize @db_cell
 
     if @db_cell.update(db_cell_params)
+      apply_task_status_row_style!(@db_cell)
       @database.reload
       respond_to do |format|
         format.turbo_stream do
@@ -85,5 +86,21 @@ class DbCellsController < ApplicationController
     return unless @database.locked?
 
     redirect_to cell_redirect_location, alert: "Grid is locked. Unlock to make changes."
+  end
+
+  def apply_task_status_row_style!(db_cell)
+    property = db_cell.db_property
+    return unless property.select?
+    return unless property.name.to_s.strip.casecmp("status").zero?
+
+    row = db_cell.db_row
+    status_value = db_cell.value_text.to_s.strip.downcase
+    if status_value == "complete"
+      row.apply_row_style_action!(action: "set_color", text_color: "gray")
+    elsif row.row_text_color == "gray"
+      row.apply_row_style_action!(action: "set_color", text_color: "default")
+    end
+
+    row.save! if row.changed?
   end
 end

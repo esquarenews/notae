@@ -72,6 +72,7 @@ Rails.application.routes.draw do
     resources :databases, only: %i[show create update destroy] do
       member do
         post :duplicate
+        post :kanbanize
         patch :archive
         patch :restore
         patch :permissions

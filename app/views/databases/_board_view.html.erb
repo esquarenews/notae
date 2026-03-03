@@ -3,6 +3,7 @@
     Board view requires a property with type <code>select</code>. Choose one in the view config.
   </p>
 <% else %>
+  <% board_card_properties = @db_properties.reject { |property| property.id == @board_group_property.id } %>
   <div data-controller="database-drag"
        data-database-drag-workspace-slug-value="<%= @workspace.slug %>"
        data-database-drag-database-id-value="<%= @database.id %>"
@@ -26,6 +27,21 @@
                      data-action="dragstart->database-drag#dragstart">
               <div class="font-medium text-stone-800"><%= row.title %></div>
               <div class="text-xs text-stone-500">#<%= row.id.to_s.first(8) %></div>
+              <% property_rows = board_card_properties.filter_map do |property| %>
+                <% value = cell_value_for(row, property).to_s.strip %>
+                <% next if value.blank? %>
+                <% [ property.name, value ] %>
+              <% end %>
+              <% if property_rows.any? %>
+                <dl class="mt-2 space-y-1 text-xs">
+                  <% property_rows.each do |property_name, property_value| %>
+                    <div class="flex items-start justify-between gap-2">
+                      <dt class="text-stone-500"><%= property_name %></dt>
+                      <dd class="text-right text-stone-700"><%= property_value %></dd>
+                    </div>
+                  <% end %>
+                </dl>
+              <% end %>
             </article>
           <% end %>
         </div>

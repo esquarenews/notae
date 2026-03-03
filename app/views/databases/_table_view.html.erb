@@ -368,7 +368,7 @@ end %>
                               ),
                               method: :patch,
                               data: { controller: "auto-submit" } do |form| %>
-                  <% field_classes = "notae-db-cell-input" %>
+                  <% field_classes = db_property.select? ? select_input_classes_for(db_property, db_cell.value_text) : "notae-db-cell-input" %>
                   <% if db_property.checkbox? %>
                     <label class="notae-db-checkbox-wrap">
                       <%= form.check_box :value_text,

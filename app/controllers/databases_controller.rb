@@ -1,12 +1,20 @@
 class DatabasesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv permissions]
+  before_action :set_database, only: %i[show update duplicate archive export_csv permissions kanbanize]
   before_action :set_archived_database, only: %i[restore destroy]
   COVER_SHIFT_STEP = 10
   FILTER_OPERATORS = %w[eq before after].freeze
+  TASK_STATUS_OPTIONS = [ "not started", "planning", "started", "on hold", "complete" ].freeze
+  TASK_STATUS_CLASS_MAP = {
+    "not started" => "is-status-not-started",
+    "planning" => "is-status-planning",
+    "started" => "is-status-started",
+    "on hold" => "is-status-on-hold",
+    "complete" => "is-status-complete"
+  }.freeze
 
-  helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row
+  helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for
 
   def show
     authorize @database
@@ -69,22 +77,44 @@ class DatabasesController < ApplicationController
   def create
     @database = @workspace.databases.new(database_params)
     @database.created_by = current_user
+    template = normalize_template(params[:template])
+    apply_template_default_name!(template)
     apply_quick_create_name!
     authorize @database
 
-    if @database.save
-      @database.database_views.create!(
-        workspace: @workspace,
-        created_by: current_user,
-        name: "Table",
-        view_type: :table,
-        default: true
-      )
+    ActiveRecord::Base.transaction do
+      @database.save!
+      table_view = ensure_default_view!
+      apply_template!(template, table_view:)
       log_database_audit_event!(action: "create", kind: "database_created")
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Grid created."
-    else
-      redirect_to workspace_path(@workspace.slug), alert: @database.errors.full_messages.to_sentence
     end
+
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), notice: "Grid created."
+  rescue ActiveRecord::RecordInvalid => error
+    message = @database.errors.full_messages.to_sentence.presence || error.record.errors.full_messages.to_sentence
+    redirect_to workspace_path(@workspace.slug), alert: message
+  end
+
+  def kanbanize
+    authorize @database, :update?
+
+    if @database.locked?
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: "Grid is locked. Unlock to make changes."
+      return
+    end
+
+    board_view = nil
+    ActiveRecord::Base.transaction do
+      status_property = resolve_or_create_kanban_group_property!
+      board_view = resolve_or_create_kanban_view!
+      config = board_view.config_json.to_h
+      config["group_property_id"] = status_property.id
+      board_view.update!(config_json: config)
+    end
+
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: board_view.id), notice: "Switched to Kanban view."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: error.record.errors.full_messages.to_sentence
   end
 
   def permissions
@@ -495,14 +525,41 @@ class DatabasesController < ApplicationController
     @select_options_by_property[property.id] || []
   end
 
+  def select_input_classes_for(property, value)
+    classes = [ "notae-db-cell-input" ]
+    return classes.join(" ") unless task_status_property?(property)
+
+    normalized_value = normalize_task_status_value(value)
+    classes << "notae-db-cell-select-status"
+    classes << TASK_STATUS_CLASS_MAP[normalized_value] if TASK_STATUS_CLASS_MAP.key?(normalized_value)
+    classes.join(" ")
+  end
+
   def build_select_options_by_property
     @db_properties.select(&:select?).each_with_object({}) do |property, options|
-      values = @rows
-               .map { |row| cell_value_for(row, property).to_s.strip }
-               .reject(&:blank?)
-               .uniq
-               .sort
-      options[property.id] = values
+      seen = {}
+      values = []
+
+      if task_status_property?(property)
+        TASK_STATUS_OPTIONS.each do |status|
+          seen[status] = true
+          values << status
+        end
+      end
+
+      @rows.each do |row|
+        value = cell_value_for(row, property).to_s.strip
+        next if value.blank?
+
+        normalized = task_status_property?(property) ? normalize_task_status_value(value) : value
+        next if normalized.blank?
+        next if seen.key?(normalized)
+
+        seen[normalized] = true
+        values << normalized
+      end
+
+      options[property.id] = task_status_property?(property) ? values : values.sort
     end
   end
 
@@ -684,9 +741,126 @@ class DatabasesController < ApplicationController
     DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
   end
 
+  def normalize_template(raw_template)
+    template = raw_template.to_s
+    return "tasks" if template == "tasks"
+
+    "blank"
+  end
+
+  def apply_template_default_name!(template)
+    return unless @database.name.to_s.strip.blank?
+
+    @database.name = template == "tasks" ? "Tasks grid" : "Untitled grid"
+  end
+
+  def apply_template!(template, table_view:)
+    return unless template == "tasks"
+
+    build_tasks_template!(table_view:)
+  end
+
+  def build_tasks_template!(table_view:)
+    created_properties = []
+    created_properties << @database.db_properties.create!(
+      workspace: @workspace,
+      name: "Status",
+      property_type: :select
+    )
+    created_properties << @database.db_properties.create!(
+      workspace: @workspace,
+      name: "Date created",
+      property_type: :date
+    )
+    created_properties << @database.db_properties.create!(
+      workspace: @workspace,
+      name: "Due date",
+      property_type: :date
+    )
+    created_properties << @database.db_properties.create!(
+      workspace: @workspace,
+      name: "Notes",
+      property_type: :text
+    )
+
+    return if table_view.blank?
+
+    config = table_view.config_json.to_h
+    config["visible_property_ids"] = created_properties.map { |property| property.id.to_s }
+    table_view.update!(config_json: config)
+  end
+
+  def task_status_property?(property)
+    property.present? && property.select? && property.name.to_s.strip.casecmp("status").zero?
+  end
+
+  def normalize_task_status_value(value)
+    value.to_s.strip.downcase
+  end
+
+  def resolve_or_create_kanban_group_property!
+    status_property = @database.db_properties.ordered.find { |property| task_status_property?(property) }
+    return status_property if status_property.present?
+
+    selectable_property = @database.db_properties.ordered.find(&:select?)
+    return selectable_property if selectable_property.present?
+
+    @database.db_properties.create!(
+      workspace: @workspace,
+      name: next_available_property_name("Status"),
+      property_type: :select
+    )
+  end
+
+  def resolve_or_create_kanban_view!
+    existing_board = @database.database_views.ordered.find { |view| view.view_type == "board" }
+    return existing_board if existing_board.present?
+
+    @database.database_views.create!(
+      workspace: @workspace,
+      created_by: current_user,
+      name: next_available_view_name("Kanban"),
+      view_type: :board,
+      default: false
+    )
+  end
+
+  def next_available_property_name(base_name)
+    existing_names = @database.db_properties.pluck(:name).map { |name| name.to_s.downcase }
+    return base_name unless existing_names.include?(base_name.downcase)
+
+    suffix = 2
+    loop do
+      candidate = "#{base_name} #{suffix}"
+      return candidate unless existing_names.include?(candidate.downcase)
+
+      suffix += 1
+    end
+  end
+
+  def next_available_view_name(base_name)
+    existing_names = @database.database_views.pluck(:name).map { |name| name.to_s.downcase }
+    return base_name unless existing_names.include?(base_name.downcase)
+
+    suffix = 2
+    loop do
+      candidate = "#{base_name} #{suffix}"
+      return candidate unless existing_names.include?(candidate.downcase)
+
+      suffix += 1
+    end
+  end
+
   def ensure_default_view!
-    return if @database.database_views.exists?
-    return unless policy(DatabaseView.new(database: @database, workspace: @workspace, created_by: current_user)).create?
+    default_view = @database.database_views.find_by(default: true)
+    return default_view if default_view.present?
+
+    first_view = @database.database_views.ordered.first
+    if first_view.present?
+      first_view.set_as_default!
+      return first_view
+    end
+    return nil unless policy(DatabaseView.new(database: @database, workspace: @workspace, created_by: current_user)).create?
 
     @database.database_views.create!(
       workspace: @workspace,
