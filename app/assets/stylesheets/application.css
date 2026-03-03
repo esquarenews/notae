@@ -10515,6 +10515,80 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   flex: 0 0 auto;
 }
 
+.notae-favicon-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin: 0.7rem 0 0.95rem;
+  flex-wrap: wrap;
+}
+
+.notae-favicon-preview-status {
+  margin: 0;
+}
+
+.notae-favicon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.notae-favicon-card {
+  border: 1px solid var(--notae-border, #d6d3d1);
+  border-radius: 0.7rem;
+  padding: 0.7rem;
+  background: color-mix(in srgb, var(--notae-surface, #fff) 97%, #0ea5e9 3%);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.notae-favicon-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.notae-favicon-card-head h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.notae-favicon-card-head code {
+  font-size: 0.68rem;
+  color: #57534e;
+}
+
+.notae-favicon-size-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.notae-favicon-size-swatch {
+  display: grid;
+  justify-items: center;
+  gap: 0.26rem;
+}
+
+.notae-favicon-size-swatch span {
+  font-size: 0.66rem;
+  color: #57534e;
+  font-weight: 600;
+}
+
+.notae-favicon-size-swatch img {
+  image-rendering: auto;
+  border-radius: 0.32rem;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--notae-border, #d6d3d1) 88%, transparent 12%);
+}
+
+.notae-favicon-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .notae-kalendarium-project-archive-details {
   margin-top: 0.2rem;
 }
@@ -10902,5 +10976,9 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   .notae-kalendarium-year-day-event-label {
     font-size: 0.48rem;
     padding: 0.06rem 0.16rem;
+  }
+
+  .notae-favicon-grid {
+    grid-template-columns: 1fr;
   }
 }

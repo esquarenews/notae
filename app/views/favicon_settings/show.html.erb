@@ -1,0 +1,70 @@
+<% content_for :title, "Favicon Lab" %>
+<% content_for :topbar_page_icon, "🧿" %>
+<% content_for :topbar_privacy, "Workspace" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :favicon %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section"
+             data-controller="favicon-preview"
+             data-favicon-preview-default-href-value="/icon.svg">
+      <h2>Favicon Lab</h2>
+      <p class="notae-pref-description">
+        Candidate set for stronger browser-tab visibility. This page only previews icons in your current tab.
+        The live favicon remains unchanged until you choose one.
+      </p>
+
+      <div class="notae-favicon-preview-toolbar">
+        <button type="button"
+                class="notae-chip-button"
+                data-action="favicon-preview#restore">
+          Restore current favicon
+        </button>
+        <p class="notae-page-subtle notae-favicon-preview-status" data-favicon-preview-target="status">
+          Previewing: Current default
+        </p>
+      </div>
+
+      <div class="notae-favicon-grid">
+        <% @favicon_candidates.each do |candidate| %>
+          <article class="notae-favicon-card">
+            <header class="notae-favicon-card-head">
+              <h3><%= candidate[:name] %></h3>
+              <code><%= candidate[:id] %></code>
+            </header>
+            <p class="notae-page-subtle"><%= candidate[:description] %></p>
+
+            <div class="notae-favicon-size-row" aria-label="Favicon size previews">
+              <div class="notae-favicon-size-swatch">
+                <img src="<%= candidate[:svg_href] %>" alt="<%= candidate[:name] %> 16 pixel preview" width="16" height="16">
+                <span>16</span>
+              </div>
+              <div class="notae-favicon-size-swatch">
+                <img src="<%= candidate[:svg_href] %>" alt="<%= candidate[:name] %> 32 pixel preview" width="32" height="32">
+                <span>32</span>
+              </div>
+              <div class="notae-favicon-size-swatch">
+                <img src="<%= candidate[:svg_href] %>" alt="<%= candidate[:name] %> 64 pixel preview" width="64" height="64">
+                <span>64</span>
+              </div>
+            </div>
+
+            <div class="notae-favicon-actions">
+              <button type="button"
+                      class="notae-chip-button"
+                      data-action="favicon-preview#preview"
+                      data-favicon-preview-url-param="<%= candidate[:svg_href] %>"
+                      data-favicon-preview-name-param="<%= candidate[:name] %>">
+                Preview in tab
+              </button>
+            </div>
+          </article>
+        <% end %>
+      </div>
+    </section>
+  </div>
+</section>

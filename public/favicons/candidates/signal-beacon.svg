@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Signal Beacon favicon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0" stop-color="#172554"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="40" fill="none" stroke="#38bdf8" stroke-width="8"/>
+  <circle cx="64" cy="64" r="27" fill="none" stroke="#a78bfa" stroke-width="7"/>
+  <circle cx="64" cy="64" r="14" fill="#f472b6"/>
+  <path d="M64 20v16M64 92v16M20 64h16M92 64h16" stroke="#e2e8f0" stroke-width="4" stroke-linecap="round"/>
+</svg>
