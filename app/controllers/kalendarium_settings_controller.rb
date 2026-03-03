@@ -79,10 +79,10 @@ class KalendariumSettingsController < ApplicationController
 
       variants.any? do |variant|
         value = if variant.length == 1
-                  credentials[variant.first]
-                else
-                  credentials.dig(*variant)
-                end
+          credentials[variant.first]
+        else
+          credentials.dig(*variant)
+        end
         value.to_s.strip.present?
       end
     end

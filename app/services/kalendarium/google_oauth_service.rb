@@ -132,10 +132,10 @@ module Kalendarium
 
       path_options.each do |candidate|
         value = if candidate.length == 1
-                  credentials[candidate.first]
-                else
-                  safe_nested_value(credentials, *candidate)
-                end
+          credentials[candidate.first]
+        else
+          safe_nested_value(credentials, *candidate)
+        end
         return value if value.present?
       end
 

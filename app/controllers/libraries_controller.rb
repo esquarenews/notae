@@ -163,7 +163,7 @@ class LibrariesController < ApplicationController
     policy_scope(Database)
       .where(workspace_id: workspace_ids)
       .active
-      .includes(:workspace)
+      .includes(:workspace, :created_by)
       .to_a
       .map do |database|
         creator_email = owner_email_lookup[database.workspace_id] || "—"

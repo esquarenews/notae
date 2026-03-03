@@ -52,6 +52,6 @@ class FavoritePolicy < ApplicationPolicy
   def membership
     return nil unless user && workspace_id
 
-    Membership.find_by(user_id: user.id, workspace_id: workspace_id)
+    membership_for_workspace(workspace_id)
   end
 end

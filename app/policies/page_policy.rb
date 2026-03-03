@@ -76,6 +76,6 @@ class PagePolicy < ApplicationPolicy
   def membership
     return nil unless user && workspace_for_record
 
-    @membership ||= Membership.find_by(user_id: user.id, workspace_id: workspace_for_record)
+    @membership ||= membership_for_workspace(workspace_for_record)
   end
 end

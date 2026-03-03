@@ -395,5 +395,4 @@ class KalendariumController < ApplicationController
       "available_ids" => Array(available_ids).map(&:to_s).reject(&:blank?).uniq
     }
   end
-
 end

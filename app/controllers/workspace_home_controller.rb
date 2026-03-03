@@ -22,7 +22,11 @@ class WorkspaceHomeController < ApplicationController
     @recent_databases = policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).limit(3).to_a
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_memberships = @memberships.any? { |membership| policy(membership).update? }
-    @audit_events = policy_scope(AuditEvent).where(workspace_id: @workspace.id).recent_first.limit(15)
+    @audit_events = policy_scope(AuditEvent)
+                      .where(workspace_id: @workspace.id)
+                      .includes(:actor)
+                      .recent_first
+                      .limit(15)
   end
 
   private

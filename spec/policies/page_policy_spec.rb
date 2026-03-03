@@ -57,4 +57,30 @@ RSpec.describe PagePolicy do
     expect(described_class.new(admin, locked_page).update?).to be(true)
     expect(described_class.new(owner, locked_page).update?).to be(true)
   end
+
+  it "memoizes workspace membership lookups across repeated policy checks" do
+    workspace = Workspace.create!(name: "Memoized membership", slug: "memoized-membership")
+    member = User.create!(email: "memoized-member@example.com", password: "password123")
+    owner = User.create!(email: "memoized-owner@example.com", password: "password123")
+
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+
+    page = Page.new(workspace: workspace, created_by: owner, title: "Memoized page")
+
+    membership_queries = []
+    sql_probe = lambda do |_name, _started, _finished, _unique_id, payload|
+      sql = payload[:sql].to_s
+      next if payload[:name].to_s == "SCHEMA"
+      next unless sql.match?(/FROM\s+["`]memberships["`]/i)
+
+      membership_queries << sql
+    end
+
+    ActiveSupport::Notifications.subscribed(sql_probe, "sql.active_record") do
+      5.times { expect(described_class.new(member, page).create?).to be(true) }
+    end
+
+    expect(membership_queries.size).to be <= 1
+  end
 end

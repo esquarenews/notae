@@ -12,9 +12,9 @@ class ApplicationController < ActionController::Base
   before_action :ensure_active_record_encryption_keys
   before_action :set_paper_trail_whodunnit
   before_action :set_unread_notifications_count
-  before_action :set_ai_rail_context
-  before_action :set_ai_rail_conversations
-  before_action :set_ai_rail_usage_panel
+  before_action :set_ai_rail_context, if: :load_shell_context?
+  before_action :set_ai_rail_conversations, if: :load_shell_context?
+  before_action :set_ai_rail_usage_panel, if: :load_shell_context?
   before_action :ensure_realtime_channel_loaded
   around_action :use_user_time_zone
   after_action :verify_pundit_authorization, unless: :devise_controller?
@@ -27,6 +27,10 @@ class ApplicationController < ActionController::Base
 
   def verify_pundit_authorization
     action_name == "index" ? verify_policy_scoped : verify_authorized
+  end
+
+  def load_shell_context?
+    request.get? && request.format.html?
   end
 
   def handle_not_authorized
@@ -53,6 +57,11 @@ class ApplicationController < ActionController::Base
   end
 
   def set_unread_notifications_count
+    unless load_shell_context?
+      @unread_notifications_count = 0
+      return
+    end
+
     @unread_notifications_count =
       if user_signed_in?
         with_optional_schema_fallback(default: 0, feature: "unread notifications") do

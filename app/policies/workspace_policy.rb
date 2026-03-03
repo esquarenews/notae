@@ -36,6 +36,6 @@ class WorkspacePolicy < ApplicationPolicy
   def membership
     return nil unless user
 
-    @membership ||= record.memberships.find_by(user_id: user.id)
+    @membership ||= membership_for_workspace(record.id)
   end
 end

@@ -38,6 +38,6 @@ class KalendariumWriteProposalPolicy < ApplicationPolicy
   def membership
     return nil unless user
 
-    @membership ||= Membership.find_by(user_id: user.id, workspace_id: record.workspace_id)
+    @membership ||= membership_for_workspace(record.workspace_id)
   end
 end
