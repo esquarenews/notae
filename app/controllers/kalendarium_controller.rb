@@ -14,6 +14,8 @@ class KalendariumController < ApplicationController
     authorize @workspace, :show?
 
     @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week"
+    persist_last_calendar_view!
+    @project_return_view = resolve_project_return_view
     @selected_date = parse_selected_date
     @show_year_daily_events = ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     @week_start_day = week_start_day
@@ -22,6 +24,8 @@ class KalendariumController < ApplicationController
     @projects = policy_scope(KalendariumProject).for_workspace(@workspace).active.order(:name).to_a
     @archived_projects = policy_scope(KalendariumProject).for_workspace(@workspace).archived.order(archived_at: :desc, name: :asc).to_a
     @selected_project_id = selected_active_project_id
+    @visible_project_ids = resolve_visible_project_ids(@projects)
+    @visible_projects = @projects.select { |project| @visible_project_ids.include?(project.id.to_s) }
     active_project_ids = @projects.map(&:id)
     active_project_calendar_ids = @projects.map(&:kalendarium_calendar_id).compact
 
@@ -43,12 +47,12 @@ class KalendariumController < ApplicationController
                 .for_range(range_start, range_end)
                 .order(:starts_at_utc)
     if active_project_ids.any?
-      @events = @events.where("kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)", active_project_ids)
+      @events = @events.where(
+        "kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)",
+        @visible_project_ids
+      )
     else
       @events = @events.where(kalendarium_project_id: nil)
-    end
-    if @selected_project_id.present?
-      @events = @events.where(kalendarium_project_id: @selected_project_id)
     end
     @events = @events.to_a
 
@@ -176,6 +180,53 @@ class KalendariumController < ApplicationController
       .compact
       .uniq
       .select { |zone_name| ActiveSupport::TimeZone[zone_name].present? }
+  end
+
+  def resolve_visible_project_ids(projects)
+    allowed_ids = projects.map { |project| project.id.to_s }
+    payload = persisted_project_visibility_payload
+
+    selected = if stored_project_visibility?
+      payload[:selected_ids] & allowed_ids
+    else
+      allowed_ids
+    end
+
+    if params[:project_visibility_applied].to_s == "1"
+      selected = Array(params[:visible_project_ids]).map(&:to_s).reject(&:blank?) & allowed_ids
+      persist_visible_project_ids(selected, available_ids: allowed_ids)
+      return selected
+    end
+
+    toggle_project_id = params[:toggle_project_id].to_s
+    toggle_state = params[:project_visible].to_s
+    if toggle_project_id.present? && allowed_ids.include?(toggle_project_id)
+      selected = allowed_ids if !stored_project_visibility? && payload[:selected_ids].empty?
+      if toggle_state == "1"
+        selected |= [ toggle_project_id ]
+      else
+        selected -= [ toggle_project_id ]
+      end
+      persist_visible_project_ids(selected, available_ids: allowed_ids)
+      return selected
+    end
+
+    if stored_project_visibility?
+      available_ids = payload[:available_ids]
+      selected &= allowed_ids
+      if available_ids.present? && (available_ids & allowed_ids).empty?
+        selected = allowed_ids
+      end
+
+      if selected != payload[:selected_ids] || available_ids != allowed_ids
+        persist_visible_project_ids(selected, available_ids: allowed_ids)
+      end
+
+      return selected
+    end
+
+    persist_visible_project_ids(selected, available_ids: allowed_ids)
+    selected
   end
 
   def range_for_view
@@ -394,5 +445,63 @@ class KalendariumController < ApplicationController
       "selected_ids" => Array(ids).map(&:to_s).reject(&:blank?).uniq,
       "available_ids" => Array(available_ids).map(&:to_s).reject(&:blank?).uniq
     }
+  end
+
+  def project_visibility_session
+    session[:kalendarium_project_visibility] ||= {}
+  end
+
+  def project_visibility_workspace_key
+    @workspace.id.to_s
+  end
+
+  def stored_project_visibility?
+    project_visibility_session.key?(project_visibility_workspace_key)
+  end
+
+  def persisted_project_visibility_payload
+    raw = project_visibility_session[project_visibility_workspace_key]
+    if raw.is_a?(Hash)
+      {
+        selected_ids: Array(raw["selected_ids"] || raw[:selected_ids]).map(&:to_s).reject(&:blank?).uniq,
+        available_ids: Array(raw["available_ids"] || raw[:available_ids]).map(&:to_s).reject(&:blank?).uniq
+      }
+    else
+      {
+        selected_ids: Array(raw).map(&:to_s).reject(&:blank?).uniq,
+        available_ids: []
+      }
+    end
+  end
+
+  def persist_visible_project_ids(ids, available_ids: nil)
+    project_visibility_session[project_visibility_workspace_key] = {
+      "selected_ids" => Array(ids).map(&:to_s).reject(&:blank?).uniq,
+      "available_ids" => Array(available_ids).map(&:to_s).reject(&:blank?).uniq
+    }
+  end
+
+  def last_calendar_view_session
+    session[:kalendarium_last_calendar_view] ||= {}
+  end
+
+  def last_calendar_view_workspace_key
+    @workspace.id.to_s
+  end
+
+  def persist_last_calendar_view!
+    return if @view == "project"
+
+    last_calendar_view_session[last_calendar_view_workspace_key] = @view
+  end
+
+  def resolve_project_return_view
+    requested = params[:return_view].to_s
+    return requested if requested.present? && VIEW_OPTIONS.include?(requested) && requested != "project"
+
+    stored = last_calendar_view_session[last_calendar_view_workspace_key].to_s
+    return stored if stored.present? && VIEW_OPTIONS.include?(stored) && stored != "project"
+
+    "week"
   end
 end

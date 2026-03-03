@@ -11,10 +11,11 @@
 <% invitee_preview = invitee_labels.first(3).join(", ") %>
 <% invitee_extra_count = [invitee_labels.length - 3, 0].max %>
 <% meeting_join_url = event.meeting_join_url %>
+<% event_color = event.kalendarium_project&.color_hex.presence || event.kalendarium_calendar.color_hex %>
 
 <article id="kalendarium_event_<%= event.id %>"
          class="notae-kalendarium-event-card <%= "is-timeline" if timeline %> <%= "is-compact" if compact %> <%= "is-all-day" if all_day_badge %>"
-         style="--kal-color: <%= event.kalendarium_calendar.color_hex %>;<%= " #{timeline_style}" if timeline_style.present? %>"
+         style="--kal-color: <%= event_color %>;<%= " #{timeline_style}" if timeline_style.present? %>"
          data-controller="kalendarium-event-modal"
          data-action="click->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
          role="button"

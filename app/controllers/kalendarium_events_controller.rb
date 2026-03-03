@@ -4,7 +4,20 @@ class KalendariumEventsController < ApplicationController
   before_action :set_event, only: %i[update destroy]
 
   def create
-    calendar = policy_scope(KalendariumCalendar).for_workspace(@workspace).find(event_params[:kalendarium_calendar_id])
+    project = find_event_project(event_params[:kalendarium_project_id])
+    if event_params[:kalendarium_project_id].present? && project.blank?
+      skip_authorization
+      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+                  alert: "Selected project could not be found."
+      return
+    end
+    calendar = resolve_event_calendar(project: project, selected_calendar_id: event_params[:kalendarium_calendar_id])
+    if calendar.blank?
+      skip_authorization
+      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+                  alert: "Select a calendar for this event."
+      return
+    end
     all_day = ActiveModel::Type::Boolean.new.cast(event_params[:all_day]) || false
     starts_at_utc = parse_local_time(event_params[:starts_at_local])
     ends_at_utc = parse_local_time(event_params[:ends_at_local])
@@ -25,9 +38,10 @@ class KalendariumEventsController < ApplicationController
     end
 
     @event = KalendariumEvent.new(
-      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :all_day).merge(
+      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :all_day, :kalendarium_project_id).merge(
         workspace: @workspace,
         kalendarium_calendar: calendar,
+        kalendarium_project: project,
         created_by: current_user,
         updated_by: current_user,
         starts_at_utc: starts_at_utc,
@@ -51,13 +65,26 @@ class KalendariumEventsController < ApplicationController
   def update
     authorize @event
 
+    project = if event_params.key?(:kalendarium_project_id)
+      find_event_project(event_params[:kalendarium_project_id])
+    else
+      @event.kalendarium_project
+    end
+    if event_params.key?(:kalendarium_project_id) && event_params[:kalendarium_project_id].present? && project.blank?
+      skip_authorization
+      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+                  alert: "Selected project could not be found."
+      return
+    end
+
     all_day = if event_params.key?(:all_day)
       ActiveModel::Type::Boolean.new.cast(event_params[:all_day]) || false
     else
       @event.all_day
     end
     @event.assign_attributes(
-      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :kalendarium_calendar_id, :all_day).merge(
+      event_params.except(:starts_at_local, :ends_at_local, :linked_page_action, :kalendarium_calendar_id, :kalendarium_project_id, :all_day).merge(
+        kalendarium_project: project,
         updated_by: current_user,
         all_day: all_day,
         reminder_offsets_minutes: normalize_offsets(event_params[:reminder_offsets_minutes])
@@ -83,9 +110,10 @@ class KalendariumEventsController < ApplicationController
       end
       @event.ends_at_utc = ends_at_utc
     end
-    if event_params[:kalendarium_calendar_id].present?
-      calendar = policy_scope(KalendariumCalendar).for_workspace(@workspace).find(event_params[:kalendarium_calendar_id])
-      @event.kalendarium_calendar = calendar
+    if project.present?
+      @event.kalendarium_calendar = ensure_project_calendar!(project)
+    elsif event_params[:kalendarium_calendar_id].present?
+      @event.kalendarium_calendar = policy_scope(KalendariumCalendar).for_workspace(@workspace).find(event_params[:kalendarium_calendar_id])
     end
     if all_day
       @event.starts_at_utc, @event.ends_at_utc = normalize_all_day_times(starts_at_utc: @event.starts_at_utc, ends_at_utc: @event.ends_at_utc)
@@ -158,6 +186,34 @@ class KalendariumEventsController < ApplicationController
 
   def normalize_all_day_times(starts_at_utc:, ends_at_utc:)
     [ starts_at_utc.beginning_of_day, ends_at_utc.end_of_day ]
+  end
+
+  def find_event_project(project_id)
+    return nil if project_id.blank?
+
+    policy_scope(KalendariumProject).for_workspace(@workspace).find_by(id: project_id)
+  end
+
+  def resolve_event_calendar(project:, selected_calendar_id:)
+    return ensure_project_calendar!(project) if project.present?
+    return nil if selected_calendar_id.blank?
+
+    policy_scope(KalendariumCalendar).for_workspace(@workspace).find(selected_calendar_id)
+  end
+
+  def ensure_project_calendar!(project)
+    return project.kalendarium_calendar if project.kalendarium_calendar.present?
+
+    calendar = KalendariumCalendar.create!(
+      workspace: @workspace,
+      created_by: current_user,
+      name: project.name,
+      color_hex: project.color_hex,
+      source_kind: "project",
+      enabled: true
+    )
+    project.update!(kalendarium_calendar: calendar)
+    calendar
   end
 
   def apply_linked_nota_action!(event, action)

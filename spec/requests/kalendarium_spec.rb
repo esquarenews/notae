@@ -261,7 +261,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(week_card["style"]).to include("height: 28.0px;")
   end
 
-  it "renders separate calendar and project dropdown filters that preserve each other state" do
+  it "renders separate calendar and project dropdown filters with project actions" do
     user, workspace, calendar = build_stack(suffix: "separate-filters")
     sign_in user
 
@@ -276,13 +276,12 @@ RSpec.describe "Kalendarium", type: :request do
       workspace_slug: workspace.slug,
       view: "month",
       date: "2026-03-01",
-      calendar_ids: [ calendar.id ],
-      project_id: project.id
+      calendar_ids: [ calendar.id ]
     )
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Calendars (1)")
-    expect(response.body).to include("Projects (Client Work)")
+    expect(response.body).to include("Projects (1)")
     expect(response.body).to include("class=\"notae-kalendarium-calendar-filter\"")
     expect(response.body).to include("class=\"notae-kalendarium-project-filter\"")
     expect(response.body).to include("data-controller=\"floating-panel\"")
@@ -292,18 +291,122 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("class=\"notae-kalendarium-sidebar-accordion-summary\">Create project</summary>")
     expect(response.body).not_to include("notae-kalendarium-sidebar-accordion-chevron")
     expect(response.body).to include("name=\"calendar_ids[]\"")
-    expect(response.body).to include("name=\"project_id\"")
-    expect(response.body).to include("All projects")
+    expect(response.body).to include("Show: On")
+    expect(response.body).to include("Edit projects")
 
     document = Nokogiri::HTML.parse(response.body)
     option_row = document.at_css(".notae-kalendarium-project-option-row")
     expect(option_row).to be_present
+    show_link = option_row.at_css("a.notae-kalendarium-project-action-link.is-toggle")
     archive_link = option_row.at_css("a[data-turbo-method='patch']")
     delete_link = option_row.at_css("a[data-turbo-method='delete']")
+    expect(show_link).to be_present
     expect(archive_link).to be_present
     expect(delete_link).to be_present
+    expect(show_link["href"]).to include("toggle_project_id=#{project.id}")
     expect(archive_link["href"]).to include("/kalendarium/projects/#{project.id}/archive")
     expect(delete_link["href"]).to include("/kalendarium/projects/#{project.id}")
+    edit_projects_link = document.at_css(".notae-kalendarium-project-popover-actions a.notae-chip-button")
+    expect(edit_projects_link).to be_nil
+    edit_projects_link = document.at_css(".notae-kalendarium-project-popover-actions a.notae-kalendarium-project-edit-link")
+    expect(edit_projects_link).to be_present
+    expect(edit_projects_link.text).to include("Edit projects")
+    expect(edit_projects_link["href"]).to include("view=project")
+  end
+
+  it "shows a close button in project view that returns to the requested calendar view" do
+    user, workspace, = build_stack(suffix: "project-close-button")
+    sign_in user
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "project",
+      return_view: "day",
+      date: "2026-03-01"
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    close_link = document.at_css(".notae-kalendarium-project-close-button")
+    expect(close_link).to be_present
+    expect(close_link["href"]).to include("view=day")
+    expect(close_link["href"]).to include("date=2026-03-01")
+  end
+
+  it "toggles project visibility independently from calendar visibility" do
+    user, workspace, calendar = build_stack(suffix: "project-toggle")
+    sign_in user
+
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project scope calendar",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project Alpha",
+      slug: "project-alpha",
+      color_hex: "#8B5CF6",
+      kalendarium_calendar: project_calendar
+    )
+    regular_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Regular calendar event",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+    )
+    project_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Project scoped event",
+      starts_at_utc: Time.zone.parse("2026-03-01 11:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 12:00:00")
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-03-01",
+      calendar_filter_applied: "1",
+      calendar_ids: [ calendar.id.to_s ]
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(regular_event.title)
+    expect(response.body).to include(project_event.title)
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-03-01",
+      calendar_ids: [ calendar.id.to_s ],
+      toggle_project_id: project.id,
+      project_visible: "0"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(regular_event.title)
+    expect(response.body).not_to include(project_event.title)
+    expect(response.body).to include("Projects (0)")
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-03-01",
+      calendar_ids: [ calendar.id.to_s ]
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(regular_event.title)
+    expect(response.body).not_to include(project_event.title)
+    expect(response.body).to include("Projects (0)")
   end
 
   it "persists calendar selections when navigating away and returning to kalendarium" do
@@ -705,14 +808,15 @@ RSpec.describe "Kalendarium", type: :request do
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01")
     document = Nokogiri::HTML.parse(response.body)
-    project_filter_labels = document.css(".notae-kalendarium-project-popover .notae-options-checkbox span").map(&:text)
-    expect(project_filter_labels).not_to include("Archived soon")
     expect(response.body).to include("Archived projects")
     expect(response.body).to include("Archived soon")
+    edit_projects_link = document.at_css(".notae-kalendarium-project-popover-actions a.notae-kalendarium-project-edit-link")
+    expect(edit_projects_link).to be_present
+    expect(edit_projects_link.text).to include("Edit projects")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
     expect(response.body).not_to include("Project event to hide")
-    expect(response.body).to include("Projects (All)")
+    expect(response.body).to include("Projects (0)")
   end
 
   it "restores an archived project and re-enables its project calendar" do
@@ -845,6 +949,59 @@ RSpec.describe "Kalendarium", type: :request do
     end.not_to change(KalendariumEvent, :count)
 
     expect(flash[:alert]).to include("must be in the future")
+  end
+
+  it "uses project calendars and project colors for project-linked events" do
+    user, workspace, calendar = build_stack(suffix: "project-event-color")
+    sign_in user
+
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project Color Calendar",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project Purple",
+      slug: "project-purple",
+      color_hex: "#8B5CF6",
+      kalendarium_calendar: project_calendar
+    )
+
+    future_start = 2.days.from_now.change(hour: 10, min: 0, sec: 0)
+    future_end = future_start + 1.hour
+    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+      view: "day",
+      date: future_start.to_date.to_s,
+      kalendarium_event: {
+        kalendarium_calendar_id: calendar.id,
+        kalendarium_project_id: project.id,
+        title: "Project colored event",
+        starts_at_local: future_start.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+        ends_at_local: future_end.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
+      }
+    }
+
+    event = KalendariumEvent.order(:created_at).last
+    expect(event.kalendarium_project_id).to eq(project.id)
+    expect(event.kalendarium_calendar_id).to eq(project_calendar.id)
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: future_start.to_date.to_s,
+      calendar_filter_applied: "1",
+      calendar_ids: [ calendar.id.to_s ]
+    )
+
+    document = Nokogiri::HTML.parse(response.body)
+    event_card = document.at_css("#kalendarium_event_#{event.id}")
+    expect(event_card).to be_present
+    expect(event_card["style"]).to include("--kal-color: #8B5CF6")
   end
 
   it "updates and deletes events via kalendarium event endpoints" do
