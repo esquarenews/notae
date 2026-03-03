@@ -50,7 +50,7 @@ RSpec.describe Meetings::SpeakerResolutionService do
     ]
 
     resolved = service.resolve(turns: turns)
-    expect(resolved.map(&:speaker_name)).to eq(["Alex", "Sam"])
+    expect(resolved.map(&:speaker_name)).to eq([ "Alex", "Sam" ])
 
     resolved.each do |turn|
       session.meeting_utterances.create!(

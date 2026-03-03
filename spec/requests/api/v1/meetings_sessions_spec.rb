@@ -50,7 +50,7 @@ RSpec.describe "API V1 Meetings sessions", type: :request do
 
     expect(response).to have_http_status(:ok)
     ids = json_body.fetch("data").map { |row| row.fetch("id") }
-    expect(ids).to eq([session.id])
+    expect(ids).to eq([ session.id ])
 
     get "/api/v1/workspaces/#{workspace.slug}/meetings/sessions/#{session.id}/transcript", headers: auth_headers(token)
 

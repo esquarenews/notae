@@ -33,7 +33,7 @@ RSpec.describe Meetings::NotaMaterializerService do
       updated_by: user
     )
 
-    [user, workspace, event, session]
+    [ user, workspace, event, session ]
   end
 
   it "creates a linked meeting note page and persists session output idempotently" do
@@ -48,7 +48,7 @@ RSpec.describe Meetings::NotaMaterializerService do
     first_page = service.upsert_session_output!(
       transcript_text: "[00:00] Speaker 1: Hello team",
       summary_markdown: "### Summary\n- Kickoff",
-      action_items: [{ "title" => "Send deck", "owner" => "Alex", "due_at" => 1.day.from_now.iso8601 }]
+      action_items: [ { "title" => "Send deck", "owner" => "Alex", "due_at" => 1.day.from_now.iso8601 } ]
     )
     first_blocks = first_page.blocks.active.where("content_json ->> 'notae_meeting_session_id' = ?", session.id.to_s)
     expect(first_blocks.count).to be >= 3
