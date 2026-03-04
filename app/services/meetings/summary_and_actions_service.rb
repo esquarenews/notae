@@ -2,7 +2,11 @@ require "json"
 
 module Meetings
   class SummaryAndActionsService
-    MODEL = "gpt-4.1-mini".freeze
+    MODEL = "gpt-4.1".freeze
+    MAX_ACTION_ITEMS = 8
+    MIN_ACTION_CONFIDENCE = 0.55
+    ACTION_VERB_PATTERN = /\b(send|share|draft|prepare|create|update|schedule|book|assign|deliver|review|finalize|publish|follow up|email|call|confirm|submit|build|implement|fix|investigate|coordinate|sync|document|write|approve|plan)\b/i
+    NON_ACTION_PREFIX_PATTERN = /\A(?:discuss|consider|think about|explore|brainstorm|maybe|possibly|tbd)\b/i
 
     def initialize(session:)
       @session = session
@@ -66,7 +70,11 @@ module Meetings
         }
         Rules:
         - Keep summary concise and factual.
-        - Include at most 8 action items.
+        - Include at most #{MAX_ACTION_ITEMS} action items.
+        - Output only concrete commitments that someone can execute.
+        - Do not invent tasks; use only statements grounded in the transcript.
+        - Exclude vague statements (for example "discuss", "consider", "think about", "explore").
+        - Prefer actions with explicit owner and/or due date.
         - Use empty strings for unknown owner/due_at.
         - Confidence must be between 0 and 1.
 
@@ -105,16 +113,26 @@ module Meetings
     end
 
     def normalize_action_items(raw_items)
+      seen_titles = {}
+
       Array(raw_items).filter_map do |item|
         next unless item.is_a?(Hash)
 
         title = item["title"].to_s.strip
         next if title.blank?
+        next if non_actionable_title?(title)
+        next unless actionable_title?(title)
+
+        normalized_title = title.downcase.gsub(/\s+/, " ").strip
+        next if seen_titles[normalized_title]
 
         owner = item["owner"].to_s.strip
         due_at = parse_due_at(item["due_at"])
         confidence = item["confidence"].to_f
         confidence = confidence.clamp(0.0, 1.0)
+        next if confidence < MIN_ACTION_CONFIDENCE
+
+        seen_titles[normalized_title] = true
 
         {
           "title" => title,
@@ -122,7 +140,15 @@ module Meetings
           "due_at" => due_at,
           "confidence" => confidence
         }
-      end.first(12)
+      end.first(MAX_ACTION_ITEMS)
+    end
+
+    def actionable_title?(title)
+      title.match?(ACTION_VERB_PATTERN)
+    end
+
+    def non_actionable_title?(title)
+      title.match?(NON_ACTION_PREFIX_PATTERN)
     end
 
     def parse_due_at(raw_value)

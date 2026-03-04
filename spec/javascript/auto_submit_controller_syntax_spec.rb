@@ -1,0 +1,29 @@
+require "rails_helper"
+require "open3"
+
+RSpec.describe "AutoSubmitController JavaScript syntax" do
+  it "parses successfully" do
+    controller_path = Rails.root.join("app/javascript/controllers/auto_submit_controller.js")
+
+    stdout, status = Open3.capture2e("node", "--check", controller_path.to_s)
+
+    expect(status.success?).to be(true), <<~MESSAGE
+      Expected #{controller_path} to parse cleanly with node --check.
+      Output:
+      #{stdout}
+    MESSAGE
+  rescue Errno::ENOENT
+    skip "node is not available in this environment"
+  end
+
+  it "updates task status classes immediately for select cells" do
+    source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
+
+    expect(source).to include("applyTaskStatusVisualState")
+    expect(source).to include("notae-db-cell-select-status")
+    expect(source).to include("applyTaskStatusSelectClasses")
+    expect(source).to include("applyTaskStatusRowClasses")
+    expect(source).to include("is-status-not-started")
+    expect(source).to include("is-status-done")
+  end
+end

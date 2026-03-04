@@ -10,6 +10,8 @@ module Meetings
       Meetings::SummarizeSessionJob.perform_later(session.id)
     rescue Meetings::ProcessingPipelineService::Error => error
       session&.update(status: "failed", error_message: error.message, processed_at: Time.current, ended_at: Time.current)
+    rescue StandardError => error
+      session&.update(status: "failed", error_message: error.message, processed_at: Time.current, ended_at: Time.current)
     end
   end
 end

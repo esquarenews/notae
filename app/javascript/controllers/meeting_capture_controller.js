@@ -1,15 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["startButton", "stopButton", "status", "fileInput", "captureMode"]
+  static targets = ["startButton", "stopButton", "status", "fileInput", "captureMode", "activityIndicator", "activityLabel"]
 
   connect() {
     this.mediaRecorder = null
     this.stream = null
     this.chunks = []
+    this.setRecordingState(false, "Recorder idle.")
   }
 
   disconnect() {
+    this.setRecordingState(false)
     this.stopStream()
   }
 
@@ -19,6 +21,16 @@ export default class extends Controller {
 
     if (!navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder === "undefined") {
       this.updateStatus("Microphone recording is not supported in this browser.")
+      return
+    }
+
+    if (!window.isSecureContext) {
+      this.updateStatus("Microphone access requires a secure origin (https:// or localhost).")
+      return
+    }
+
+    if (!this.microphoneFeatureAllowed()) {
+      this.updateStatus("Microphone access is blocked by the page Permissions-Policy header. Restart the app after setting Permissions-Policy to include microphone=(self).")
       return
     }
 
@@ -37,9 +49,11 @@ export default class extends Controller {
       this.captureModeTarget.value = "in_person_mic"
       this.startButtonTarget.disabled = true
       this.stopButtonTarget.disabled = false
+      this.setRecordingState(true, "Recording in progress...")
       this.updateStatus("Recording in progress...")
     } catch (error) {
-      this.updateStatus(`Microphone access failed: ${error.message}`)
+      this.setRecordingState(false)
+      this.updateStatus(this.microphoneErrorMessage(error))
       this.stopStream()
     }
   }
@@ -51,6 +65,7 @@ export default class extends Controller {
     this.mediaRecorder.stop()
     this.startButtonTarget.disabled = false
     this.stopButtonTarget.disabled = true
+    this.setRecordingState(false, "Finalizing recording...")
     this.updateStatus("Finalizing recording...")
   }
 
@@ -61,6 +76,7 @@ export default class extends Controller {
 
   persistRecording() {
     if (!this.hasFileInputTarget || this.chunks.length === 0) {
+      this.setRecordingState(false)
       this.updateStatus("Recording complete.")
       this.stopStream()
       return
@@ -74,6 +90,7 @@ export default class extends Controller {
     dataTransfer.items.add(file)
     this.fileInputTarget.files = dataTransfer.files
 
+    this.setRecordingState(false, "Recorder idle.")
     this.updateStatus("Recording ready. Submit to upload and process.")
     this.stopStream()
   }
@@ -88,5 +105,54 @@ export default class extends Controller {
   updateStatus(message) {
     if (!this.hasStatusTarget) return
     this.statusTarget.textContent = message
+  }
+
+  setRecordingState(active, label = null) {
+    if (this.hasActivityIndicatorTarget) {
+      this.activityIndicatorTarget.classList.toggle("is-active", active)
+    }
+    if (label && this.hasActivityLabelTarget) {
+      this.activityLabelTarget.textContent = label
+    }
+  }
+
+  microphoneFeatureAllowed() {
+    const policy = document.permissionsPolicy || document.featurePolicy
+    if (!policy || typeof policy.allowsFeature !== "function") return true
+
+    try {
+      return policy.allowsFeature("microphone")
+    } catch (_error) {
+      return true
+    }
+  }
+
+  microphoneErrorMessage(error) {
+    const name = error?.name?.toString() || ""
+    const message = error?.message?.toString()?.trim() || ""
+
+    if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+      if (!this.microphoneFeatureAllowed()) {
+        return "Microphone access failed: blocked by page Permissions-Policy. Restart the app and ensure the response header includes microphone=(self)."
+      }
+      if (!window.isSecureContext) {
+        return "Microphone access failed: this page is not secure. Use https:// or localhost."
+      }
+      return "Microphone access failed: permission denied. Click the lock/camera icon in the address bar and allow Microphone for this site, then retry."
+    }
+
+    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      return "Microphone access failed: no microphone device was found."
+    }
+
+    if (name === "NotReadableError" || name === "TrackStartError") {
+      return "Microphone access failed: your microphone is busy in another app."
+    }
+
+    if (name === "SecurityError") {
+      return "Microphone access failed: blocked by browser security settings."
+    }
+
+    return `Microphone access failed: ${message || "Unable to access microphone."}`
   }
 }

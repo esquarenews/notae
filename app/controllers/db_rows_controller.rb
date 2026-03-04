@@ -40,7 +40,7 @@ class DbRowsController < ApplicationController
     apply_row_style_update!
 
     if @db_row.errors.any?
-      redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: @db_row.errors.full_messages.to_sentence
+      respond_row_update_failure(anchor: "row_#{@db_row.id}", message: @db_row.errors.full_messages.to_sentence)
       return
     end
 
@@ -50,18 +50,25 @@ class DbRowsController < ApplicationController
       next_row = create_next_row_requested? ? create_row_below!(@db_row) : nil
 
       if create_next_row_requested? && next_row.blank?
-        redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: @db_row.errors.full_messages.to_sentence
+        respond_row_update_failure(anchor: "row_#{@db_row.id}", message: @db_row.errors.full_messages.to_sentence)
         return
       end
 
-      if next_row.present?
+      if turbo_title_autosave_request?(next_row:)
+        @database.reload
+        render turbo_stream: turbo_stream.update(
+          "database_topbar_edited_at",
+          partial: "databases/topbar_edited_meta",
+          locals: { database: @database }
+        )
+      elsif next_row.present?
         close_row_split_for_row_switch!
         redirect_to database_redirect_location(anchor: "row_#{next_row.id}"), notice: "Row updated."
       else
         redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), notice: "Row updated."
       end
     else
-      redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: @db_row.errors.full_messages.to_sentence
+      respond_row_update_failure(anchor: "row_#{@db_row.id}", message: @db_row.errors.full_messages.to_sentence)
     end
   end
 
@@ -139,6 +146,14 @@ class DbRowsController < ApplicationController
     ActiveModel::Type::Boolean.new.cast(params.dig(:db_row, :create_next_row))
   end
 
+  def title_autosave_requested?
+    ActiveModel::Type::Boolean.new.cast(params.dig(:db_row, :autosave_title))
+  end
+
+  def turbo_title_autosave_request?(next_row:)
+    title_autosave_requested? && request.format.turbo_stream? && next_row.blank?
+  end
+
   def set_db_row
     @db_row = policy_scope(DbRow).for_database(@database).find(params[:id])
   end
@@ -146,7 +161,7 @@ class DbRowsController < ApplicationController
   def seed_cells_for_row(row)
     policy_scope(DbProperty).for_database(@database).ordered.each do |db_property|
       row.db_cells.find_or_create_by!(db_property:, workspace: @workspace) do |cell|
-        cell.value_text = ""
+        cell.value_text = default_cell_value_for_property(db_property)
       end
     end
   end
@@ -387,9 +402,26 @@ class DbRowsController < ApplicationController
     view.update!(config_json: config) if changed
   end
 
+  def default_cell_value_for_property(property)
+    return "not started" if task_status_property?(property)
+
+    ""
+  end
+
+  def task_status_property?(property)
+    property.select? && property.name.to_s.strip.casecmp("status").zero?
+  end
+
   def ensure_database_unlocked!
     return unless @database.locked?
 
     redirect_to database_redirect_location, alert: "Grid is locked. Unlock to make changes."
+  end
+
+  def respond_row_update_failure(anchor:, message:)
+    respond_to do |format|
+      format.turbo_stream { render plain: message, status: :unprocessable_entity }
+      format.html { redirect_to database_redirect_location(anchor:), alert: message }
+    end
   end
 end

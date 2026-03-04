@@ -5,13 +5,20 @@ class DatabasesController < ApplicationController
   before_action :set_archived_database, only: %i[restore destroy]
   COVER_SHIFT_STEP = 10
   FILTER_OPERATORS = %w[eq before after].freeze
-  TASK_STATUS_OPTIONS = [ "not started", "planning", "started", "on hold", "complete" ].freeze
+  TASK_STATUS_OPTIONS = [ "not started", "started", "overdue", "hold", "done" ].freeze
+  TASK_STATUS_NORMALIZATION_MAP = {
+    "planning" => "not started",
+    "on hold" => "hold",
+    "complete" => "done",
+    "completed" => "done",
+    "in progress" => "started"
+  }.freeze
   TASK_STATUS_CLASS_MAP = {
     "not started" => "is-status-not-started",
-    "planning" => "is-status-planning",
     "started" => "is-status-started",
-    "on hold" => "is-status-on-hold",
-    "complete" => "is-status-complete"
+    "overdue" => "is-status-overdue",
+    "hold" => "is-status-hold",
+    "done" => "is-status-done"
   }.freeze
 
   helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for
@@ -795,7 +802,8 @@ class DatabasesController < ApplicationController
   end
 
   def normalize_task_status_value(value)
-    value.to_s.strip.downcase
+    normalized = value.to_s.strip.downcase
+    TASK_STATUS_NORMALIZATION_MAP.fetch(normalized, normalized)
   end
 
   def resolve_or_create_kanban_group_property!

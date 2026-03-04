@@ -9,9 +9,31 @@
     <p>Capture online or in-person meetings, then generate speaker-separated transcripts, summary notes, and follow-up proposals.</p>
   </header>
 
-  <div class="notae-meetings-layout">
+  <% if @active_recording_sessions.any? %>
+    <section class="notae-auth-card notae-meetings-live-banner" aria-live="polite">
+      <div class="notae-meetings-live-indicator is-active" role="status">
+        <span class="notae-meetings-live-dot" aria-hidden="true"></span>
+        <span class="notae-meetings-live-bars" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span>
+          Recording in progress for <%= pluralize(@active_recording_sessions.size, "session") %>.
+        </span>
+      </div>
+    </section>
+  <% end %>
+
+  <div class="notae-meetings-layout notae-meetings-layout--capture">
     <section class="notae-auth-card notae-meetings-card">
-      <h2>Start Online Capture</h2>
+      <div class="notae-meetings-card-head">
+        <h2>Schedule a Meeting to Record</h2>
+        <% if @online_recording_active %>
+          <span class="notae-meetings-live-indicator is-active is-compact" role="status">
+            <span class="notae-meetings-live-dot" aria-hidden="true"></span>
+            <span>Live</span>
+          </span>
+        <% end %>
+      </div>
       <p class="notae-doc-muted">Use this for Google Meet, Zoom, or Teams links.</p>
 
       <%= form_with model: @meeting_session,
@@ -32,21 +54,29 @@
           <%= form.check_box :consent_warning_acknowledged, { checked: false }, "1", "0" %>
           <span>I acknowledge consent requirements before recording.</span>
         </label>
-        <%= form.submit "Start capture", class: "notae-chip-button" %>
+        <%= form.submit "Schedule capture", class: "notae-chip-button" %>
       <% end %>
     </section>
 
     <section class="notae-auth-card notae-meetings-card"
              data-controller="meeting-capture">
-      <h2>In-Person Capture</h2>
-      <p class="notae-doc-muted">Record from this browser microphone or upload a file.</p>
+      <div class="notae-meetings-card-head">
+        <h2>Live In-Person Recording</h2>
+        <% if @in_person_recording_active %>
+          <span class="notae-meetings-live-indicator is-active is-compact" role="status">
+            <span class="notae-meetings-live-dot" aria-hidden="true"></span>
+            <span>Live</span>
+          </span>
+        <% end %>
+      </div>
+      <p class="notae-doc-muted">Record from this browser microphone, then submit for transcription.</p>
 
       <%= form_with model: @meeting_session,
                     url: meeting_sessions_path(workspace_slug: @workspace.slug),
                     class: "notae-meetings-form",
                     html: { multipart: true } do |form| %>
         <%= form.hidden_field :capture_mode,
-                              value: "upload",
+                              value: "in_person_mic",
                               data: { meeting_capture_target: "captureMode" } %>
         <%= form.hidden_field :provider, value: "local" %>
         <%= form.text_field :title, placeholder: "Session title", class: "notae-auth-input", required: true %>
@@ -56,9 +86,23 @@
                         class: "notae-auth-input" %>
         <%= form.file_field :capture_files,
                             multiple: true,
-                            class: "notae-auth-input",
+                            class: "notae-auth-input notae-meetings-hidden-file-input",
                             accept: "audio/*,video/*",
                             data: { meeting_capture_target: "fileInput" } %>
+        <label class="notae-options-checkbox">
+          <%= form.check_box :consent_warning_acknowledged, { checked: false }, "1", "0" %>
+          <span>I acknowledge consent requirements before recording.</span>
+        </label>
+        <div class="notae-meetings-live-indicator"
+             role="status"
+             aria-live="polite"
+             data-meeting-capture-target="activityIndicator">
+          <span class="notae-meetings-live-dot" aria-hidden="true"></span>
+          <span class="notae-meetings-live-bars" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+          <span data-meeting-capture-target="activityLabel">Recorder idle.</span>
+        </div>
         <div class="notae-meetings-recorder-actions">
           <button type="button"
                   class="notae-chip-button"
@@ -70,8 +114,37 @@
                   data-meeting-capture-target="stopButton"
                   disabled>Stop recording</button>
         </div>
+        <p class="notae-doc-muted">If access is denied, use the lock/camera icon in the browser address bar to allow microphone, then retry.</p>
         <p class="notae-doc-muted" data-meeting-capture-target="status">Recorder idle.</p>
-        <%= form.submit "Upload and process", class: "notae-chip-button" %>
+        <%= form.submit "Save recording and transcribe", class: "notae-chip-button" %>
+      <% end %>
+    </section>
+
+    <section class="notae-auth-card notae-meetings-card">
+      <h2>File Upload and Transcribe</h2>
+      <p class="notae-doc-muted">Upload meeting audio/video files for asynchronous transcription.</p>
+
+      <%= form_with model: @meeting_session,
+                    url: meeting_sessions_path(workspace_slug: @workspace.slug),
+                    class: "notae-meetings-form",
+                    html: { multipart: true } do |form| %>
+        <%= form.hidden_field :capture_mode, value: "upload" %>
+        <%= form.hidden_field :provider, value: "local" %>
+        <%= form.text_field :title, placeholder: "Session title", class: "notae-auth-input", required: true %>
+        <%= form.select :kalendarium_event_id,
+                        options_for_select([["Associate with event (optional)", ""]] + @upcoming_events.map { |event| ["#{event.title} (#{event.starts_at_utc.in_time_zone(current_user.time_zone).strftime('%a %-d %b %H:%M')})", event.id] }),
+                        {},
+                        class: "notae-auth-input" %>
+        <%= form.file_field :capture_files,
+                            multiple: true,
+                            class: "notae-auth-input",
+                            accept: "audio/*,video/*",
+                            required: true %>
+        <label class="notae-options-checkbox">
+          <%= form.check_box :consent_warning_acknowledged, { checked: false }, "1", "0" %>
+          <span>I acknowledge consent requirements before recording.</span>
+        </label>
+        <%= form.submit "Upload and transcribe", class: "notae-chip-button" %>
       <% end %>
     </section>
   </div>

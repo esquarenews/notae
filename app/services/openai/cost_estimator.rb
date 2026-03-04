@@ -28,6 +28,11 @@ module Openai
             Rails.application.config.x.ai_pricing.gpt_4_1_mini_input_per_1k.to_f,
             Rails.application.config.x.ai_pricing.gpt_4_1_mini_output_per_1k.to_f
           ]
+        when "gpt-4.1"
+          [
+            Rails.application.config.x.ai_pricing.gpt_4_1_input_per_1k.to_f,
+            Rails.application.config.x.ai_pricing.gpt_4_1_output_per_1k.to_f
+          ]
         else
           [ 0.0, 0.0 ]
         end

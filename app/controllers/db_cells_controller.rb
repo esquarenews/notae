@@ -94,13 +94,29 @@ class DbCellsController < ApplicationController
     return unless property.name.to_s.strip.casecmp("status").zero?
 
     row = db_cell.db_row
-    status_value = db_cell.value_text.to_s.strip.downcase
-    if status_value == "complete"
+    status_value = normalize_task_status_value(db_cell.value_text)
+    if status_value == "done"
       row.apply_row_style_action!(action: "set_color", text_color: "gray")
     elsif row.row_text_color == "gray"
       row.apply_row_style_action!(action: "set_color", text_color: "default")
     end
 
     row.save! if row.changed?
+  end
+
+  def normalize_task_status_value(value)
+    normalized = value.to_s.strip.downcase
+    case normalized
+    when "complete", "completed"
+      "done"
+    when "on hold"
+      "hold"
+    when "planning"
+      "not started"
+    when "in progress"
+      "started"
+    else
+      normalized
+    end
   end
 end

@@ -8,14 +8,15 @@ require "uri"
 module Kalendarium
   module Providers
     class GoogleAdapter < BaseAdapter
-      def sync!(calendar: nil)
+      def sync!(calendar: nil, range_start: nil, range_end: nil)
         ensure_credentials!
+        effective_range_start, effective_range_end = sync_range(range_start:, range_end:)
 
         if calendar.present?
           ensure_calendar_belongs_to_connection!(calendar)
-          sync_single_calendar(calendar)
+          sync_single_calendar(calendar, range_start: effective_range_start, range_end: effective_range_end)
         else
-          sync_all_calendars
+          sync_all_calendars(range_start: effective_range_start, range_end: effective_range_end)
         end
 
         true
@@ -78,23 +79,23 @@ module Kalendarium
       REQUEST_OPEN_TIMEOUT_SECONDS = 10
       GOOGLE_EVENT_TYPES = %w[default outOfOffice focusTime workingLocation birthday fromGmail].freeze
 
-      def sync_all_calendars
+      def sync_all_calendars(range_start:, range_end:)
         remote_calendars = fetch_all_remote_calendars
         synced_remote_ids = remote_calendars.map do |remote_calendar|
           local_calendar = upsert_remote_calendar(remote_calendar)
-          sync_single_calendar(local_calendar)
+          sync_single_calendar(local_calendar, range_start: range_start, range_end: range_end)
           local_calendar.remote_id
         end
 
         disable_missing_provider_calendars(synced_remote_ids)
       end
 
-      def sync_single_calendar(calendar)
+      def sync_single_calendar(calendar, range_start:, range_end:)
         seen_remote_event_ids = []
         events = fetch_calendar_events(
           calendar_id: calendar.remote_id,
-          range_start: (Time.current - LOOKBACK_DAYS.days).beginning_of_day,
-          range_end: (Time.current + LOOKAHEAD_DAYS.days).end_of_day
+          range_start: range_start,
+          range_end: range_end
         )
 
         events.each_with_index do |remote_event, index|
@@ -195,6 +196,12 @@ module Kalendarium
         end
 
         items
+      end
+
+      def sync_range(range_start:, range_end:)
+        start_time = range_start.presence || (Time.current - LOOKBACK_DAYS.days).beginning_of_day
+        end_time = range_end.presence || (Time.current + LOOKAHEAD_DAYS.days).end_of_day
+        [ start_time, end_time ]
       end
 
       def upsert_remote_calendar(remote_calendar)

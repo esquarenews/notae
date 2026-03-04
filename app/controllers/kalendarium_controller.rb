@@ -80,6 +80,10 @@ class KalendariumController < ApplicationController
   def refresh
     authorize @workspace, :show?
 
+    @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week"
+    @selected_date = parse_selected_date
+    range_start, range_end = range_for_view
+
     refreshable_connections = policy_scope(KalendariumConnection)
                                 .for_workspace(@workspace)
                                 .active
@@ -92,22 +96,62 @@ class KalendariumController < ApplicationController
       return
     end
 
+    scoped_calendar_ids = Array(params[:calendar_ids]).map(&:to_s).reject(&:blank?)
+    explicit_empty_scope = params[:calendar_filter_applied].to_s == "1" && scoped_calendar_ids.empty?
+    scoped_calendars_by_connection = refresh_scope_calendars(refreshable_connections).group_by(&:kalendarium_connection_id)
     failures = []
+    queued_failures = []
+    synced_connections = []
+
     refreshable_connections.each do |connection|
-      Kalendarium::ConnectionSyncService.new(connection: connection).call
+      if explicit_empty_scope
+        synced_connections << connection
+        next
+      end
+
+      scoped_calendars = scoped_calendars_by_connection.fetch(connection.id, [])
+
+      if scoped_calendars.any?
+        scoped_calendars.each do |calendar|
+          Kalendarium::ConnectionSyncService.new(
+            connection: connection,
+            calendar: calendar,
+            range_start: range_start,
+            range_end: range_end,
+            retry_pending_writes: false
+          ).call
+        end
+      else
+        Kalendarium::ConnectionSyncService.new(
+          connection: connection,
+          range_start: range_start,
+          range_end: range_end,
+          retry_pending_writes: false
+        ).call
+      end
+
+      synced_connections << connection
     rescue StandardError => error
       failures << "#{connection.label}: #{error.message}"
     end
+
+    synced_connections.each do |connection|
+      Kalendarium::SyncConnectionJob.set(wait: 2.minutes).perform_later(connection.id)
+    rescue StandardError => error
+      queued_failures << "#{connection.label}: #{error.message}"
+    end
+
+    queued_suffix = queued_failures.any? ? " Background full sync queue errors: #{queued_failures.join(' | ')}" : " Full sync queued in background."
 
     if failures.any?
       if failures.size == refreshable_connections.size
         redirect_to kalendarium_path(kalendarium_redirect_params), alert: "Refresh failed for all connections: #{failures.join(' | ')}"
       else
         completed_count = refreshable_connections.size - failures.size
-        redirect_to kalendarium_path(kalendarium_redirect_params), alert: "Refresh completed for #{helpers.pluralize(completed_count, "connection")} with errors: #{failures.join(' | ')}"
+        redirect_to kalendarium_path(kalendarium_redirect_params), alert: "Refresh completed for #{helpers.pluralize(completed_count, "connection")} with errors: #{failures.join(' | ')}.#{queued_suffix}"
       end
     else
-      redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Refresh completed for #{helpers.pluralize(refreshable_connections.size, "connection")}."
+      redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Refresh completed for #{helpers.pluralize(refreshable_connections.size, "connection")} in the current view.#{queued_suffix}"
     end
   end
 
@@ -264,6 +308,25 @@ class KalendariumController < ApplicationController
 
       redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     end
+  end
+
+  def refresh_scope_calendars(connections)
+    connection_ids = connections.map(&:id)
+    return [] if connection_ids.empty?
+
+    scope = policy_scope(KalendariumCalendar)
+              .for_workspace(@workspace)
+              .where(source_kind: "provider", kalendarium_connection_id: connection_ids)
+              .order(:name)
+
+    requested_ids = Array(params[:calendar_ids]).map(&:to_s).reject(&:blank?)
+    if params[:calendar_filter_applied].to_s == "1"
+      return requested_ids.any? ? scope.where(id: requested_ids).to_a : []
+    end
+
+    return scope.where(id: requested_ids).to_a if requested_ids.any?
+
+    scope.where(enabled: true).to_a
   end
 
   def build_day_timeline(day)

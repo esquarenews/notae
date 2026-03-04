@@ -31,7 +31,7 @@ RSpec.describe "Databases", type: :request do
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: created_database.id))
   end
 
-  it "creates a tasks template with task columns and default status options" do
+  it "creates a tasks template with task columns, default status, and dropdown options" do
     owner = User.create!(email: "database-template-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Template tables", slug: "template-tables")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -51,24 +51,30 @@ RSpec.describe "Databases", type: :request do
       ]
     )
 
-    get database_path(workspace_slug: workspace.slug, id: database.id)
-
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include('option value="not started"')
-    expect(response.body).to include('option value="planning"')
-    expect(response.body).to include('option value="started"')
-    expect(response.body).to include('option value="on hold"')
-    expect(response.body).to include('option value="complete"')
-
     post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
          params: { db_row: { title: "Task one" } }
 
     row = database.db_rows.order(:created_at).last
+    status_property = database.db_properties.find_by!(name: "Status")
+    status_cell = row.db_cells.find_by!(db_property: status_property)
     date_created_property = database.db_properties.find_by!(name: "Date created")
+    expect(status_cell.value_text).to eq("not started")
     expect(row.db_cells.find_by!(db_property: date_created_property).value_text).to eq(Date.current.iso8601)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("<datalist")
+
+    document = Nokogiri::HTML(response.body)
+    status_dropdown = document.at_css("select.notae-db-cell-select-status")
+    expect(status_dropdown).to be_present
+    status_option_values = status_dropdown.css("option").map { |option| option["value"] }.compact
+    expect(status_option_values).to include("", "not started", "started", "overdue", "hold", "done")
+    expect(status_dropdown.at_css("option[selected]")&.[]("value")).to eq("not started")
   end
 
-  it "greys rows when status is complete and restores color when reopened" do
+  it "greys rows when status is done and restores color when reopened" do
     owner = User.create!(email: "database-status-color-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Status color tables", slug: "status-color-tables")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -79,7 +85,7 @@ RSpec.describe "Databases", type: :request do
     sign_in owner
 
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: status_cell.id),
-          params: { db_cell: { value_text: "complete" } }
+          params: { db_cell: { value_text: "done" } }
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{row.id}"))
     expect(row.reload.row_text_color).to eq("gray")
 
@@ -1015,6 +1021,28 @@ RSpec.describe "Databases", type: :request do
     expect(row.reload.title).to eq("Untitled row")
   end
 
+  it "updates row titles with turbo-stream autosave without full-page redirect" do
+    owner = User.create!(email: "database-row-update-turbo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row turbo update tables", slug: "row-turbo-update-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row turbo update DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Original title")
+    database.update_column(:updated_at, 2.days.ago)
+    previous_database_updated_at = database.reload.updated_at
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { title: "Renamed row", autosave_title: "1" } },
+          as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(row.reload.title).to eq("Renamed row")
+    expect(database.reload.updated_at).to be > previous_database_updated_at
+  end
+
   it "creates a new row directly below when row update requests create_next_row" do
     owner = User.create!(email: "database-row-create-next-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row create next tables", slug: "row-create-next-tables")
@@ -1352,11 +1380,14 @@ RSpec.describe "Databases", type: :request do
     title_form = row_node.at_css("form.notae-db-title-form-inline")
     expect(title_form).to be_present
     expect(title_form["data-controller"]).to eq("auto-submit")
-    expect(title_form["data-turbo"]).to eq("false")
+    expect(title_form["data-turbo"]).to be_nil
     title_input = title_form.at_css("input[name='db_row[title]']")
     expect(title_input).to be_present
     expect(title_input["onkeydown"]).to be_nil
     expect(title_input["data-action"]).to include("change->auto-submit#submit")
+    autosave_input = title_form.at_css("input[name='db_row[autosave_title]']")
+    expect(autosave_input).to be_present
+    expect(autosave_input["value"]).to eq("1")
     create_next_submitter = title_form.at_css("button.notae-db-enter-submitter[name='db_row[create_next_row]'][value='1']")
     expect(create_next_submitter).to be_present
     expect(response.body).not_to include("Create next row")

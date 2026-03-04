@@ -40,11 +40,36 @@ RSpec.describe "Meetings", type: :request do
     get workspace_meetings_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Start Online Capture")
-    expect(response.body).to include("In-Person Capture")
+    expect(response.body).to include("Schedule a Meeting to Record")
+    expect(response.body).to include("Live In-Person Recording")
+    expect(response.body).to include("File Upload and Transcribe")
     expect(response.body).to include("Recent Sessions")
     expect(response.body).to include("Action Proposals")
     expect(response.body).to include("notae-sidebar-link-label\">Meetings")
+    expect(response.body).to include("If access is denied, use the lock/camera icon in the browser address bar to allow microphone, then retry.")
+    expect(response.headers["Permissions-Policy"].to_s).to include("microphone=(self)")
+  end
+
+  it "shows a recording-in-progress indicator when a live session exists" do
+    user, workspace, event = build_stack(suffix: "active-indicator")
+    MeetingSession.create!(
+      workspace: workspace,
+      kalendarium_event: event,
+      created_by: user,
+      updated_by: user,
+      title: "Live capture",
+      capture_mode: "online_bot",
+      provider: "google_meet",
+      status: "recording",
+      join_url: "https://meet.google.com/abc-defg-hij"
+    )
+    sign_in user
+
+    get workspace_meetings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Recording in progress for 1 session.")
+    expect(response.body).to include("notae-meetings-live-indicator is-active")
   end
 
   it "creates an upload session, links a meeting note, and queues processing" do

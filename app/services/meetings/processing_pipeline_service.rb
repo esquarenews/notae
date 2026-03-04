@@ -3,6 +3,8 @@ require "tempfile"
 module Meetings
   class ProcessingPipelineService
     class Error < StandardError; end
+    DIARIZATION_MODEL = "gpt-4o-transcribe-diarize".freeze
+    FALLBACK_MODEL = "gpt-4o-mini-transcribe".freeze
 
     def initialize(session:)
       @session = session
@@ -14,7 +16,7 @@ module Meetings
 
       session.update!(status: "processing", error_message: nil)
       transcription = transcribe_capture_file!
-      turns = Meetings::LocalDiarizer.call(segments: transcription.fetch(:segments))
+      turns = turns_from_transcription(transcription)
       resolved_turns = Meetings::SpeakerResolutionService.new(session: session).resolve(turns: turns)
 
       MeetingSession.transaction do
@@ -58,36 +60,246 @@ module Meetings
       downloaded_path.write(capture_attachment.blob.download)
       downloaded_path.flush
 
-      response = Openai::AudioTranscriptionsClient.transcribe(
-        file_path: downloaded_path.path,
-        api_key: session.created_by.openai_api_key
-      )
+      response = transcribe_with_preferred_formats(downloaded_path.path)
+      transcript_text = response["text"].to_s.strip
+      normalized_segments = normalize_segments(response, transcript_text)
 
       {
-        text: response["text"].to_s,
-        segments: normalize_segments(response["segments"])
+        text: transcript_text,
+        segments: normalized_segments.fetch(:segments),
+        segments_source: normalized_segments.fetch(:source)
       }
     ensure
-      downloaded_path&.close!
+      downloaded_path&.close
+      downloaded_path&.unlink if downloaded_path.respond_to?(:unlink)
     end
 
-    def normalize_segments(raw_segments)
-      segments = Array(raw_segments).filter_map do |segment|
-        text = segment["text"].to_s.strip
+    def transcribe_with_preferred_formats(file_path)
+      last_error = nil
+
+      preferred_transcription_models.each do |model|
+        transcription_attempts_for_model(model).each do |attempt|
+          begin
+            return Openai::AudioTranscriptionsClient.transcribe(
+              file_path: file_path,
+              api_key: session.created_by.openai_api_key,
+              model: model,
+              response_format: attempt.fetch(:response_format),
+              chunking_strategy: attempt[:chunking_strategy]
+            )
+          rescue Openai::AudioTranscriptionsClient::Error => error
+            last_error = error
+            raise error unless retry_with_fallback_format?(model: model, response_format: attempt.fetch(:response_format), message: error.message)
+          end
+        end
+      end
+
+      raise last_error if last_error
+      raise Error, "Audio transcription request failed"
+    end
+
+    def preferred_transcription_models
+      [
+        ENV.fetch("OPENAI_MEETINGS_TRANSCRIPTION_MODEL", "").to_s.strip.presence,
+        DIARIZATION_MODEL,
+        ENV.fetch("OPENAI_TRANSCRIPTION_MODEL", "").to_s.strip.presence,
+        FALLBACK_MODEL,
+        "whisper-1"
+      ].compact.uniq
+    end
+
+    def transcription_attempts_for_model(model)
+      if diarization_model?(model)
+        [
+          { response_format: "diarized_json", chunking_strategy: "auto" },
+          { response_format: "json", chunking_strategy: "auto" }
+        ]
+      else
+        [
+          { response_format: "verbose_json" },
+          { response_format: "json" }
+        ]
+      end
+    end
+
+    def retry_with_fallback_format?(model:, response_format:, message:)
+      return true if diarization_model?(model) && response_format == "diarized_json"
+
+      normalized = message.to_s.downcase
+      normalized.include?("response_format") ||
+        normalized.include?("diarized_json") ||
+        normalized.include?("timestamp_granularit") ||
+        normalized.include?("chunking_strategy") ||
+        normalized.include?("not compatible") ||
+        ((normalized.include?("model") || normalized.include?("engine")) &&
+          (normalized.include?("not found") || normalized.include?("not available") || normalized.include?("does not exist")))
+    end
+
+    def diarization_model?(model)
+      model.to_s.include?("diarize")
+    end
+
+    def turns_from_transcription(transcription)
+      segments = Array(transcription[:segments])
+      return [] if segments.empty?
+
+      if segments_with_speakers?(segments)
+        turns_from_speaker_segments(segments)
+      elsif transcription[:segments_source] == :synthetic
+        turns_from_synthetic_segments(segments)
+      else
+        Meetings::LocalDiarizer.call(segments: segments)
+      end
+    end
+
+    def segments_with_speakers?(segments)
+      segments.any? { |segment| segment[:speaker].to_s.strip.present? }
+    end
+
+    def turns_from_speaker_segments(segments)
+      speaker_keys = {}
+      segments.map.with_index do |segment, index|
+        speaker_label = segment[:speaker].to_s.strip
+        speaker_label = "speaker_#{index + 1}" if speaker_label.blank?
+        speaker_key = speaker_keys[speaker_label] ||= "S#{speaker_keys.length + 1}"
+
+        started_ms = (segment[:start].to_f * 1000).to_i
+        ended_ms = (segment[:end].to_f * 1000).to_i
+        ended_ms = [ ended_ms, started_ms + 220 ].max
+
+        Meetings::LocalDiarizer::Turn.new(
+          position: index,
+          started_ms: started_ms,
+          ended_ms: ended_ms,
+          speaker_key: speaker_key,
+          text: segment[:text].to_s.strip,
+          confidence: 0.78
+        )
+      end
+    end
+
+    def turns_from_synthetic_segments(segments)
+      speaker_count = estimated_speaker_count
+      segments.map.with_index do |segment, index|
+        Meetings::LocalDiarizer::Turn.new(
+          position: index,
+          started_ms: (segment[:start].to_f * 1000).to_i,
+          ended_ms: (segment[:end].to_f * 1000).to_i,
+          speaker_key: "S#{(index % speaker_count) + 1}",
+          text: segment[:text].to_s.strip,
+          confidence: 0.48
+        )
+      end
+    end
+
+    def estimated_speaker_count
+      invitees = Array(session.kalendarium_event&.invitees)
+      count = [ invitees.size, 1 ].max
+      [ count, 4 ].min
+    end
+
+    def normalize_segments(raw_response, transcript_text)
+      payload = raw_response.is_a?(Hash) ? raw_response : {}
+
+      segments = Array(payload["segments"]).filter_map do |segment|
+        text = segment_value(segment, "text").to_s.strip
         next if text.blank?
 
+        start_time = segment_value(segment, "start").to_f
+        end_time = segment_value(segment, "end").to_f
+        end_time = [ end_time, start_time ].max
+
         {
-          start: segment["start"].to_f,
-          end: segment["end"].to_f,
-          text: text
+          start: start_time,
+          end: end_time,
+          text: text,
+          speaker: speaker_label_for(segment)
         }
       end
 
-      return segments if segments.any?
+      return { segments: segments, source: :provider } if segments.any?
 
-      transcript = session.transcript_text.to_s.strip
-      fallback_text = transcript.presence || "Transcript unavailable."
-      [ { start: 0.0, end: 1.0, text: fallback_text } ]
+      word_segments = segments_from_words(Array(payload["words"]))
+      return { segments: word_segments, source: :provider_words } if word_segments.any?
+
+      fallback_segments = sentence_segments_from_text(transcript_text)
+      return { segments: fallback_segments, source: :synthetic } if fallback_segments.any?
+
+      fallback_text = transcript_text.to_s.presence || "Transcript unavailable."
+      { segments: [ { start: 0.0, end: 1.0, text: fallback_text } ], source: :fallback }
+    end
+
+    def segment_value(segment, key)
+      segment[key] || segment[key.to_sym]
+    end
+
+    def speaker_label_for(segment)
+      value = segment_value(segment, "speaker")
+      if value.is_a?(Hash)
+        segment_value(value, "name") || segment_value(value, "id") || segment_value(value, "label")
+      else
+        value
+      end
+    end
+
+    def segments_from_words(words)
+      entries = words.filter_map do |word|
+        token = segment_value(word, "word").to_s.presence || segment_value(word, "text").to_s.presence
+        next if token.blank?
+
+        {
+          speaker: speaker_label_for(word).to_s.strip.presence,
+          start: segment_value(word, "start").to_f,
+          end: segment_value(word, "end").to_f,
+          text: token.strip
+        }
+      end
+      return [] if entries.empty?
+      return [] if entries.none? { |entry| entry[:speaker].present? }
+
+      grouped = []
+      current = nil
+      entries.each do |entry|
+        if current.nil? || entry[:speaker] != current[:speaker]
+          grouped << {
+            speaker: entry[:speaker],
+            start: entry[:start],
+            end: [ entry[:end], entry[:start] ].max,
+            text: entry[:text]
+          }
+          current = grouped.last
+        else
+          current[:end] = [ entry[:end], current[:end] ].max
+          current[:text] = [ current[:text], entry[:text] ].join(" ")
+        end
+      end
+
+      grouped
+    end
+
+    def sentence_segments_from_text(text)
+      content = text.to_s.strip
+      return [] if content.blank?
+
+      sentences = content.split(/(?<=[.!?])\s+|\n+/).map(&:strip).reject(&:blank?)
+      if sentences.length < 2
+        chunked = content.split(/\s+/).each_slice(16).map { |words| words.join(" ").strip }.reject(&:blank?)
+        sentences = chunked if chunked.length > 1
+      end
+      return [] if sentences.length < 2
+
+      cursor = 0.0
+      sentences.map do |sentence|
+        words = [ sentence.scan(/\S+/).length, 1 ].max
+        duration = [ words * 0.42, 1.1 ].max
+        segment = {
+          start: cursor,
+          end: cursor + duration,
+          text: sentence
+        }
+        cursor += duration + 0.08
+        segment
+      end
     end
 
     def transcript_for(turns)

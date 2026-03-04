@@ -1,13 +1,16 @@
 module Kalendarium
   class ConnectionSyncService
-    def initialize(connection:, calendar: nil)
+    def initialize(connection:, calendar: nil, range_start: nil, range_end: nil, retry_pending_writes: true)
       @connection = connection
       @calendar = calendar
+      @range_start = range_start
+      @range_end = range_end
+      @retry_pending_writes = retry_pending_writes
     end
 
     def call
-      adapter.sync!(calendar: calendar)
-      retry_pending_provider_writes!
+      adapter.sync!(calendar: calendar, range_start: range_start, range_end: range_end)
+      retry_pending_provider_writes! if retry_pending_writes?
       connection.update!(status: "connected", last_synced_at: Time.current, last_error: nil)
     rescue StandardError => error
       connection.update!(status: "sync_error", last_error: error.message)
@@ -16,7 +19,11 @@ module Kalendarium
 
     private
 
-    attr_reader :connection, :calendar
+    attr_reader :connection, :calendar, :range_start, :range_end
+
+    def retry_pending_writes?
+      !!@retry_pending_writes
+    end
 
     def retry_pending_provider_writes!
       return unless connection.provider == "google"

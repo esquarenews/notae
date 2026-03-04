@@ -275,12 +275,13 @@ end %>
                                     url: row_update_path,
                                     method: :patch,
                                     class: "notae-db-title-form notae-db-title-form-inline",
-                                    data: { controller: "auto-submit", turbo: false } do |form| %>
+                                    data: { controller: "auto-submit" } do |form| %>
                       <%= form.text_field :title,
                                         value: row.title,
                                         class: "notae-db-title-input",
                                         placeholder: "Enter name",
                                         data: { action: "change->auto-submit#submit" } %>
+                      <%= hidden_field_tag "db_row[autosave_title]", "1" %>
                       <%= form.button "",
                                       type: "submit",
                                       class: "notae-db-enter-submitter",
@@ -306,12 +307,13 @@ end %>
                                   url: row_update_path,
                                   method: :patch,
                                   class: "notae-db-title-form notae-db-title-form-inline",
-                                  data: { controller: "auto-submit", turbo: false } do |form| %>
+                                  data: { controller: "auto-submit" } do |form| %>
                     <%= form.text_field :title,
                                         value: row.title,
                                         class: "notae-db-title-input",
                                         placeholder: "Enter name",
                                         data: { action: "change->auto-submit#submit" } %>
+                    <%= hidden_field_tag "db_row[autosave_title]", "1" %>
                     <%= form.button "",
                                     type: "submit",
                                     class: "notae-db-enter-submitter",
@@ -380,6 +382,13 @@ end %>
                                          "true",
                                          "false" %>
                     </label>
+                  <% elsif db_property.select? %>
+                    <% blank_label = db_property.name.to_s.strip.casecmp("status").zero? ? "Select status" : "Select option" %>
+                    <%= form.select :value_text,
+                                    options_for_select(select_options_for(db_property), db_cell.value_text),
+                                    { include_blank: blank_label },
+                                    class: field_classes,
+                                    data: { action: "change->auto-submit#submit" } %>
                   <% elsif db_property.number? %>
                     <%= form.number_field :value_text,
                                           value: db_cell.value_text,
@@ -394,16 +403,11 @@ end %>
                                         class: field_classes,
                                         data: { action: "change->auto-submit#submit" } %>
                   <% else %>
-                    <% input_options = {
-                      value: db_cell.value_text,
-                      id: "db_cell_#{db_cell.id}_value_text",
-                      class: field_classes,
-                      data: { action: "change->auto-submit#submit" }
-                    } %>
-                    <% if db_property.select? %>
-                      <% input_options[:list] = "db_property_#{db_property.id}_options" %>
-                    <% end %>
-                    <%= form.text_field :value_text, **input_options %>
+                    <%= form.text_field :value_text,
+                                        value: db_cell.value_text,
+                                        id: "db_cell_#{db_cell.id}_value_text",
+                                        class: field_classes,
+                                        data: { action: "change->auto-submit#submit" } %>
                   <% end %>
                 <% end %>
               <% else %>
@@ -456,14 +460,3 @@ end %>
     </tbody>
   </table>
 </div>
-
-<% @db_properties.select(&:select?).each do |property| %>
-  <% options = select_options_for(property) %>
-  <% next if options.empty? %>
-
-  <datalist id="db_property_<%= property.id %>_options">
-    <% options.each do |option| %>
-      <option value="<%= option %>"></option>
-    <% end %>
-  </datalist>
-<% end %>

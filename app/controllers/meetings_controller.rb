@@ -1,4 +1,6 @@
 class MeetingsController < ApplicationController
+  ACTIVE_RECORDING_STATUSES = %w[joining recording].freeze
+
   before_action :authenticate_user!
   before_action :set_workspace
 
@@ -21,6 +23,13 @@ class MeetingsController < ApplicationController
                           .recent_first
                           .limit(30)
                           .to_a
+
+    @active_recording_sessions = @meeting_sessions.select do |session|
+      session.capture_mode.in?(%w[online_bot in_person_mic]) &&
+        session.status.in?(ACTIVE_RECORDING_STATUSES)
+    end
+    @online_recording_active = @active_recording_sessions.any? { |session| session.capture_mode == "online_bot" }
+    @in_person_recording_active = @active_recording_sessions.any? { |session| session.capture_mode == "in_person_mic" }
 
     @pending_action_proposals = policy_scope(KalendariumWriteProposal)
                                   .for_workspace(@workspace)
