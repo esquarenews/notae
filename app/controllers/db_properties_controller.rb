@@ -43,11 +43,29 @@ class DbPropertiesController < ApplicationController
   end
 
   def seed_cells_for_existing_rows(db_property)
-    policy_scope(DbRow).for_database(@database).active.find_each do |row|
-      row.db_cells.find_or_create_by!(db_property:, workspace: @workspace) do |cell|
-        cell.value_text = ""
-      end
+    row_ids = policy_scope(DbRow).for_database(@database).active.pluck(:id)
+    return if row_ids.empty?
+
+    existing_row_ids = DbCell.where(db_property_id: db_property.id, db_row_id: row_ids).pluck(:db_row_id)
+    existing_lookup = existing_row_ids.each_with_object({}) { |row_id, memo| memo[row_id] = true }
+
+    now = Time.current
+    missing_cells = row_ids.each_with_object([]) do |row_id, memo|
+      next if existing_lookup[row_id]
+
+      memo << {
+        id: SecureRandom.uuid,
+        workspace_id: @workspace.id,
+        db_row_id: row_id,
+        db_property_id: db_property.id,
+        value_text: "",
+        created_at: now,
+        updated_at: now
+      }
     end
+    return if missing_cells.empty?
+
+    DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
   end
 
   def append_property_to_active_view_visibility(db_property)

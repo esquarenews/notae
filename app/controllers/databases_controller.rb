@@ -1,50 +1,38 @@
 class DatabasesController < ApplicationController
+  include DatabaseTablePresentation
+  include RequestPerformanceInstrumentation
+
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database, only: %i[show update duplicate archive export_csv permissions kanbanize]
   before_action :set_archived_database, only: %i[restore destroy]
+  track_request_performance_for :show, :update
+
   COVER_SHIFT_STEP = 10
   FILTER_OPERATORS = %w[eq before after].freeze
-  TASK_STATUS_OPTIONS = [ "not started", "started", "overdue", "hold", "done" ].freeze
-  TASK_STATUS_NORMALIZATION_MAP = {
-    "planning" => "not started",
-    "on hold" => "hold",
-    "complete" => "done",
-    "completed" => "done",
-    "in progress" => "started"
-  }.freeze
-  TASK_STATUS_CLASS_MAP = {
-    "not started" => "is-status-not-started",
-    "started" => "is-status-started",
-    "overdue" => "is-status-overdue",
-    "hold" => "is-status-hold",
-    "done" => "is-status-done"
-  }.freeze
-
-  helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for
 
   def show
     authorize @database
     ensure_default_view!
 
     @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
-    @databases = policy_scope(Database).for_workspace(@workspace).active.order(:created_at)
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
     @archived_rows = policy_scope(DbRow).for_database(@database).where.not(archived_at: nil).ordered.to_a
-    ensure_cells_for_rendered_rows!
-    @cells = policy_scope(DbCell).for_database(@database).to_a
-    @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
-    @select_options_by_property = build_select_options_by_property
     @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
     @current_view = resolve_current_view
     @view_type = @current_view&.view_type || "table"
     @view_config = @current_view&.config_json.to_h || {}
-    @linkable_pages = policy_scope(Page).for_workspace(@workspace).active.order(updated_at: :desc).to_a
+    resolve_filter_and_sort_settings!
+    required_property_ids = required_property_ids_for_cell_load
+    ensure_cells_for_rendered_rows!(property_ids: required_property_ids)
+    @cells = load_cells_for_rows_and_properties(property_ids: required_property_ids)
+    @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
+    @select_options_by_property = build_select_options_by_property
+    @linkable_pages = policy_scope(Page).for_workspace(@workspace).active.select(:id, :title, :updated_at).order(updated_at: :desc).to_a
     @linkable_pages_by_id = @linkable_pages.index_by(&:id)
     @split_page = resolve_split_page
 
-    resolve_filter_and_sort_settings!
     apply_row_filter!
     sort_rows!
     prepare_board_view_data!
@@ -520,35 +508,14 @@ class DatabasesController < ApplicationController
     nil
   end
 
-  def cell_value_for(row, property)
-    return "" if row.blank? || property.blank?
-
-    @cells_by_key[[ row.id, property.id ]]&.value_text.to_s
-  end
-
-  def select_options_for(property)
-    return [] if property.blank?
-
-    @select_options_by_property[property.id] || []
-  end
-
-  def select_input_classes_for(property, value)
-    classes = [ "notae-db-cell-input" ]
-    return classes.join(" ") unless task_status_property?(property)
-
-    normalized_value = normalize_task_status_value(value)
-    classes << "notae-db-cell-select-status"
-    classes << TASK_STATUS_CLASS_MAP[normalized_value] if TASK_STATUS_CLASS_MAP.key?(normalized_value)
-    classes.join(" ")
-  end
-
   def build_select_options_by_property
-    @db_properties.select(&:select?).each_with_object({}) do |property, options|
+    properties = @visible_db_properties || @db_properties
+    properties.select(&:select?).each_with_object({}) do |property, options|
       seen = {}
       values = []
 
       if task_status_property?(property)
-        TASK_STATUS_OPTIONS.each do |status|
+        DatabaseTablePresentation::TASK_STATUS_OPTIONS.each do |status|
           seen[status] = true
           values << status
         end
@@ -662,17 +629,6 @@ class DatabasesController < ApplicationController
     value.to_s == "overdue" ? "overdue" : "none"
   end
 
-  def conditional_color_class_for_row(row)
-    return nil unless @conditional_color_mode == "overdue"
-    return nil if @conditional_color_property.blank?
-
-    due_date = cast_value_for_property(@conditional_color_property, cell_value_for(row, @conditional_color_property))
-    return nil unless due_date.is_a?(Date)
-    return nil unless due_date < Date.current
-
-    "is-overdue-highlight"
-  end
-
   def unlocking_database_request?
     return false unless params.key?(:database)
     return false unless params[:database].respond_to?(:key?) && params[:database].key?(:locked)
@@ -712,17 +668,19 @@ class DatabasesController < ApplicationController
     policy_scope(Page).for_workspace(@workspace).active.find_by(id: split_page_id)
   end
 
-  def ensure_cells_for_rendered_rows!
+  def ensure_cells_for_rendered_rows!(property_ids: nil)
     return if @rows.empty? || @db_properties.empty?
 
     row_ids = @rows.map(&:id)
-    property_ids = @db_properties.map(&:id)
+    property_ids = Array(property_ids).presence || @db_properties.map(&:id)
+    return if property_ids.empty?
 
-    existing_keys = policy_scope(DbCell)
-                    .for_database(@database)
-                    .where(db_row_id: row_ids, db_property_id: property_ids)
-                    .pluck(:db_row_id, :db_property_id)
-                    .to_set
+    existing_scope = policy_scope(DbCell).for_database(@database).where(db_row_id: row_ids, db_property_id: property_ids)
+    expected_count = row_ids.length * property_ids.length
+    return if expected_count <= 0
+    return if existing_scope.count >= expected_count
+
+    existing_keys = existing_scope.pluck(:db_row_id, :db_property_id).to_set
 
     now = Time.current
     missing_cells = []
@@ -746,6 +704,27 @@ class DatabasesController < ApplicationController
     return if missing_cells.empty?
 
     DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
+  end
+
+  def load_cells_for_rows_and_properties(property_ids:)
+    row_ids = @rows.map(&:id)
+    return [] if row_ids.empty? || property_ids.empty?
+
+    policy_scope(DbCell)
+      .for_database(@database)
+      .where(db_row_id: row_ids, db_property_id: property_ids)
+      .to_a
+  end
+
+  def required_property_ids_for_cell_load
+    required_ids = []
+    required_ids.concat(Array(@visible_db_properties).map(&:id))
+    required_ids << @sort_property&.id
+    required_ids << @filter_property&.id
+    required_ids << @conditional_color_property&.id
+    required_ids << @board_group_property&.id if @view_type == "board"
+    required_ids << @calendar_date_property&.id if @view_type == "calendar"
+    required_ids.compact.uniq
   end
 
   def normalize_template(raw_template)
@@ -795,15 +774,6 @@ class DatabasesController < ApplicationController
     config = table_view.config_json.to_h
     config["visible_property_ids"] = created_properties.map { |property| property.id.to_s }
     table_view.update!(config_json: config)
-  end
-
-  def task_status_property?(property)
-    property.present? && property.select? && property.name.to_s.strip.casecmp("status").zero?
-  end
-
-  def normalize_task_status_value(value)
-    normalized = value.to_s.strip.downcase
-    TASK_STATUS_NORMALIZATION_MAP.fetch(normalized, normalized)
   end
 
   def resolve_or_create_kanban_group_property!

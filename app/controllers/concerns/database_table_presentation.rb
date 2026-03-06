@@ -1,0 +1,75 @@
+module DatabaseTablePresentation
+  extend ActiveSupport::Concern
+
+  TASK_STATUS_OPTIONS = [ "not started", "started", "overdue", "hold", "done" ].freeze
+  TASK_STATUS_NORMALIZATION_MAP = {
+    "planning" => "not started",
+    "on hold" => "hold",
+    "complete" => "done",
+    "completed" => "done",
+    "in progress" => "started"
+  }.freeze
+  TASK_STATUS_CLASS_MAP = {
+    "not started" => "is-status-not-started",
+    "started" => "is-status-started",
+    "overdue" => "is-status-overdue",
+    "hold" => "is-status-hold",
+    "done" => "is-status-done"
+  }.freeze
+
+  included do
+    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for
+  end
+
+  private
+
+  def cell_value_for(row, property)
+    return "" if row.blank? || property.blank?
+
+    @cells_by_key[[ row.id, property.id ]]&.value_text.to_s
+  end
+
+  def select_options_for(property)
+    return [] if property.blank?
+
+    @select_options_by_property[property.id] || []
+  end
+
+  def select_input_classes_for(property, value)
+    classes = [ "notae-db-cell-input" ]
+    return classes.join(" ") unless task_status_property?(property)
+
+    normalized_value = normalize_task_status_value(value)
+    classes << "notae-db-cell-select-status"
+    classes << TASK_STATUS_CLASS_MAP[normalized_value] if TASK_STATUS_CLASS_MAP.key?(normalized_value)
+    classes.join(" ")
+  end
+
+  def conditional_color_class_for_row(row)
+    return nil unless @conditional_color_mode == "overdue"
+    return nil if @conditional_color_property.blank?
+
+    due_date = parse_database_table_date_value(cell_value_for(row, @conditional_color_property))
+    return nil unless due_date.is_a?(Date)
+    return nil unless due_date < Date.current
+
+    "is-overdue-highlight"
+  end
+
+  def task_status_property?(property)
+    property.present? && property.select? && property.name.to_s.strip.casecmp("status").zero?
+  end
+
+  def normalize_task_status_value(value)
+    normalized = value.to_s.strip.downcase
+    TASK_STATUS_NORMALIZATION_MAP.fetch(normalized, normalized)
+  end
+
+  def parse_database_table_date_value(value)
+    return nil if value.blank?
+
+    Date.parse(value.to_s)
+  rescue ArgumentError
+    nil
+  end
+end

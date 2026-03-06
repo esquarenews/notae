@@ -40,5 +40,6 @@ RSpec.describe "AI Analytics settings", type: :request do
     expect(response.body).to include("Operation breakdown")
     expect(response.body).to include("Assistant query generation")
     expect(response.body).to include("Search answer generation")
+    expect(response.body).to include("Meeting diarization")
   end
 end

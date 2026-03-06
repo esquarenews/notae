@@ -146,15 +146,23 @@ body.notae-theme-dark .notae-settings-section h2 {
 body.notae-theme-dark .notae-sidebar-link:hover,
 body.notae-theme-dark .notae-icon-link:hover {
   background: #242a31;
+  border-color: #323a43;
 }
 
 body.notae-theme-dark .notae-sidebar-link.active {
   background: #2d343c;
+  border-color: #3b4652;
   color: var(--notae-text);
 }
 
 body.notae-theme-dark .notae-settings-nav-item {
   color: var(--notae-muted);
+}
+
+body.notae-theme-dark .notae-settings-nav a.notae-settings-nav-item:hover {
+  background: #242a31;
+  border-color: #36404b;
+  color: var(--notae-text);
 }
 
 body.notae-theme-dark .notae-settings-nav-group {
@@ -270,6 +278,10 @@ body.notae-theme-dark .notae-sidebar-dock-toggle {
   background: #1f252c;
 }
 
+body.notae-theme-dark .notae-sidebar-input:focus {
+  background: #1f252c;
+}
+
 body.notae-theme-dark .notae-sidebar-collapse-toggle:hover,
 body.notae-theme-dark .notae-sidebar-dock-toggle:hover {
   background: #262d35;
@@ -291,6 +303,21 @@ body.notae-theme-dark .notae-ai-assistant-result,
 body.notae-theme-dark .notae-ai-analytics-card {
   background: #1b222a;
   border-color: var(--notae-border);
+}
+
+body.notae-theme-dark .notae-ai-compose {
+  background: #1b222a;
+  border-color: var(--notae-border);
+}
+
+body.notae-theme-dark .notae-ai-prompt-input {
+  background: #121820;
+  color: var(--notae-text);
+  border-color: var(--notae-border);
+}
+
+body.notae-theme-dark .notae-ai-prompt-input::placeholder {
+  color: #94a3b8;
 }
 
 body.notae-theme-dark .notae-ai-message.is-user {
@@ -390,15 +417,23 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   body.notae-theme-system .notae-sidebar-link:hover,
   body.notae-theme-system .notae-icon-link:hover {
     background: #242a31;
+    border-color: #323a43;
   }
 
   body.notae-theme-system .notae-sidebar-link.active {
     background: #2d343c;
+    border-color: #3b4652;
     color: var(--notae-text);
   }
 
   body.notae-theme-system .notae-settings-nav-item {
     color: var(--notae-muted);
+  }
+
+  body.notae-theme-system .notae-settings-nav a.notae-settings-nav-item:hover {
+    background: #242a31;
+    border-color: #36404b;
+    color: var(--notae-text);
   }
 
   body.notae-theme-system .notae-settings-nav-group {
@@ -526,6 +561,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
     background: #1f252c;
   }
 
+  body.notae-theme-system .notae-sidebar-input:focus {
+    background: #1f252c;
+  }
+
   body.notae-theme-system .notae-sidebar-collapse-toggle:hover,
   body.notae-theme-system .notae-sidebar-dock-toggle:hover {
     background: #262d35;
@@ -545,6 +584,21 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   body.notae-theme-system .notae-ai-message {
     background: #1b222a;
     border-color: var(--notae-border);
+  }
+
+  body.notae-theme-system .notae-ai-compose {
+    background: #1b222a;
+    border-color: var(--notae-border);
+  }
+
+  body.notae-theme-system .notae-ai-prompt-input {
+    background: #121820;
+    color: var(--notae-text);
+    border-color: var(--notae-border);
+  }
+
+  body.notae-theme-system .notae-ai-prompt-input::placeholder {
+    color: #94a3b8;
   }
 
   body.notae-theme-system .notae-ai-message.is-user {
@@ -610,17 +664,17 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-shell {
   position: relative;
   display: grid;
-  grid-template-columns: 246px minmax(0, 1fr) 320px;
+  grid-template-columns: 238px minmax(0, 1fr) 308px;
   min-height: 100vh;
   transition: grid-template-columns 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .notae-shell.is-ai-rail-collapsed {
-  grid-template-columns: 246px minmax(0, 1fr) 2.8rem;
+  grid-template-columns: 238px minmax(0, 1fr) 2.8rem;
 }
 
 .notae-shell.is-sidebar-collapsed {
-  grid-template-columns: 3.4rem minmax(0, 1fr) 320px;
+  grid-template-columns: 3.4rem minmax(0, 1fr) 308px;
 }
 
 .notae-shell.is-sidebar-collapsed.is-ai-rail-collapsed {
@@ -635,10 +689,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-sidebar {
   border-right: 1px solid var(--notae-border);
   background: #f4f3f2;
-  padding: 0.6rem 0.45rem 0.8rem;
+  padding: 0.72rem 0.52rem 0.92rem;
   display: flex;
   flex-direction: column;
-  gap: 0.62rem;
+  gap: 0.78rem;
   z-index: 40;
 }
 
@@ -647,7 +701,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  gap: 0.62rem;
+  gap: 0.78rem;
 }
 
 .notae-sidebar-dock {
@@ -658,7 +712,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
 .notae-sidebar-header-actions {
@@ -840,7 +894,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-sidebar-list {
   display: flex;
   flex-direction: column;
-  gap: 0.02rem;
+  gap: 0.08rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -849,17 +903,17 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-sidebar-section {
   display: flex;
   flex-direction: column;
-  gap: 0.22rem;
+  gap: 0.34rem;
 }
 
 .notae-sidebar-label {
   margin: 0;
-  font-size: 0.61rem;
+  font-size: 0.64rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   color: #57534e;
-  padding-left: 0.24rem;
+  padding-left: 0.3rem;
 }
 
 .notae-sidebar-link,
@@ -880,11 +934,12 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-sidebar-link {
   display: block;
-  border-radius: 0.35rem;
-  padding: 0.24rem 0.42rem;
-  font-size: 0.76rem;
+  border: 1px solid transparent;
+  border-radius: 0.42rem;
+  padding: 0.34rem 0.48rem;
+  font-size: 0.78rem;
   font-weight: 500;
-  line-height: 1.28;
+  line-height: 1.32;
 }
 
 .notae-sidebar-link-content {
@@ -920,10 +975,12 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-sidebar-link:hover {
   background: #e8e7e6;
+  border-color: #e2dfdc;
 }
 
 .notae-sidebar-link.active {
   background: #dfdddb;
+  border-color: #d7d3cf;
   color: #292524;
   font-weight: 600;
 }
@@ -935,7 +992,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-sidebar-page-link-content {
   display: inline-flex;
   align-items: center;
-  gap: 0.33rem;
+  gap: 0.4rem;
   min-width: 0;
 }
 
@@ -953,17 +1010,17 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-sidebar-empty {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.73rem;
   color: #57534e;
-  padding-left: 0.25rem;
+  padding-left: 0.3rem;
 }
 
 .notae-sidebar-input {
   width: 100%;
-  border: 1px solid transparent;
-  border-radius: 0.35rem;
-  background: #ebe9e7;
-  padding: 0.34rem 0.44rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border) 78%, transparent);
+  border-radius: 0.42rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 88%, var(--notae-surface-muted) 12%);
+  padding: 0.38rem 0.46rem;
   font-size: 0.76rem;
 }
 
@@ -976,9 +1033,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-sidebar-footer {
   margin-top: auto;
   border-top: 1px solid var(--notae-border);
-  padding-top: 0.38rem;
+  padding-top: 0.48rem;
   display: grid;
-  gap: 0.06rem;
+  gap: 0.12rem;
 }
 
 .notae-sidebar-signout {
@@ -997,14 +1054,14 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-topbar {
-  height: 2.45rem;
+  height: 2.58rem;
   border-bottom: 1px solid var(--notae-border);
   background: #f8f7f6;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.55rem;
-  padding: 0 0.8rem;
+  gap: 0.7rem;
+  padding: 0 0.95rem;
 }
 
 .notae-topbar.is-embedded-shell {
@@ -1022,9 +1079,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-topbar-title {
   display: inline-flex;
   align-items: center;
-  gap: 0.36rem;
+  gap: 0.42rem;
   min-width: 0;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -1047,7 +1104,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-topbar-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.38rem;
   min-width: 0;
 }
 
@@ -1089,8 +1146,8 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-content {
-  padding: 1.2rem clamp(0.8rem, 3vw, 2.4rem) 1.9rem;
-  max-width: 900px;
+  padding: 1.28rem clamp(0.9rem, 3vw, 2.5rem) 2rem;
+  max-width: 930px;
   width: 100%;
   margin: 0 auto;
   position: relative;
@@ -1100,7 +1157,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   max-width: none;
   width: 100%;
   margin: 0;
-  padding: 1rem 0.5rem 1.5rem;
+  padding: 1.05rem clamp(0.6rem, 1.6vw, 1rem) 1.8rem;
 }
 
 .notae-flash {
@@ -1264,10 +1321,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-ai-rail {
   border-left: 1px solid var(--notae-border);
   background: #f7f6f5;
-  padding: 0.5rem 0.56rem 0.58rem;
+  padding: 0.62rem 0.66rem 0.72rem;
   display: flex;
   flex-direction: column;
-  gap: 0.38rem;
+  gap: 0.5rem;
   transition: padding 200ms ease;
 }
 
@@ -1275,7 +1332,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 600;
 }
 
@@ -1419,14 +1476,14 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   border: 0;
   border-radius: 0.6rem;
   background: transparent;
-  padding: 0.42rem 0.35rem;
+  padding: 0.28rem 0.2rem 0.08rem;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.26rem;
 }
 
 .notae-ai-title {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
@@ -1434,20 +1491,20 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   margin: 0;
   color: var(--notae-muted);
   font-size: 0.74rem;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .notae-ai-thread {
   border: 1px solid var(--notae-border);
-  border-radius: 0.6rem;
-  background: rgba(255, 255, 255, 0.62);
-  padding: 0.42rem;
+  border-radius: 0.72rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 92%, transparent);
+  padding: 0.38rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   align-content: flex-start;
-  gap: 0.35rem;
-  min-height: 120px;
+  gap: 0.38rem;
+  min-height: 132px;
   max-height: none;
   flex: 1 1 auto;
   overflow-y: auto;
@@ -1462,15 +1519,15 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-ai-message {
   border: 1px solid var(--notae-border);
-  border-radius: 0.55rem;
-  padding: 0.4rem 0.45rem;
+  border-radius: 0.62rem;
+  padding: 0.44rem 0.5rem;
   display: grid;
-  gap: 0.18rem;
-  background: rgba(255, 255, 255, 0.78);
+  gap: 0.2rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 96%, transparent);
 }
 
 .notae-ai-message.is-user {
-  background: #eef6ff;
+  background: color-mix(in srgb, #eef6ff 86%, var(--notae-surface-raised));
   border-color: #bfdbfe;
 }
 
@@ -1479,8 +1536,8 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-ai-message.is-compact {
-  padding-top: 0.28rem;
-  padding-bottom: 0.28rem;
+  padding-top: 0.32rem;
+  padding-bottom: 0.32rem;
   gap: 0.08rem;
 }
 
@@ -1497,6 +1554,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   font-size: 0.76rem;
   color: var(--notae-text);
   white-space: pre-wrap;
+  line-height: 1.5;
 }
 
 .notae-ai-message-meta {
@@ -1508,12 +1566,13 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-ai-usage-card {
   border: 1px solid var(--notae-border);
   background: rgba(255, 255, 255, 0.72);
+  padding: 0.5rem 0.54rem;
 }
 
 .notae-ai-usage-drawer-wrap {
   margin-top: auto;
   display: grid;
-  gap: 0.34rem;
+  gap: 0.42rem;
 }
 
 .notae-ai-usage-toggle {
@@ -1572,7 +1631,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-ai-usage-grid div {
   border: 1px solid var(--notae-border);
   border-radius: 0.5rem;
-  padding: 0.3rem 0.34rem;
+  padding: 0.38rem 0.42rem;
   background: rgba(255, 255, 255, 0.86);
   display: grid;
   gap: 0.05rem;
@@ -1691,27 +1750,52 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-ai-loader {
   --notae-ai-loader-size: 64px;
-  --notae-ai-loader-color-a: #72e8ff;
-  --notae-ai-loader-color-b: #f55ec6;
-  --notae-ai-loader-color-c: #7f84ff;
+  --notae-loader-a: #7ee8ff;
+  --notae-loader-b: #ff7bd2;
+  --notae-loader-c: #7c7cff;
+  --notae-loader-border: rgba(124, 124, 255, 0.22);
+  --notae-loader-plate: linear-gradient(145deg, rgba(252, 249, 255, 0.96), rgba(239, 244, 255, 0.94));
+  --notae-loader-shadow: 0 10px 26px rgba(33, 26, 66, 0.16);
+  --notae-loader-point-size: clamp(3px, calc(var(--notae-ai-loader-size) * 0.086), 10px);
   position: relative;
   width: var(--notae-ai-loader-size);
   height: var(--notae-ai-loader-size);
-  border-radius: calc(var(--notae-ai-loader-size) * 0.2);
+  border-radius: calc(var(--notae-ai-loader-size) * 0.3);
   overflow: hidden;
-  border: 1px solid rgba(127, 132, 255, 0.24);
-  background:
-    radial-gradient(circle at 28% 22%, rgba(114, 232, 255, 0.26), transparent 52%),
-    radial-gradient(circle at 76% 78%, rgba(245, 94, 198, 0.2), transparent 50%),
-    linear-gradient(140deg, rgba(255, 255, 255, 0.7), rgba(244, 241, 254, 0.9));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
-    0 8px 20px rgba(56, 42, 99, 0.12);
+  isolation: isolate;
+  display: block;
+  border: 1px solid var(--notae-loader-border);
+  background: var(--notae-loader-plate);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48), var(--notae-loader-shadow);
 }
 
-.notae-ai-loader-ring,
-.notae-ai-loader-line,
-.notae-ai-loader-particle,
+.notae-ai-loader::before,
+.notae-ai-loader::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.notae-ai-loader::before {
+  z-index: 0;
+  background:
+    radial-gradient(circle at 24% 20%, rgba(126, 232, 255, 0.28), transparent 34%),
+    radial-gradient(circle at 74% 76%, rgba(255, 123, 210, 0.24), transparent 36%),
+    radial-gradient(circle at 54% 52%, rgba(124, 124, 255, 0.12), transparent 48%);
+}
+
+.notae-ai-loader::after {
+  z-index: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.54), transparent 44%, rgba(255, 255, 255, 0.14) 68%, transparent 100%);
+  mix-blend-mode: screen;
+  opacity: 0.68;
+}
+
+.notae-ai-loader-shell,
+.notae-ai-loader-beam,
+.notae-ai-loader-point,
 .notae-ai-loader-core {
   position: absolute;
   left: 50%;
@@ -1719,1168 +1803,789 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   transform: translate(-50%, -50%);
 }
 
-.notae-ai-loader-ring {
+.notae-ai-loader-shell {
+  z-index: 1;
   border-radius: 999px;
-  border: 1.5px solid rgba(127, 132, 255, 0.28);
-  box-shadow: 0 0 12px rgba(127, 132, 255, 0.15);
+  border: 1px solid rgba(124, 124, 255, 0.28);
+  opacity: 0.66;
+  box-shadow: 0 0 14px rgba(124, 124, 255, 0.14);
 }
 
-.notae-ai-loader-ring.ring-one {
+.notae-ai-loader-shell.shell-one {
   width: 84%;
   height: 84%;
 }
 
-.notae-ai-loader-ring.ring-two {
-  width: 62%;
-  height: 62%;
+.notae-ai-loader-shell.shell-two {
+  width: 60%;
+  height: 60%;
 }
 
-.notae-ai-loader-ring.ring-three {
-  width: 40%;
-  height: 40%;
+.notae-ai-loader-shell.shell-three {
+  width: 36%;
+  height: 36%;
 }
 
-.notae-ai-loader-line {
-  width: 78%;
-  height: 2px;
+.notae-ai-loader-beam {
+  z-index: 2;
+  width: 72%;
+  height: clamp(1.5px, calc(var(--notae-ai-loader-size) * 0.024), 3px);
   border-radius: 999px;
+  opacity: 0.45;
+  background: linear-gradient(90deg, transparent, rgba(126, 232, 255, 0.9), rgba(255, 123, 210, 0.88), transparent);
   transform-origin: center;
-  background: linear-gradient(90deg, rgba(114, 232, 255, 0.18), rgba(245, 94, 198, 0.82), rgba(127, 132, 255, 0.18));
-  opacity: 0.52;
 }
 
-.notae-ai-loader-line.line-one {
-  --line-rotation: 0deg;
+.notae-ai-loader-beam.beam-one {
   transform: translate(-50%, -50%) rotate(0deg);
 }
 
-.notae-ai-loader-line.line-two {
-  --line-rotation: 60deg;
+.notae-ai-loader-beam.beam-two {
   transform: translate(-50%, -50%) rotate(60deg);
 }
 
-.notae-ai-loader-line.line-three {
-  --line-rotation: 120deg;
+.notae-ai-loader-beam.beam-three {
   transform: translate(-50%, -50%) rotate(120deg);
 }
 
-.notae-ai-loader-particle {
-  width: 10%;
-  height: 10%;
+.notae-ai-loader-point {
+  z-index: 3;
+  display: none;
+  width: var(--notae-loader-point-size);
+  height: var(--notae-loader-point-size);
   border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.96), var(--notae-ai-loader-color-a) 58%, var(--notae-ai-loader-color-c));
-  box-shadow: 0 0 8px rgba(114, 232, 255, 0.55);
-  transform:
-    translate(-50%, -50%)
-    rotate(calc(var(--particle-index) * 30deg))
-    translateX(calc(var(--notae-ai-loader-size) * 0.34));
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.98) 0 18%, var(--notae-loader-a) 56%, var(--notae-loader-c));
+  box-shadow: 0 0 10px rgba(126, 232, 255, 0.34);
 }
 
 .notae-ai-loader-core {
+  z-index: 4;
   width: 22%;
   height: 22%;
   border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, #ffffff, var(--notae-ai-loader-color-b) 62%, var(--notae-ai-loader-color-c));
-  box-shadow: 0 0 16px rgba(245, 94, 198, 0.45);
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.98), var(--notae-loader-a) 36%, var(--notae-loader-c) 66%, var(--notae-loader-b));
+  box-shadow: 0 0 18px rgba(126, 232, 255, 0.26), 0 0 20px rgba(255, 123, 210, 0.18);
 }
 
-.notae-ai-loader.is-loading .notae-ai-loader-ring.ring-one {
-  animation: notae-ai-spin 5.2s linear infinite;
+.notae-ai-loader.is-disco_orbit {
+  --notae-loader-a: #88ebff;
+  --notae-loader-b: #ff7ad7;
+  --notae-loader-c: #7a82ff;
+  --notae-loader-border: rgba(122, 130, 255, 0.28);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.72), rgba(238, 244, 255, 0.96) 60%, rgba(223, 232, 255, 0.9) 100%);
 }
 
-.notae-ai-loader.is-loading .notae-ai-loader-ring.ring-two {
-  animation: notae-ai-spin-reverse 4.3s linear infinite;
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-beam {
+  display: none;
 }
 
-.notae-ai-loader.is-loading .notae-ai-loader-ring.ring-three {
-  animation: notae-ai-spin 3.6s linear infinite;
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-shell.shell-one {
+  width: 88%;
+  height: 88%;
+  border-color: rgba(122, 130, 255, 0.34);
 }
 
-.notae-ai-loader.is-loading .notae-ai-loader-core {
-  animation: notae-ai-core-pulse 3.2s ease-in-out infinite;
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-shell.shell-two {
+  width: 56%;
+  height: 56%;
+  border-style: dashed;
+  border-color: rgba(255, 122, 215, 0.46);
 }
 
-.notae-ai-loader.is-loading .notae-ai-loader-line {
-  animation: notae-ai-line-breathe 4.6s ease-in-out infinite;
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-shell.shell-three {
+  display: none;
 }
 
-.notae-ai-loader.is-loading .notae-ai-loader-particle {
-  animation: notae-ai-particle-wave 3.4s ease-in-out infinite;
-  animation-delay: calc(var(--particle-index) * 0.12s);
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point:is(.p-1, .p-5, .p-9, .p-13, .p-3, .p-11) {
+  display: block;
+}
+
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point.p-1 { --orbit-angle: 0deg; --orbit-radius: calc(var(--notae-ai-loader-size) * 0.31); }
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point.p-5 { --orbit-angle: 90deg; --orbit-radius: calc(var(--notae-ai-loader-size) * 0.31); }
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point.p-9 { --orbit-angle: 180deg; --orbit-radius: calc(var(--notae-ai-loader-size) * 0.31); }
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point.p-13 { --orbit-angle: 270deg; --orbit-radius: calc(var(--notae-ai-loader-size) * 0.31); }
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point.p-3 { --orbit-angle: 40deg; --orbit-radius: calc(var(--notae-ai-loader-size) * 0.18); }
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point.p-11 { --orbit-angle: 220deg; --orbit-radius: calc(var(--notae-ai-loader-size) * 0.18); }
+
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-point {
+  width: clamp(3px, calc(var(--notae-ai-loader-size) * 0.09), 10px);
+  height: clamp(3px, calc(var(--notae-ai-loader-size) * 0.09), 10px);
+  transform: translate(-50%, -50%) rotate(var(--orbit-angle)) translateX(var(--orbit-radius));
+}
+
+.notae-ai-loader.is-disco_orbit .notae-ai-loader-core {
+  width: 26%;
+  height: 26%;
+  background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.98), rgba(136, 235, 255, 0.95) 38%, rgba(122, 130, 255, 0.9) 68%, rgba(255, 122, 215, 0.9));
+}
+
+.notae-ai-loader.is-disco_orbit.is-loading .notae-ai-loader-shell.shell-one {
+  animation: notae-ai-loader-rotate 7.2s linear infinite;
+}
+
+.notae-ai-loader.is-disco_orbit.is-loading .notae-ai-loader-shell.shell-two {
+  animation: notae-ai-loader-rotate-reverse 5.8s linear infinite;
+}
+
+.notae-ai-loader.is-disco_orbit.is-loading .notae-ai-loader-point {
+  animation: notae-ai-loader-orbit 4.8s linear infinite;
+  animation-delay: calc(var(--point-index) * 0.06s);
+}
+
+.notae-ai-loader.is-disco_orbit.is-loading .notae-ai-loader-core {
+  animation: notae-ai-loader-pulse 3.2s ease-in-out infinite;
 }
 
 .notae-ai-loader.is-neon_mesh {
-  --notae-ai-loader-color-a: #6de5ff;
-  --notae-ai-loader-color-b: #f973ff;
-  --notae-ai-loader-color-c: #6f85ff;
-  border-color: rgba(109, 229, 255, 0.26);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(111, 133, 255, 0.14), transparent 62%),
-    linear-gradient(140deg, rgba(255, 255, 255, 0.72), rgba(236, 244, 255, 0.92));
+  --notae-loader-a: #7dedff;
+  --notae-loader-b: #ff87df;
+  --notae-loader-c: #6f84ff;
+  --notae-loader-border: rgba(111, 132, 255, 0.26);
+  border-radius: calc(var(--notae-ai-loader-size) * 0.24);
+  background: linear-gradient(145deg, rgba(250, 252, 255, 0.96), rgba(233, 241, 255, 0.94));
 }
 
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-ring.ring-three {
+.notae-ai-loader.is-neon_mesh::before {
+  background:
+    linear-gradient(135deg, rgba(125, 237, 255, 0.16), transparent 48%),
+    linear-gradient(315deg, rgba(255, 135, 223, 0.14), transparent 44%);
+}
+
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-shell {
   display: none;
 }
 
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-ring {
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-line {
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-beam {
   opacity: 0.72;
-  height: 1.6px;
+  background-size: 180% 100%;
 }
 
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-particle {
-  width: 8%;
-  height: 8%;
-  box-shadow: 0 0 10px rgba(109, 229, 255, 0.44);
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-beam.beam-one {
+  width: 56%;
+  transform: translate(-50%, -50%) translateY(calc(var(--notae-ai-loader-size) * 0.16)) rotate(0deg);
 }
 
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-particle.p-2,
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-particle.p-5,
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-particle.p-8,
-.notae-ai-loader.is-neon_mesh .notae-ai-loader-particle.p-11 {
-  transform:
-    translate(-50%, -50%)
-    rotate(calc(var(--particle-index) * 30deg))
-    translateX(calc(var(--notae-ai-loader-size) * 0.26));
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-beam.beam-two {
+  width: 76%;
+  transform: translate(-50%, -50%) translateY(calc(var(--notae-ai-loader-size) * -0.03)) rotate(58deg);
+}
+
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-beam.beam-three {
+  width: 76%;
+  transform: translate(-50%, -50%) translateY(calc(var(--notae-ai-loader-size) * -0.03)) rotate(-58deg);
+}
+
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point:is(.p-1, .p-2, .p-3, .p-4, .p-5, .p-6) {
+  display: block;
+}
+
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point.p-1 { --node-x: 0px; --node-y: calc(var(--notae-ai-loader-size) * -0.28); }
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point.p-2 { --node-x: calc(var(--notae-ai-loader-size) * -0.24); --node-y: calc(var(--notae-ai-loader-size) * -0.02); }
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point.p-3 { --node-x: calc(var(--notae-ai-loader-size) * 0.24); --node-y: calc(var(--notae-ai-loader-size) * -0.02); }
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point.p-4 { --node-x: 0px; --node-y: calc(var(--notae-ai-loader-size) * 0.16); }
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point.p-5 { --node-x: calc(var(--notae-ai-loader-size) * -0.16); --node-y: calc(var(--notae-ai-loader-size) * 0.28); }
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point.p-6 { --node-x: calc(var(--notae-ai-loader-size) * 0.16); --node-y: calc(var(--notae-ai-loader-size) * 0.28); }
+
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-point {
+  width: clamp(3px, calc(var(--notae-ai-loader-size) * 0.076), 8px);
+  height: clamp(3px, calc(var(--notae-ai-loader-size) * 0.076), 8px);
+  transform: translate(-50%, -50%) translate(var(--node-x), var(--node-y));
+}
+
+.notae-ai-loader.is-neon_mesh .notae-ai-loader-core {
+  width: 16%;
+  height: 16%;
+  background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.98), rgba(125, 237, 255, 0.95) 46%, rgba(255, 135, 223, 0.85));
+}
+
+.notae-ai-loader.is-neon_mesh.is-loading .notae-ai-loader-beam {
+  animation: notae-ai-loader-sweep 2.7s ease-in-out infinite;
+}
+
+.notae-ai-loader.is-neon_mesh.is-loading .notae-ai-loader-point {
+  animation: notae-ai-loader-node 2.1s ease-in-out infinite;
+  animation-delay: calc(var(--point-index) * 0.08s);
+}
+
+.notae-ai-loader.is-neon_mesh.is-loading .notae-ai-loader-core {
+  animation: notae-ai-loader-pulse 2.6s ease-in-out infinite;
 }
 
 .notae-ai-loader.is-pulse_beads {
-  --notae-ai-loader-color-a: #8d5bff;
-  --notae-ai-loader-color-b: #7a3cff;
-  --notae-ai-loader-color-c: #d78aff;
-  border-color: rgba(141, 91, 255, 0.28);
-  background:
-    radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.52), transparent 58%),
-    linear-gradient(145deg, rgba(244, 241, 255, 0.93), rgba(232, 228, 255, 0.9));
+  --notae-loader-a: #b98fff;
+  --notae-loader-b: #ff95de;
+  --notae-loader-c: #7a67ff;
+  --notae-loader-border: rgba(155, 127, 255, 0.24);
+  background: linear-gradient(148deg, rgba(249, 245, 255, 0.96), rgba(236, 233, 255, 0.94));
 }
 
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-ring,
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-line {
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-shell,
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-beam {
   display: none;
 }
 
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-particle {
-  width: 12%;
-  height: 12%;
-  box-shadow: 0 0 8px rgba(122, 60, 255, 0.4);
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point:is(.p-1, .p-2, .p-3, .p-4, .p-5, .p-6, .p-7, .p-8) {
+  display: block;
 }
 
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-particle.p-2,
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-particle.p-4,
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-particle.p-6,
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-particle.p-8,
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-particle.p-10,
-.notae-ai-loader.is-pulse_beads .notae-ai-loader-particle.p-12 {
-  transform:
-    translate(-50%, -50%)
-    rotate(calc(var(--particle-index) * 30deg))
-    translateX(calc(var(--notae-ai-loader-size) * 0.3));
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-1 { --bead-x: calc(var(--notae-ai-loader-size) * -0.28); --bead-y: calc(var(--notae-ai-loader-size) * 0.16); --bead-scale: 1; }
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-2 { --bead-x: calc(var(--notae-ai-loader-size) * -0.18); --bead-y: calc(var(--notae-ai-loader-size) * 0.04); --bead-scale: 0.95; }
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-3 { --bead-x: calc(var(--notae-ai-loader-size) * -0.05); --bead-y: calc(var(--notae-ai-loader-size) * -0.08); --bead-scale: 0.9; }
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-4 { --bead-x: calc(var(--notae-ai-loader-size) * 0.1); --bead-y: calc(var(--notae-ai-loader-size) * -0.14); --bead-scale: 0.84; }
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-5 { --bead-x: calc(var(--notae-ai-loader-size) * 0.24); --bead-y: calc(var(--notae-ai-loader-size) * -0.08); --bead-scale: 0.8; }
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-6 { --bead-x: calc(var(--notae-ai-loader-size) * 0.3); --bead-y: calc(var(--notae-ai-loader-size) * 0.06); --bead-scale: 0.78; }
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-7 { --bead-x: calc(var(--notae-ai-loader-size) * 0.18); --bead-y: calc(var(--notae-ai-loader-size) * 0.2); --bead-scale: 0.88; }
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point.p-8 { --bead-x: calc(var(--notae-ai-loader-size) * 0.02); --bead-y: calc(var(--notae-ai-loader-size) * 0.28); --bead-scale: 0.98; }
+
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-point {
+  display: block;
+  width: clamp(4px, calc(var(--notae-ai-loader-size) * 0.11), 13px);
+  height: clamp(4px, calc(var(--notae-ai-loader-size) * 0.11), 13px);
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.98), rgba(255, 149, 222, 0.92) 38%, rgba(122, 103, 255, 0.9));
+  box-shadow: 0 0 10px rgba(185, 143, 255, 0.34);
+  transform: translate(-50%, -50%) translate(var(--bead-x), var(--bead-y)) scale(var(--bead-scale));
+}
+
+.notae-ai-loader.is-pulse_beads .notae-ai-loader-core {
+  width: 14%;
+  height: 14%;
+  transform: translate(-50%, -50%) translate(calc(var(--notae-ai-loader-size) * -0.22), calc(var(--notae-ai-loader-size) * 0.18));
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.98), rgba(185, 143, 255, 0.95) 46%, rgba(255, 149, 222, 0.85));
+}
+
+.notae-ai-loader.is-pulse_beads.is-loading .notae-ai-loader-point {
+  animation: notae-ai-loader-bead 1.9s ease-in-out infinite;
+  animation-delay: calc(var(--point-index) * 0.11s);
+}
+
+.notae-ai-loader.is-pulse_beads.is-loading .notae-ai-loader-core {
+  animation: notae-ai-loader-glow 2.4s ease-in-out infinite;
 }
 
 .notae-ai-loader.is-disco_ball_reflect {
-  --notae-ai-loader-color-a: #99ecff;
-  --notae-ai-loader-color-b: #ff89db;
-  --notae-ai-loader-color-c: #8f98ff;
+  --notae-loader-a: #96eaff;
+  --notae-loader-b: #ff86df;
+  --notae-loader-c: #8a8fff;
+  --notae-loader-border: rgba(138, 143, 255, 0.3);
   border-radius: 999px;
-  border-color: rgba(143, 152, 255, 0.38);
-  background:
-    radial-gradient(circle at 32% 25%, rgba(255, 255, 255, 0.45), transparent 54%),
-    radial-gradient(circle at 75% 74%, rgba(245, 94, 198, 0.24), transparent 56%),
-    linear-gradient(150deg, rgba(238, 244, 255, 0.92), rgba(220, 230, 255, 0.88));
+  background: radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.74), rgba(229, 238, 255, 0.96) 58%, rgba(214, 228, 255, 0.92));
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-ring.ring-one {
-  width: 88%;
-  height: 88%;
-  border-width: 1.8px;
-  border-color: rgba(143, 152, 255, 0.36);
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-shell.shell-one {
+  width: 90%;
+  height: 90%;
+  border-color: rgba(138, 143, 255, 0.34);
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-ring.ring-two {
-  width: 68%;
-  height: 68%;
-  border-style: dashed;
-  border-color: rgba(255, 137, 219, 0.46);
-}
-
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-ring.ring-three {
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-shell.shell-two,
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-shell.shell-three {
   display: none;
 }
 
 .notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-core {
   width: 58%;
   height: 58%;
-  box-shadow: 0 0 18px rgba(143, 152, 255, 0.42);
-  background:
-    repeating-conic-gradient(
-      from 14deg,
-      rgba(255, 255, 255, 0.94) 0deg 20deg,
-      rgba(152, 236, 255, 0.84) 20deg 40deg,
-      rgba(255, 137, 219, 0.84) 40deg 60deg,
-      rgba(143, 152, 255, 0.84) 60deg 80deg
-    );
+  background: repeating-conic-gradient(
+    from 18deg,
+    rgba(255, 255, 255, 0.96) 0deg 18deg,
+    rgba(150, 234, 255, 0.9) 18deg 36deg,
+    rgba(255, 134, 223, 0.86) 36deg 54deg,
+    rgba(138, 143, 255, 0.86) 54deg 72deg
+  );
+  box-shadow: 0 0 18px rgba(138, 143, 255, 0.24);
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-line {
-  width: 165%;
-  height: 2.2px;
-  opacity: 0.4;
-  filter: blur(0.3px);
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-beam {
+  width: 150%;
+  opacity: 0.3;
+  filter: blur(0.2px);
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-line.line-one {
-  --line-rotation: 16deg;
-  transform: translate(-50%, -50%) rotate(16deg);
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-beam.beam-one {
+  transform: translate(-50%, -50%) rotate(14deg);
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-line.line-two {
-  --line-rotation: -28deg;
-  transform: translate(-50%, -50%) rotate(-28deg);
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-beam.beam-two {
+  transform: translate(-50%, -50%) rotate(-32deg);
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-line.line-three {
-  --line-rotation: 64deg;
-  transform: translate(-50%, -50%) rotate(64deg);
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-beam.beam-three {
+  transform: translate(-50%, -50%) rotate(68deg);
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle {
-  width: 6%;
-  height: 6%;
-  opacity: 0.82;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.4);
-  transform: translate(-50%, -50%) translate(var(--facet-x, 0), var(--facet-y, 0));
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-point:is(.p-1, .p-4, .p-9, .p-13) {
+  display: block;
 }
 
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-1 { --facet-x: calc(var(--notae-ai-loader-size) * -0.22); --facet-y: calc(var(--notae-ai-loader-size) * -0.18); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-2 { --facet-x: calc(var(--notae-ai-loader-size) * -0.06); --facet-y: calc(var(--notae-ai-loader-size) * -0.24); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-3 { --facet-x: calc(var(--notae-ai-loader-size) * 0.12); --facet-y: calc(var(--notae-ai-loader-size) * -0.2); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-4 { --facet-x: calc(var(--notae-ai-loader-size) * -0.26); --facet-y: calc(var(--notae-ai-loader-size) * -0.06); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-5 { --facet-x: calc(var(--notae-ai-loader-size) * -0.12); --facet-y: calc(var(--notae-ai-loader-size) * -0.08); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-6 { --facet-x: calc(var(--notae-ai-loader-size) * 0.04); --facet-y: calc(var(--notae-ai-loader-size) * -0.08); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-7 { --facet-x: calc(var(--notae-ai-loader-size) * 0.2); --facet-y: calc(var(--notae-ai-loader-size) * -0.04); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-8 { --facet-x: calc(var(--notae-ai-loader-size) * -0.2); --facet-y: calc(var(--notae-ai-loader-size) * 0.08); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-9 { --facet-x: calc(var(--notae-ai-loader-size) * -0.04); --facet-y: calc(var(--notae-ai-loader-size) * 0.08); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-10 { --facet-x: calc(var(--notae-ai-loader-size) * 0.12); --facet-y: calc(var(--notae-ai-loader-size) * 0.1); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-11 { --facet-x: calc(var(--notae-ai-loader-size) * -0.1); --facet-y: calc(var(--notae-ai-loader-size) * 0.24); }
-.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-particle.p-12 { --facet-x: calc(var(--notae-ai-loader-size) * 0.08); --facet-y: calc(var(--notae-ai-loader-size) * 0.22); }
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-point.p-1 { --glint-x: calc(var(--notae-ai-loader-size) * -0.18); --glint-y: calc(var(--notae-ai-loader-size) * -0.16); }
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-point.p-4 { --glint-x: calc(var(--notae-ai-loader-size) * 0.16); --glint-y: calc(var(--notae-ai-loader-size) * -0.06); }
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-point.p-9 { --glint-x: calc(var(--notae-ai-loader-size) * -0.08); --glint-y: calc(var(--notae-ai-loader-size) * 0.18); }
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-point.p-13 { --glint-x: calc(var(--notae-ai-loader-size) * 0.12); --glint-y: calc(var(--notae-ai-loader-size) * 0.14); }
+
+.notae-ai-loader.is-disco_ball_reflect .notae-ai-loader-point {
+  width: clamp(2px, calc(var(--notae-ai-loader-size) * 0.06), 7px);
+  height: clamp(2px, calc(var(--notae-ai-loader-size) * 0.06), 7px);
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 1), rgba(150, 234, 255, 0.95) 48%, rgba(255, 134, 223, 0.7));
+  transform: translate(-50%, -50%) translate(var(--glint-x), var(--glint-y));
+}
 
 .notae-ai-loader.is-disco_ball_reflect.is-loading .notae-ai-loader-core {
-  animation: notae-ai-disco-rotate 5s linear infinite;
+  animation: notae-ai-loader-rotate 6.4s linear infinite;
 }
 
-.notae-ai-loader.is-disco_ball_reflect.is-loading .notae-ai-loader-line {
-  animation: notae-ai-disco-sweep 4.8s ease-in-out infinite;
+.notae-ai-loader.is-disco_ball_reflect.is-loading .notae-ai-loader-beam {
+  animation: notae-ai-loader-glint 4.6s ease-in-out infinite;
 }
 
-.notae-ai-loader.is-disco_ball_reflect.is-loading .notae-ai-loader-particle {
-  animation: notae-ai-disco-twinkle 3.9s ease-in-out infinite;
-  animation-delay: calc(var(--particle-index) * 0.11s);
+.notae-ai-loader.is-disco_ball_reflect.is-loading .notae-ai-loader-point {
+  animation: notae-ai-loader-node 2.8s ease-in-out infinite;
+  animation-delay: calc(var(--point-index) * 0.12s);
 }
 
 .notae-ai-loader.is-flock_cloud {
-  --notae-ai-loader-color-a: #7de4ff;
-  --notae-ai-loader-color-b: #ff7cd9;
-  --notae-ai-loader-color-c: #8b8dff;
-  border-color: rgba(139, 141, 255, 0.22);
-  perspective: calc(var(--notae-ai-loader-size) * 3.4);
-  transform-style: preserve-3d;
-  background:
-    radial-gradient(circle at 24% 30%, rgba(255, 255, 255, 0.42), transparent 52%),
-    radial-gradient(circle at 72% 72%, rgba(128, 115, 255, 0.22), transparent 56%),
-    linear-gradient(145deg, rgba(246, 240, 255, 0.91), rgba(230, 236, 255, 0.95));
+  --notae-loader-a: #92e9ff;
+  --notae-loader-b: #ff88df;
+  --notae-loader-c: #8688ff;
+  --notae-loader-border: rgba(134, 136, 255, 0.18);
+  background: linear-gradient(145deg, rgba(250, 249, 255, 0.74), rgba(241, 244, 255, 0.56));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 10px 24px rgba(31, 28, 68, 0.08);
 }
 
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-ring,
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-line,
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-shell,
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-beam,
 .notae-ai-loader.is-flock_cloud .notae-ai-loader-core {
   display: none;
 }
 
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle {
-  width: 3.8%;
-  height: 3.8%;
-  opacity: var(--flock-opacity, 0.86);
-  filter: blur(var(--flock-blur, 0px));
-  box-shadow: 0 0 6px rgba(139, 141, 255, 0.3);
-  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.95), var(--dot-color-a, #ff7cd9) 58%, var(--dot-color-b, #8b8dff));
-  will-change: transform, opacity;
-  transform:
-    translate(-50%, -50%)
-    translate3d(var(--flock-x, 0), var(--flock-y, 0), var(--flock-z, 0px))
-    scale(var(--flock-scale, 1));
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point:is(.p-1, .p-2, .p-3, .p-4, .p-5, .p-6, .p-7, .p-8, .p-9, .p-10, .p-11, .p-12) {
+  display: block;
 }
 
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-1 { --flock-x: calc(var(--notae-ai-loader-size) * -0.3); --flock-y: calc(var(--notae-ai-loader-size) * -0.08); --flock-z: calc(var(--notae-ai-loader-size) * -0.3); --flock-scale: 0.56; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.18); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.1); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.28); --flock-opacity: 0.54; --flock-blur: 0.9px; --dot-color-a: #ff8adf; --dot-color-b: #8c8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-2 { --flock-x: calc(var(--notae-ai-loader-size) * -0.23); --flock-y: calc(var(--notae-ai-loader-size) * -0.17); --flock-z: calc(var(--notae-ai-loader-size) * -0.2); --flock-scale: 0.64; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.11); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.22); --flock-opacity: 0.62; --flock-blur: 0.7px; --dot-color-a: #8ce9ff; --dot-color-b: #8c8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-3 { --flock-x: calc(var(--notae-ai-loader-size) * -0.14); --flock-y: calc(var(--notae-ai-loader-size) * -0.26); --flock-z: calc(var(--notae-ai-loader-size) * -0.1); --flock-scale: 0.76; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.23); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.12); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.18); --flock-opacity: 0.73; --flock-blur: 0.35px; --dot-color-a: #ff7cd9; --dot-color-b: #73dfff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-4 { --flock-x: calc(var(--notae-ai-loader-size) * -0.02); --flock-y: calc(var(--notae-ai-loader-size) * -0.31); --flock-z: calc(var(--notae-ai-loader-size) * 0.06); --flock-scale: 0.94; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.26); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.14); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.12); --flock-opacity: 0.9; --flock-blur: 0px; --dot-color-a: #8ce9ff; --dot-color-b: #b779ff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-5 { --flock-x: calc(var(--notae-ai-loader-size) * 0.09); --flock-y: calc(var(--notae-ai-loader-size) * -0.25); --flock-z: calc(var(--notae-ai-loader-size) * -0.02); --flock-scale: 0.84; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.22); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.12); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.16); --flock-opacity: 0.81; --flock-blur: 0.2px; --dot-color-a: #ff91e3; --dot-color-b: #8b8dff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-6 { --flock-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-y: calc(var(--notae-ai-loader-size) * -0.18); --flock-z: calc(var(--notae-ai-loader-size) * -0.15); --flock-scale: 0.7; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.18); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.08); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.22); --flock-opacity: 0.68; --flock-blur: 0.5px; --dot-color-a: #8ce9ff; --dot-color-b: #889bff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-7 { --flock-x: calc(var(--notae-ai-loader-size) * 0.29); --flock-y: calc(var(--notae-ai-loader-size) * -0.11); --flock-z: calc(var(--notae-ai-loader-size) * -0.28); --flock-scale: 0.58; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.15); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.06); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.24); --flock-opacity: 0.56; --flock-blur: 0.85px; --dot-color-a: #ff7cd9; --dot-color-b: #7f8cff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-8 { --flock-x: calc(var(--notae-ai-loader-size) * -0.2); --flock-y: calc(var(--notae-ai-loader-size) * 0.01); --flock-z: calc(var(--notae-ai-loader-size) * -0.17); --flock-scale: 0.66; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.06); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.2); --flock-opacity: 0.64; --flock-blur: 0.55px; --dot-color-a: #95dfff; --dot-color-b: #9b81ff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-9 { --flock-x: calc(var(--notae-ai-loader-size) * -0.1); --flock-y: calc(var(--notae-ai-loader-size) * -0.06); --flock-z: calc(var(--notae-ai-loader-size) * -0.08); --flock-scale: 0.76; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.22); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.08); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.18); --flock-opacity: 0.74; --flock-blur: 0.32px; --dot-color-a: #ff8fdf; --dot-color-b: #8f8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-10 { --flock-x: calc(var(--notae-ai-loader-size) * 0.02); --flock-y: calc(var(--notae-ai-loader-size) * -0.1); --flock-z: calc(var(--notae-ai-loader-size) * 0.1); --flock-scale: 0.96; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.25); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.09); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.1); --flock-opacity: 0.92; --flock-blur: 0px; --dot-color-a: #85e6ff; --dot-color-b: #8f8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-11 { --flock-x: calc(var(--notae-ai-loader-size) * 0.12); --flock-y: calc(var(--notae-ai-loader-size) * -0.06); --flock-z: calc(var(--notae-ai-loader-size) * -0.01); --flock-scale: 0.82; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.22); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.07); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.14); --flock-opacity: 0.82; --flock-blur: 0.18px; --dot-color-a: #ff8fdf; --dot-color-b: #7d89ff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-12 { --flock-x: calc(var(--notae-ai-loader-size) * 0.22); --flock-y: calc(var(--notae-ai-loader-size) * -0.01); --flock-z: calc(var(--notae-ai-loader-size) * -0.15); --flock-scale: 0.68; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.18); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.04); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.2); --flock-opacity: 0.66; --flock-blur: 0.46px; --dot-color-a: #91e9ff; --dot-color-b: #9f7aff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-13 { --flock-x: calc(var(--notae-ai-loader-size) * -0.29); --flock-y: calc(var(--notae-ai-loader-size) * 0.02); --flock-z: calc(var(--notae-ai-loader-size) * -0.26); --flock-scale: 0.6; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.02); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.24); --flock-opacity: 0.58; --flock-blur: 0.82px; --dot-color-a: #8ddfff; --dot-color-b: #8c8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-14 { --flock-x: calc(var(--notae-ai-loader-size) * -0.21); --flock-y: calc(var(--notae-ai-loader-size) * 0.09); --flock-z: calc(var(--notae-ai-loader-size) * -0.16); --flock-scale: 0.68; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.21); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.03); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.2); --flock-opacity: 0.67; --flock-blur: 0.56px; --dot-color-a: #ff8cde; --dot-color-b: #8d90ff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-15 { --flock-x: calc(var(--notae-ai-loader-size) * -0.13); --flock-y: calc(var(--notae-ai-loader-size) * 0.14); --flock-z: calc(var(--notae-ai-loader-size) * -0.04); --flock-scale: 0.79; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.24); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.04); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.15); --flock-opacity: 0.78; --flock-blur: 0.3px; --dot-color-a: #91e7ff; --dot-color-b: #9a80ff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-16 { --flock-x: calc(var(--notae-ai-loader-size) * -0.04); --flock-y: calc(var(--notae-ai-loader-size) * 0.19); --flock-z: calc(var(--notae-ai-loader-size) * 0.08); --flock-scale: 0.91; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.25); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.05); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.09); --flock-opacity: 0.9; --flock-blur: 0px; --dot-color-a: #ff9be4; --dot-color-b: #8d8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-17 { --flock-x: calc(var(--notae-ai-loader-size) * 0.06); --flock-y: calc(var(--notae-ai-loader-size) * 0.21); --flock-z: calc(var(--notae-ai-loader-size) * -0.01); --flock-scale: 0.84; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.23); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.06); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.12); --flock-opacity: 0.83; --flock-blur: 0.18px; --dot-color-a: #8ce9ff; --dot-color-b: #9e7aff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-18 { --flock-x: calc(var(--notae-ai-loader-size) * 0.15); --flock-y: calc(var(--notae-ai-loader-size) * 0.18); --flock-z: calc(var(--notae-ai-loader-size) * -0.12); --flock-scale: 0.74; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.05); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.16); --flock-opacity: 0.72; --flock-blur: 0.38px; --dot-color-a: #ff87dd; --dot-color-b: #8091ff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-19 { --flock-x: calc(var(--notae-ai-loader-size) * 0.25); --flock-y: calc(var(--notae-ai-loader-size) * 0.14); --flock-z: calc(var(--notae-ai-loader-size) * -0.24); --flock-scale: 0.62; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.17); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.04); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.21); --flock-opacity: 0.6; --flock-blur: 0.72px; --dot-color-a: #8de5ff; --dot-color-b: #7f8eff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-20 { --flock-x: calc(var(--notae-ai-loader-size) * -0.25); --flock-y: calc(var(--notae-ai-loader-size) * 0.15); --flock-z: calc(var(--notae-ai-loader-size) * -0.22); --flock-scale: 0.62; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.18); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.01); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.2); --flock-opacity: 0.6; --flock-blur: 0.7px; --dot-color-a: #ff90e1; --dot-color-b: #8d8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-21 { --flock-x: calc(var(--notae-ai-loader-size) * -0.15); --flock-y: calc(var(--notae-ai-loader-size) * 0.22); --flock-z: calc(var(--notae-ai-loader-size) * -0.1); --flock-scale: 0.74; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.02); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.14); --flock-opacity: 0.74; --flock-blur: 0.35px; --dot-color-a: #8ce8ff; --dot-color-b: #9b7eff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-22 { --flock-x: calc(var(--notae-ai-loader-size) * -0.03); --flock-y: calc(var(--notae-ai-loader-size) * 0.25); --flock-z: calc(var(--notae-ai-loader-size) * 0.04); --flock-scale: 0.88; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.22); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.03); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.08); --flock-opacity: 0.88; --flock-blur: 0.08px; --dot-color-a: #ff95e3; --dot-color-b: #8f8fff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-23 { --flock-x: calc(var(--notae-ai-loader-size) * 0.09); --flock-y: calc(var(--notae-ai-loader-size) * 0.24); --flock-z: calc(var(--notae-ai-loader-size) * -0.06); --flock-scale: 0.8; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.03); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.12); --flock-opacity: 0.8; --flock-blur: 0.22px; --dot-color-a: #93e6ff; --dot-color-b: #9c80ff; }
-.notae-ai-loader.is-flock_cloud .notae-ai-loader-particle.p-24 { --flock-x: calc(var(--notae-ai-loader-size) * 0.2); --flock-y: calc(var(--notae-ai-loader-size) * 0.19); --flock-z: calc(var(--notae-ai-loader-size) * -0.2); --flock-scale: 0.66; --flock-drift-x: calc(var(--notae-ai-loader-size) * 0.17); --flock-drift-y: calc(var(--notae-ai-loader-size) * -0.02); --flock-drift-z: calc(var(--notae-ai-loader-size) * 0.18); --flock-opacity: 0.65; --flock-blur: 0.52px; --dot-color-a: #ff8ede; --dot-color-b: #7f8cff; }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-1 { --cloud-x: calc(var(--notae-ai-loader-size) * -0.28); --cloud-y: calc(var(--notae-ai-loader-size) * -0.06); --cloud-scale: 0.56; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.18); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.08); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-2 { --cloud-x: calc(var(--notae-ai-loader-size) * -0.18); --cloud-y: calc(var(--notae-ai-loader-size) * -0.16); --cloud-scale: 0.62; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.16); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.1); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-3 { --cloud-x: calc(var(--notae-ai-loader-size) * -0.04); --cloud-y: calc(var(--notae-ai-loader-size) * -0.22); --cloud-scale: 0.8; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.16); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.12); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-4 { --cloud-x: calc(var(--notae-ai-loader-size) * 0.12); --cloud-y: calc(var(--notae-ai-loader-size) * -0.18); --cloud-scale: 0.86; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.12); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.1); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-5 { --cloud-x: calc(var(--notae-ai-loader-size) * 0.24); --cloud-y: calc(var(--notae-ai-loader-size) * -0.08); --cloud-scale: 0.68; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.08); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.06); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-6 { --cloud-x: calc(var(--notae-ai-loader-size) * -0.22); --cloud-y: calc(var(--notae-ai-loader-size) * 0.06); --cloud-scale: 0.62; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.18); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.04); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-7 { --cloud-x: calc(var(--notae-ai-loader-size) * -0.08); --cloud-y: calc(var(--notae-ai-loader-size) * -0.02); --cloud-scale: 0.76; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.18); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.04); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-8 { --cloud-x: calc(var(--notae-ai-loader-size) * 0.08); --cloud-y: calc(var(--notae-ai-loader-size) * 0.02); --cloud-scale: 0.84; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.16); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.02); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-9 { --cloud-x: calc(var(--notae-ai-loader-size) * 0.22); --cloud-y: calc(var(--notae-ai-loader-size) * 0.08); --cloud-scale: 0.64; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.12); --cloud-dy: calc(var(--notae-ai-loader-size) * -0.02); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-10 { --cloud-x: calc(var(--notae-ai-loader-size) * -0.14); --cloud-y: calc(var(--notae-ai-loader-size) * 0.2); --cloud-scale: 0.66; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.18); --cloud-dy: calc(var(--notae-ai-loader-size) * 0.02); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-11 { --cloud-x: calc(var(--notae-ai-loader-size) * 0.02); --cloud-y: calc(var(--notae-ai-loader-size) * 0.24); --cloud-scale: 0.76; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.16); --cloud-dy: calc(var(--notae-ai-loader-size) * 0.04); }
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point.p-12 { --cloud-x: calc(var(--notae-ai-loader-size) * 0.18); --cloud-y: calc(var(--notae-ai-loader-size) * 0.18); --cloud-scale: 0.62; --cloud-dx: calc(var(--notae-ai-loader-size) * 0.14); --cloud-dy: calc(var(--notae-ai-loader-size) * 0.02); }
 
-.notae-ai-loader.is-flock_cloud.is-loading .notae-ai-loader-particle {
-  animation: notae-ai-flock-drift 2.8s cubic-bezier(0.42, 0.04, 0.58, 0.96) infinite;
-  animation-delay: calc(var(--particle-index) * 0.028s);
+.notae-ai-loader.is-flock_cloud .notae-ai-loader-point {
+  width: clamp(2px, calc(var(--notae-ai-loader-size) * 0.05), 6px);
+  height: clamp(2px, calc(var(--notae-ai-loader-size) * 0.05), 6px);
+  box-shadow: 0 0 8px rgba(146, 233, 255, 0.26);
+  transform: translate(-50%, -50%) translate(var(--cloud-x), var(--cloud-y)) scale(var(--cloud-scale));
+}
+
+.notae-ai-loader.is-flock_cloud.is-loading .notae-ai-loader-point {
+  animation: notae-ai-loader-cloud 4.6s ease-in-out infinite;
+  animation-delay: calc(var(--point-index) * 0.06s);
 }
 
 .notae-ai-loader.is-neural_network {
-  --notae-ai-loader-color-a: #5bf1ff;
-  --notae-ai-loader-color-b: #ff69d8;
-  --notae-ai-loader-color-c: #7b89ff;
-  border-color: rgba(123, 137, 255, 0.5);
-  background:
-    radial-gradient(circle at 18% 82%, rgba(91, 241, 255, 0.26), transparent 42%),
-    radial-gradient(circle at 82% 20%, rgba(255, 105, 216, 0.3), transparent 44%),
-    radial-gradient(circle at 54% 50%, rgba(123, 137, 255, 0.22), transparent 64%),
-    linear-gradient(142deg, #040217, #0a0621 46%, #06172f 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(157, 170, 255, 0.22),
-    0 0 24px rgba(91, 241, 255, 0.15);
-}
-
-.notae-ai-loader.is-neural_network::before,
-.notae-ai-loader.is-neural_network::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
+  --notae-loader-a: #76eaff;
+  --notae-loader-b: #ff78d6;
+  --notae-loader-c: #8c82ff;
+  --notae-loader-border: rgba(140, 130, 255, 0.24);
+  background: linear-gradient(145deg, rgba(7, 14, 34, 0.96), rgba(15, 18, 52, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 26px rgba(8, 10, 30, 0.36);
 }
 
 .notae-ai-loader.is-neural_network::before {
-  inset: -18%;
-  z-index: 0;
-  opacity: 0.36;
-  mix-blend-mode: screen;
   background:
-    repeating-linear-gradient(22deg, rgba(91, 241, 255, 0) 0 20px, rgba(91, 241, 255, 0.28) 20px 22px, rgba(91, 241, 255, 0) 22px 42px),
-    repeating-linear-gradient(-36deg, rgba(255, 105, 216, 0) 0 22px, rgba(255, 105, 216, 0.24) 22px 24px, rgba(255, 105, 216, 0) 24px 46px);
+    radial-gradient(circle at 28% 24%, rgba(118, 234, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 74% 72%, rgba(255, 120, 214, 0.16), transparent 38%),
+    radial-gradient(circle at 50% 50%, rgba(140, 130, 255, 0.14), transparent 52%);
 }
 
-.notae-ai-loader.is-neural_network::after {
-  inset: 0;
-  z-index: 1;
-  opacity: 0.52;
-  background:
-    radial-gradient(circle at 20% 26%, rgba(96, 244, 255, 0.35), transparent 20%),
-    radial-gradient(circle at 74% 22%, rgba(255, 112, 222, 0.33), transparent 22%),
-    radial-gradient(circle at 62% 72%, rgba(130, 145, 255, 0.3), transparent 24%);
+.notae-ai-loader.is-neural_network .notae-ai-loader-shell.shell-one {
+  width: 90%;
+  height: 90%;
+  border-color: rgba(118, 234, 255, 0.14);
 }
 
-.notae-ai-loader.is-neural_network .notae-ai-loader-ring,
-.notae-ai-loader.is-neural_network .notae-ai-loader-line,
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle,
-.notae-ai-loader.is-neural_network .notae-ai-loader-core {
-  z-index: 2;
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-ring {
-  border: none;
-  height: 1.6px;
-  border-radius: 999px;
-  opacity: 0.22;
-  background: linear-gradient(90deg, rgba(91, 241, 255, 0.08), rgba(123, 137, 255, 0.95), rgba(255, 105, 216, 0.1));
-  background-size: 220% 100%;
-  box-shadow: 0 0 12px rgba(123, 137, 255, 0.26);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-ring.ring-one {
-  width: 146%;
-  transform: translate(calc(-50% + var(--notae-ai-loader-size) * 0.02), calc(-50% - var(--notae-ai-loader-size) * 0.2)) rotate(21deg);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-ring.ring-two {
-  width: 162%;
-  transform: translate(calc(-50% + var(--notae-ai-loader-size) * 0.07), calc(-50% + var(--notae-ai-loader-size) * 0.08)) rotate(-34deg);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-ring.ring-three {
-  width: 134%;
-  transform: translate(calc(-50% - var(--notae-ai-loader-size) * 0.16), calc(-50% + var(--notae-ai-loader-size) * 0.16)) rotate(64deg);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-line {
-  height: 1.5px;
-  opacity: 0.24;
-  background: linear-gradient(90deg, rgba(91, 241, 255, 0.1), rgba(123, 137, 255, 0.95), rgba(255, 105, 216, 0.12));
-  background-size: 220% 100%;
-  box-shadow: 0 0 10px rgba(91, 241, 255, 0.2);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-line.line-one {
-  --line-rotation: 16deg;
-  width: 128%;
-  transform: translate(calc(-50% + var(--notae-ai-loader-size) * 0.01), calc(-50% - var(--notae-ai-loader-size) * 0.03)) rotate(16deg);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-line.line-two {
-  --line-rotation: -44deg;
-  width: 150%;
-  transform: translate(calc(-50% + var(--notae-ai-loader-size) * 0.09), calc(-50% + var(--notae-ai-loader-size) * 0.04)) rotate(-44deg);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-line.line-three {
-  --line-rotation: 62deg;
-  width: 136%;
-  transform: translate(calc(-50% - var(--notae-ai-loader-size) * 0.13), calc(-50% + var(--notae-ai-loader-size) * 0.14)) rotate(62deg);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-core {
-  width: 13%;
-  height: 13%;
-  border: 1px solid rgba(228, 236, 255, 0.78);
-  background: radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.98), rgba(123, 137, 255, 0.94) 48%, rgba(255, 105, 216, 0.78));
-  box-shadow: 0 0 16px rgba(91, 241, 255, 0.52), 0 0 26px rgba(255, 105, 216, 0.28);
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle {
-  width: 8.5%;
-  height: 8.5%;
-  opacity: 0.94;
-  border: 1px solid rgba(224, 233, 255, 0.72);
-  box-shadow: 0 0 12px rgba(91, 241, 255, 0.5), 0 0 18px rgba(255, 105, 216, 0.22);
-  background: radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.98), rgba(123, 137, 255, 0.92) 52%, rgba(255, 105, 216, 0.84));
-  transform: translate(-50%, -50%) translate(var(--node-x, 0), var(--node-y, 0));
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle::after {
-  content: "";
-  position: absolute;
-  inset: -44%;
-  border-radius: 999px;
-  border: 1px solid rgba(163, 178, 255, 0.4);
-  opacity: 0.74;
-}
-
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-1 { --node-x: calc(var(--notae-ai-loader-size) * -0.35); --node-y: calc(var(--notae-ai-loader-size) * -0.23); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-2 { --node-x: calc(var(--notae-ai-loader-size) * -0.16); --node-y: calc(var(--notae-ai-loader-size) * -0.23); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-3 { --node-x: calc(var(--notae-ai-loader-size) * 0.04); --node-y: calc(var(--notae-ai-loader-size) * -0.28); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-4 { --node-x: calc(var(--notae-ai-loader-size) * 0.24); --node-y: calc(var(--notae-ai-loader-size) * -0.2); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-5 { --node-x: calc(var(--notae-ai-loader-size) * -0.26); --node-y: calc(var(--notae-ai-loader-size) * -0.06); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-6 { --node-x: calc(var(--notae-ai-loader-size) * -0.05); --node-y: calc(var(--notae-ai-loader-size) * -0.04); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-7 { --node-x: calc(var(--notae-ai-loader-size) * 0.17); --node-y: calc(var(--notae-ai-loader-size) * -0.02); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-8 { --node-x: calc(var(--notae-ai-loader-size) * -0.33); --node-y: calc(var(--notae-ai-loader-size) * 0.16); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-9 { --node-x: calc(var(--notae-ai-loader-size) * -0.13); --node-y: calc(var(--notae-ai-loader-size) * 0.13); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-10 { --node-x: calc(var(--notae-ai-loader-size) * 0.06); --node-y: calc(var(--notae-ai-loader-size) * 0.12); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-11 { --node-x: calc(var(--notae-ai-loader-size) * 0.26); --node-y: calc(var(--notae-ai-loader-size) * 0.2); }
-.notae-ai-loader.is-neural_network .notae-ai-loader-particle.p-12 { --node-x: calc(var(--notae-ai-loader-size) * -0.02); --node-y: calc(var(--notae-ai-loader-size) * 0.28); }
-
-.notae-ai-loader.is-neural_network.is-loading::before {
-  animation: notae-ai-neural-field 5.2s linear infinite;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-core {
-  animation: notae-ai-neural-core 2.9s ease-in-out infinite;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-ring.ring-one {
-  animation: notae-ai-neural-line 2.5s ease-in-out infinite;
-  animation-delay: -0.25s;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-ring.ring-two {
-  animation: notae-ai-neural-line 2.2s ease-in-out infinite;
-  animation-delay: -0.85s;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-ring.ring-three {
-  animation: notae-ai-neural-line 2.8s ease-in-out infinite;
-  animation-delay: -1.3s;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-line.line-one {
-  animation: notae-ai-neural-line 2.1s ease-in-out infinite;
-  animation-delay: -0.4s;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-line.line-two {
-  animation: notae-ai-neural-line 2.4s ease-in-out infinite;
-  animation-delay: -1.1s;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-line.line-three {
-  animation: notae-ai-neural-line 2s ease-in-out infinite;
-  animation-delay: -0.7s;
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-particle {
-  animation: notae-ai-neural-node 2.2s ease-in-out infinite;
-  animation-delay: calc(var(--particle-index) * 0.08s);
-}
-
-.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-particle::after {
-  animation: notae-ai-neural-halo 2.2s ease-in-out infinite;
-  animation-delay: calc(var(--particle-index) * 0.08s);
-}
-
-.notae-ai-loader.is-luminous_pulse_sphere {
-  --notae-ai-loader-color-a: #55ebff;
-  --notae-ai-loader-color-b: #ff5ed5;
-  --notae-ai-loader-color-c: #7f8cff;
-  border-radius: 999px;
-  border-color: rgba(123, 137, 255, 0.44);
-  perspective: calc(var(--notae-ai-loader-size) * 3.8);
-  transform-style: preserve-3d;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(29, 36, 120, 0.5), transparent 60%),
-    radial-gradient(circle at 20% 16%, rgba(91, 241, 255, 0.22), transparent 54%),
-    radial-gradient(circle at 78% 82%, rgba(255, 95, 214, 0.2), transparent 52%),
-    linear-gradient(145deg, #020826, #03003f 52%, #041352 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(151, 166, 255, 0.2),
-    0 0 24px rgba(91, 241, 255, 0.18);
-}
-
-.notae-ai-loader.is-luminous_pulse_sphere::before,
-.notae-ai-loader.is-luminous_pulse_sphere::after {
-  content: "";
-  position: absolute;
-  inset: -14%;
-  border-radius: 999px;
-  pointer-events: none;
-  z-index: 0;
-  mix-blend-mode: screen;
-}
-
-.notae-ai-loader.is-luminous_pulse_sphere::before {
-  opacity: 0.84;
-  background:
-    radial-gradient(circle at 20% 22%, rgba(87, 239, 255, 0.9) 0 1.2%, transparent 2.8%),
-    radial-gradient(circle at 33% 12%, rgba(255, 105, 218, 0.9) 0 1.1%, transparent 2.7%),
-    radial-gradient(circle at 46% 8%, rgba(112, 132, 255, 0.88) 0 1%, transparent 2.5%),
-    radial-gradient(circle at 62% 14%, rgba(87, 239, 255, 0.9) 0 1.1%, transparent 2.7%),
-    radial-gradient(circle at 76% 22%, rgba(255, 105, 218, 0.9) 0 1.2%, transparent 2.8%),
-    radial-gradient(circle at 88% 38%, rgba(87, 239, 255, 0.85) 0 1.1%, transparent 2.7%),
-    radial-gradient(circle at 90% 54%, rgba(255, 105, 218, 0.88) 0 1.1%, transparent 2.7%),
-    radial-gradient(circle at 82% 72%, rgba(87, 239, 255, 0.9) 0 1.2%, transparent 2.8%),
-    radial-gradient(circle at 66% 86%, rgba(255, 105, 218, 0.9) 0 1.2%, transparent 2.8%),
-    radial-gradient(circle at 48% 92%, rgba(112, 132, 255, 0.88) 0 1%, transparent 2.5%),
-    radial-gradient(circle at 30% 86%, rgba(87, 239, 255, 0.9) 0 1.1%, transparent 2.7%),
-    radial-gradient(circle at 16% 72%, rgba(255, 105, 218, 0.88) 0 1.1%, transparent 2.7%),
-    radial-gradient(circle at 10% 56%, rgba(87, 239, 255, 0.85) 0 1%, transparent 2.5%),
-    radial-gradient(circle at 12% 38%, rgba(255, 105, 218, 0.88) 0 1.1%, transparent 2.7%);
-  filter: blur(0.2px);
-}
-
-.notae-ai-loader.is-luminous_pulse_sphere::after {
-  inset: -8%;
-  opacity: 0.62;
-  background:
-    radial-gradient(circle at 24% 26%, rgba(255, 105, 218, 0.86) 0 5%, transparent 14%),
-    radial-gradient(circle at 74% 36%, rgba(87, 239, 255, 0.84) 0 4.6%, transparent 13%),
-    radial-gradient(circle at 34% 74%, rgba(87, 239, 255, 0.82) 0 4.8%, transparent 13%),
-    radial-gradient(circle at 68% 68%, rgba(255, 105, 218, 0.84) 0 4.9%, transparent 14%),
-    radial-gradient(circle at 50% 48%, rgba(112, 132, 255, 0.72) 0 8%, transparent 18%);
-  filter: blur(5px);
-}
-
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-ring,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-line {
+.notae-ai-loader.is-neural_network .notae-ai-loader-shell.shell-two,
+.notae-ai-loader.is-neural_network .notae-ai-loader-shell.shell-three {
   display: none;
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-core {
-  z-index: 2;
+.notae-ai-loader.is-neural_network .notae-ai-loader-beam.beam-one {
+  width: 78%;
+  transform: translate(-50%, -50%) translateY(calc(var(--notae-ai-loader-size) * -0.02)) rotate(28deg);
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle {
-  width: 2.7%;
-  height: 2.7%;
-  opacity: var(--spark-opacity, 0.76);
-  filter: blur(var(--spark-blur, 0px));
-  box-shadow: 0 0 8px rgba(87, 239, 255, 0.5);
-  background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.98), var(--spark-color-a, #5bf1ff) 56%, var(--spark-color-b, #ff69d8));
-  transform:
-    translate(-50%, -50%)
-    rotate(calc(var(--particle-index) * 15deg + var(--spark-shift, 0deg)))
-    translateX(var(--spark-radius, calc(var(--notae-ai-loader-size) * 0.35)))
-    scale(var(--spark-scale, 1));
+.notae-ai-loader.is-neural_network .notae-ai-loader-beam.beam-two {
+  width: 60%;
+  transform: translate(-50%, -50%) translate(calc(var(--notae-ai-loader-size) * -0.04), calc(var(--notae-ai-loader-size) * 0.12)) rotate(-24deg);
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-1,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-2,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-3,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-4,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-5,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-6,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-7,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-8 {
-  --spark-radius: calc(var(--notae-ai-loader-size) * 0.26);
-  --spark-scale: 0.7;
-  --spark-opacity: 0.5;
-  --spark-blur: 0.6px;
-  --spark-shift: 8deg;
+.notae-ai-loader.is-neural_network .notae-ai-loader-beam.beam-three {
+  width: 56%;
+  transform: translate(-50%, -50%) translate(calc(var(--notae-ai-loader-size) * 0.08), calc(var(--notae-ai-loader-size) * -0.16)) rotate(86deg);
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-9,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-10,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-11,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-12,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-13,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-14,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-15,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-16 {
-  --spark-radius: calc(var(--notae-ai-loader-size) * 0.35);
-  --spark-scale: 0.94;
-  --spark-opacity: 0.74;
-  --spark-blur: 0.2px;
-  --spark-shift: -5deg;
+.notae-ai-loader.is-neural_network .notae-ai-loader-point:is(.p-1, .p-2, .p-3, .p-4, .p-5, .p-6, .p-7) {
+  display: block;
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-17,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-18,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-19,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-20,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-21,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-22,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-23,
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-particle.p-24 {
-  --spark-radius: calc(var(--notae-ai-loader-size) * 0.43);
-  --spark-scale: 1.08;
-  --spark-opacity: 0.9;
-  --spark-color-a: #52eeff;
-  --spark-color-b: #ff66d7;
+.notae-ai-loader.is-neural_network .notae-ai-loader-point.p-1 { --node-x: calc(var(--notae-ai-loader-size) * -0.26); --node-y: calc(var(--notae-ai-loader-size) * -0.12); }
+.notae-ai-loader.is-neural_network .notae-ai-loader-point.p-2 { --node-x: calc(var(--notae-ai-loader-size) * -0.08); --node-y: calc(var(--notae-ai-loader-size) * -0.24); }
+.notae-ai-loader.is-neural_network .notae-ai-loader-point.p-3 { --node-x: calc(var(--notae-ai-loader-size) * 0.16); --node-y: calc(var(--notae-ai-loader-size) * -0.18); }
+.notae-ai-loader.is-neural_network .notae-ai-loader-point.p-4 { --node-x: calc(var(--notae-ai-loader-size) * -0.18); --node-y: calc(var(--notae-ai-loader-size) * 0.12); }
+.notae-ai-loader.is-neural_network .notae-ai-loader-point.p-5 { --node-x: calc(var(--notae-ai-loader-size) * 0.02); --node-y: calc(var(--notae-ai-loader-size) * 0.06); }
+.notae-ai-loader.is-neural_network .notae-ai-loader-point.p-6 { --node-x: calc(var(--notae-ai-loader-size) * 0.24); --node-y: calc(var(--notae-ai-loader-size) * 0.16); }
+.notae-ai-loader.is-neural_network .notae-ai-loader-point.p-7 { --node-x: calc(var(--notae-ai-loader-size) * 0.12); --node-y: calc(var(--notae-ai-loader-size) * 0.28); }
+
+.notae-ai-loader.is-neural_network .notae-ai-loader-point {
+  width: clamp(3px, calc(var(--notae-ai-loader-size) * 0.075), 8px);
+  height: clamp(3px, calc(var(--notae-ai-loader-size) * 0.075), 8px);
+  transform: translate(-50%, -50%) translate(var(--node-x), var(--node-y));
+  box-shadow: 0 0 9px rgba(118, 234, 255, 0.38);
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-core {
-  width: 28%;
-  height: 28%;
-  border: 1px solid rgba(198, 217, 255, 0.76);
+.notae-ai-loader.is-neural_network .notae-ai-loader-core {
+  width: 18%;
+  height: 18%;
+  background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.96), rgba(118, 234, 255, 0.9) 40%, rgba(255, 120, 214, 0.84));
+}
+
+.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-beam {
+  animation: notae-ai-loader-synapse 2.9s ease-in-out infinite;
+}
+
+.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-point {
+  animation: notae-ai-loader-node 2.2s ease-in-out infinite;
+  animation-delay: calc(var(--point-index) * 0.08s);
+}
+
+.notae-ai-loader.is-neural_network.is-loading .notae-ai-loader-core {
+  animation: notae-ai-loader-pulse 2.4s ease-in-out infinite;
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere {
+  --notae-loader-a: #5ff0ff;
+  --notae-loader-b: #ff62da;
+  --notae-loader-c: #7b8bff;
+  --notae-loader-border: rgba(123, 139, 255, 0.34);
+  border-radius: 999px;
+  background: radial-gradient(circle at 50% 50%, rgba(22, 30, 90, 0.58), rgba(2, 8, 34, 0.96) 70%, rgba(4, 8, 30, 1));
+  box-shadow: inset 0 0 0 1px rgba(155, 173, 255, 0.14), 0 0 28px rgba(95, 240, 255, 0.16);
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere::before {
   background:
-    radial-gradient(circle at 35% 32%, rgba(255, 255, 255, 0.96), rgba(83, 238, 255, 0.85) 38%, rgba(94, 105, 255, 0.92) 60%, rgba(255, 102, 216, 0.8));
-  box-shadow: 0 0 20px rgba(83, 238, 255, 0.48), 0 0 28px rgba(255, 102, 216, 0.34);
+    radial-gradient(circle at 20% 18%, rgba(95, 240, 255, 0.18), transparent 36%),
+    radial-gradient(circle at 78% 80%, rgba(255, 98, 218, 0.16), transparent 34%),
+    radial-gradient(circle at 50% 50%, rgba(123, 139, 255, 0.16), transparent 54%);
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere.is-loading::before {
-  animation:
-    notae-ai-luminous-cloud-spin 6.4s linear infinite,
-    notae-ai-luminous-cloud-breathe 4.2s ease-in-out infinite;
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-beam {
+  display: none;
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere.is-loading::after {
-  animation:
-    notae-ai-luminous-cloud-spin 5.2s linear infinite reverse,
-    notae-ai-luminous-cloud-breathe 3.6s ease-in-out infinite reverse;
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-shell.shell-one {
+  width: 90%;
+  height: 90%;
+  border-color: rgba(95, 240, 255, 0.22);
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-shell.shell-two {
+  width: 66%;
+  height: 66%;
+  border-color: rgba(255, 98, 218, 0.24);
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-shell.shell-three {
+  width: 42%;
+  height: 42%;
+  border-color: rgba(123, 139, 255, 0.3);
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point:is(.p-1, .p-3, .p-5, .p-7, .p-9, .p-11, .p-13, .p-15) {
+  display: block;
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-1 { --orbit-angle: 0deg; }
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-3 { --orbit-angle: 45deg; }
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-5 { --orbit-angle: 90deg; }
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-7 { --orbit-angle: 135deg; }
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-9 { --orbit-angle: 180deg; }
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-11 { --orbit-angle: 225deg; }
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-13 { --orbit-angle: 270deg; }
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point.p-15 { --orbit-angle: 315deg; }
+
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-point {
+  width: clamp(2px, calc(var(--notae-ai-loader-size) * 0.055), 7px);
+  height: clamp(2px, calc(var(--notae-ai-loader-size) * 0.055), 7px);
+  transform: translate(-50%, -50%) rotate(var(--orbit-angle)) translateX(calc(var(--notae-ai-loader-size) * 0.34));
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere .notae-ai-loader-core {
+  width: 30%;
+  height: 30%;
+  border: 1px solid rgba(212, 224, 255, 0.42);
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.98), rgba(95, 240, 255, 0.92) 34%, rgba(123, 139, 255, 0.94) 64%, rgba(255, 98, 218, 0.82));
+  box-shadow: 0 0 22px rgba(95, 240, 255, 0.42), 0 0 32px rgba(255, 98, 218, 0.22);
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere.is-loading .notae-ai-loader-shell.shell-one {
+  animation: notae-ai-loader-glow 4.8s ease-in-out infinite;
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere.is-loading .notae-ai-loader-shell.shell-two {
+  animation: notae-ai-loader-glow 3.8s ease-in-out infinite reverse;
+}
+
+.notae-ai-loader.is-luminous_pulse_sphere.is-loading .notae-ai-loader-shell.shell-three {
+  animation: notae-ai-loader-glow 3.2s ease-in-out infinite;
 }
 
 .notae-ai-loader.is-luminous_pulse_sphere.is-loading .notae-ai-loader-core {
-  animation: notae-ai-luminous-core-pulse 2.8s ease-in-out infinite;
+  animation: notae-ai-loader-pulse 2.6s ease-in-out infinite;
 }
 
-.notae-ai-loader.is-luminous_pulse_sphere.is-loading .notae-ai-loader-particle {
-  animation: notae-ai-luminous-spark-orbit 3.2s ease-in-out infinite;
-  animation-delay: calc(var(--particle-index) * 0.05s);
+.notae-ai-loader.is-luminous_pulse_sphere.is-loading .notae-ai-loader-point {
+  animation:
+    notae-ai-loader-orbit 7.4s linear infinite,
+    notae-ai-loader-glint 2.5s ease-in-out infinite;
+  animation-delay: 0s, calc(var(--point-index) * 0.06s);
 }
 
 .notae-ai-loader.is-luminous_wave_sphere {
-  --notae-ai-loader-color-a: #4df0ff;
-  --notae-ai-loader-color-b: #ff62d9;
-  --notae-ai-loader-color-c: #7a8bff;
+  --notae-loader-a: #5ceeff;
+  --notae-loader-b: #ff63d9;
+  --notae-loader-c: #7d8fff;
+  --notae-loader-border: rgba(125, 143, 255, 0.34);
   border-radius: 999px;
-  border-color: rgba(122, 139, 255, 0.46);
-  perspective: calc(var(--notae-ai-loader-size) * 3.6);
-  transform-style: preserve-3d;
-  background:
-    radial-gradient(circle at 48% 46%, rgba(84, 238, 255, 0.16), transparent 62%),
-    radial-gradient(circle at 72% 76%, rgba(255, 98, 217, 0.2), transparent 54%),
-    linear-gradient(146deg, #020a2a, #07003d 54%, #021246 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(150, 167, 255, 0.18),
-    0 0 28px rgba(84, 238, 255, 0.14);
+  background: radial-gradient(circle at 50% 50%, rgba(20, 30, 98, 0.44), rgba(4, 9, 37, 0.98) 72%, rgba(2, 7, 24, 1));
+  box-shadow: inset 0 0 0 1px rgba(155, 170, 255, 0.14), 0 0 28px rgba(92, 238, 255, 0.14);
 }
 
-.notae-ai-loader.is-luminous_wave_sphere::before,
-.notae-ai-loader.is-luminous_wave_sphere::after {
-  content: "";
-  position: absolute;
-  inset: -10%;
-  border-radius: 999px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.notae-ai-loader.is-luminous_wave_sphere::before {
-  opacity: 0.76;
-  mix-blend-mode: screen;
-  background:
-    conic-gradient(
-      from 14deg,
-      rgba(84, 238, 255, 0.06),
-      rgba(84, 238, 255, 0.55) 16%,
-      rgba(255, 98, 217, 0.18) 30%,
-      rgba(255, 98, 217, 0.62) 44%,
-      rgba(122, 139, 255, 0.2) 58%,
-      rgba(84, 238, 255, 0.58) 74%,
-      rgba(255, 98, 217, 0.18) 88%,
-      rgba(84, 238, 255, 0.06)
-    );
-  filter: blur(4px);
-}
-
-.notae-ai-loader.is-luminous_wave_sphere::after {
-  inset: -16%;
-  opacity: 0.58;
-  mix-blend-mode: screen;
-  background:
-    radial-gradient(circle at 28% 24%, rgba(84, 238, 255, 0.78) 0 3%, transparent 16%),
-    radial-gradient(circle at 76% 30%, rgba(255, 98, 217, 0.76) 0 3%, transparent 16%),
-    radial-gradient(circle at 36% 72%, rgba(255, 98, 217, 0.72) 0 3%, transparent 16%),
-    radial-gradient(circle at 72% 72%, rgba(84, 238, 255, 0.72) 0 3%, transparent 16%);
-  filter: blur(6px);
-}
-
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-ring,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-line,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-core {
-  z-index: 2;
-}
-
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-ring {
-  border: 1px solid rgba(149, 167, 255, 0.4);
-  box-shadow: 0 0 12px rgba(84, 238, 255, 0.22);
-}
-
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-ring.ring-one {
-  width: 86%;
-  height: 86%;
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-shell.shell-one {
+  width: 88%;
+  height: 88%;
   border-style: dashed;
+  border-color: rgba(92, 238, 255, 0.22);
 }
 
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-ring.ring-two {
-  width: 68%;
-  height: 68%;
-  border-color: rgba(255, 98, 217, 0.52);
-}
-
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-ring.ring-three {
-  width: 46%;
-  height: 46%;
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-shell.shell-two {
+  width: 64%;
+  height: 64%;
   border-style: dashed;
-  border-color: rgba(84, 238, 255, 0.5);
+  border-color: rgba(255, 99, 217, 0.24);
 }
 
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-line {
-  width: 132%;
-  height: 1.6px;
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-shell.shell-three {
+  width: 40%;
+  height: 40%;
+  border-color: rgba(125, 143, 255, 0.28);
+}
+
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-beam {
+  width: 118%;
   opacity: 0.34;
-  background: linear-gradient(90deg, rgba(84, 238, 255, 0.08), rgba(122, 139, 255, 0.92), rgba(255, 98, 217, 0.08));
-  background-size: 220% 100%;
+  background: linear-gradient(90deg, transparent, rgba(92, 238, 255, 0.9), rgba(125, 143, 255, 0.86), rgba(255, 99, 217, 0.72), transparent);
 }
 
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle {
-  width: 2.9%;
-  height: 2.9%;
-  opacity: 0.78;
-  filter: blur(0.12px);
-  box-shadow: 0 0 6px rgba(84, 238, 255, 0.44);
-  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.98), rgba(84, 238, 255, 0.86) 56%, rgba(255, 98, 217, 0.72));
-  transform:
-    translate(-50%, -50%)
-    rotate(calc(var(--particle-index) * 15deg))
-    translateX(calc(var(--notae-ai-loader-size) * 0.38))
-    scale(var(--wave-spark-scale, 1));
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-beam.beam-one {
+  transform: translate(-50%, -50%) rotate(18deg);
 }
 
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-1,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-4,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-7,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-10,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-13,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-16,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-19,
-.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-particle.p-22 {
-  --wave-spark-scale: 0.76;
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-beam.beam-two {
+  transform: translate(-50%, -50%) rotate(-54deg);
+}
+
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-beam.beam-three {
+  transform: translate(-50%, -50%) rotate(92deg);
+}
+
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-point:is(.p-2, .p-6, .p-10, .p-14) {
+  display: block;
+}
+
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-point.p-2 { --spray-x: calc(var(--notae-ai-loader-size) * -0.22); --spray-y: calc(var(--notae-ai-loader-size) * -0.18); }
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-point.p-6 { --spray-x: calc(var(--notae-ai-loader-size) * 0.2); --spray-y: calc(var(--notae-ai-loader-size) * -0.1); }
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-point.p-10 { --spray-x: calc(var(--notae-ai-loader-size) * -0.08); --spray-y: calc(var(--notae-ai-loader-size) * 0.22); }
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-point.p-14 { --spray-x: calc(var(--notae-ai-loader-size) * 0.18); --spray-y: calc(var(--notae-ai-loader-size) * 0.16); }
+
+.notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-point {
+  width: clamp(2px, calc(var(--notae-ai-loader-size) * 0.06), 7px);
+  height: clamp(2px, calc(var(--notae-ai-loader-size) * 0.06), 7px);
+  transform: translate(-50%, -50%) translate(var(--spray-x), var(--spray-y));
 }
 
 .notae-ai-loader.is-luminous_wave_sphere .notae-ai-loader-core {
-  width: 24%;
-  height: 24%;
-  border: 1px solid rgba(208, 221, 255, 0.76);
-  background:
-    radial-gradient(circle at 35% 32%, rgba(255, 255, 255, 0.98), rgba(84, 238, 255, 0.88) 36%, rgba(117, 130, 255, 0.9) 58%, rgba(255, 98, 217, 0.78));
-  box-shadow: 0 0 18px rgba(84, 238, 255, 0.46), 0 0 24px rgba(255, 98, 217, 0.26);
+  width: 20%;
+  height: 20%;
+  border: 1px solid rgba(212, 224, 255, 0.36);
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.98), rgba(92, 238, 255, 0.9) 36%, rgba(125, 143, 255, 0.9) 64%, rgba(255, 99, 217, 0.78));
 }
 
-.notae-ai-loader.is-luminous_wave_sphere.is-loading::before {
-  animation: notae-ai-luminous-wave-field 5.6s linear infinite;
+.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-shell.shell-one {
+  animation: notae-ai-loader-rotate 6.6s linear infinite;
 }
 
-.notae-ai-loader.is-luminous_wave_sphere.is-loading::after {
-  animation: notae-ai-luminous-wave-field 4.8s linear infinite reverse;
+.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-shell.shell-two {
+  animation: notae-ai-loader-rotate-reverse 5.2s linear infinite;
 }
 
-.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-ring.ring-one {
-  animation: notae-ai-luminous-wave-spin 5s linear infinite;
+.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-shell.shell-three {
+  animation: notae-ai-loader-wave 3.6s ease-in-out infinite;
 }
 
-.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-ring.ring-two {
-  animation: notae-ai-luminous-wave-spin 4.2s linear infinite reverse;
+.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-beam {
+  animation: notae-ai-loader-sweep 2.5s ease-in-out infinite;
 }
 
-.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-ring.ring-three {
-  animation: notae-ai-luminous-wave-spin 3.6s linear infinite;
-}
-
-.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-line {
-  animation: notae-ai-luminous-wave-sweep 2.9s ease-in-out infinite;
-}
-
-.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-particle {
-  animation: notae-ai-luminous-wave-particle 3.1s ease-in-out infinite;
-  animation-delay: calc(var(--particle-index) * 0.045s);
+.notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-point {
+  animation: notae-ai-loader-glint 2.8s ease-in-out infinite;
+  animation-delay: calc(var(--point-index) * 0.09s);
 }
 
 .notae-ai-loader.is-luminous_wave_sphere.is-loading .notae-ai-loader-core {
-  animation: notae-ai-luminous-core-pulse 2.6s ease-in-out infinite;
+  animation: notae-ai-loader-pulse 2.3s ease-in-out infinite;
 }
 
-@keyframes notae-ai-spin {
+@keyframes notae-ai-loader-rotate {
   to {
     transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
-@keyframes notae-ai-spin-reverse {
+@keyframes notae-ai-loader-rotate-reverse {
   to {
     transform: translate(-50%, -50%) rotate(-360deg);
   }
 }
 
-@keyframes notae-ai-core-pulse {
+@keyframes notae-ai-loader-pulse {
   0%,
   100% {
-    transform: translate(-50%, -50%) scale(0.92);
-    box-shadow: 0 0 10px rgba(245, 94, 198, 0.35);
+    transform: translate(-50%, -50%) scale(0.9);
+    box-shadow: 0 0 12px rgba(126, 232, 255, 0.22), 0 0 12px rgba(255, 123, 210, 0.16);
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.08);
-    box-shadow: 0 0 22px rgba(114, 232, 255, 0.45);
+    transform: translate(-50%, -50%) scale(1.12);
+    box-shadow: 0 0 20px rgba(126, 232, 255, 0.4), 0 0 22px rgba(255, 123, 210, 0.24);
   }
 }
 
-@keyframes notae-ai-line-breathe {
+@keyframes notae-ai-loader-glow {
   0%,
   100% {
-    opacity: 0.34;
-    transform: translate(-50%, -50%) rotate(var(--line-rotation, 0deg)) scaleX(0.7);
-  }
-  50% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) rotate(var(--line-rotation, 0deg)) scaleX(1);
-  }
-}
-
-@keyframes notae-ai-particle-wave {
-  0%,
-  100% {
-    opacity: 0.46;
-    transform:
-      translate(-50%, -50%)
-      rotate(calc(var(--particle-index) * 30deg))
-      translateX(calc(var(--notae-ai-loader-size) * 0.31))
-      scale(0.84);
-  }
-  50% {
-    opacity: 1;
-    transform:
-      translate(-50%, -50%)
-      rotate(calc(var(--particle-index) * 30deg))
-      translateX(calc(var(--notae-ai-loader-size) * 0.36))
-      scale(1.16);
-  }
-}
-
-@keyframes notae-ai-disco-rotate {
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-
-@keyframes notae-ai-disco-sweep {
-  0%,
-  100% {
-    opacity: 0.22;
-    transform: translate(-50%, -50%) rotate(var(--line-rotation, 0deg)) scaleX(0.8);
-  }
-  50% {
-    opacity: 0.78;
-    transform: translate(-50%, -50%) rotate(calc(var(--line-rotation, 0deg) + 10deg)) scaleX(1.04);
-  }
-}
-
-@keyframes notae-ai-disco-twinkle {
-  0%,
-  100% {
-    opacity: 0.32;
-    transform: translate(-50%, -50%) translate(var(--facet-x, 0), var(--facet-y, 0)) scale(0.9);
-  }
-  50% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) translate(var(--facet-x, 0), var(--facet-y, 0)) scale(1.2);
-  }
-}
-
-@keyframes notae-ai-flock-drift {
-  0%,
-  100% {
-    opacity: 0.74;
-    transform:
-      translate(-50%, -50%)
-      translate3d(var(--flock-x, 0), var(--flock-y, 0), var(--flock-z, 0px))
-      scale(var(--flock-scale, 1));
-  }
-  22% {
-    opacity: 0.84;
-    transform:
-      translate(-50%, -50%)
-      translate3d(
-        calc(var(--flock-x, 0) + var(--flock-drift-x, 0) * 0.28),
-        calc(var(--flock-y, 0) + var(--flock-drift-y, 0) * 0.24),
-        calc(var(--flock-z, 0px) + var(--flock-drift-z, 0px) * 0.22)
-      )
-      scale(calc(var(--flock-scale, 1) + 0.02));
-  }
-  44% {
-    opacity: 0.94;
-    transform:
-      translate(-50%, -50%)
-      translate3d(
-        calc(var(--flock-x, 0) + var(--flock-drift-x, 0) * 0.68),
-        calc(var(--flock-y, 0) + var(--flock-drift-y, 0) * 0.7),
-        calc(var(--flock-z, 0px) + var(--flock-drift-z, 0px) * 0.62)
-      )
-      scale(calc(var(--flock-scale, 1) + 0.05));
-  }
-  66% {
-    opacity: 0.86;
-    transform:
-      translate(-50%, -50%)
-      translate3d(
-        calc(var(--flock-x, 0) + var(--flock-drift-x, 0) * 0.44),
-        calc(var(--flock-y, 0) + var(--flock-drift-y, 0) * -0.22),
-        calc(var(--flock-z, 0px) + var(--flock-drift-z, 0px) * -0.28)
-      )
-      scale(calc(var(--flock-scale, 1) + 0.01));
-  }
-  84% {
-    opacity: 0.8;
-    transform:
-      translate(-50%, -50%)
-      translate3d(
-        calc(var(--flock-x, 0) + var(--flock-drift-x, 0) * -0.18),
-        calc(var(--flock-y, 0) + var(--flock-drift-y, 0) * 0.16),
-        calc(var(--flock-z, 0px) + var(--flock-drift-z, 0px) * 0.14)
-      )
-      scale(var(--flock-scale, 1));
-  }
-}
-
-@keyframes notae-ai-neural-line {
-  0% {
-    background-position: 0 0;
-    opacity: 0.05;
-  }
-  18% {
-    opacity: 0.08;
-  }
-  34% {
-    opacity: 0.9;
-  }
-  50% {
-    opacity: 0.22;
-  }
-  68% {
-    opacity: 0.96;
-  }
-  84% {
-    opacity: 0.16;
-  }
-  100% {
-    background-position: 120% 0;
-    opacity: 0.07;
-  }
-}
-
-@keyframes notae-ai-neural-core {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(0.86);
-    box-shadow: 0 0 8px rgba(255, 115, 212, 0.34);
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.18);
-    box-shadow: 0 0 18px rgba(118, 239, 255, 0.56);
-  }
-}
-
-@keyframes notae-ai-neural-node {
-  0%,
-  100% {
-    opacity: 0.52;
-    transform: translate(-50%, -50%) translate(var(--node-x, 0), var(--node-y, 0)) scale(0.84);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(-50%, -50%) translate(var(--node-x, 0), var(--node-y, 0)) scale(1.12);
-  }
-}
-
-@keyframes notae-ai-neural-halo {
-  0%,
-  100% {
-    opacity: 0.36;
-    transform: scale(0.84);
-  }
-  50% {
-    opacity: 0.92;
-    transform: scale(1.12);
-  }
-}
-
-@keyframes notae-ai-neural-field {
-  0% {
-    opacity: 0.24;
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
     opacity: 0.42;
+    transform: translate(-50%, -50%) scale(0.92);
   }
-  100% {
-    opacity: 0.24;
-    transform: rotate(360deg) scale(1.05);
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.06);
   }
 }
 
-@keyframes notae-ai-luminous-cloud-spin {
+@keyframes notae-ai-loader-orbit {
+  from {
+    transform: translate(-50%, -50%) rotate(var(--orbit-angle)) translateX(var(--orbit-radius));
+  }
   to {
-    transform: rotate(360deg);
+    transform: translate(-50%, -50%) rotate(calc(var(--orbit-angle) + 1turn)) translateX(var(--orbit-radius));
   }
 }
 
-@keyframes notae-ai-luminous-cloud-breathe {
+@keyframes notae-ai-loader-node {
   0%,
   100% {
     opacity: 0.56;
-    transform: scale(0.94);
-  }
-  50% {
-    opacity: 0.92;
-    transform: scale(1.06);
-  }
-}
-
-@keyframes notae-ai-luminous-spark-orbit {
-  0%,
-  100% {
-    opacity: var(--spark-opacity, 0.76);
-    transform:
-      translate(-50%, -50%)
-      rotate(calc(var(--particle-index) * 15deg + var(--spark-shift, 0deg)))
-      translateX(var(--spark-radius, calc(var(--notae-ai-loader-size) * 0.35)))
-      scale(var(--spark-scale, 1));
+    transform: translate(-50%, -50%) translate(var(--node-x, var(--glint-x, var(--spray-x, 0))), var(--node-y, var(--glint-y, var(--spray-y, 0)))) scale(0.86);
   }
   50% {
     opacity: 1;
-    transform:
-      translate(-50%, -50%)
-      rotate(calc(var(--particle-index) * 15deg + var(--spark-shift, 0deg) + 18deg))
-      translateX(calc(var(--spark-radius, calc(var(--notae-ai-loader-size) * 0.35)) * 1.05))
-      scale(calc(var(--spark-scale, 1) + 0.12));
+    transform: translate(-50%, -50%) translate(var(--node-x, var(--glint-x, var(--spray-x, 0))), var(--node-y, var(--glint-y, var(--spray-y, 0)))) scale(1.18);
   }
 }
 
-@keyframes notae-ai-luminous-core-pulse {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(0.86);
-    box-shadow: 0 0 14px rgba(84, 238, 255, 0.36), 0 0 18px rgba(255, 98, 217, 0.22);
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.16);
-    box-shadow: 0 0 24px rgba(84, 238, 255, 0.62), 0 0 30px rgba(255, 98, 217, 0.34);
-  }
-}
-
-@keyframes notae-ai-luminous-wave-field {
-  0% {
-    opacity: 0.42;
-    transform: rotate(0deg) scale(0.94);
-  }
-  50% {
-    opacity: 0.8;
-    transform: rotate(180deg) scale(1.04);
-  }
-  100% {
-    opacity: 0.42;
-    transform: rotate(360deg) scale(0.94);
-  }
-}
-
-@keyframes notae-ai-luminous-wave-spin {
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-
-@keyframes notae-ai-luminous-wave-sweep {
+@keyframes notae-ai-loader-sweep {
   0%,
   100% {
     opacity: 0.16;
-    transform: translate(-50%, -50%) rotate(var(--line-rotation, 0deg)) scaleX(0.72);
+    background-position: 0% 50%;
+    filter: blur(0.1px);
   }
   50% {
-    opacity: 0.9;
-    transform: translate(-50%, -50%) rotate(calc(var(--line-rotation, 0deg) + 9deg)) scaleX(1.06);
+    opacity: 0.86;
+    background-position: 100% 50%;
+    filter: blur(0.3px);
   }
 }
 
-@keyframes notae-ai-luminous-wave-particle {
+@keyframes notae-ai-loader-bead {
   0%,
   100% {
-    opacity: 0.54;
-    transform:
-      translate(-50%, -50%)
-      rotate(calc(var(--particle-index) * 15deg))
-      translateX(calc(var(--notae-ai-loader-size) * 0.38))
-      scale(var(--wave-spark-scale, 1));
+    opacity: 0.52;
+    transform: translate(-50%, -50%) translate(var(--bead-x), var(--bead-y)) scale(calc(var(--bead-scale) * 0.88));
   }
   50% {
-    opacity: 0.96;
-    transform:
-      translate(-50%, -50%)
-      rotate(calc(var(--particle-index) * 15deg + 20deg))
-      translateX(calc(var(--notae-ai-loader-size) * 0.43))
-      scale(calc(var(--wave-spark-scale, 1) + 0.1));
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(var(--bead-x), var(--bead-y)) scale(calc(var(--bead-scale) * 1.14));
   }
 }
 
-.notae-ai-loader.is-reduced-motion * {
-  animation: none !important;
-  transition: none !important;
+@keyframes notae-ai-loader-glint {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.92;
+  }
 }
 
+@keyframes notae-ai-loader-cloud {
+  0%,
+  100% {
+    opacity: 0.56;
+    transform: translate(-50%, -50%) translate(var(--cloud-x), var(--cloud-y)) scale(var(--cloud-scale));
+  }
+  30% {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) translate(calc(var(--cloud-x) + var(--cloud-dx) * 0.44), calc(var(--cloud-y) + var(--cloud-dy) * 0.52)) scale(calc(var(--cloud-scale) + 0.05));
+  }
+  65% {
+    opacity: 0.94;
+    transform: translate(-50%, -50%) translate(calc(var(--cloud-x) + var(--cloud-dx)), calc(var(--cloud-y) + var(--cloud-dy))) scale(calc(var(--cloud-scale) + 0.08));
+  }
+}
+
+@keyframes notae-ai-loader-synapse {
+  0%,
+  100% {
+    opacity: 0.18;
+    background-position: 0% 50%;
+  }
+  50% {
+    opacity: 0.82;
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes notae-ai-loader-wave {
+  0%,
+  100% {
+    opacity: 0.34;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  50% {
+    opacity: 0.86;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+.notae-ai-loader.is-reduced-motion *,
 .notae-ai-loader.is-reduced-motion::before,
 .notae-ai-loader.is-reduced-motion::after {
   animation: none !important;
@@ -2888,11 +2593,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notae-ai-loader * {
-    animation: none !important;
-    transition: none !important;
-  }
-
+  .notae-ai-loader *,
   .notae-ai-loader::before,
   .notae-ai-loader::after {
     animation: none !important;
@@ -3006,11 +2707,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-ai-compose {
   margin-top: 0;
   border: 1px solid var(--notae-border);
-  background: #fff;
-  border-radius: 0.6rem;
-  padding: 0.45rem;
+  background: var(--notae-surface-raised);
+  border-radius: 0.72rem;
+  padding: 0.46rem;
   display: grid;
-  gap: 0.3rem;
+  gap: 0.34rem;
 }
 
 .notae-ai-label {
@@ -3022,16 +2723,22 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-ai-compose textarea {
   width: 100%;
   border: 1px solid #e5e7eb;
-  border-radius: 0.46rem;
+  border-radius: 0.52rem;
   resize: vertical;
-  padding: 0.46rem 0.52rem;
+  padding: 0.52rem 0.56rem;
   font: inherit;
   font-size: 0.75rem;
+  color: var(--notae-text);
+  background: color-mix(in srgb, var(--notae-surface) 96%, #ffffff 4%);
+}
+
+.notae-ai-compose textarea::placeholder {
+  color: #78716c;
 }
 
 .notae-ai-compose-input-wrap {
   position: relative;
-  min-height: 120px;
+  min-height: 108px;
 }
 
 .notae-ai-compose-input-wrap textarea {
@@ -3307,7 +3014,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-db-header {
   display: grid;
-  gap: 0.22rem;
+  gap: 0.34rem;
 }
 
 .notae-db-header-tools {
@@ -3343,32 +3050,32 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-db-viewbar {
-  margin-top: 0.06rem;
+  margin-top: 0.2rem;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.72rem;
   flex-wrap: wrap;
 }
 
 .notae-db-viewbar-left {
   display: flex;
   align-items: center;
-  gap: 0.22rem;
+  gap: 0.3rem;
   flex-wrap: wrap;
 }
 
 .notae-db-viewbar-right {
   display: inline-flex;
   align-items: center;
-  gap: 0.34rem;
+  gap: 0.4rem;
   margin-left: auto;
 }
 
 .notae-db-template-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.24rem;
+  gap: 0.3rem;
   flex-wrap: wrap;
 }
 
@@ -3386,9 +3093,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   list-style: none;
   border: 1px solid var(--notae-border);
   background: color-mix(in srgb, var(--notae-surface-raised) 88%, transparent);
-  border-radius: 0.42rem;
-  width: 2rem;
-  height: 2rem;
+  border-radius: 0.48rem;
+  width: 2.08rem;
+  height: 2.08rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3651,16 +3358,16 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-db-meta {
   margin: 0;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--notae-muted);
 }
 
 .notae-db-linked-page-controls {
   display: flex;
   align-items: center;
-  gap: 0.42rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.55rem;
 }
 
 .notae-db-linked-page-label {
@@ -3677,9 +3384,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   background: color-mix(in srgb, var(--notae-surface-muted) 96%, transparent);
   color: var(--notae-text);
   text-decoration: none;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 600;
-  padding: 0.18rem 0.74rem;
+  padding: 0.28rem 0.78rem;
   line-height: 1.3;
   display: inline-flex;
   align-items: center;
@@ -3736,10 +3443,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   min-width: 220px;
   max-width: min(560px, 86vw);
   border: 1px solid var(--notae-border);
-  border-radius: 0.56rem;
+  border-radius: 0.66rem;
   background: var(--notae-surface-raised);
   box-shadow: 0 10px 28px rgba(28, 25, 23, 0.15);
-  padding: 0.48rem;
+  padding: 0.56rem;
   z-index: 430;
 }
 
@@ -3750,8 +3457,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-db-grid-wrap {
+  border: 1px solid color-mix(in srgb, var(--notae-border) 88%, transparent);
+  background: color-mix(in srgb, var(--notae-surface-raised) 96%, transparent);
   overflow: auto;
-  border-radius: 0.4rem;
+  border-radius: 0.7rem;
+  box-shadow: 0 10px 22px rgba(24, 24, 27, 0.04);
 }
 
 .notae-db-grid {
@@ -3764,9 +3474,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-db-grid td {
   border-bottom: 1px solid color-mix(in srgb, var(--notae-border) 84%, transparent);
   border-right: 1px solid color-mix(in srgb, var(--notae-border) 72%, transparent);
-  padding: 0.12rem 0.4rem;
+  padding: 0.18rem 0.5rem;
   vertical-align: middle;
-  height: 2.12rem;
+  height: 2.24rem;
   font-size: 0.84rem;
   background: transparent;
 }
@@ -3778,10 +3488,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-db-grid th {
   text-align: left;
-  font-size: 0.84rem;
+  font-size: 0.79rem;
   font-weight: 600;
   color: var(--notae-muted);
   position: relative;
+  background: color-mix(in srgb, var(--notae-surface-raised) 88%, var(--notae-surface-muted) 12%);
 }
 
 .notae-db-grid-name-col {
@@ -3896,11 +3607,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   border: 1px solid var(--notae-border);
   background: var(--notae-surface-raised);
   color: var(--notae-text);
-  border-radius: 0.45rem;
+  border-radius: 0.5rem;
   font-size: 0.82rem;
   font-weight: 600;
   line-height: 1;
-  padding: 0.3rem 0.56rem;
+  padding: 0.34rem 0.62rem;
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
@@ -4047,7 +3758,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-db-row-shell {
   position: relative;
-  padding-left: 4.85rem;
+  padding-left: 5.08rem;
   isolation: isolate;
 }
 
@@ -4146,15 +3857,15 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   border-radius: 0.44rem;
   background: var(--notae-surface);
   color: var(--notae-text);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 520;
-  padding: 0.35rem 0.48rem;
+  padding: 0.38rem 0.5rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
   text-align: left;
-  min-height: 1.9rem;
+  min-height: 2rem;
 }
 
 .notae-db-row-menu-button:hover {
@@ -4194,12 +3905,12 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-db-row-menu-color-swatch {
-  width: 1.02rem;
-  height: 1.02rem;
+  width: 1.16rem;
+  height: 1.16rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.24rem;
+  border-radius: 0.3rem;
   border: 1px solid color-mix(in srgb, var(--notae-border) 86%, transparent);
   background: color-mix(in srgb, var(--notae-surface-muted) 70%, transparent);
   flex-shrink: 0;
@@ -4268,6 +3979,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-db-row-link-actions {
   display: inline-flex;
   align-items: center;
+  gap: 0.28rem;
 }
 
 .notae-db-enter-submitter {
@@ -4320,22 +4032,22 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-db-link-clear-button,
 .notae-db-row-link-action {
   border: 1px solid var(--notae-border);
-  border-radius: 0.36rem;
+  border-radius: 0.42rem;
   background: color-mix(in srgb, var(--notae-surface-raised) 90%, transparent);
   color: var(--notae-text);
   text-decoration: none;
   font-size: 0.66rem;
   font-weight: 600;
   line-height: 1;
-  padding: 0.18rem 0.36rem;
+  padding: 0.22rem 0.4rem;
 }
 
 .notae-db-row-link-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.55rem;
-  height: 1.55rem;
+  min-width: 1.62rem;
+  height: 1.62rem;
   padding: 0;
   cursor: pointer;
 }
@@ -4366,7 +4078,8 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-db-linked-page-name {
   color: var(--notae-muted);
   text-decoration: none;
-  font-size: 0.69rem;
+  font-size: 0.76rem;
+  font-weight: 600;
 }
 
 .notae-db-linked-page-name:hover {
@@ -4436,10 +4149,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-db-cell-input {
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 0.34rem;
+  border-radius: 0.4rem;
   background: transparent;
   color: var(--notae-text);
-  padding: 0.2rem 0.3rem;
+  padding: 0.24rem 0.38rem;
   font-size: 0.82rem;
   line-height: 1.32;
 }
@@ -4677,11 +4390,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-auth-card {
   border: 1px solid #e7e5e4;
   background: #fff;
-  border-radius: 0.85rem;
+  border-radius: 0.9rem;
   box-shadow: 0 12px 28px rgba(24, 24, 27, 0.08);
-  padding: 1rem;
+  padding: 1.04rem;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.78rem;
 }
 
 .notae-auth-card h2 {
@@ -4772,7 +4485,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-home-card {
-  gap: 0.72rem;
+  gap: 0.8rem;
 }
 
 .notae-home-card-head {
@@ -4797,11 +4510,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-home-workspace-item {
   border: 1px solid var(--notae-border);
-  border-radius: 0.62rem;
+  border-radius: 0.72rem;
   background: var(--notae-surface-raised);
-  padding: 0.56rem 0.64rem;
+  padding: 0.62rem 0.7rem;
   display: grid;
-  gap: 0.12rem;
+  gap: 0.16rem;
   text-decoration: none;
   color: inherit;
 }
@@ -4826,10 +4539,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-workspace-home {
-  width: min(860px, 100%);
+  width: min(920px, 100%);
   margin: 0 auto;
   display: grid;
-  gap: 0.72rem;
+  gap: 0.88rem;
   padding: 0.22rem 0 1.1rem;
 }
 
@@ -4841,10 +4554,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-workspace-home-body {
-  width: min(860px, calc(100% - 1.2rem));
+  width: min(920px, calc(100% - 1.2rem));
   margin: 0 auto;
   display: grid;
-  gap: 0.72rem;
+  gap: 0.88rem;
 }
 
 .notae-workspace-home-banner {
@@ -4865,7 +4578,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-workspace-home-banner-inner {
-  width: min(860px, calc(100% - 1.2rem));
+  width: min(920px, calc(100% - 1.2rem));
   margin: 0 auto;
 }
 
@@ -4939,25 +4652,26 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-workspace-home-link-grid {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.5rem;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .notae-workspace-page-grid {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.58rem;
   grid-template-columns: repeat(auto-fit, minmax(188px, 1fr));
 }
 
 .notae-workspace-page-card {
   border: 1px solid var(--notae-border);
-  border-radius: 0.7rem;
+  border-radius: 0.78rem;
   background: var(--notae-surface-raised);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
   display: grid;
   min-height: 138px;
+  box-shadow: 0 6px 18px rgba(24, 24, 27, 0.04);
 }
 
 .notae-workspace-page-card:hover {
@@ -4996,8 +4710,8 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-workspace-page-card-body {
   display: flex;
   align-items: flex-start;
-  gap: 0.46rem;
-  padding: 0.56rem 0.62rem 0.66rem;
+  gap: 0.52rem;
+  padding: 0.62rem 0.68rem 0.74rem;
 }
 
 .notae-workspace-page-card-icon {
@@ -5030,7 +4744,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-workspace-home-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
+  gap: 0.76rem;
 }
 
 .notae-workspace-home-stack {
@@ -5043,14 +4757,14 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.4rem;
+  gap: 0.48rem;
 }
 
 .notae-workspace-home-list-item {
-  border: 1px solid #ecebea;
-  border-radius: 0.62rem;
-  background: #fff;
-  padding: 0.56rem 0.64rem;
+  border: 1px solid var(--notae-border);
+  border-radius: 0.72rem;
+  background: var(--notae-surface-raised);
+  padding: 0.62rem 0.72rem;
   font-size: 0.82rem;
   color: #292524;
 }
@@ -5261,26 +4975,26 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-settings-shell {
-  width: min(1120px, 100%);
+  width: min(1160px, 100%);
   margin: 0 auto;
   min-height: calc(100vh - 4.6rem);
   box-sizing: border-box;
   border: 1px solid #e7e5e4;
-  border-radius: 0.82rem;
+  border-radius: 0.9rem;
   background: #fff;
   display: grid;
-  grid-template-columns: 228px minmax(0, 1fr);
+  grid-template-columns: 236px minmax(0, 1fr);
   overflow: hidden;
 }
 
 .notae-settings-nav {
   background: #f7f6f5;
   border-right: 1px solid #e7e5e4;
-  padding: 0.84rem 0.64rem;
+  padding: 0.92rem 0.72rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.12rem;
+  gap: 0.16rem;
 }
 
 .notae-settings-mobile-accordion {
@@ -5306,16 +5020,18 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-settings-nav-group {
-  margin: 0.56rem 0 0.12rem;
-  font-size: 0.76rem;
+  margin: 0.76rem 0 0.18rem;
+  font-size: 0.68rem;
   color: #57534e;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .notae-settings-workspace-picker {
   display: grid;
-  gap: 0.28rem;
-  margin: 0.08rem 0 0.34rem;
+  gap: 0.34rem;
+  margin: 0.08rem 0 0.42rem;
 }
 
 .notae-settings-workspace-picker-label {
@@ -5363,8 +5079,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-settings-nav-item {
-  border-radius: 0.46rem;
-  padding: 0.36rem 0.46rem;
+  border: 1px solid transparent;
+  border-radius: 0.52rem;
+  padding: 0.42rem 0.52rem;
   color: #57534e;
   font-size: 0.82rem;
   font-weight: 600;
@@ -5400,6 +5117,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-settings-nav a.notae-settings-nav-item:hover {
   background: #efedeb;
+  border-color: #e1dedb;
   color: #292524;
 }
 
@@ -5408,20 +5126,30 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-settings-nav-item em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.44rem;
+  border-radius: 999px;
+  border: 1px solid #e7e5e4;
+  background: #f5f5f4;
   font-style: normal;
   font-size: 0.67rem;
-  color: var(--notae-muted);
+  color: #78716c;
   font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .notae-settings-content {
   box-sizing: border-box;
   min-width: 0;
-  padding: 1.02rem 1.06rem 1.5rem;
+  padding: 1.16rem 1.18rem 1.65rem;
   overflow-y: auto;
   overflow-x: hidden;
   display: grid;
-  gap: 1.08rem;
+  gap: 1.2rem;
   align-content: start;
 }
 
@@ -5445,6 +5173,14 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   .notae-shell:not(.is-ai-rail-collapsed):not(.is-ai-compact-viewport) .notae-settings-content {
     padding: 0.88rem 0.82rem 1.24rem;
   }
+}
+
+.notae-shell:not(.is-ai-rail-collapsed):not(.is-ai-compact-viewport) .notae-options-panel {
+  width: min(470px, calc(100vw - 22rem));
+}
+
+.notae-shell:not(.is-ai-rail-collapsed):not(.is-ai-compact-viewport) .notae-actions-panel {
+  width: min(320px, calc(100vw - 22rem));
 }
 
 @media (max-width: 920px) {
@@ -6355,7 +6091,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   position: absolute;
   right: 0;
   top: calc(100% + 0.45rem);
-  width: min(340px, calc(100vw - 1rem));
+  width: min(332px, calc(100vw - 1rem));
   max-height: min(74vh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem), 720px);
   overflow: auto;
   overscroll-behavior: contain;
@@ -6656,7 +6392,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   position: absolute;
   right: 0;
   top: calc(100% + 0.45rem);
-  width: min(540px, calc(100vw - 1rem));
+  width: min(500px, calc(100vw - 1rem));
   max-height: min(70vh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem), 640px);
   overflow: auto;
   overscroll-behavior: contain;
@@ -8090,11 +7826,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   }
 
   .notae-options-panel {
-    width: min(540px, calc(100vw - 1rem));
+    width: min(500px, calc(100vw - 1rem));
   }
 
   .notae-actions-panel {
-    width: min(340px, calc(100vw - 1rem));
+    width: min(332px, calc(100vw - 1rem));
   }
 
   .notae-block-menu-panel {
@@ -8668,10 +8404,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-shell.is-mobile-viewport .notae-ai-floating-toggle {
-  right: 0.82rem;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.15rem);
-  width: 3.15rem;
-  height: 3.15rem;
+  right: 0.92rem;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  width: 2.96rem;
+  height: 2.96rem;
 }
 
 .notae-doc-tree.is-drag-active .notae-doc-block {
@@ -8807,21 +8543,21 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
   width: min(1880px, 100%);
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 1rem 0.75rem 1.6rem;
+  padding: 1.15rem 0.95rem 1.8rem;
   display: grid;
-  gap: 0.8rem;
+  gap: 0.95rem;
 }
 
 .notae-library-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.9rem;
 }
 
 .notae-library-header h1 {
   margin: 0;
-  font-size: 2.05rem;
+  font-size: 2.16rem;
   line-height: 1.05;
 }
 
@@ -8832,19 +8568,21 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
 .notae-library-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 0.24rem;
+  gap: 0.32rem;
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: thin;
 }
 
 .notae-library-tab {
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--notae-border) 78%, transparent);
   border-radius: 999px;
-  padding: 0.26rem 0.66rem;
-  font-size: 0.95rem;
+  padding: 0.3rem 0.72rem;
+  font-size: 0.84rem;
+  font-weight: 600;
   color: #57534e;
   text-decoration: none;
+  background: color-mix(in srgb, var(--notae-surface-raised) 96%, transparent);
 }
 
 .notae-library-tab.active,
@@ -8858,32 +8596,33 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.6rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .notae-library-search-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  border: 1px solid #e7e5e4;
-  border-radius: 0.55rem;
-  background: #fff;
+  gap: 0.38rem;
+  border: 1px solid var(--notae-border);
+  border-radius: 0.65rem;
+  background: var(--notae-surface-raised);
   min-width: 0;
   flex: 1 1 560px;
   max-width: 100%;
-  padding: 0 0.5rem;
+  min-height: 2.45rem;
+  padding: 0 0.58rem;
 }
 
 .notae-library-workspace-filter {
   display: inline-flex;
   align-items: center;
-  gap: 0.34rem;
+  gap: 0.45rem;
   flex: 0 0 auto;
 }
 
 .notae-library-inline-label {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: #57534e;
   white-space: nowrap;
@@ -8902,8 +8641,8 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 0.44rem 0.08rem;
-  font-size: 0.9rem;
+  padding: 0.48rem 0.08rem;
+  font-size: 0.88rem;
   color: var(--notae-text);
 }
 
@@ -8914,7 +8653,8 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
 .notae-library-toolbar-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.34rem;
+  gap: 0.42rem;
+  flex-wrap: wrap;
   margin-left: auto;
   flex: 0 0 auto;
 }
@@ -8945,12 +8685,12 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
   top: calc(100% + 0.4rem);
   width: min(320px, 86vw);
   border: 1px solid #e7e5e4;
-  border-radius: 0.62rem;
+  border-radius: 0.7rem;
   background: #fff;
   box-shadow: 0 14px 34px rgba(28, 25, 23, 0.18);
-  padding: 0.55rem;
+  padding: 0.6rem;
   display: grid;
-  gap: 0.38rem;
+  gap: 0.42rem;
   z-index: 95;
 }
 
@@ -8979,45 +8719,39 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
 }
 
 .notae-library-table-wrap {
-  border: 1px solid #e7e5e4;
-  border-radius: 0.7rem;
-  background: #fff;
+  border: 1px solid var(--notae-border);
+  border-radius: 0.82rem;
+  background: var(--notae-surface-raised);
   overflow-x: auto;
   overflow-y: hidden;
+  box-shadow: 0 10px 24px rgba(24, 24, 27, 0.04);
 }
 
 .notae-library-table {
   width: 100%;
+  min-width: 1120px;
   table-layout: fixed;
   border-collapse: collapse;
-}
-
-.notae-library-table th:first-child,
-.notae-library-table td:first-child {
-  width: 28%;
-  min-width: 220px;
 }
 
 .notae-library-table th,
 .notae-library-table td {
   text-align: left;
-  padding: 0.56rem 0.62rem;
+  padding: 0.68rem 0.76rem;
   border-bottom: 1px solid #efeeed;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   vertical-align: middle;
-  white-space: normal;
   overflow-wrap: anywhere;
 }
 
-.notae-library-table td:first-child {
-  word-break: break-word;
-}
-
 .notae-library-table th {
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   color: #78716c;
   font-weight: 600;
-  background: #fafaf9;
+  background: color-mix(in srgb, var(--notae-surface-raised) 82%, var(--notae-surface-muted) 18%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .notae-library-table tbody tr:hover {
@@ -9041,7 +8775,7 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
 .notae-library-name-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.34rem;
+  gap: 0.42rem;
   text-decoration: none;
   color: inherit;
   width: 100%;
@@ -9063,6 +8797,7 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
 .notae-library-row-title {
   word-break: break-word;
   color: inherit;
+  line-height: 1.4;
 }
 
 .notae-library-row-favorite {
@@ -9074,8 +8809,8 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 0.08rem 0.38rem;
-  font-size: 0.7rem;
+  padding: 0.14rem 0.42rem;
+  font-size: 0.68rem;
   font-weight: 600;
   margin-right: 0.3rem;
 }
@@ -9091,8 +8826,35 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
 }
 
 .notae-library-source-label {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: #78716c;
+  white-space: nowrap;
+}
+
+.notae-library-col-page-name {
+  width: 34%;
+}
+
+.notae-library-col-workspace {
+  width: 12%;
+  white-space: nowrap;
+}
+
+.notae-library-col-created-by,
+.notae-library-col-last-edited-by {
+  width: 16%;
+  overflow-wrap: anywhere;
+}
+
+.notae-library-col-source {
+  width: 12%;
+  white-space: nowrap;
+}
+
+.notae-library-col-created-time,
+.notae-library-col-last-edited-time,
+.notae-library-col-last-visited-time {
+  width: 13%;
   white-space: nowrap;
 }
 
@@ -9180,15 +8942,20 @@ body.notae-theme-system .notae-library-tab:hover {
 body.notae-theme-dark .notae-library-search-wrap,
 body.notae-theme-dark .notae-library-popover-panel,
 body.notae-theme-dark .notae-library-table-wrap,
-body.notae-theme-dark .notae-library-table th,
 body.notae-theme-dark .notae-library-table td,
 body.notae-theme-system .notae-library-search-wrap,
 body.notae-theme-system .notae-library-popover-panel,
 body.notae-theme-system .notae-library-table-wrap,
-body.notae-theme-system .notae-library-table th,
 body.notae-theme-system .notae-library-table td {
   background: var(--notae-surface-raised);
   color: var(--notae-text);
+  border-color: var(--notae-border);
+}
+
+body.notae-theme-dark .notae-library-table th,
+body.notae-theme-system .notae-library-table th {
+  background: color-mix(in srgb, var(--notae-surface-raised) 78%, var(--notae-surface-muted) 22%);
+  color: var(--notae-muted);
   border-color: var(--notae-border);
 }
 
@@ -9238,7 +9005,7 @@ body.notae-theme-system .notae-library-row:focus-within {
 @media (max-width: 880px) {
   .notae-library-shell {
     width: 100%;
-    padding: 1rem 0.5rem 1.3rem;
+    padding: 1rem 0.55rem 1.4rem;
   }
 
   .notae-library-tabs {
@@ -9274,7 +9041,27 @@ body.notae-theme-system .notae-library-row:focus-within {
 
   .notae-library-table th,
   .notae-library-table td {
-    padding: 0.5rem;
+    padding: 0.54rem 0.56rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .notae-library-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notae-library-toolbar-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .notae-library-toolbar-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .notae-workspace-home-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -10787,13 +10574,17 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 
 .notae-kalendarium-timezone-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.35rem;
-  max-height: 250px;
+  align-content: start;
+  max-height: min(250px, 36vh);
   overflow: auto;
+  scrollbar-gutter: stable;
   border: 1px solid var(--notae-border, #d6d3d1);
   border-radius: 0.65rem;
   padding: 0.55rem;
   margin-bottom: 0.6rem;
+  background: color-mix(in srgb, #fafaf9 88%, transparent);
 }
 
 .notae-kalendarium-connection-form,
@@ -10814,9 +10605,47 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   max-width: 100%;
 }
 
+.notae-shell.is-ai-compact-viewport .notae-content-scroll {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.15rem);
+}
+
+@media (max-width: 920px) {
+  .notae-kalendarium-timezone-grid {
+    grid-template-columns: 1fr;
+    max-height: min(260px, 34vh);
+  }
+}
+
+body.notae-theme-dark .notae-settings-nav-item.is-disabled em {
+  background: #262d35;
+  border-color: #36404b;
+  color: #c7ced6;
+}
+
+body.notae-theme-dark .notae-kalendarium-timezone-grid {
+  background: color-mix(in srgb, var(--notae-surface-raised) 92%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-settings-nav-item.is-disabled em {
+    background: #262d35;
+    border-color: #36404b;
+    color: #c7ced6;
+  }
+
+  body.notae-theme-system .notae-kalendarium-timezone-grid {
+    background: color-mix(in srgb, var(--notae-surface-raised) 92%, transparent);
+  }
+}
+
 .notae-meetings-page {
   display: grid;
-  gap: 1rem;
+  gap: 1.08rem;
+}
+
+.notae-meetings-sections {
+  display: grid;
+  gap: 0.9rem;
 }
 
 .notae-meetings-hero h1 {
@@ -10824,18 +10653,33 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   color: var(--notae-heading-ink, #292524d4);
 }
 
+.notae-meetings-hero {
+  padding-block: 1rem 1.06rem;
+}
+
 .notae-meetings-hero p {
   margin: 0;
   color: var(--notae-muted, #57534e);
+  max-width: 70ch;
 }
 
 .notae-meetings-layout {
   display: grid;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .notae-meetings-layout--capture {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.notae-meetings-layout--capture > .notae-meetings-card {
+  height: 100%;
+}
+
+.notae-meetings-layout--session-split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
 }
 
 .notae-meetings-card {
@@ -10867,6 +10711,21 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   gap: 0.45rem;
 }
 
+.notae-meetings-live-controls {
+  border: 1px solid var(--notae-border, #d6d3d1);
+  border-radius: 0.75rem;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.55rem;
+  background: color-mix(in srgb, var(--notae-surface, #fff) 96%, #0ea5e9 4%);
+}
+
+.notae-meetings-live-controls h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--notae-heading-ink, #292524d4);
+}
+
 .notae-meetings-hidden-file-input {
   display: none;
 }
@@ -10882,10 +10741,10 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  border: 1px solid color-mix(in srgb, var(--notae-border, #d6d3d1) 78%, var(--notae-live-dot) 22%);
+  border: 1px solid var(--notae-border, #d6d3d1);
   border-radius: 999px;
   padding: 0.35rem 0.58rem;
-  background: color-mix(in srgb, var(--notae-surface, #fff) 90%, var(--notae-live-dot) 10%);
+  background: var(--notae-surface, #fff);
   color: var(--notae-heading-ink, #292524d4);
   font-size: 0.82rem;
   font-weight: 600;
@@ -10940,6 +10799,11 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   animation: notae-meetings-recording-bars 1.1s ease-in-out infinite;
 }
 
+.notae-meetings-live-indicator.is-active {
+  border-color: color-mix(in srgb, var(--notae-border, #d6d3d1) 78%, var(--notae-live-dot) 22%);
+  background: color-mix(in srgb, var(--notae-surface, #fff) 90%, var(--notae-live-dot) 10%);
+}
+
 .notae-meetings-live-indicator.is-active .notae-meetings-live-bars span:nth-child(2) { animation-delay: 0.08s; }
 .notae-meetings-live-indicator.is-active .notae-meetings-live-bars span:nth-child(3) { animation-delay: 0.16s; }
 .notae-meetings-live-indicator.is-active .notae-meetings-live-bars span:nth-child(4) { animation-delay: 0.24s; }
@@ -10952,9 +10816,9 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 .notae-meetings-session-item {
   border: 1px solid var(--notae-border, #d6d3d1);
   border-radius: 0.75rem;
-  padding: 0.65rem;
+  padding: 0.72rem;
   display: grid;
-  gap: 0.38rem;
+  gap: 0.44rem;
   background: color-mix(in srgb, var(--notae-surface, #fff) 95%, #0ea5e9 5%);
 }
 

@@ -168,6 +168,8 @@ RSpec.describe "Pages", type: :request do
     dock_links = doc.css(".notae-sidebar-dock-link")
     expect(dock_links.size).to be >= 7
     expect(dock_links.map { |link| link["title"] }).to include("Home", "Search", "Library", "Kalendārium", "Meetings", "Settings")
+    expect(dock_links).to all(satisfy { |link| link["data-turbo-prefetch"] == "false" })
+    expect(doc.css(".notae-sidebar-link[href]")).to all(satisfy { |link| link["data-turbo-prefetch"] == "false" })
   end
 
   it "lists only explicit meeting-note pages in the sidebar meetings section" do

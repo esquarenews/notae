@@ -1,6 +1,9 @@
 class KalendariumController < ApplicationController
+  include RequestPerformanceInstrumentation
+
   before_action :authenticate_user!
   before_action :set_workspace
+  track_request_performance_for :show, :refresh
 
   VIEW_OPTIONS = %w[day week month year project].freeze
   TIMELINE_SLOT_MINUTES = 30
@@ -97,61 +100,62 @@ class KalendariumController < ApplicationController
     end
 
     scoped_calendar_ids = Array(params[:calendar_ids]).map(&:to_s).reject(&:blank?)
-    explicit_empty_scope = params[:calendar_filter_applied].to_s == "1" && scoped_calendar_ids.empty?
+    calendar_filter_applied = params[:calendar_filter_applied].to_s == "1"
+    explicit_empty_scope = calendar_filter_applied && scoped_calendar_ids.empty?
     scoped_calendars_by_connection = refresh_scope_calendars(refreshable_connections).group_by(&:kalendarium_connection_id)
-    failures = []
-    queued_failures = []
-    synced_connections = []
-
-    refreshable_connections.each do |connection|
-      if explicit_empty_scope
-        synced_connections << connection
-        next
+    connections_to_refresh =
+      if calendar_filter_applied
+        refreshable_connections.select { |connection| scoped_calendars_by_connection[connection.id].present? }
+      else
+        refreshable_connections
       end
 
+    if explicit_empty_scope
+      redirect_to kalendarium_path(kalendarium_redirect_params), alert: "No calendars selected to refresh."
+      return
+    end
+
+    if connections_to_refresh.empty?
+      redirect_to kalendarium_path(kalendarium_redirect_params), alert: "No selected calendars are available to refresh."
+      return
+    end
+
+    failures = []
+    synced_connection_count = 0
+    synced_calendar_count = 0
+
+    connections_to_refresh.each do |connection|
       scoped_calendars = scoped_calendars_by_connection.fetch(connection.id, [])
+      sync_options = {
+        connection: connection,
+        range_start: range_start,
+        range_end: range_end,
+        retry_pending_writes: false
+      }
 
       if scoped_calendars.any?
-        scoped_calendars.each do |calendar|
-          Kalendarium::ConnectionSyncService.new(
-            connection: connection,
-            calendar: calendar,
-            range_start: range_start,
-            range_end: range_end,
-            retry_pending_writes: false
-          ).call
-        end
+        Kalendarium::ConnectionSyncService.new(**sync_options.merge(calendars: scoped_calendars)).call
+        synced_calendar_count += scoped_calendars.size
       else
-        Kalendarium::ConnectionSyncService.new(
-          connection: connection,
-          range_start: range_start,
-          range_end: range_end,
-          retry_pending_writes: false
-        ).call
+        Kalendarium::ConnectionSyncService.new(**sync_options).call
       end
 
-      synced_connections << connection
+      synced_connection_count += 1
     rescue StandardError => error
       failures << "#{connection.label}: #{error.message}"
     end
 
-    synced_connections.each do |connection|
-      Kalendarium::SyncConnectionJob.set(wait: 2.minutes).perform_later(connection.id)
-    rescue StandardError => error
-      queued_failures << "#{connection.label}: #{error.message}"
-    end
-
-    queued_suffix = queued_failures.any? ? " Background full sync queue errors: #{queued_failures.join(' | ')}" : " Full sync queued in background."
-
     if failures.any?
-      if failures.size == refreshable_connections.size
-        redirect_to kalendarium_path(kalendarium_redirect_params), alert: "Refresh failed for all connections: #{failures.join(' | ')}"
+      if failures.size == connections_to_refresh.size
+        redirect_to kalendarium_path(kalendarium_redirect_params), alert: "Refresh failed for all selected connections: #{failures.join(' | ')}"
       else
-        completed_count = refreshable_connections.size - failures.size
-        redirect_to kalendarium_path(kalendarium_redirect_params), alert: "Refresh completed for #{helpers.pluralize(completed_count, "connection")} with errors: #{failures.join(' | ')}.#{queued_suffix}"
+        completed_count = connections_to_refresh.size - failures.size
+        redirect_to kalendarium_path(kalendarium_redirect_params), alert: "Refresh completed for #{helpers.pluralize(completed_count, "connection")} in the current view with errors: #{failures.join(' | ')}"
       end
+    elsif synced_calendar_count.positive?
+      redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Refresh completed for #{helpers.pluralize(synced_calendar_count, "calendar")} in the current view."
     else
-      redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Refresh completed for #{helpers.pluralize(refreshable_connections.size, "connection")} in the current view.#{queued_suffix}"
+      redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Refresh completed for #{helpers.pluralize(synced_connection_count, "connection")} in the current view."
     end
   end
 
@@ -195,7 +199,7 @@ class KalendariumController < ApplicationController
       return selected
     end
 
-    stored_selection = persisted_selected_calendar_ids & allowed_ids
+    stored_selection = persisted_selected_calendar_ids(allowed_ids: allowed_ids)
     if stored_selection.any?
       persist_selected_calendar_ids(stored_selection, available_ids: allowed_ids)
       return stored_selection
@@ -231,7 +235,7 @@ class KalendariumController < ApplicationController
     payload = persisted_project_visibility_payload
 
     selected = if stored_project_visibility?
-      payload[:selected_ids] & allowed_ids
+      persisted_visible_project_ids(allowed_ids: allowed_ids)
     else
       allowed_ids
     end
@@ -245,7 +249,7 @@ class KalendariumController < ApplicationController
     toggle_project_id = params[:toggle_project_id].to_s
     toggle_state = params[:project_visible].to_s
     if toggle_project_id.present? && allowed_ids.include?(toggle_project_id)
-      selected = allowed_ids if !stored_project_visibility? && payload[:selected_ids].empty?
+      selected = allowed_ids if !stored_project_visibility? && payload[:ids].empty?
       if toggle_state == "1"
         selected |= [ toggle_project_id ]
       else
@@ -262,7 +266,7 @@ class KalendariumController < ApplicationController
         selected = allowed_ids
       end
 
-      if selected != payload[:selected_ids] || available_ids != allowed_ids
+      if payload[:legacy_format] && (selected != payload[:ids] || available_ids != allowed_ids)
         persist_visible_project_ids(selected, available_ids: allowed_ids)
       end
 
@@ -475,39 +479,60 @@ class KalendariumController < ApplicationController
   def persisted_calendar_selection_payload
     raw = calendar_filter_session[calendar_filter_workspace_key]
     if raw.is_a?(Hash)
-      selected_ids = Array(raw["selected_ids"] || raw[:selected_ids]).map(&:to_s).reject(&:blank?).uniq
-      available_ids = Array(raw["available_ids"] || raw[:available_ids]).map(&:to_s).reject(&:blank?).uniq
-      { selected_ids: selected_ids, available_ids: available_ids, legacy_format: false }
+      mode = (raw["mode"] || raw[:mode]).to_s
+      if %w[all none selected all_except].include?(mode)
+        ids = Array(raw["ids"] || raw[:ids]).map(&:to_s).reject(&:blank?).uniq
+        { mode: mode, ids: ids, available_ids: [], legacy_format: false }
+      else
+        selected_ids = Array(raw["selected_ids"] || raw[:selected_ids]).map(&:to_s).reject(&:blank?).uniq
+        available_ids = Array(raw["available_ids"] || raw[:available_ids]).map(&:to_s).reject(&:blank?).uniq
+        { mode: "selected", ids: selected_ids, available_ids: available_ids, legacy_format: true }
+      end
     else
       selected_ids = Array(raw).map(&:to_s).reject(&:blank?).uniq
-      { selected_ids: selected_ids, available_ids: [], legacy_format: true }
+      { mode: "selected", ids: selected_ids, available_ids: [], legacy_format: true }
     end
   end
 
-  def persisted_selected_calendar_ids
-    persisted_calendar_selection_payload[:selected_ids]
+  def persisted_selected_calendar_ids(allowed_ids:)
+    payload = persisted_calendar_selection_payload
+
+    if payload[:legacy_format]
+      return payload[:ids] & allowed_ids
+    end
+
+    case payload[:mode]
+    when "all"
+      allowed_ids
+    when "none"
+      []
+    when "all_except"
+      allowed_ids - payload[:ids]
+    else
+      payload[:ids] & allowed_ids
+    end
   end
 
   def stale_or_legacy_empty_selection?(allowed_ids:)
     return false if allowed_ids.blank?
 
     payload = persisted_calendar_selection_payload
-    selected_ids = payload[:selected_ids]
+    selected_ids = payload[:ids]
     available_ids = payload[:available_ids]
 
-    return true if selected_ids.present? && (selected_ids & allowed_ids).empty?
-    return false unless selected_ids.empty?
-    return true if payload[:legacy_format]
-    return false if available_ids.empty?
+    if payload[:legacy_format]
+      return true if selected_ids.present? && (selected_ids & allowed_ids).empty?
+      return false unless selected_ids.empty?
+      return false if available_ids.empty?
 
-    (available_ids & allowed_ids).empty?
+      return (available_ids & allowed_ids).empty?
+    end
+
+    payload[:mode] == "selected" && selected_ids.present? && (selected_ids & allowed_ids).empty?
   end
 
   def persist_selected_calendar_ids(ids, available_ids: nil)
-    calendar_filter_session[calendar_filter_workspace_key] = {
-      "selected_ids" => Array(ids).map(&:to_s).reject(&:blank?).uniq,
-      "available_ids" => Array(available_ids).map(&:to_s).reject(&:blank?).uniq
-    }
+    calendar_filter_session[calendar_filter_workspace_key] = compact_visibility_payload(ids, available_ids)
   end
 
   def project_visibility_session
@@ -525,23 +550,65 @@ class KalendariumController < ApplicationController
   def persisted_project_visibility_payload
     raw = project_visibility_session[project_visibility_workspace_key]
     if raw.is_a?(Hash)
-      {
-        selected_ids: Array(raw["selected_ids"] || raw[:selected_ids]).map(&:to_s).reject(&:blank?).uniq,
-        available_ids: Array(raw["available_ids"] || raw[:available_ids]).map(&:to_s).reject(&:blank?).uniq
-      }
+      mode = (raw["mode"] || raw[:mode]).to_s
+      if %w[all none selected all_except].include?(mode)
+        {
+          mode: mode,
+          ids: Array(raw["ids"] || raw[:ids]).map(&:to_s).reject(&:blank?).uniq,
+          available_ids: [],
+          legacy_format: false
+        }
+      else
+        {
+          mode: "selected",
+          ids: Array(raw["selected_ids"] || raw[:selected_ids]).map(&:to_s).reject(&:blank?).uniq,
+          available_ids: Array(raw["available_ids"] || raw[:available_ids]).map(&:to_s).reject(&:blank?).uniq,
+          legacy_format: true
+        }
+      end
     else
       {
-        selected_ids: Array(raw).map(&:to_s).reject(&:blank?).uniq,
-        available_ids: []
+        mode: "selected",
+        ids: Array(raw).map(&:to_s).reject(&:blank?).uniq,
+        available_ids: [],
+        legacy_format: true
       }
     end
   end
 
   def persist_visible_project_ids(ids, available_ids: nil)
-    project_visibility_session[project_visibility_workspace_key] = {
-      "selected_ids" => Array(ids).map(&:to_s).reject(&:blank?).uniq,
-      "available_ids" => Array(available_ids).map(&:to_s).reject(&:blank?).uniq
-    }
+    project_visibility_session[project_visibility_workspace_key] = compact_visibility_payload(ids, available_ids)
+  end
+
+  def persisted_visible_project_ids(allowed_ids:)
+    payload = persisted_project_visibility_payload
+
+    case payload[:mode]
+    when "all"
+      allowed_ids
+    when "none"
+      []
+    when "all_except"
+      allowed_ids - payload[:ids]
+    else
+      payload[:ids] & allowed_ids
+    end
+  end
+
+  def compact_visibility_payload(ids, available_ids)
+    available = Array(available_ids).map(&:to_s).reject(&:blank?).uniq
+    selected = Array(ids).map(&:to_s).reject(&:blank?).uniq
+    selected &= available if available.any?
+
+    return { "mode" => "none" } if available.any? && selected.empty?
+    return { "mode" => "all" } if available.any? && selected.sort == available.sort
+
+    deselected = available - selected
+    if available.any? && deselected.any? && deselected.size < selected.size
+      { "mode" => "all_except", "ids" => deselected }
+    else
+      { "mode" => "selected", "ids" => selected }
+    end
   end
 
   def last_calendar_view_session

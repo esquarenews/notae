@@ -25,5 +25,10 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("applyTaskStatusRowClasses")
     expect(source).to include("is-status-not-started")
     expect(source).to include("is-status-done")
+    expect(source).to include("requestSubmitOnce")
+    expect(source).to include("submitOnEnter")
+    expect(source).to include("requestSubmit(submitter)")
+    expect(source).to include("autoSubmitPending")
+    expect(source).to include("turbo:submit-start")
   end
 end

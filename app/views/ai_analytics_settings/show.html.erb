@@ -64,7 +64,7 @@
             <% if @ai_analytics_operations.any? %>
               <% @ai_analytics_operations.each do |entry| %>
                 <tr>
-                  <td><%= entry[:operation].to_s.humanize %></td>
+                  <td><%= AiUsageLog.label_for(entry[:operation]) %></td>
                   <td><%= number_with_delimiter(entry[:count]) %></td>
                   <td><%= number_with_delimiter(entry[:tokens]) %></td>
                   <td><%= number_to_currency(entry[:cost]) %></td>

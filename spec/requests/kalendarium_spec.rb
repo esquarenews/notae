@@ -44,6 +44,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-week-header-days")
     expect(response.body).to include("name=\"kalendarium_event[all_day]\"")
     expect(response.body).not_to include(">10m</span>")
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("KalendariumController#show")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     document = Nokogiri::HTML.parse(response.body)
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
@@ -542,27 +544,67 @@ RSpec.describe "Kalendarium", type: :request do
     sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
     allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
 
-    expect do
-      post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
-        view: "month",
-        date: "2026-03-01",
-        calendar_filter_applied: "1",
-        calendar_ids: [ calendar.id ]
-      }
-    end.to have_enqueued_job(Kalendarium::SyncConnectionJob).with(connection.id)
+    post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+      view: "month",
+      date: "2026-03-01",
+      calendar_filter_applied: "1",
+      calendar_ids: [ calendar.id ]
+    }
 
     expect(response).to redirect_to(
       kalendarium_path(workspace_slug: workspace.slug, view: "month", date: Date.parse("2026-03-01"), calendar_ids: [ calendar.id.to_s ])
     )
-    expect(flash[:notice]).to include("Refresh completed for 1 connection in the current view")
+    expect(flash[:notice]).to include("Refresh completed for 1 calendar in the current view")
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(
       hash_including(
         connection: connection,
-        calendar: calendar,
+        calendars: [ calendar ],
         retry_pending_writes: false
       )
     )
     expect(sync_service).to have_received(:call)
+  end
+
+  it "instantiates the refresh sync service with keyword arguments" do
+    user, workspace, = build_stack(suffix: "refresh-keyword-init")
+    sign_in user
+
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Keyword feed",
+      ics_url: "https://example.com/keyword.ics",
+      enabled: true,
+      status: "connected"
+    )
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_connection: connection,
+      provider: "ics",
+      remote_id: "ics-keyword",
+      name: "Keyword feed",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      enabled: true
+    )
+
+    allow_any_instance_of(Kalendarium::ConnectionSyncService).to receive(:call).and_return(true)
+
+    post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+      view: "week",
+      date: "2026-03-06",
+      calendar_filter_applied: "1",
+      calendar_ids: [ calendar.id ]
+    }
+
+    expect(response).to redirect_to(
+      kalendarium_path(workspace_slug: workspace.slug, view: "week", date: Date.parse("2026-03-06"), calendar_ids: [ calendar.id.to_s ])
+    )
+    expect(flash[:notice]).to include("Refresh completed for 1 calendar in the current view")
   end
 
   it "runs refresh once per active connection and skips disabled ones" do
@@ -627,27 +669,159 @@ RSpec.describe "Kalendarium", type: :request do
     sync_service_two = instance_double(Kalendarium::ConnectionSyncService, call: true)
     allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service_one, sync_service_two)
 
-    expect do
-      post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
-        view: "month",
-        date: "2026-03-01",
-        calendar_filter_applied: "1",
-        calendar_ids: [ calendar_one.id, calendar_two.id ]
-      }
-    end.to have_enqueued_job(Kalendarium::SyncConnectionJob).with(connection_one.id).and have_enqueued_job(Kalendarium::SyncConnectionJob).with(connection_two.id)
+    post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+      view: "month",
+      date: "2026-03-01",
+      calendar_filter_applied: "1",
+      calendar_ids: [ calendar_one.id, calendar_two.id ]
+    }
 
     expect(response).to redirect_to(
       kalendarium_path(workspace_slug: workspace.slug, view: "month", date: Date.parse("2026-03-01"), calendar_ids: [ calendar_one.id.to_s, calendar_two.id.to_s ])
     )
-    expect(flash[:notice]).to include("Refresh completed for 2 connections in the current view")
+    expect(flash[:notice]).to include("Refresh completed for 2 calendars in the current view")
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(
-      hash_including(connection: connection_one, calendar: calendar_one, retry_pending_writes: false)
+      hash_including(connection: connection_one, calendars: [ calendar_one ], retry_pending_writes: false)
     )
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(
-      hash_including(connection: connection_two, calendar: calendar_two, retry_pending_writes: false)
+      hash_including(connection: connection_two, calendars: [ calendar_two ], retry_pending_writes: false)
     )
     expect(sync_service_one).to have_received(:call)
     expect(sync_service_two).to have_received(:call)
+  end
+
+  it "keeps the refresh selection session compact when many calendars are selected" do
+    user, workspace, = build_stack(suffix: "refresh-cookie-overflow")
+    sign_in user
+
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Large feed",
+      ics_url: "https://example.com/large.ics",
+      enabled: true,
+      status: "connected"
+    )
+
+    calendars = 80.times.map do |index|
+      KalendariumCalendar.create!(
+        workspace: workspace,
+        created_by: user,
+        kalendarium_connection: connection,
+        provider: "ics",
+        remote_id: "ics-large-#{index}",
+        name: "Large feed #{index + 1}",
+        color_hex: "#3B82F6",
+        time_zone: "UTC",
+        source_kind: "provider",
+        enabled: true
+      )
+    end
+
+    selected_calendars = calendars.first(78)
+    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
+
+    expect do
+      post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+        view: "week",
+        date: "2026-03-06",
+        calendar_filter_applied: "1",
+        calendar_ids: selected_calendars.map(&:id)
+      }
+    end.not_to raise_error
+
+    expect(response).to redirect_to(
+      kalendarium_path(
+        workspace_slug: workspace.slug,
+        view: "week",
+        date: Date.parse("2026-03-06"),
+        calendar_ids: selected_calendars.map { |calendar| calendar.id.to_s }
+      )
+    )
+    expect(flash[:notice]).to include("Refresh completed for 78 calendars in the current view")
+    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(
+      hash_including(
+        connection: connection,
+        calendars: match_array(selected_calendars),
+        retry_pending_writes: false
+      )
+    )
+    expect(sync_service).to have_received(:call)
+  end
+
+  it "skips full-connection refresh for unselected connections when a calendar filter is applied" do
+    user, workspace, = build_stack(suffix: "refresh-filter-skip-unselected")
+    sign_in user
+
+    selected_connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Selected feed",
+      ics_url: "https://example.com/selected.ics",
+      enabled: true,
+      status: "connected"
+    )
+    unselected_connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Unselected feed",
+      ics_url: "https://example.com/unselected.ics",
+      enabled: true,
+      status: "connected"
+    )
+
+    selected_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_connection: selected_connection,
+      provider: "ics",
+      remote_id: "ics-selected",
+      name: "Selected feed",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      enabled: true
+    )
+    KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_connection: unselected_connection,
+      provider: "ics",
+      remote_id: "ics-unselected",
+      name: "Unselected feed",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      enabled: true
+    )
+
+    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).and_return(sync_service)
+
+    post refresh_kalendarium_path(workspace_slug: workspace.slug), params: {
+      view: "week",
+      date: "2026-03-01",
+      calendar_filter_applied: "1",
+      calendar_ids: [ selected_calendar.id ]
+    }
+
+    expect(response).to redirect_to(
+      kalendarium_path(workspace_slug: workspace.slug, view: "week", date: Date.parse("2026-03-01"), calendar_ids: [ selected_calendar.id.to_s ])
+    )
+    expect(flash[:notice]).to include("Refresh completed for 1 calendar in the current view")
+    expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(
+      hash_including(connection: selected_connection, calendars: [ selected_calendar ], retry_pending_writes: false)
+    )
+    expect(Kalendarium::ConnectionSyncService).not_to have_received(:new).with(
+      hash_including(connection: unselected_connection)
+    )
   end
 
   it "scopes refresh to the current view range" do
@@ -690,7 +864,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(
       hash_including(
         connection: connection,
-        calendar: calendar,
+        calendars: [ calendar ],
         range_start: expected_date.beginning_of_day,
         range_end: expected_date.end_of_day,
         retry_pending_writes: false

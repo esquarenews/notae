@@ -1002,7 +1002,7 @@
   </div>
 
   <% linked_page = @linkable_pages_by_id[@database.linked_page_id] %>
-  <p class="notae-db-meta"><%= pluralize(@rows.size, "row") %></p>
+  <p id="database_row_count" class="notae-db-meta"><%= render "databases/row_count_meta", row_count: @rows.size %></p>
   <div class="notae-db-linked-page-controls">
     <% if linked_page.present? %>
       <%= link_to linked_page.title,

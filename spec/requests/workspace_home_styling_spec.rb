@@ -104,7 +104,7 @@ RSpec.describe "Workspace home styling", type: :request do
     get workspace_path(workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("<p class=\"notae-page-subtle\">Test Space</p>")
+    expect(response.body).to include("<p class=\"notae-page-subtle\">Workspace home</p>")
     expect(response.body).not_to include("Test Space · test-space")
   end
 end

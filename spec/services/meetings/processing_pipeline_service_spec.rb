@@ -4,7 +4,8 @@ require "ostruct"
 RSpec.describe Meetings::ProcessingPipelineService do
   def build_service
     user = OpenStruct.new(openai_api_key: "sk-test")
-    session = OpenStruct.new(created_by: user)
+    workspace = OpenStruct.new(id: "workspace-1")
+    session = OpenStruct.new(id: "session-1", created_by: user, workspace: workspace)
     described_class.new(session: session)
   end
 
@@ -75,5 +76,36 @@ RSpec.describe Meetings::ProcessingPipelineService do
 
     expect(turns.map(&:speaker_key)).to eq([ "S1", "S2", "S1" ])
     expect(turns.map(&:text)).to eq([ "Hello", "Hi", "Follow up" ])
+  end
+
+  it "logs transcription usage for meeting AI usage tracking" do
+    service = build_service
+    allow(Search::AiUsageLogger).to receive(:log!)
+    service.instance_variable_set(:@last_transcription_model, "gpt-4o-transcribe-diarize")
+
+    service.send(:log_transcription_usage!, {
+      "usage" => {
+        "input_tokens" => 320,
+        "output_tokens" => 90,
+        "total_tokens" => 410
+      }
+    })
+
+    expect(Search::AiUsageLogger).to have_received(:log!).with(
+      hash_including(
+        operation: AiUsageLog::OP_MEETING_TRANSCRIPTION,
+        model: "gpt-4o-transcribe-diarize",
+        usage: { prompt_tokens: 320, completion_tokens: 90, total_tokens: 410 }
+      )
+    )
+  end
+
+  it "ignores transcription usage logging when no usage is returned" do
+    service = build_service
+    allow(Search::AiUsageLogger).to receive(:log!)
+
+    service.send(:log_transcription_usage!, {})
+
+    expect(Search::AiUsageLogger).not_to have_received(:log!)
   end
 end

@@ -2,7 +2,10 @@ module ApplicationHelper
   def ui_workspaces
     return [] unless user_signed_in?
 
-    @ui_workspaces ||= workspace_scope_with_slug.order(:created_at).to_a
+    @ui_workspaces ||= workspace_scope_with_slug
+                        .select(:id, :slug, :name, :icon, :updated_at, :created_at)
+                        .order(:created_at)
+                        .to_a
   end
 
   def ui_current_workspace
@@ -37,6 +40,7 @@ module ApplicationHelper
     @ui_sidebar_databases ||= policy_scope(Database)
                               .for_workspace(workspace)
                               .active
+                              .select(:id, :name, :icon, :updated_at, :created_at)
                               .order(:created_at)
                               .limit(12)
                               .to_a
@@ -46,46 +50,54 @@ module ApplicationHelper
     workspace = ui_current_workspace
     return [] unless workspace
 
-    policy_scope(Page)
-      .for_workspace(workspace)
-      .active
-      .order(updated_at: :desc)
-      .limit(limit)
-      .to_a
+    @ui_sidebar_recent_pages ||= {}
+    @ui_sidebar_recent_pages[limit] ||= policy_scope(Page)
+                                        .for_workspace(workspace)
+                                        .active
+                                        .select(:id, :title, :icon, :updated_at)
+                                        .order(updated_at: :desc)
+                                        .limit(limit)
+                                        .to_a
   end
 
   def ui_sidebar_recent_databases(limit: 6)
     workspace = ui_current_workspace
     return [] unless workspace
 
-    policy_scope(Database)
-      .for_workspace(workspace)
-      .active
-      .order(updated_at: :desc)
-      .limit(limit)
-      .to_a
+    @ui_sidebar_recent_databases ||= {}
+    @ui_sidebar_recent_databases[limit] ||= policy_scope(Database)
+                                            .for_workspace(workspace)
+                                            .active
+                                            .select(:id, :name, :icon, :updated_at)
+                                            .order(updated_at: :desc)
+                                            .limit(limit)
+                                            .to_a
   end
 
   def ui_sidebar_recent_meetings(limit: 6)
     workspace = ui_current_workspace
     return [] unless workspace
 
-    policy_scope(Page)
-      .for_workspace(workspace)
-      .active
-      .meeting_notes
-      .order(updated_at: :desc)
-      .limit(limit)
-      .to_a
+    @ui_sidebar_recent_meetings ||= {}
+    @ui_sidebar_recent_meetings[limit] ||= policy_scope(Page)
+                                           .for_workspace(workspace)
+                                           .active
+                                           .meeting_notes
+                                           .select(:id, :title, :updated_at)
+                                           .order(updated_at: :desc)
+                                           .limit(limit)
+                                           .to_a
   end
 
   def ui_sidebar_recent_workspaces(limit: 6)
     return [] unless user_signed_in?
 
-    workspace_scope_with_slug
-      .order(updated_at: :desc)
-      .limit(limit)
-      .to_a
+    @ui_sidebar_recent_workspaces ||= {}
+    @ui_sidebar_recent_workspaces[limit] ||= workspace_scope_with_slug
+                                             .select(:id, :slug, :name, :icon, :updated_at)
+                                             .order(updated_at: :desc)
+                                             .limit(limit)
+                                             .to_a
   end
 
   def ui_sidebar_recent_favorites(limit: 6)
@@ -121,6 +133,13 @@ module ApplicationHelper
     is_active = active || (path.present? && current_page?(path))
     base = "notae-sidebar-link"
     is_active ? "#{base} active" : base
+  end
+
+  def notae_shell_link_data(action: "click->shell#close")
+    {
+      action: action,
+      turbo_prefetch: false
+    }
   end
 
   def notae_icon_svg(name, css_class: nil)

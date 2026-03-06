@@ -3,7 +3,7 @@
 <% size = local_assigns.fetch(:size, 64).to_i %>
 <% reduced_motion = local_assigns.fetch(:reduced_motion, false) == true %>
 <% hover_animate = local_assigns.fetch(:hover_animate, false) == true %>
-<% particle_count = [ "flock_cloud", "luminous_pulse_sphere", "luminous_wave_sphere" ].include?(variant) ? 24 : 12 %>
+<% point_count = 16 %>
 <%
   classes = [
     "notae-ai-loader",
@@ -15,14 +15,14 @@
 %>
 
 <div class="<%= classes %>" style="--notae-ai-loader-size: <%= size %>px;" aria-hidden="true">
-  <span class="notae-ai-loader-ring ring-one"></span>
-  <span class="notae-ai-loader-ring ring-two"></span>
-  <span class="notae-ai-loader-ring ring-three"></span>
-  <span class="notae-ai-loader-line line-one"></span>
-  <span class="notae-ai-loader-line line-two"></span>
-  <span class="notae-ai-loader-line line-three"></span>
-  <% particle_count.times do |index| %>
-    <span class="notae-ai-loader-particle p-<%= index + 1 %>" style="--particle-index: <%= index %>;"></span>
+  <span class="notae-ai-loader-shell shell-one"></span>
+  <span class="notae-ai-loader-shell shell-two"></span>
+  <span class="notae-ai-loader-shell shell-three"></span>
+  <span class="notae-ai-loader-beam beam-one"></span>
+  <span class="notae-ai-loader-beam beam-two"></span>
+  <span class="notae-ai-loader-beam beam-three"></span>
+  <% point_count.times do |index| %>
+    <span class="notae-ai-loader-point p-<%= index + 1 %>" style="--point-index: <%= index %>;"></span>
   <% end %>
   <span class="notae-ai-loader-core"></span>
 </div>

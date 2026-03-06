@@ -61,6 +61,7 @@ module Meetings
       downloaded_path.flush
 
       response = transcribe_with_preferred_formats(downloaded_path.path)
+      log_transcription_usage!(response)
       transcript_text = response["text"].to_s.strip
       normalized_segments = normalize_segments(response, transcript_text)
 
@@ -80,13 +81,15 @@ module Meetings
       preferred_transcription_models.each do |model|
         transcription_attempts_for_model(model).each do |attempt|
           begin
-            return Openai::AudioTranscriptionsClient.transcribe(
+            response = Openai::AudioTranscriptionsClient.transcribe(
               file_path: file_path,
               api_key: session.created_by.openai_api_key,
               model: model,
               response_format: attempt.fetch(:response_format),
               chunking_strategy: attempt[:chunking_strategy]
             )
+            @last_transcription_model = model
+            return response
           rescue Openai::AudioTranscriptionsClient::Error => error
             last_error = error
             raise error unless retry_with_fallback_format?(model: model, response_format: attempt.fetch(:response_format), message: error.message)
@@ -133,6 +136,44 @@ module Meetings
         normalized.include?("not compatible") ||
         ((normalized.include?("model") || normalized.include?("engine")) &&
           (normalized.include?("not found") || normalized.include?("not available") || normalized.include?("does not exist")))
+    end
+
+    def log_transcription_usage!(response_payload)
+      usage = transcription_usage_from_response(response_payload)
+      return if usage.blank?
+
+      Search::AiUsageLogger.log!(
+        user: session.created_by,
+        workspace: session.workspace,
+        operation: AiUsageLog::OP_MEETING_TRANSCRIPTION,
+        model: @last_transcription_model.presence || preferred_transcription_models.first,
+        usage: usage,
+        metadata: {
+          feature: "meetings_transcription",
+          meeting_session_id: session.id
+        }
+      )
+    end
+
+    def transcription_usage_from_response(response_payload)
+      usage = if response_payload.is_a?(Hash)
+        response_payload["usage"] || response_payload[:usage]
+      end
+      return nil unless usage.respond_to?(:[])
+
+      prompt_tokens = usage["input_tokens"] || usage[:input_tokens] || usage["prompt_tokens"] || usage[:prompt_tokens] || 0
+      completion_tokens = usage["output_tokens"] || usage[:output_tokens] || usage["completion_tokens"] || usage[:completion_tokens] || 0
+      total_tokens = usage["total_tokens"] || usage[:total_tokens]
+      total_tokens = prompt_tokens.to_i + completion_tokens.to_i if total_tokens.blank?
+
+      normalized = {
+        prompt_tokens: prompt_tokens.to_i,
+        completion_tokens: completion_tokens.to_i,
+        total_tokens: total_tokens.to_i
+      }
+      return nil if normalized[:prompt_tokens].zero? && normalized[:completion_tokens].zero? && normalized[:total_tokens].zero?
+
+      normalized
     end
 
     def diarization_model?(model)

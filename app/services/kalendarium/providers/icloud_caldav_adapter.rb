@@ -22,11 +22,17 @@ module Kalendarium
       REQUEST_OPEN_TIMEOUT_SECONDS = 10
       MAX_REDIRECTS = 3
 
-      def sync!(calendar: nil, range_start: nil, range_end: nil)
+      def sync!(calendar: nil, calendars: nil, range_start: nil, range_end: nil)
         ensure_credentials!
         effective_range_start, effective_range_end = sync_range(range_start:, range_end:)
+        selected_calendars = Array(calendars).compact
 
-        if calendar.present?
+        if selected_calendars.any?
+          selected_calendars.each do |selected_calendar|
+            ensure_calendar_belongs_to_connection!(selected_calendar)
+            sync_single_calendar(selected_calendar, range_start: effective_range_start, range_end: effective_range_end)
+          end
+        elsif calendar.present?
           ensure_calendar_belongs_to_connection!(calendar)
           sync_single_calendar(calendar, range_start: effective_range_start, range_end: effective_range_end)
         else
@@ -86,10 +92,15 @@ module Kalendarium
         end
 
         if seen_remote_event_ids.empty? && calendar.kalendarium_events.where(source_kind: "provider").exists?
-          raise "No events were returned for #{calendar.name}. Existing events were preserved."
+          return
         end
 
-        cancel_stale_provider_events(calendar: calendar, seen_remote_event_ids: seen_remote_event_ids)
+        cancel_stale_provider_events(
+          calendar: calendar,
+          seen_remote_event_ids: seen_remote_event_ids,
+          range_start: range_start,
+          range_end: range_end
+        )
       end
 
       def ensure_credentials!
@@ -318,8 +329,9 @@ module Kalendarium
         event.save!
       end
 
-      def cancel_stale_provider_events(calendar:, seen_remote_event_ids:)
+      def cancel_stale_provider_events(calendar:, seen_remote_event_ids:, range_start:, range_end:)
         scope = calendar.kalendarium_events.where(source_kind: "provider")
+        scope = scope.for_range(range_start, range_end) if range_start.present? && range_end.present?
         scope = seen_remote_event_ids.any? ? scope.where.not(remote_event_id: seen_remote_event_ids) : scope
         scope.find_each do |event|
           next if event.status == "cancelled"

@@ -1,0 +1,87 @@
+<article class="notae-meetings-session-item">
+  <% latest_bot_run = session.capture_mode == "online_bot" ? session.latest_meeting_bot_run : nil %>
+  <header>
+    <h3><%= session.title %></h3>
+    <span class="notae-kalendarium-status-badge"><%= session.status.humanize %></span>
+  </header>
+  <p class="notae-doc-muted">
+    <%= session.capture_mode.humanize %> • <%= session.provider.humanize %> •
+    Created <%= time_ago_in_words(session.created_at) %> ago
+  </p>
+  <% if session.kalendarium_event.present? %>
+    <p class="notae-doc-muted">
+      Event: <%= session.kalendarium_event.title %>
+      <% if session.kalendarium_event.starts_at_utc.present? %>
+        • <%= session.kalendarium_event.starts_at_utc.in_time_zone(current_user.time_zone).strftime("%a %-d %b %H:%M") %>
+      <% end %>
+    </p>
+  <% end %>
+  <% if session.page.present? %>
+    <p><%= link_to "Open linked Nota", page_path(workspace_slug: workspace.slug, id: session.page_id), class: "notae-utility-link" %></p>
+  <% end %>
+  <% if session.error_message.present? %>
+    <p class="notae-form-error"><%= session.error_message %></p>
+  <% end %>
+  <% if latest_bot_run.present? %>
+    <p class="notae-doc-muted">
+      Bot run: <strong><%= latest_bot_run.status.humanize %></strong>
+      <% if latest_bot_run.worker_id.present? %>
+        • Worker <%= latest_bot_run.worker_id %>
+      <% end %>
+      <% if latest_bot_run.last_heartbeat_at.present? %>
+        • heartbeat <%= time_ago_in_words(latest_bot_run.last_heartbeat_at) %> ago
+      <% else %>
+        • waiting for first worker heartbeat
+      <% end %>
+    </p>
+    <% if latest_bot_run.last_heartbeat_at.blank? && latest_bot_run.status.in?(%w[queued claimed joining]) %>
+      <p class="notae-doc-muted">
+        Waiting for bot worker claim. If this does not change, verify worker process and internal token.
+      </p>
+    <% elsif latest_bot_run.last_heartbeat_at.present? && latest_bot_run.last_heartbeat_at < 2.minutes.ago && latest_bot_run.status.in?(%w[claimed joining recording uploading]) %>
+      <p class="notae-form-error">
+        Bot heartbeat is stale. The worker may be stuck.
+      </p>
+    <% end %>
+  <% end %>
+
+  <div class="notae-meetings-session-actions">
+    <% if session.capture_mode == "online_bot" && session.status.in?(%w[failed cancelled]) %>
+      <%= button_to "Restart",
+                    start_meeting_session_path(workspace_slug: workspace.slug, id: session.id),
+                    method: :post,
+                    class: "notae-chip-button" %>
+    <% end %>
+    <% if session.status.in?(%w[recording joining uploading processing summarizing proposing]) %>
+      <%= button_to "Stop",
+                    stop_meeting_session_path(workspace_slug: workspace.slug, id: session.id),
+                    method: :post,
+                    class: "notae-chip-button" %>
+    <% end %>
+    <%= button_to "Reprocess",
+                  reprocess_meeting_session_path(workspace_slug: workspace.slug, id: session.id),
+                  method: :post,
+                  class: "notae-chip-button" %>
+  </div>
+
+  <% if show_speaker_mapping && session.meeting_utterances.any? %>
+    <details class="notae-meetings-speaker-map">
+      <summary>Speaker mapping</summary>
+      <%= form_with model: session,
+                    url: speakers_meeting_session_path(workspace_slug: workspace.slug, id: session.id),
+                    method: :patch,
+                    class: "notae-meetings-speaker-map-form" do |form| %>
+        <% session.meeting_utterances.map(&:speaker_key).uniq.each do |speaker_key| %>
+          <label>
+            <span><%= speaker_key %></span>
+            <input type="text"
+                    name="meeting_session[speaker_map][<%= speaker_key %>]"
+                    value="<%= session.meeting_utterances.find { |utterance| utterance.speaker_key == speaker_key }&.speaker_name %>"
+                    class="notae-auth-input">
+          </label>
+        <% end %>
+        <%= form.submit "Save names", class: "notae-chip-button" %>
+      <% end %>
+    </details>
+  <% end %>
+</article>

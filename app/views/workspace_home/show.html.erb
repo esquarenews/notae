@@ -35,7 +35,9 @@
         <% workspace_slug = @workspace.slug.to_s.strip %>
         <% slug_duplicates_name = workspace_slug.casecmp?(workspace_name) || workspace_slug == workspace_name.parameterize %>
         <% workspace_meta = slug_duplicates_name ? workspace_name : "#{workspace_name} · #{workspace_slug}" %>
-        <p class="notae-page-subtle"><%= workspace_meta %></p>
+        <% unless slug_duplicates_name %>
+          <p class="notae-page-subtle"><%= workspace_meta %></p>
+        <% end %>
       </header>
 
       <section class="notae-auth-card notae-home-card">

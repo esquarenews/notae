@@ -19,6 +19,24 @@ export default class extends Controller {
 
   static STATUS_CLASSES = Object.values(this.STATUS_CLASS_BY_VALUE)
 
+  connect() {
+    this.handleSubmitStart = () => this.markSubmitting()
+    this.handleSubmitEnd = () => this.clearSubmitting()
+    this.clearSubmitting()
+
+    if (this.element instanceof HTMLFormElement) {
+      this.element.addEventListener("turbo:submit-start", this.handleSubmitStart)
+      this.element.addEventListener("turbo:submit-end", this.handleSubmitEnd)
+    }
+  }
+
+  disconnect() {
+    if (this.element instanceof HTMLFormElement) {
+      this.element.removeEventListener("turbo:submit-start", this.handleSubmitStart)
+      this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd)
+    }
+  }
+
   formFor(event) {
     return event.target?.form || event.target?.closest("form")
   }
@@ -29,7 +47,7 @@ export default class extends Controller {
     const form = this.formFor(event)
     if (!form) return
 
-    form.requestSubmit()
+    this.requestSubmitOnce(form)
   }
 
   submitOnEnter(event) {
@@ -37,13 +55,13 @@ export default class extends Controller {
     const form = this.formFor(event)
     if (!form) return
 
+    let submitter
     const createNextOnEnter = event.target?.dataset?.autoSubmitCreateNextRowOnEnter === "true"
     if (createNextOnEnter) {
-      const createNextField = form.querySelector('input[name="db_row[create_next_row]"]')
-      if (createNextField) createNextField.value = "1"
+      submitter = form.querySelector('button[name="db_row[create_next_row]"]')
     }
 
-    form.requestSubmit()
+    this.requestSubmitOnce(form, submitter)
   }
 
   submitAndCreateNextOnEnter(event) {
@@ -84,5 +102,34 @@ export default class extends Controller {
     if (!row) return
 
     row.classList.toggle("is-row-color-gray", normalizedStatus === "done")
+  }
+
+  requestSubmitOnce(form, submitter = undefined) {
+    if (!(form instanceof HTMLFormElement)) return
+    if (form.dataset.autoSubmitPending === "true") return
+
+    if (typeof form.checkValidity === "function" && !form.checkValidity()) {
+      if (typeof form.reportValidity === "function") form.reportValidity()
+      return
+    }
+
+    this.markSubmitting(form)
+    if (submitter) {
+      form.requestSubmit(submitter)
+    } else {
+      form.requestSubmit()
+    }
+  }
+
+  markSubmitting(form = this.element) {
+    if (!(form instanceof HTMLFormElement)) return
+
+    form.dataset.autoSubmitPending = "true"
+  }
+
+  clearSubmitting(form = this.element) {
+    if (!(form instanceof HTMLFormElement)) return
+
+    delete form.dataset.autoSubmitPending
   }
 }

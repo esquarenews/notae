@@ -30,7 +30,7 @@ class ApplicationController < ActionController::Base
   end
 
   def load_shell_context?
-    request.get? && request.format.html?
+    request.get? && request.format.html? && params[:embedded].to_s != "1"
   end
 
   def handle_not_authorized

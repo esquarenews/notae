@@ -74,6 +74,32 @@ RSpec.describe "Databases", type: :request do
     expect(status_dropdown.at_css("option[selected]")&.[]("value")).to eq("not started")
   end
 
+  it "does not auto-seed hidden property cells during grid render" do
+    owner = User.create!(email: "database-hidden-cells-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Hidden cells", slug: "hidden-cells")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Scoped cell loading")
+    visible_property = DbProperty.create!(workspace: workspace, database: database, name: "Visible", property_type: :text)
+    hidden_property = DbProperty.create!(workspace: workspace, database: database, name: "Hidden", property_type: :text)
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "visible_property_ids" => [ visible_property.id.to_s ] }
+    )
+    row = DbRow.create!(workspace: workspace, database: database, title: "Row one")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: visible_property, value_text: "Visible value")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(DbCell.exists?(db_row: row, db_property: hidden_property)).to be(false)
+  end
+
   it "greys rows when status is done and restores color when reopened" do
     owner = User.create!(email: "database-status-color-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Status color tables", slug: "status-color-tables")
@@ -698,6 +724,8 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("🧠")
     expect(response.body).to include("name=\"database[name]\"")
     expect(response.body).to include("notae-page-title-input")
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("DatabasesController#show")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     expect(response.body).not_to include("db-edit-view-panel")
     expect(response.body).not_to include("notae-db-view-plus")
 
@@ -1039,8 +1067,36 @@ RSpec.describe "Databases", type: :request do
     expect(response).not_to be_redirect
     expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
     expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("DbRowsController#update")
     expect(row.reload.title).to eq("Renamed row")
     expect(database.reload.updated_at).to be > previous_database_updated_at
+  end
+
+  it "creates the next row with turbo streams instead of redirecting the full grid for the simple table path" do
+    owner = User.create!(email: "database-row-create-next-turbo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row create next turbo tables", slug: "row-create-next-turbo-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row create next turbo DB")
+    first_row = DbRow.create!(workspace: workspace, database: database, title: "First row")
+    second_row = DbRow.create!(workspace: workspace, database: database, title: "Second row")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: first_row.id),
+          params: { db_row: { title: "Updated first row", autosave_title: "1", create_next_row: "1" } },
+          as: :turbo_stream
+
+    created_row = database.db_rows.where.not(id: [ first_row.id, second_row.id ]).order(:created_at).last
+    expect(created_row).to be_present
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("DbRowsController#update")
+    expect(response.body).to include('turbo-stream action="replace" target="row_')
+    expect(response.body).to include('turbo-stream action="after" target="row_')
+    expect(response.body).to include('turbo-stream action="update" target="database_row_count"')
+    expect(response.body).to include('turbo-stream action="update" target="database_table_placeholders"')
+    expect(first_row.reload.title).to eq("Updated first row")
+    expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])
   end
 
   it "creates a new row directly below when row update requests create_next_row" do
@@ -1061,6 +1117,26 @@ RSpec.describe "Databases", type: :request do
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{created_row.id}"))
     expect(first_row.reload.title).to eq("Updated first row")
     expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])
+  end
+
+  it "inserts create-next rows without renumbering unaffected rows when position gaps are available" do
+    owner = User.create!(email: "database-row-create-next-position-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row create next position tables", slug: "row-create-next-position-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row create next position DB")
+    first_row = DbRow.create!(workspace: workspace, database: database, title: "First row")
+    second_row = DbRow.create!(workspace: workspace, database: database, title: "Second row")
+    original_second_position = second_row.position
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: first_row.id),
+          params: { db_row: { title: "Updated first row", create_next_row: "1" } }
+
+    created_row = database.db_rows.where.not(id: [ first_row.id, second_row.id ]).order(:created_at).last
+    expect(created_row).to be_present
+    expect(created_row.position).to be > first_row.reload.position
+    expect(created_row.position).to be < second_row.reload.position
+    expect(second_row.reload.position).to eq(original_second_position)
   end
 
   it "closes a row-linked split pane when editing a different row title" do
@@ -1385,6 +1461,8 @@ RSpec.describe "Databases", type: :request do
     expect(title_input).to be_present
     expect(title_input["onkeydown"]).to be_nil
     expect(title_input["data-action"]).to include("change->auto-submit#submit")
+    expect(title_input["data-action"]).to include("keydown.enter->auto-submit#submitOnEnter")
+    expect(title_input["data-auto-submit-create-next-row-on-enter"]).to eq("true")
     autosave_input = title_form.at_css("input[name='db_row[autosave_title]']")
     expect(autosave_input).to be_present
     expect(autosave_input["value"]).to eq("1")

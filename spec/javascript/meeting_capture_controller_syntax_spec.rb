@@ -25,5 +25,8 @@ RSpec.describe "MeetingCaptureController JavaScript syntax" do
     expect(source).to include("navigator.mediaDevices.getUserMedia")
     expect(source).to include("Permissions-Policy")
     expect(source).to include("microphoneFeatureAllowed")
+    expect(source).to include("sessionTitleInput")
+    expect(source).to include("syncSessionTitle")
+    expect(source).to include("Recording in progress:")
   end
 end

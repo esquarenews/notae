@@ -132,28 +132,28 @@
       <thead>
         <tr>
           <% if visible_columns.include?("page_name") %>
-            <th>Nota name</th>
+            <th class="notae-library-col notae-library-col-page-name">Nota name</th>
           <% end %>
           <% if visible_columns.include?("workspace") %>
-            <th>Workspace</th>
+            <th class="notae-library-col notae-library-col-workspace">Workspace</th>
           <% end %>
           <% if visible_columns.include?("created_by") %>
-            <th>Created by</th>
+            <th class="notae-library-col notae-library-col-created-by">Created by</th>
           <% end %>
           <% if visible_columns.include?("source") %>
-            <th>Source</th>
+            <th class="notae-library-col notae-library-col-source">Source</th>
           <% end %>
           <% if visible_columns.include?("created_time") %>
-            <th>Created time</th>
+            <th class="notae-library-col notae-library-col-created-time">Created time</th>
           <% end %>
           <% if visible_columns.include?("last_edited_by") %>
-            <th>Last edited by</th>
+            <th class="notae-library-col notae-library-col-last-edited-by">Last edited by</th>
           <% end %>
           <% if visible_columns.include?("last_edited_time") %>
-            <th>Last edited time</th>
+            <th class="notae-library-col notae-library-col-last-edited-time">Last edited time</th>
           <% end %>
           <% if visible_columns.include?("last_visited_time") %>
-            <th>Last visited time</th>
+            <th class="notae-library-col notae-library-col-last-visited-time">Last visited time</th>
           <% end %>
         </tr>
       </thead>
@@ -162,7 +162,7 @@
           <% @library_rows.each do |row| %>
             <tr class="notae-library-row">
               <% if visible_columns.include?("page_name") %>
-                <td>
+                <td class="notae-library-col notae-library-col-page-name">
                   <%= link_to row[:path], class: "notae-library-name-link" do %>
                     <% if row[:kind] == "database" %>
                       <span class="notae-library-row-title"><%= "#{row[:icon]} #{row[:title]}" %></span>
@@ -177,28 +177,28 @@
                 </td>
               <% end %>
               <% if visible_columns.include?("workspace") %>
-                <td><%= row[:workspace_name] %></td>
+                <td class="notae-library-col notae-library-col-workspace"><%= row[:workspace_name] %></td>
               <% end %>
               <% if visible_columns.include?("created_by") %>
-                <td><%= row[:created_by] %></td>
+                <td class="notae-library-col notae-library-col-created-by"><%= row[:created_by] %></td>
               <% end %>
               <% if visible_columns.include?("source") %>
-                <td>
+                <td class="notae-library-col notae-library-col-source">
                   <span class="notae-library-source-pill is-<%= row[:visibility] %>"><%= row[:visibility].titleize %></span>
                   <span class="notae-library-source-label"><%= row[:kind] == "database" ? "Grid" : row[:kind].titleize %></span>
                 </td>
               <% end %>
               <% if visible_columns.include?("created_time") %>
-                <td><%= row[:created_time].present? ? time_ago_in_words(row[:created_time]) + " ago" : "—" %></td>
+                <td class="notae-library-col notae-library-col-created-time"><%= row[:created_time].present? ? time_ago_in_words(row[:created_time]) + " ago" : "—" %></td>
               <% end %>
               <% if visible_columns.include?("last_edited_by") %>
-                <td><%= row[:last_edited_by] %></td>
+                <td class="notae-library-col notae-library-col-last-edited-by"><%= row[:last_edited_by] %></td>
               <% end %>
               <% if visible_columns.include?("last_edited_time") %>
-                <td><%= row[:last_edited_time].present? ? time_ago_in_words(row[:last_edited_time]) + " ago" : "—" %></td>
+                <td class="notae-library-col notae-library-col-last-edited-time"><%= row[:last_edited_time].present? ? time_ago_in_words(row[:last_edited_time]) + " ago" : "—" %></td>
               <% end %>
               <% if visible_columns.include?("last_visited_time") %>
-                <td><%= row[:last_visited_time].present? ? time_ago_in_words(row[:last_visited_time]) + " ago" : "—" %></td>
+                <td class="notae-library-col notae-library-col-last-visited-time"><%= row[:last_visited_time].present? ? time_ago_in_words(row[:last_visited_time]) + " ago" : "—" %></td>
               <% end %>
             </tr>
           <% end %>

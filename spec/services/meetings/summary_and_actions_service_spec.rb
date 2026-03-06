@@ -44,6 +44,9 @@ RSpec.describe Meetings::SummaryAndActionsService do
     expect(result[:action_items].first["owner"]).to eq("Alex")
     expect(result[:action_items].first["due_at"]).to end_with("Z")
     expect(result[:action_items].first["confidence"]).to eq(0.88)
+    expect(Search::AiUsageLogger).to have_received(:log!).with(
+      hash_including(operation: AiUsageLog::OP_MEETING_SUMMARY)
+    )
   end
 
   it "falls back when no OpenAI key is configured" do

@@ -1,15 +1,16 @@
 module Kalendarium
   class ConnectionSyncService
-    def initialize(connection:, calendar: nil, range_start: nil, range_end: nil, retry_pending_writes: true)
+    def initialize(connection:, calendar: nil, calendars: nil, range_start: nil, range_end: nil, retry_pending_writes: true)
       @connection = connection
       @calendar = calendar
+      @calendars = Array(calendars).compact
       @range_start = range_start
       @range_end = range_end
       @retry_pending_writes = retry_pending_writes
     end
 
     def call
-      adapter.sync!(calendar: calendar, range_start: range_start, range_end: range_end)
+      adapter.sync!(calendar: calendar, calendars: calendars, range_start: range_start, range_end: range_end)
       retry_pending_provider_writes! if retry_pending_writes?
       connection.update!(status: "connected", last_synced_at: Time.current, last_error: nil)
     rescue StandardError => error
@@ -19,7 +20,7 @@ module Kalendarium
 
     private
 
-    attr_reader :connection, :calendar, :range_start, :range_end
+    attr_reader :connection, :calendar, :calendars, :range_start, :range_end
 
     def retry_pending_writes?
       !!@retry_pending_writes
@@ -55,7 +56,13 @@ module Kalendarium
                 .where(status: %w[confirmed tentative])
                 .where("kalendarium_events.source_kind = ? OR kalendarium_events.remote_event_id IS NULL OR COALESCE(kalendarium_events.metadata_json ->> 'pending_remote_sync', 'false') = 'true'", "local")
 
-      calendar.present? ? scope.where(kalendarium_calendar_id: calendar.id) : scope
+      if calendars.any?
+        scope.where(kalendarium_calendar_id: calendars.map(&:id))
+      elsif calendar.present?
+        scope.where(kalendarium_calendar_id: calendar.id)
+      else
+        scope
+      end
     end
 
     def mark_pending_sync!(event, error:)

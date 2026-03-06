@@ -1,9 +1,13 @@
 class DbCellsController < ApplicationController
+  include DatabaseTablePresentation
+  include RequestPerformanceInstrumentation
+
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database
   before_action :ensure_database_unlocked!
   before_action :set_db_cell
+  track_request_performance_for :update
 
   def update
     authorize @db_cell
@@ -104,19 +108,4 @@ class DbCellsController < ApplicationController
     row.save! if row.changed?
   end
 
-  def normalize_task_status_value(value)
-    normalized = value.to_s.strip.downcase
-    case normalized
-    when "complete", "completed"
-      "done"
-    when "on hold"
-      "hold"
-    when "planning"
-      "not started"
-    when "in progress"
-      "started"
-    else
-      normalized
-    end
-  end
 end

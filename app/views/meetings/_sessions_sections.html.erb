@@ -1,0 +1,70 @@
+<section class="notae-auth-card notae-meetings-card">
+  <h2>Live / Joining Sessions</h2>
+  <div class="notae-meetings-live-controls">
+    <h3>Recording status</h3>
+    <div class="notae-meetings-live-indicator<%= active_recording_sessions.any? { |session| session.capture_mode == "in_person_mic" } ? " is-active" : "" %>"
+         role="status"
+         aria-live="polite"
+         data-meeting-capture-target="activityIndicator">
+      <span class="notae-meetings-live-dot" aria-hidden="true"></span>
+      <span class="notae-meetings-live-bars" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </span>
+      <span data-meeting-capture-target="activityLabel">Recorder idle.</span>
+    </div>
+    <div class="notae-meetings-recorder-actions">
+      <button type="submit"
+              class="notae-chip-button"
+              data-meeting-capture-target="submitButton"
+              hidden
+              form="in_person_meeting_form">Submit for processing</button>
+      <button type="button"
+              class="notae-chip-button"
+              data-action="meeting-capture#clearRecording"
+              data-meeting-capture-target="deleteButton"
+              hidden>Delete recording</button>
+    </div>
+    <p class="notae-doc-muted">If access is denied, use the lock/camera icon in the browser address bar to allow microphone, then retry.</p>
+    <p class="notae-doc-muted" data-meeting-capture-target="status">Recorder idle.</p>
+  </div>
+  <% if active_recording_sessions.any? %>
+    <div class="notae-meetings-sessions">
+      <%= render partial: "session_item",
+                 collection: active_recording_sessions,
+                 as: :session,
+                 locals: { workspace: workspace, show_speaker_mapping: false } %>
+    </div>
+  <% else %>
+    <p class="notae-doc-muted">No live sessions right now.</p>
+  <% end %>
+</section>
+
+<div class="notae-meetings-layout notae-meetings-layout--session-split">
+  <section class="notae-auth-card notae-meetings-card">
+    <h2>Scheduled Future Recordings</h2>
+    <% if scheduled_future_sessions.any? %>
+      <div class="notae-meetings-sessions">
+        <%= render partial: "session_item",
+                   collection: scheduled_future_sessions,
+                   as: :session,
+                   locals: { workspace: workspace, show_speaker_mapping: false } %>
+      </div>
+    <% else %>
+      <p class="notae-doc-muted">No future recordings are currently scheduled.</p>
+    <% end %>
+  </section>
+
+  <section class="notae-auth-card notae-meetings-card">
+    <h2>Uploading to Processed</h2>
+    <% if processing_completed_sessions.any? %>
+      <div class="notae-meetings-sessions">
+        <%= render partial: "session_item",
+                   collection: processing_completed_sessions,
+                   as: :session,
+                   locals: { workspace: workspace, show_speaker_mapping: show_speaker_mapping } %>
+      </div>
+    <% else %>
+      <p class="notae-doc-muted">No sessions are currently in upload/processing/completed states.</p>
+    <% end %>
+  </section>
+</div>

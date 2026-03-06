@@ -62,6 +62,7 @@ RSpec.describe Meetings::NotaMaterializerService do
     expect(second_blocks.count).to be >= 2
     expect(second_blocks.pluck(:search_text).join(" ")).to include("Updated transcript")
 
-    expect(event.reload.linked_page_id).to be_nil
+    expect(event.reload.linked_page_id).to eq(second_page.id)
+    expect(session.reload.page_id).to eq(second_page.id)
   end
 end

@@ -25,9 +25,14 @@ class MeetingSessionsController < ApplicationController
       force_new: ActiveModel::Type::Boolean.new.cast(meeting_session_params[:force_new])
     )
     attach_capture_files!(session)
-    handle_session_dispatch!(session)
+    dispatch_result = handle_session_dispatch!(session)
+    notice = if dispatch_result == :deferred
+      "Meeting session scheduled. Capture will start at meeting time."
+    else
+      "Meeting session created."
+    end
 
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Meeting session created."
+    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: notice
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
   rescue StandardError => error
@@ -58,16 +63,31 @@ class MeetingSessionsController < ApplicationController
 
   def start
     authorize @meeting_session
+    unless @meeting_session.capture_mode == "online_bot"
+      redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Only online bot sessions can be started."
+      return
+    end
 
-    @meeting_session.update!(status: "recording", started_at: Time.current, updated_by: current_user) unless @meeting_session.status == "recording"
-    handle_session_dispatch!(@meeting_session)
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Meeting capture started."
+    if @meeting_session.join_url.to_s.strip.blank?
+      redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Meeting URL is required to start online capture."
+      return
+    end
+
+    if @meeting_session.status.in?(%w[joining recording uploading processing summarizing proposing completed])
+      redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Session is already active."
+      return
+    end
+
+    @meeting_session.update!(status: "scheduled", error_message: nil, ended_at: nil, updated_by: current_user)
+    handle_session_dispatch!(@meeting_session, force_online: true)
+    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Meeting capture start requested."
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
   end
 
   def stop
     authorize @meeting_session
+    stop_active_bot_runs!(@meeting_session, reason: "Stopped by user.")
 
     if @meeting_session.capture_files.attached?
       @meeting_session.update!(status: "uploading", ended_at: Time.current, updated_by: current_user)
@@ -109,6 +129,7 @@ class MeetingSessionsController < ApplicationController
     mapping = speaker_map_params
 
     Meetings::SpeakerResolutionService.new(session: @meeting_session).apply_manual_mapping!(mapping)
+    refresh_session_note_after_speaker_update!
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Speaker names updated."
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
@@ -161,11 +182,7 @@ class MeetingSessionsController < ApplicationController
   end
 
   def normalized_join_url(raw_url)
-    value = raw_url.to_s.strip
-    return nil if value.blank?
-    return value if value.start_with?("https://", "http://")
-
-    nil
+    MeetingSession.normalize_join_url(raw_url)
   end
 
   def attach_capture_files!(session)
@@ -175,15 +192,97 @@ class MeetingSessionsController < ApplicationController
     session.capture_files.attach(files)
   end
 
-  def handle_session_dispatch!(session)
+  def handle_session_dispatch!(session, force_online: false)
     if session.capture_mode == "online_bot"
+      return :deferred if !force_online && defer_online_dispatch?(session)
+
       Meetings::BotDispatchService.new(session: session, actor: current_user).dispatch!
-      return
+      return :dispatched
     end
 
     return unless session.capture_files.attached?
 
     session.update!(status: "uploading", updated_by: current_user)
     Meetings::ProcessSessionJob.perform_later(session.id)
+    :processing
+  end
+
+  def defer_online_dispatch?(session)
+    event_start = session.kalendarium_event&.starts_at_utc
+    return false if event_start.blank?
+
+    event_start > Time.current
+  end
+
+  def refresh_session_note_after_speaker_update!
+    transcript = @meeting_session.transcript_text_from_utterances.to_s.strip
+    return if transcript.blank?
+    speaker_replacements = speaker_replacements_from_utterances(@meeting_session)
+    updated_summary = replace_speaker_placeholders(@meeting_session.summary_markdown.to_s, speaker_replacements)
+    updated_action_items = replace_speaker_names_in_actions(@meeting_session.action_items_json, speaker_replacements)
+
+    @meeting_session.update!(
+      transcript_text: transcript,
+      summary_markdown: updated_summary,
+      action_items_json: updated_action_items,
+      updated_by: current_user
+    )
+
+    Meetings::NotaMaterializerService.new(session: @meeting_session, actor: current_user).upsert_session_output!(
+      transcript_text: transcript,
+      summary_markdown: updated_summary,
+      action_items: updated_action_items
+    )
+  end
+
+  def stop_active_bot_runs!(session, reason:)
+    return unless session.capture_mode == "online_bot"
+
+    session.meeting_bot_runs.active.find_each do |run|
+      run.update!(
+        status: "failed",
+        finished_at: Time.current,
+        error_message: reason
+      )
+    end
+  end
+
+  def speaker_replacements_from_utterances(session)
+    session.meeting_utterances.ordered.each_with_object({}) do |utterance, memo|
+      number = utterance.speaker_key.to_s.delete_prefix("S").to_i
+      next if number <= 0
+
+      name = utterance.speaker_name.to_s.strip
+      next if name.blank?
+
+      memo["speaker #{number}"] = name
+    end
+  end
+
+  def replace_speaker_placeholders(text, replacements)
+    value = text.to_s
+    return value if value.blank? || replacements.blank?
+
+    replacements.each do |label, replacement|
+      value = value.gsub(/\b#{Regexp.escape(label)}\b/i, replacement)
+    end
+    value
+  end
+
+  def replace_speaker_names_in_actions(action_items, replacements)
+    normalized_replacements = replacements.transform_keys { |key| key.to_s.downcase }
+
+    Array(action_items).map do |item|
+      next item unless item.is_a?(Hash)
+
+      updated = item.deep_dup
+      owner = updated["owner"].to_s.strip
+      if owner.present?
+        mapped_owner = normalized_replacements[owner.downcase]
+        updated["owner"] = mapped_owner if mapped_owner.present?
+      end
+
+      updated
+    end
   end
 end

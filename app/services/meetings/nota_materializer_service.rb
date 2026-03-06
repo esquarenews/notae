@@ -8,15 +8,24 @@ module Meetings
     end
 
     def ensure_linked_nota!
-      return session.page if session.page.present?
-      return session.kalendarium_event.linked_page if session.kalendarium_event&.linked_page.present?
+      page =
+        session.page ||
+        session.kalendarium_event&.linked_page ||
+        begin
+          new_page = workspace.pages.create!(
+            title: default_title,
+            page_kind: "meeting_note",
+            created_by: actor
+          )
+          new_page.blocks.create!(workspace: workspace, created_by: actor, block_type: "paragraph")
+          new_page
+        end
 
-      page = workspace.pages.create!(
-        title: default_title,
-        page_kind: "meeting_note",
-        created_by: actor
-      )
-      page.blocks.create!(workspace: workspace, created_by: actor, block_type: "paragraph")
+      session.update!(page: page) if session.page_id != page.id
+      if session.kalendarium_event.present? && session.kalendarium_event.linked_page_id != page.id
+        session.kalendarium_event.update!(linked_page: page, updated_by: actor)
+      end
+
       page
     end
 

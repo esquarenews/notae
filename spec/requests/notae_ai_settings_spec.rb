@@ -15,14 +15,17 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response.body).to include("Loading state")
     expect(response.body).to include("Style library")
     expect(response.body).to include("AI guardrails")
-    expect(response.body).to include("Disco Orbit")
-    expect(response.body).to include("Neural Network")
-    expect(response.body).to include("Luminous Pulse Sphere")
-    expect(response.body).to include("Luminous Wave Sphere")
+    expect(response.body).to include("Halo Relay")
+    expect(response.body).to include("Mirror Sweep")
+    expect(response.body).to include("Synapse Bloom")
+    expect(response.body).to include("Plasma Core")
+    expect(response.body).to include("Tidal Pulse")
     expect(response.body).to include("notae-ai-loader")
     expect(response.body).to include("is-hover-animate")
     expect(response.body).to include("Hover to preview animation.")
-    expect(response.body).to include("p-24")
+    expect(response.body).to include("notae-ai-loader-shell")
+    expect(response.body).to include("notae-ai-loader-beam")
+    expect(response.body).to include("p-16")
     expect(response.body).to include("notae-ai-loader-options-grid is-two-column")
     expect(response.body).to include("This document only")
     expect(response.body).to include("This workspace only")
@@ -60,6 +63,26 @@ RSpec.describe "Notae AI settings", type: :request do
       total_tokens: 620,
       estimated_cost_usd: 0.24
     )
+    AiUsageLog.create!(
+      user: user,
+      workspace: workspace,
+      operation: AiUsageLog::OP_MEETING_TRANSCRIPTION,
+      model: "gpt-4o-transcribe-diarize",
+      prompt_tokens: 300,
+      completion_tokens: 90,
+      total_tokens: 390,
+      estimated_cost_usd: 0.08
+    )
+    AiUsageLog.create!(
+      user: user,
+      workspace: workspace,
+      operation: AiUsageLog::OP_MEETING_SUMMARY,
+      model: "gpt-4.1",
+      prompt_tokens: 80,
+      completion_tokens: 20,
+      total_tokens: 100,
+      estimated_cost_usd: 0.06
+    )
     sign_in user
 
     get workspace_notae_ai_settings_path(workspace_slug: workspace.slug)
@@ -67,8 +90,8 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-ai-usage-card")
     expect(response.body).to include("Today usage")
-    expect(response.body).to include("620")
-    expect(response.body).to include("$0.24")
+    expect(response.body).to include("1,110")
+    expect(response.body).to include("$0.38")
     expect(response.body).to include("Guardrails")
     expect(response.body).to include("Budget:")
     expect(response.body).to include("Available")

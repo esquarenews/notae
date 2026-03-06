@@ -31,7 +31,7 @@ module Meetings
       Search::AiUsageLogger.log!(
         user: session.created_by,
         workspace: session.workspace,
-        operation: AiUsageLog::OP_ASSISTANT_WRITE,
+        operation: AiUsageLog::OP_MEETING_SUMMARY,
         model: MODEL,
         usage: response[:usage],
         metadata: {

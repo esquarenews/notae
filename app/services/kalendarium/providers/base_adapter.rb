@@ -5,9 +5,10 @@ module Kalendarium
         @connection = connection
       end
 
-      def sync!(calendar: nil, range_start: nil, range_end: nil)
+      def sync!(calendar: nil, calendars: nil, range_start: nil, range_end: nil)
         # Adapter base intentionally no-op.
         calendar
+        calendars
         range_start
         range_end
         true

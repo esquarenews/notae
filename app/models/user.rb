@@ -52,25 +52,25 @@ class User < ApplicationRecord
   ].freeze
 
   AI_LOADER_STYLE_OPTIONS = [
-    [ "Disco Orbit", "disco_orbit" ],
-    [ "Neon Mesh", "neon_mesh" ],
-    [ "Pulse Beads", "pulse_beads" ],
-    [ "Disco Ball Reflect", "disco_ball_reflect" ],
-    [ "Flock Cloud", "flock_cloud" ],
-    [ "Neural Network", "neural_network" ],
-    [ "Luminous Pulse Sphere", "luminous_pulse_sphere" ],
-    [ "Luminous Wave Sphere", "luminous_wave_sphere" ]
+    [ "Halo Relay", "disco_orbit" ],
+    [ "Prism Lattice", "neon_mesh" ],
+    [ "Pearl Circuit", "pulse_beads" ],
+    [ "Mirror Sweep", "disco_ball_reflect" ],
+    [ "Aurora Drift", "flock_cloud" ],
+    [ "Synapse Bloom", "neural_network" ],
+    [ "Plasma Core", "luminous_pulse_sphere" ],
+    [ "Tidal Pulse", "luminous_wave_sphere" ]
   ].freeze
 
   AI_LOADER_STYLE_DESCRIPTIONS = {
-    "disco_orbit" => "A disco-inspired orbital field with neon cyan/magenta halos.",
-    "neon_mesh" => "A connected node mesh that feels like an active neural network.",
-    "pulse_beads" => "A ring of beads that softly pulses and rotates in sync.",
-    "disco_ball_reflect" => "A spinning disco sphere with mirrored facets and moving light reflections.",
-    "flock_cloud" => "A cloud of pink-purple-blue dots that drifts like a flock in formation.",
-    "neural_network" => "A futuristic network visualization with connected blue, pink, and purple nodes.",
-    "luminous_pulse_sphere" => "A dense luminous particle sphere with cyan-magenta pulses and a glowing energy core.",
-    "luminous_wave_sphere" => "A reactive plasma sphere where particle waves wrap and sweep around the core."
+    "disco_orbit" => "A polished orbital relay with slow satellites circling a glassy central pearl.",
+    "neon_mesh" => "A crisp geometric lattice with luminous edges and signal pulses running through the frame.",
+    "pulse_beads" => "A velvet string of gradient pearls that wakes up in a soft sequenced rhythm.",
+    "disco_ball_reflect" => "A mirrored disc with faceted reflections and a clean travelling light sweep.",
+    "flock_cloud" => "A drifting cloud of fine motes that feels airy, spatial, and slightly alive.",
+    "neural_network" => "An organic synapse cluster with branching links and restrained electric bloom.",
+    "luminous_pulse_sphere" => "A dense plasma core with a breathing glow and restrained peripheral sparks.",
+    "luminous_wave_sphere" => "A wave-driven energy shell with sweeping arcs that wrap around a bright center."
   }.freeze
 
   CHANNEL_NOTIFICATION_OPTIONS = [

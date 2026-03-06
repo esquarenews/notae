@@ -1,13 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["startButton", "stopButton", "status", "fileInput", "captureMode", "activityIndicator", "activityLabel"]
+  static targets = ["startButton", "stopButton", "status", "fileInput", "captureMode", "activityIndicator", "activityLabel", "submitButton", "deleteButton", "sessionTitleInput"]
 
   connect() {
     this.mediaRecorder = null
     this.stream = null
     this.chunks = []
+    this.activeSessionTitle = ""
     this.setRecordingState(false, "Recorder idle.")
+    this.syncReadyStateFromInput()
   }
 
   disconnect() {
@@ -18,6 +20,8 @@ export default class extends Controller {
   async start(event) {
     event.preventDefault()
     if (this.mediaRecorder?.state === "recording") return
+    this.clearCapturedFile()
+    this.setRecordingReady(false)
 
     if (!navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder === "undefined") {
       this.updateStatus("Microphone recording is not supported in this browser.")
@@ -49,9 +53,12 @@ export default class extends Controller {
       this.captureModeTarget.value = "in_person_mic"
       this.startButtonTarget.disabled = true
       this.stopButtonTarget.disabled = false
-      this.setRecordingState(true, "Recording in progress...")
-      this.updateStatus("Recording in progress...")
+      this.activeSessionTitle = this.currentSessionTitle()
+      const recordingLabel = this.recordingInProgressLabel()
+      this.setRecordingState(true, recordingLabel)
+      this.updateStatus(recordingLabel)
     } catch (error) {
+      this.activeSessionTitle = ""
       this.setRecordingState(false)
       this.updateStatus(this.microphoneErrorMessage(error))
       this.stopStream()
@@ -65,8 +72,9 @@ export default class extends Controller {
     this.mediaRecorder.stop()
     this.startButtonTarget.disabled = false
     this.stopButtonTarget.disabled = true
-    this.setRecordingState(false, "Finalizing recording...")
-    this.updateStatus("Finalizing recording...")
+    const finalizingLabel = this.finalizingLabel()
+    this.setRecordingState(false, finalizingLabel)
+    this.updateStatus(finalizingLabel)
   }
 
   supportedMimeType() {
@@ -76,8 +84,10 @@ export default class extends Controller {
 
   persistRecording() {
     if (!this.hasFileInputTarget || this.chunks.length === 0) {
+      this.setRecordingReady(false)
       this.setRecordingState(false)
       this.updateStatus("Recording complete.")
+      this.activeSessionTitle = ""
       this.stopStream()
       return
     }
@@ -89,10 +99,36 @@ export default class extends Controller {
     const dataTransfer = new DataTransfer()
     dataTransfer.items.add(file)
     this.fileInputTarget.files = dataTransfer.files
+    this.setRecordingReady(true)
 
     this.setRecordingState(false, "Recorder idle.")
-    this.updateStatus("Recording ready. Submit to upload and process.")
+    this.updateStatus("Recording ready. Submit for processing or delete recording.")
+    this.activeSessionTitle = ""
     this.stopStream()
+  }
+
+  syncSessionTitle() {
+    if (!this.mediaRecorder || this.mediaRecorder.state !== "recording") return
+    this.activeSessionTitle = this.currentSessionTitle()
+    const recordingLabel = this.recordingInProgressLabel()
+    this.setRecordingState(true, recordingLabel)
+    this.updateStatus(recordingLabel)
+  }
+
+  clearRecording(event) {
+    if (event) event.preventDefault()
+    if (this.mediaRecorder?.state === "recording") {
+      this.mediaRecorder.stop()
+    }
+    this.stopStream()
+    this.clearCapturedFile()
+    this.chunks = []
+    this.activeSessionTitle = ""
+    this.setRecordingReady(false)
+    this.startButtonTarget.disabled = false
+    this.stopButtonTarget.disabled = true
+    this.setRecordingState(false, "Recorder idle.")
+    this.updateStatus("Recording deleted.")
   }
 
   stopStream() {
@@ -114,6 +150,46 @@ export default class extends Controller {
     if (label && this.hasActivityLabelTarget) {
       this.activityLabelTarget.textContent = label
     }
+  }
+
+  syncReadyStateFromInput() {
+    const hasFile = this.hasFileInputTarget && this.fileInputTarget.files && this.fileInputTarget.files.length > 0
+    this.setRecordingReady(hasFile)
+  }
+
+  setRecordingReady(ready) {
+    if (this.hasSubmitButtonTarget) {
+      this.submitButtonTarget.hidden = !ready
+      this.submitButtonTarget.disabled = !ready
+    }
+    if (this.hasDeleteButtonTarget) {
+      this.deleteButtonTarget.hidden = !ready
+      this.deleteButtonTarget.disabled = !ready
+    }
+  }
+
+  clearCapturedFile() {
+    if (!this.hasFileInputTarget) return
+    this.fileInputTarget.value = ""
+  }
+
+  currentSessionTitle() {
+    if (!this.hasSessionTitleInputTarget) return ""
+    return this.sessionTitleInputTarget.value.toString().trim()
+  }
+
+  recordingInProgressLabel() {
+    if (this.activeSessionTitle.length > 0) {
+      return `Recording in progress: ${this.activeSessionTitle}`
+    }
+    return "Recording in progress..."
+  }
+
+  finalizingLabel() {
+    if (this.activeSessionTitle.length > 0) {
+      return `Finalizing recording: ${this.activeSessionTitle}`
+    }
+    return "Finalizing recording..."
   }
 
   microphoneFeatureAllowed() {

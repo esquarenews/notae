@@ -1,9 +1,13 @@
 class DbRowsController < ApplicationController
+  include DatabaseTablePresentation
+  include RequestPerformanceInstrumentation
+
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_database
   before_action :ensure_database_unlocked!
   before_action :set_db_row, only: %i[update destroy move duplicate restore]
+  track_request_performance_for :create, :update
 
   def create
     @db_row = @database.db_rows.new(db_row_params)
@@ -21,7 +25,7 @@ class DbRowsController < ApplicationController
       insert_row_after_reference!(@db_row, params[:insert_after_id]) if params[:insert_after_id].present?
       seed_cells_for_row(@db_row)
       assign_date_value_to_row(@db_row)
-      assign_default_date_created_value_to_row(@db_row)
+      sync_row_cache_after_seed!(@db_row)
       clear_row_sorting_preferences! if params[:insert_after_id].present?
       if @redirect_split_source == "row" && @redirect_split_page_id.present?
         @redirect_split_row_id ||= @db_row.id
@@ -61,6 +65,8 @@ class DbRowsController < ApplicationController
           partial: "databases/topbar_edited_meta",
           locals: { database: @database }
         )
+      elsif turbo_create_next_row_request?(next_row)
+        render turbo_stream: turbo_stream_create_next_row_response(next_row)
       elsif next_row.present?
         close_row_split_for_row_switch!
         redirect_to database_redirect_location(anchor: "row_#{next_row.id}"), notice: "Row updated."
@@ -154,16 +160,46 @@ class DbRowsController < ApplicationController
     title_autosave_requested? && request.format.turbo_stream? && next_row.blank?
   end
 
+  def turbo_create_next_row_request?(next_row)
+    return false unless title_autosave_requested?
+    return false unless request.format.turbo_stream?
+    return false if next_row.blank?
+    return false unless simple_table_render_context?
+    return false if params[:split_source].to_s == "row"
+
+    true
+  end
+
   def set_db_row
     @db_row = policy_scope(DbRow).for_database(@database).find(params[:id])
   end
 
   def seed_cells_for_row(row)
-    policy_scope(DbProperty).for_database(@database).ordered.each do |db_property|
-      row.db_cells.find_or_create_by!(db_property:, workspace: @workspace) do |cell|
-        cell.value_text = default_cell_value_for_property(db_property)
-      end
+    db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+    return if db_properties.empty?
+
+    property_ids = db_properties.map(&:id)
+    existing_property_ids = row.db_cells.where(db_property_id: property_ids).pluck(:db_property_id)
+    existing_lookup = existing_property_ids.each_with_object({}) { |property_id, memo| memo[property_id] = true }
+
+    now = Time.current
+    default_created_date = Date.current.iso8601
+    missing_cells = db_properties.each_with_object([]) do |db_property, memo|
+      next if existing_lookup[db_property.id]
+
+      memo << {
+        id: SecureRandom.uuid,
+        workspace_id: @workspace.id,
+        db_row_id: row.id,
+        db_property_id: db_property.id,
+        value_text: default_cell_value_for_property(db_property, default_created_date:),
+        created_at: now,
+        updated_at: now
+      }
     end
+    return if missing_cells.empty?
+
+    DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
   end
 
   def assign_date_value_to_row(row)
@@ -174,25 +210,29 @@ class DbRowsController < ApplicationController
     date_property = policy_scope(DbProperty).for_database(@database).find_by(id: date_property_id, property_type: :date)
     return if date_property.blank?
 
-    row.db_cells.find_or_create_by!(db_property: date_property, workspace: @workspace) do |cell|
-      cell.value_text = date_value
-    end.tap do |cell|
-      cell.update!(value_text: date_value)
-    end
-  end
+    existing_cell = row.db_cells.find_by(db_property_id: date_property.id, workspace_id: @workspace.id)
+    if existing_cell.present?
+      return if existing_cell.value_text == date_value
 
-  def assign_default_date_created_value_to_row(row)
-    date_created_property = policy_scope(DbProperty)
-                            .for_database(@database)
-                            .where(property_type: :date)
-                            .find { |property| property.name.to_s.strip.casecmp("date created").zero? }
-    return if date_created_property.blank?
-
-    row.db_cells.find_or_create_by!(db_property: date_created_property, workspace: @workspace) do |cell|
-      cell.value_text = Date.current.iso8601
-    end.tap do |cell|
-      cell.update!(value_text: Date.current.iso8601) if cell.value_text.blank?
+      existing_cell.update_columns(value_text: date_value, updated_at: Time.current)
+      return
     end
+
+    now = Time.current
+    DbCell.insert_all(
+      [
+        {
+          id: SecureRandom.uuid,
+          workspace_id: @workspace.id,
+          db_row_id: row.id,
+          db_property_id: date_property.id,
+          value_text: date_value,
+          created_at: now,
+          updated_at: now
+        }
+      ],
+      unique_by: :index_db_cells_on_db_row_id_and_db_property_id
+    )
   end
 
   def database_redirect_location(anchor: nil)
@@ -302,6 +342,14 @@ class DbRowsController < ApplicationController
     reference_index = ordered_rows.index { |candidate| candidate.id == reference.id }
     return if reference_index.nil?
 
+    next_row = ordered_rows[(reference_index + 1)..]&.find { |candidate| candidate.id != row.id }
+    target_position = suggested_insert_position_after(reference:, next_row:)
+    if target_position.present?
+      row.update_columns(position: target_position, updated_at: Time.current) if row.position != target_position
+      return
+    end
+
+    # Fallback to full normalization when no sparse position remains.
     DbRows::MoveService.call(
       row: row,
       database: @database,
@@ -349,9 +397,173 @@ class DbRowsController < ApplicationController
 
     insert_row_after_reference!(row_candidate, reference_row.id)
     seed_cells_for_row(row_candidate)
-    assign_default_date_created_value_to_row(row_candidate)
+    sync_row_cache_after_seed!(row_candidate)
     clear_row_sorting_preferences!
     row_candidate
+  end
+
+  def turbo_stream_create_next_row_response(next_row)
+    load_table_row_render_context!(rows: [ @db_row, next_row ])
+    active_row_count = policy_scope(DbRow).for_database(@database).active.count
+
+    [
+      turbo_stream.update(
+        "database_topbar_edited_at",
+        partial: "databases/topbar_edited_meta",
+        locals: { database: @database.reload }
+      ),
+      turbo_stream.update(
+        "database_row_count",
+        partial: "databases/row_count_meta",
+        locals: { row_count: active_row_count }
+      ),
+      turbo_stream.replace(
+        "row_#{@db_row.id}",
+        partial: "databases/table_row",
+        locals: table_row_locals(row: @db_row)
+      ),
+      turbo_stream.after(
+        "row_#{@db_row.id}",
+        partial: "databases/table_row",
+        locals: table_row_locals(row: next_row, autofocus_title: true)
+      ),
+      turbo_stream.update(
+        "database_table_placeholders",
+        partial: "databases/table_placeholders",
+        locals: {
+          visible_properties: @visible_db_properties,
+          placeholder_count: [ 6 - active_row_count, 0 ].max
+        }
+      )
+    ]
+  end
+
+  def simple_table_render_context?
+    current_view = current_database_view_for_response
+    view_config = current_view&.config_json.to_h || {}
+
+    return false unless (current_view&.view_type || "table") == "table"
+    return false if params[:sort_property_id].present? || params[:filter_property_id].present?
+    return false if view_config["sort_property_id"].present? || view_config["filter_property_id"].present?
+
+    true
+  end
+
+  def current_database_view_for_response
+    @current_database_view_for_response ||= begin
+      views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
+      requested_id = params[:view_id].to_s.presence
+      if requested_id.present?
+        views.find { |view| view.id.to_s == requested_id }
+      else
+        views.find(&:default?) || views.first
+      end
+    end
+  end
+
+  def load_table_row_render_context!(rows:)
+    @current_view = current_database_view_for_response
+    @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+    @view_config = @current_view&.config_json.to_h || {}
+    visible_property_ids = Array(@view_config["visible_property_ids"]).map(&:to_s)
+    @visible_db_properties = if visible_property_ids.any?
+      @db_properties.select { |property| visible_property_ids.include?(property.id.to_s) }
+    else
+      @db_properties
+    end
+    conditional_property_id = @view_config["conditional_color_property_id"].to_s
+    @conditional_color_mode = @view_config["conditional_color_mode"].to_s == "overdue" ? "overdue" : "none"
+    @conditional_color_property = @db_properties.find do |property|
+      property.id.to_s == conditional_property_id && property.date?
+    end
+    property_ids = @visible_db_properties.map(&:id)
+    @cells_by_key = if rows.empty? || property_ids.empty?
+      {}
+    else
+      policy_scope(DbCell)
+        .for_database(@database)
+        .where(db_row_id: rows.map(&:id), db_property_id: property_ids)
+        .to_a
+        .index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
+    end
+    @linkable_pages = policy_scope(Page).for_workspace(@workspace).active.select(:id, :title, :updated_at).order(updated_at: :desc).to_a
+    @linkable_pages_by_id = @linkable_pages.index_by(&:id)
+    @select_options_by_property = build_select_options_by_property_for_rows(properties: @visible_db_properties)
+  end
+
+  def build_select_options_by_property_for_rows(properties:)
+    properties.select(&:select?).each_with_object({}) do |property, options|
+      values = if task_status_property?(property)
+        DatabaseTablePresentation::TASK_STATUS_OPTIONS.dup
+      else
+        []
+      end
+      seen = values.each_with_object({}) { |value, memo| memo[value] = true }
+
+      policy_scope(DbCell)
+        .for_database(@database)
+        .where(db_property_id: property.id)
+        .where.not(value_text: [ nil, "" ])
+        .distinct
+        .order(:value_text)
+        .pluck(:value_text)
+        .each do |value|
+          normalized = task_status_property?(property) ? normalize_task_status_value(value) : value.to_s.strip
+          next if normalized.blank? || seen.key?(normalized)
+
+          seen[normalized] = true
+          values << normalized
+        end
+
+      options[property.id] = task_status_property?(property) ? values : values.sort
+    end
+  end
+
+  def table_row_locals(row:, autofocus_title: false)
+    {
+      row: row,
+      workspace: @workspace,
+      database: @database,
+      current_view: @current_view,
+      row_params: table_row_params,
+      linkable_pages: @linkable_pages,
+      linkable_pages_by_id: @linkable_pages_by_id,
+      visible_properties: @visible_db_properties,
+      cells_by_key: @cells_by_key,
+      can_create_rows: policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked?,
+      row_color_options: row_color_options,
+      autofocus_title: autofocus_title
+    }
+  end
+
+  def table_row_params
+    {
+      view_id: @current_view&.id,
+      month: params[:month].presence,
+      sort_property_id: params[:sort_property_id].presence,
+      sort_direction: params[:sort_direction].presence,
+      filter_property_id: params[:filter_property_id].presence,
+      filter_value: params[:filter_value].presence,
+      filter_operator: params[:filter_operator].presence,
+      split_page_id: params[:split_page_id].presence,
+      split_source: params[:split_source].presence,
+      split_row_id: params[:split_row_id].presence
+    }.compact
+  end
+
+  def row_color_options
+    [
+      [ "Default", "default" ],
+      [ "Gray", "gray" ],
+      [ "Brown", "brown" ],
+      [ "Orange", "orange" ],
+      [ "Yellow", "yellow" ],
+      [ "Green", "green" ],
+      [ "Blue", "blue" ],
+      [ "Purple", "purple" ],
+      [ "Pink", "pink" ],
+      [ "Red", "red" ]
+    ]
   end
 
   def duplicate_row!(row)
@@ -402,14 +614,33 @@ class DbRowsController < ApplicationController
     view.update!(config_json: config) if changed
   end
 
-  def default_cell_value_for_property(property)
+  def default_cell_value_for_property(property, default_created_date: Date.current.iso8601)
+    return default_created_date if date_created_property?(property)
     return "not started" if task_status_property?(property)
 
     ""
   end
 
-  def task_status_property?(property)
-    property.select? && property.name.to_s.strip.casecmp("status").zero?
+  def date_created_property?(property)
+    property.date? && property.name.to_s.strip.casecmp("date created").zero?
+  end
+
+  def sync_row_cache_after_seed!(row)
+    row.sync_data_from_cells!
+  end
+
+  def suggested_insert_position_after(reference:, next_row:)
+    return reference.position + DbRow::POSITION_GAP if next_row.blank?
+
+    lower_bound = reference.position.to_i
+    upper_bound = next_row.position.to_i
+    gap = upper_bound - lower_bound
+    return nil if gap <= 1
+
+    candidate = lower_bound + (gap / 2)
+    return nil if candidate <= lower_bound || candidate >= upper_bound
+
+    candidate
   end
 
   def ensure_database_unlocked!

@@ -9,13 +9,18 @@ module Meetings
       existing = existing_active_session_for(kalendarium_event)
       return existing if existing.present? && !force_new
 
+      resolved_join_url = MeetingSession.normalize_join_url(join_url.presence || kalendarium_event&.meeting_join_url)
+      if capture_mode.to_s == "online_bot" && resolved_join_url.blank?
+        raise ArgumentError, "Meeting URL is required unless the selected event has a join link."
+      end
+
       session = MeetingSession.new(
         workspace: workspace,
         title: title.to_s.strip.presence || default_title_for(kalendarium_event),
         capture_mode: capture_mode,
         provider: provider,
         kalendarium_event: kalendarium_event,
-        join_url: normalized_join_url(join_url.presence || kalendarium_event&.meeting_join_url),
+        join_url: resolved_join_url,
         created_by: actor,
         updated_by: actor,
         status: "scheduled",
@@ -56,15 +61,6 @@ module Meetings
 
       "Meeting notes"
     end
-
-    def normalized_join_url(raw_url)
-      value = raw_url.to_s.strip
-      return nil if value.blank?
-      return value if value.start_with?("https://", "http://")
-
-      nil
-    end
-
     def existing_active_session_for(kalendarium_event)
       return nil if kalendarium_event.blank?
 

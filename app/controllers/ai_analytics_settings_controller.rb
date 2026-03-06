@@ -28,7 +28,15 @@ class AiAnalyticsSettingsController < ApplicationController
         count: count.to_i
       }
     end
-                                         .sort_by { |entry| -entry[:tokens] }
+    unless @ai_analytics_operations.any? { |entry| entry[:operation] == AiUsageLog::OP_MEETING_TRANSCRIPTION }
+      @ai_analytics_operations << {
+        operation: AiUsageLog::OP_MEETING_TRANSCRIPTION,
+        tokens: 0,
+        cost: 0.0,
+        count: 0
+      }
+    end
+    @ai_analytics_operations = @ai_analytics_operations.sort_by { |entry| -entry[:tokens] }
   end
 
   private

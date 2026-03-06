@@ -40,6 +40,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("notae-ai-rail-overlay")
     expect(response.body).to include("notae-ai-loader")
     expect(response.body).to include("notae-ai-compose-swirl")
+    expect(response.body).to include("notae-ai-prompt-input")
     expect(response.body).to include("Kalendārium")
     expect(response.body).to include("toggleFloatingRail")
     expect(response.body).to include("AI Conversation History")
@@ -59,6 +60,9 @@ RSpec.describe "Workspace home", type: :request do
     expect(normalized_database_titles).to include("DB 4 latest", "DB 3 newer", "DB 2 mid")
     expect(normalized_database_titles).not_to include("DB 1 old")
     expect(normalized_database_titles.count).to eq(3)
+
+    hero_subtle_lines = html.css(".notae-workspace-home-hero .notae-page-subtle").map { |node| node.text.strip }
+    expect(hero_subtle_lines).to eq([ "Workspace home" ])
   end
 
   it "renders the workspace library page for members" do

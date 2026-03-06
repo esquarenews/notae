@@ -234,10 +234,7 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
       ]
     )
 
-    expect do
-      adapter.sync!(calendar: calendar)
-    end.to raise_error(RuntimeError, /No events were returned for Home/)
-
+    expect { adapter.sync!(calendar: calendar) }.not_to raise_error
     expect(event.reload.status).to eq("confirmed")
   end
 

@@ -1,5 +1,7 @@
 module Internal
   class MeetingBotRunsController < ActionController::API
+    MAX_UPLOAD_BYTES = 250.megabytes
+
     before_action :authenticate_internal_worker!
     before_action :set_run, only: %i[heartbeat upload_complete failed]
 
@@ -24,11 +26,13 @@ module Internal
     def heartbeat
       metadata = @run.metadata_json.to_h
       metadata["heartbeat_payload"] = heartbeat_params.to_h if heartbeat_params.present?
+      requested_status = normalized_status(@run.status)
       @run.update!(
-        status: normalized_status(@run.status),
+        status: requested_status,
         last_heartbeat_at: Time.current,
         metadata_json: metadata
       )
+      synchronize_session_status_from_run!(requested_status)
 
       render json: { ok: true }, status: :ok
     end
@@ -37,6 +41,17 @@ module Internal
       upload_file = params[:file]
       if upload_file.blank?
         render json: { error: { code: "missing_file", message: "file is required" } }, status: :unprocessable_entity
+        return
+      end
+
+      if @run.status.in?(%w[finished failed])
+        render json: { error: { code: "invalid_state", message: "Run is no longer accepting uploads." } }, status: :conflict
+        return
+      end
+
+      validation_error = validate_upload_file(upload_file)
+      if validation_error.present?
+        render json: { error: { code: "invalid_file", message: validation_error } }, status: :unprocessable_entity
         return
       end
 
@@ -112,12 +127,66 @@ module Internal
       params.permit(:status, :worker_id, :error_message, metadata: {})
     end
 
+    def validate_upload_file(upload_file)
+      content_type = upload_file.content_type.to_s.strip
+      upload_size = upload_size_for(upload_file)
+
+      return "file is empty" if upload_size <= 0
+      return "file exceeds 250 MB" if upload_size > MAX_UPLOAD_BYTES
+      return nil if media_content_type?(content_type)
+
+      "Only audio or video uploads are supported."
+    end
+
+    def upload_size_for(upload_file)
+      if upload_file.respond_to?(:size)
+        upload_file.size.to_i
+      elsif upload_file.respond_to?(:tempfile) && upload_file.tempfile.present?
+        upload_file.tempfile.size.to_i
+      else
+        0
+      end
+    end
+
+    def media_content_type?(content_type)
+      return true if content_type.start_with?("audio/", "video/")
+
+      content_type == "application/octet-stream"
+    end
+
     def normalized_status(default_status)
       requested = heartbeat_params[:status].to_s
       return default_status if requested.blank?
       return requested if MeetingBotRun::STATUSES.include?(requested)
 
       default_status
+    end
+
+    def synchronize_session_status_from_run!(run_status)
+      mapped_status = case run_status
+      when "claimed", "joining", "queued"
+        "joining"
+      when "recording"
+        "recording"
+      when "uploading"
+        "uploading"
+      when "failed"
+        "failed"
+      else
+        nil
+      end
+      return if mapped_status.blank?
+
+      updates = { status: mapped_status }
+      updates[:started_at] = Time.current if mapped_status == "recording" && @run.meeting_session.started_at.blank?
+      if mapped_status == "failed"
+        updates[:ended_at] = Time.current
+        updates[:error_message] = heartbeat_params[:error_message].to_s.truncate(500).presence || @run.error_message
+      else
+        updates[:error_message] = nil if @run.meeting_session.error_message.present?
+      end
+
+      @run.meeting_session.update!(updates)
     end
   end
 end
