@@ -234,7 +234,9 @@ RSpec.describe "Meetings", type: :request do
     expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
     session = MeetingSession.order(:created_at).last
     expect(session.status).to eq("joining")
-    expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::StartBotRunJob)
+    expect(session.meeting_bot_runs.active.count).to eq(1)
+    expect(session.meeting_bot_runs.active.first.status).to eq("queued")
+    expect(enqueued_jobs.map { |job| job[:job] }).not_to include(Meetings::StartBotRunJob)
   end
 
   it "keeps a future online session scheduled when only an associated event provides the join URL" do
@@ -259,7 +261,8 @@ RSpec.describe "Meetings", type: :request do
     session = MeetingSession.order(:created_at).last
     expect(session.join_url).to eq(event.meeting_join_url)
     expect(session.status).to eq("scheduled")
-    expect(enqueued_jobs.map { |job| job[:job] }).not_to include(Meetings::StartBotRunJob)
+    expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::DispatchScheduledSessionJob)
+    expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::AutoStopSessionJob)
   end
 
   it "hides manual restart controls for future scheduled sessions" do

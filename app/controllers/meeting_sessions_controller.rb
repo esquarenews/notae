@@ -55,6 +55,7 @@ class MeetingSessionsController < ApplicationController
     )
     attach_capture_files!(@meeting_session)
     @meeting_session.save!
+    schedule_online_session_jobs!(@meeting_session)
 
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Meeting session updated."
   rescue ActiveRecord::RecordInvalid => error
@@ -87,16 +88,12 @@ class MeetingSessionsController < ApplicationController
 
   def stop
     authorize @meeting_session
-    stop_active_bot_runs!(@meeting_session, reason: "Stopped by user.")
-
-    if @meeting_session.capture_files.attached?
-      @meeting_session.update!(status: "uploading", ended_at: Time.current, updated_by: current_user)
-      Meetings::ProcessSessionJob.perform_later(@meeting_session.id)
-      notice = "Meeting capture uploaded for processing."
-    else
-      @meeting_session.update!(status: "cancelled", ended_at: Time.current, updated_by: current_user)
-      notice = "Meeting capture stopped."
-    end
+    result = Meetings::StopSessionService.new(
+      session: @meeting_session,
+      actor: current_user,
+      reason: "Stopped by user."
+    ).call
+    notice = result == :processing ? "Meeting capture uploaded for processing." : "Meeting capture stopped."
 
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: notice
   rescue ActiveRecord::RecordInvalid => error
@@ -194,9 +191,13 @@ class MeetingSessionsController < ApplicationController
 
   def handle_session_dispatch!(session, force_online: false)
     if session.capture_mode == "online_bot"
-      return :deferred if !force_online && defer_online_dispatch?(session)
+      if !force_online && defer_online_dispatch?(session)
+        schedule_online_session_jobs!(session)
+        return :deferred
+      end
 
       Meetings::BotDispatchService.new(session: session, actor: current_user).dispatch!
+      schedule_online_session_jobs!(session)
       return :dispatched
     end
 
@@ -212,6 +213,10 @@ class MeetingSessionsController < ApplicationController
     return false if event_start.blank?
 
     event_start > Time.current
+  end
+
+  def schedule_online_session_jobs!(session)
+    Meetings::OnlineSessionScheduleService.new(session: session).schedule!
   end
 
   def refresh_session_note_after_speaker_update!
@@ -233,18 +238,6 @@ class MeetingSessionsController < ApplicationController
       summary_markdown: updated_summary,
       action_items: updated_action_items
     )
-  end
-
-  def stop_active_bot_runs!(session, reason:)
-    return unless session.capture_mode == "online_bot"
-
-    session.meeting_bot_runs.active.find_each do |run|
-      run.update!(
-        status: "failed",
-        finished_at: Time.current,
-        error_message: reason
-      )
-    end
   end
 
   def speaker_replacements_from_utterances(session)

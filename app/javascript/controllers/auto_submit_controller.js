@@ -1,6 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
+  static values = {
+    focusOnConnect: Boolean
+  }
+
   static STATUS_CLASS_BY_VALUE = {
     "not started": "is-status-not-started",
     "started": "is-status-started",
@@ -21,12 +25,22 @@ export default class extends Controller {
 
   connect() {
     this.handleSubmitStart = () => this.markSubmitting()
-    this.handleSubmitEnd = () => this.clearSubmitting()
+    this.handleSubmitEnd = () => {
+      this.clearSubmitting()
+      if (!this.nextRowFocusRequested) return
+
+      this.nextRowFocusRequested = false
+      this.focusNextCreatedRow()
+    }
     this.clearSubmitting()
 
     if (this.element instanceof HTMLFormElement) {
       this.element.addEventListener("turbo:submit-start", this.handleSubmitStart)
       this.element.addEventListener("turbo:submit-end", this.handleSubmitEnd)
+    }
+
+    if (this.focusOnConnectValue) {
+      this.focusPrimaryInput()
     }
   }
 
@@ -61,6 +75,10 @@ export default class extends Controller {
       submitter = form.querySelector('button[name="db_row[create_next_row]"]')
     }
 
+    this.nextRowFocusRequested = createNextOnEnter
+    if (createNextOnEnter) {
+      this.focusNextCreatedRow()
+    }
     this.requestSubmitOnce(form, submitter)
   }
 
@@ -131,5 +149,43 @@ export default class extends Controller {
     if (!(form instanceof HTMLFormElement)) return
 
     delete form.dataset.autoSubmitPending
+  }
+
+  focusPrimaryInput() {
+    const input = this.element?.querySelector?.('input[type="text"], input:not([type]), textarea')
+    if (!(input instanceof HTMLElement)) return
+
+    requestAnimationFrame(() => {
+      input.focus({ preventScroll: true })
+      if (typeof input.select === "function") {
+        input.select()
+      }
+    })
+  }
+
+  focusNextCreatedRow(attempt = 0) {
+    setTimeout(() => {
+      const pendingForm = Array.from(document.querySelectorAll('form[data-auto-submit-focus-on-connect-value="true"]'))
+        .reverse()
+        .find((form) => form.dataset.autoSubmitPending !== "true")
+      const input = pendingForm?.querySelector?.('input[type="text"], input:not([type]), textarea')
+      if (!(input instanceof HTMLElement)) {
+        if (attempt < 20) {
+          this.focusNextCreatedRow(attempt + 1)
+        }
+        return
+      }
+
+      if (document.activeElement !== input) {
+        input.focus({ preventScroll: true })
+        if (typeof input.select === "function") {
+          input.select()
+        }
+      }
+
+      if (attempt < 20) {
+        this.focusNextCreatedRow(attempt + 1)
+      }
+    }, attempt === 0 ? 0 : 75)
   }
 }

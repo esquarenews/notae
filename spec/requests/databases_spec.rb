@@ -418,6 +418,35 @@ RSpec.describe "Databases", type: :request do
     expect(response.body.index("Move me")).to be < response.body.index("Doing item")
   end
 
+  it "renders all task status columns in board view even when some are empty" do
+    owner = User.create!(email: "database-board-all-status-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Board all status tables", slug: "board-all-status-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Task board")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Started task")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+    board_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Task board",
+      view_type: :board,
+      config_json: { "group_property_id" => status_property.id },
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("not started")
+    expect(response.body).to include("started")
+    expect(response.body).to include("overdue")
+    expect(response.body).to include("hold")
+    expect(response.body).to include("done")
+  end
+
   it "renders non-grouped property values inside board cards" do
     owner = User.create!(email: "database-board-details-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Board detail tables", slug: "board-detail-tables")
@@ -448,6 +477,24 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("2026-03-12")
     expect(response.body).to include("Notes")
     expect(response.body).to include("Follow up with vendor")
+  end
+
+  it "updates a row title over json for inline board edits" do
+    owner = User.create!(email: "database-board-json-title-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Board json title tables", slug: "board-json-title-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Board json title")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Before edit")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { title: "After edit", autosave_title: "1" } },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body["title"]).to eq("After edit")
+    expect(response.parsed_body["topbar_edited_at_html"]).to include("Edited")
+    expect(row.reload.title).to eq("After edit")
   end
 
   it "renders board view with more than 500 rows" do
@@ -1095,6 +1142,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('turbo-stream action="after" target="row_')
     expect(response.body).to include('turbo-stream action="update" target="database_row_count"')
     expect(response.body).to include('turbo-stream action="update" target="database_table_placeholders"')
+    expect(response.body).to include('data-auto-submit-focus-on-connect-value="true"')
     expect(first_row.reload.title).to eq("Updated first row")
     expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])
   end

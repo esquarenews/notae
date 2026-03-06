@@ -37,32 +37,11 @@ module Meetings
     def stop_ended_online_sessions
       ended_online_sessions.find_each do |session|
         actor = session.updated_by || session.created_by
-        reason = "Meeting ended; capture stopped automatically."
-
-        session.meeting_bot_runs.active.find_each do |run|
-          run.update!(
-            status: "failed",
-            finished_at: Time.current,
-            error_message: reason
-          )
-        end
-
-        if session.capture_files.attached?
-          session.update!(
-            status: "uploading",
-            ended_at: Time.current,
-            error_message: nil,
-            updated_by: actor
-          )
-          Meetings::ProcessSessionJob.perform_later(session.id)
-        else
-          session.update!(
-            status: "cancelled",
-            ended_at: Time.current,
-            error_message: reason,
-            updated_by: actor
-          )
-        end
+        Meetings::StopSessionService.new(
+          session: session,
+          actor: actor,
+          reason: "Meeting ended; capture stopped automatically."
+        ).call
       rescue StandardError => error
         Rails.logger.warn("Meetings auto-stop failed for meeting_session=#{session.id}: #{error.class}: #{error.message}")
       end

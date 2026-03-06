@@ -58,7 +58,18 @@ class DbRowsController < ApplicationController
         return
       end
 
-      if turbo_title_autosave_request?(next_row:)
+      if request.format.json?
+        @database.reload
+        render json: {
+          id: @db_row.id,
+          title: @db_row.title,
+          topbar_edited_at_html: render_to_string(
+            partial: "databases/topbar_edited_meta",
+            formats: [ :html ],
+            locals: { database: @database }
+          )
+        }, status: :ok
+      elsif turbo_title_autosave_request?(next_row:)
         @database.reload
         render turbo_stream: turbo_stream.update(
           "database_topbar_edited_at",
@@ -651,6 +662,7 @@ class DbRowsController < ApplicationController
 
   def respond_row_update_failure(anchor:, message:)
     respond_to do |format|
+      format.json { render json: { error: message }, status: :unprocessable_entity }
       format.turbo_stream { render plain: message, status: :unprocessable_entity }
       format.html { redirect_to database_redirect_location(anchor:), alert: message }
     end

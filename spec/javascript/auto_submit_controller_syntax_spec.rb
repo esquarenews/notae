@@ -29,6 +29,10 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("submitOnEnter")
     expect(source).to include("requestSubmit(submitter)")
     expect(source).to include("autoSubmitPending")
+    expect(source).to include("focusOnConnectValue")
+    expect(source).to include("focusPrimaryInput")
+    expect(source).to include("focusNextCreatedRow")
+    expect(source).to include("nextRowFocusRequested")
     expect(source).to include("turbo:submit-start")
   end
 end

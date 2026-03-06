@@ -53,7 +53,8 @@ RSpec.describe Meetings::ScheduleDueCapturesJob, type: :job do
     session.reload
     expect(session.status).to eq("joining")
     expect(session.meeting_bot_runs.active.count).to eq(1)
-    expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::StartBotRunJob)
+    expect(session.meeting_bot_runs.active.first.status).to eq("queued")
+    expect(enqueued_jobs.map { |job| job[:job] }).not_to include(Meetings::StartBotRunJob)
   end
 
   it "keeps future scheduled sessions deferred" do

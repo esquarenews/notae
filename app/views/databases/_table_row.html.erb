@@ -128,7 +128,10 @@
                             url: row_update_path,
                             method: :patch,
                             class: "notae-db-title-form notae-db-title-form-inline",
-                            data: { controller: "auto-submit" } do |form| %>
+                            data: {
+                              controller: "auto-submit",
+                              auto_submit_focus_on_connect_value: autofocus_title
+                            } do |form| %>
                 <%= form.text_field :title,
                                     value: row.title,
                                     class: "notae-db-title-input",
@@ -164,7 +167,10 @@
                           url: row_update_path,
                           method: :patch,
                           class: "notae-db-title-form notae-db-title-form-inline",
-                          data: { controller: "auto-submit" } do |form| %>
+                          data: {
+                            controller: "auto-submit",
+                            auto_submit_focus_on_connect_value: autofocus_title
+                          } do |form| %>
               <%= form.text_field :title,
                                   value: row.title,
                                   class: "notae-db-title-input",

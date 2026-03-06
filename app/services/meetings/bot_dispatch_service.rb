@@ -22,7 +22,6 @@ module Meetings
       end
 
       session.update!(status: "joining", updated_by: actor)
-      Meetings::StartBotRunJob.perform_later(run.id)
       session
     end
 

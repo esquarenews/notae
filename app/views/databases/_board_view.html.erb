@@ -9,39 +9,58 @@
        data-database-drag-database-id-value="<%= @database.id %>"
        data-database-drag-view-id-value="<%= @current_view&.id %>"
        data-database-drag-property-id-value="<%= @board_group_property.id %>"
-       class="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+       class="notae-db-board-grid">
     <% @board_columns.each do |column| %>
-      <section class="rounded border border-stone-200 bg-stone-50">
-        <header class="border-b border-stone-200 px-3 py-2 text-sm font-medium text-stone-700">
-          <%= column[:label] %>
-          <span class="text-xs text-stone-500">(<%= column[:rows].size %>)</span>
+      <section class="notae-db-board-column">
+        <header class="notae-db-board-column-head">
+          <span class="notae-db-board-column-title"><%= column[:label] %></span>
+          <span class="notae-db-board-column-count"><%= column[:rows].size %></span>
         </header>
-        <div class="min-h-40 space-y-2 p-2"
+        <div class="notae-db-board-lane"
              data-database-drag-target-value="<%= column[:value].to_s %>"
-             data-action="dragover->database-drag#dragover drop->database-drag#drop">
+             data-action="dragenter->database-drag#dragenter dragover->database-drag#dragover dragleave->database-drag#dragleave drop->database-drag#drop">
+          <% if column[:rows].empty? %>
+            <div class="notae-db-board-empty">
+              No tasks
+            </div>
+          <% end %>
           <% column[:rows].each do |row| %>
+            <% row_update_path = database_db_row_path(workspace_slug: @workspace.slug, database_id: @database.id, id: row.id) %>
             <article id="board_row_<%= row.id %>"
-                     class="cursor-grab rounded border border-stone-200 bg-white px-3 py-2 text-sm"
+                     class="notae-db-board-card"
                      draggable="true"
                      data-database-drag-row-id="<%= row.id %>"
-                     data-action="dragstart->database-drag#dragstart">
-              <div class="font-medium text-stone-800"><%= row.title %></div>
-              <div class="text-xs text-stone-500">#<%= row.id.to_s.first(8) %></div>
-              <% property_rows = board_card_properties.filter_map do |property| %>
-                <% value = cell_value_for(row, property).to_s.strip %>
-                <% next if value.blank? %>
-                <% [ property.name, value ] %>
-              <% end %>
-              <% if property_rows.any? %>
-                <dl class="mt-2 space-y-1 text-xs">
-                  <% property_rows.each do |property_name, property_value| %>
-                    <div class="flex items-start justify-between gap-2">
-                      <dt class="text-stone-500"><%= property_name %></dt>
-                      <dd class="text-right text-stone-700"><%= property_value %></dd>
-                    </div>
-                  <% end %>
-                </dl>
-              <% end %>
+                     data-database-drag-update-url="<%= row_update_path %>"
+                     data-database-drag-title="<%= row.title %>"
+                     data-action="dragstart->database-drag#dragstart dragend->database-drag#dragend dblclick->database-drag#beginEdit">
+              <div class="notae-db-board-card-display" data-board-card-display>
+                <div class="notae-db-board-card-title" data-board-card-title><%= row.title %></div>
+                <div class="notae-db-board-card-meta">#<%= row.id.to_s.first(8) %></div>
+                <% property_rows = board_card_properties.filter_map do |property| %>
+                  <% value = cell_value_for(row, property).to_s.strip %>
+                  <% next if value.blank? %>
+                  <% [ property.name, value ] %>
+                <% end %>
+                <% if property_rows.any? %>
+                  <dl class="notae-db-board-card-details">
+                    <% property_rows.each do |property_name, property_value| %>
+                      <div class="notae-db-board-card-detail-row">
+                        <dt class="notae-db-board-card-detail-label"><%= property_name %></dt>
+                        <dd class="notae-db-board-card-detail-value"><%= property_value %></dd>
+                      </div>
+                    <% end %>
+                  </dl>
+                <% end %>
+              </div>
+              <form class="notae-db-board-card-edit-form"
+                    data-action="submit->database-drag#submitEdit"
+                    hidden>
+                <input type="text"
+                       value="<%= row.title %>"
+                       class="notae-db-board-card-edit-input"
+                       placeholder="Enter task name"
+                       data-action="keydown.enter->database-drag#submitEditFromKeydown keydown.esc->database-drag#cancelEdit blur->database-drag#submitEditOnBlur">
+              </form>
             </article>
           <% end %>
         </div>

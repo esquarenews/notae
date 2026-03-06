@@ -463,12 +463,19 @@ class DatabasesController < ApplicationController
     @board_columns = []
     return if @board_group_property.blank?
 
-    values = @rows.map { |row| cell_value_for(row, @board_group_property) }.map(&:strip)
-    unique_values = values.reject(&:blank?).uniq.sort
+    grouped_rows = Hash.new { |hash, key| hash[key] = [] }
+    @rows.each do |row|
+      grouped_rows[board_group_value_for(row)] << row
+    end
 
-    @board_columns << { value: nil, label: "Unassigned", rows: @rows.select { |row| cell_value_for(row, @board_group_property).blank? } }
-    unique_values.each do |value|
-      @board_columns << { value: value, label: value, rows: @rows.select { |row| cell_value_for(row, @board_group_property) == value } }
+    configured_values = select_options_for(@board_group_property)
+    extra_values = grouped_rows.keys.compact.reject(&:blank?).reject { |value| configured_values.include?(value) }
+    ordered_values = configured_values.dup
+    ordered_values.concat(extra_values.sort)
+
+    @board_columns << { value: nil, label: "Unassigned", rows: grouped_rows[nil] }
+    ordered_values.each do |value|
+      @board_columns << { value: value, label: value, rows: grouped_rows[value] }
     end
   end
 
@@ -540,6 +547,13 @@ class DatabasesController < ApplicationController
   def sort_value_for_row(row, property)
     raw_value = cell_value_for(row, property)
     cast_sort_value_for_property(property, raw_value)
+  end
+
+  def board_group_value_for(row)
+    raw_value = cell_value_for(row, @board_group_property).to_s.strip
+    return nil if raw_value.blank?
+
+    task_status_property?(@board_group_property) ? normalize_task_status_value(raw_value) : raw_value
   end
 
   def compare_sort_values(left_value, right_value)
