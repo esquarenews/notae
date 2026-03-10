@@ -5,6 +5,8 @@ module Meetings
     class Error < StandardError; end
     DIARIZATION_MODEL = "gpt-4o-transcribe-diarize".freeze
     FALLBACK_MODEL = "gpt-4o-mini-transcribe".freeze
+    TRANSCRIPTION_CONNECTION_RETRY_ATTEMPTS = 3
+    TRANSCRIPTION_CONNECTION_RETRY_BASE_DELAY = 1.second
 
     def initialize(session:)
       @session = session
@@ -81,7 +83,7 @@ module Meetings
       preferred_transcription_models.each do |model|
         transcription_attempts_for_model(model).each do |attempt|
           begin
-            response = Openai::AudioTranscriptionsClient.transcribe(
+            response = transcribe_with_connection_retries(
               file_path: file_path,
               api_key: session.created_by.openai_api_key,
               model: model,
@@ -90,6 +92,9 @@ module Meetings
             )
             @last_transcription_model = model
             return response
+          rescue Openai::AudioTranscriptionsClient::ConnectionError => error
+            last_error = error
+            raise error
           rescue Openai::AudioTranscriptionsClient::Error => error
             last_error = error
             raise error unless retry_with_fallback_format?(model: model, response_format: attempt.fetch(:response_format), message: error.message)
@@ -99,6 +104,20 @@ module Meetings
 
       raise last_error if last_error
       raise Error, "Audio transcription request failed"
+    end
+
+    def transcribe_with_connection_retries(**options)
+      attempt = 0
+
+      begin
+        attempt += 1
+        Openai::AudioTranscriptionsClient.transcribe(**options)
+      rescue Openai::AudioTranscriptionsClient::ConnectionError
+        raise if attempt >= TRANSCRIPTION_CONNECTION_RETRY_ATTEMPTS
+
+        sleep(TRANSCRIPTION_CONNECTION_RETRY_BASE_DELAY * attempt)
+        retry
+      end
     end
 
     def preferred_transcription_models

@@ -19,6 +19,11 @@
   --notae-heading-ink: #292524d4;
   --notae-muted: #57534e;
   --notae-accent: #2563eb;
+  --notae-accent-soft: rgba(59, 130, 246, 0.12);
+  --notae-text-strong: rgba(41, 37, 36, 0.92);
+  --notae-text-default: rgba(41, 37, 36, 0.84);
+  --notae-text-muted: rgba(68, 64, 60, 0.8);
+  --notae-text-soft: rgba(87, 83, 78, 0.7);
 }
 
 *,
@@ -50,6 +55,11 @@ body.notae-theme-dark {
   --notae-heading-ink: var(--notae-text);
   --notae-muted: #a9b1bc;
   --notae-accent: #7aa2ff;
+  --notae-accent-soft: rgba(122, 162, 255, 0.18);
+  --notae-text-strong: rgba(248, 250, 252, 0.96);
+  --notae-text-default: rgba(232, 234, 237, 0.86);
+  --notae-text-muted: rgba(210, 216, 223, 0.78);
+  --notae-text-soft: rgba(191, 198, 207, 0.68);
 }
 
 body.notae-theme-system {
@@ -68,6 +78,11 @@ body.notae-theme-system {
     --notae-heading-ink: var(--notae-text);
     --notae-muted: #a9b1bc;
     --notae-accent: #7aa2ff;
+    --notae-accent-soft: rgba(122, 162, 255, 0.18);
+    --notae-text-strong: rgba(248, 250, 252, 0.96);
+    --notae-text-default: rgba(232, 234, 237, 0.86);
+    --notae-text-muted: rgba(210, 216, 223, 0.78);
+    --notae-text-soft: rgba(191, 198, 207, 0.68);
   }
 }
 
@@ -11147,6 +11162,8 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   align-items: start;
+  padding-inline: 0.45rem;
+  padding-bottom: 0.2rem;
 }
 
 .notae-db-board-column {

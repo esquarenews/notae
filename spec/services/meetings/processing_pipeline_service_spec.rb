@@ -66,6 +66,31 @@ RSpec.describe Meetings::ProcessingPipelineService do
     file.unlink
   end
 
+  it "retries transient transcription connection failures before succeeding" do
+    service = build_service
+    file = Tempfile.new([ "meeting-capture", ".webm" ])
+    file.write("audio")
+    file.flush
+
+    allow(service).to receive(:sleep)
+    attempts = 0
+    allow(Openai::AudioTranscriptionsClient).to receive(:transcribe)
+      .with(hash_including(file_path: file.path, model: "gpt-4o-transcribe-diarize", response_format: "diarized_json", chunking_strategy: "auto")) do
+        attempts += 1
+        raise Openai::AudioTranscriptionsClient::ConnectionError, "Transcription API connection failed: timed out" if attempts == 1
+
+        { "text" => "ok after retry" }
+      end
+
+    response = service.send(:transcribe_with_preferred_formats, file.path)
+
+    expect(response).to eq({ "text" => "ok after retry" })
+    expect(service).to have_received(:sleep).with(1.second).once
+  ensure
+    file.close
+    file.unlink
+  end
+
   it "maps diarized speaker labels into stable meeting speaker keys" do
     service = build_service
     turns = service.send(:turns_from_speaker_segments, [

@@ -7,6 +7,7 @@ module Openai
     API_URL = URI("https://api.openai.com/v1/audio/transcriptions")
 
     class Error < StandardError; end
+    class ConnectionError < Error; end
 
     def self.transcribe(
       file_path:,
@@ -57,8 +58,8 @@ module Openai
       raise Error, message
     rescue JSON::ParserError => error
       raise Error, "Invalid response from transcription API: #{error.message}"
-    rescue Timeout::Error, SocketError, Errno::ECONNREFUSED => error
-      raise Error, "Transcription API connection failed: #{error.message}"
+    rescue Timeout::Error, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET, EOFError, IOError => error
+      raise ConnectionError, "Transcription API connection failed: #{error.message}"
     end
 
     def self.multipart_body(
