@@ -5,6 +5,8 @@ require "uri"
 module Openai
   class AudioTranscriptionsClient
     API_URL = URI("https://api.openai.com/v1/audio/transcriptions")
+    DEFAULT_OPEN_TIMEOUT_SECONDS = 8
+    DEFAULT_READ_TIMEOUT_SECONDS = 600
 
     class Error < StandardError; end
     class ConnectionError < Error; end
@@ -47,8 +49,8 @@ module Openai
         API_URL.host,
         API_URL.port,
         use_ssl: true,
-        open_timeout: 8,
-        read_timeout: 120
+        open_timeout: open_timeout_seconds,
+        read_timeout: read_timeout_seconds
       ) { |http| http.request(request) }
 
       parsed = JSON.parse(response.body)
@@ -127,6 +129,22 @@ module Openai
       else
         "application/octet-stream"
       end
+    end
+
+    def self.open_timeout_seconds
+      integer_env("OPENAI_TRANSCRIPTION_OPEN_TIMEOUT_SECONDS", DEFAULT_OPEN_TIMEOUT_SECONDS)
+    end
+
+    def self.read_timeout_seconds
+      integer_env("OPENAI_TRANSCRIPTION_READ_TIMEOUT_SECONDS", DEFAULT_READ_TIMEOUT_SECONDS)
+    end
+
+    def self.integer_env(key, default)
+      raw = ENV.fetch(key, "").to_s.strip
+      return default if raw.blank?
+
+      value = raw.to_i
+      value.positive? ? value : default
     end
   end
 end

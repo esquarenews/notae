@@ -88,4 +88,30 @@ RSpec.describe Openai::AudioTranscriptionsClient do
       end.to raise_error(Openai::AudioTranscriptionsClient::ConnectionError, /Transcription API connection failed/)
     end
   end
+
+  it "uses the extended default read timeout for meeting transcription requests" do
+    Tempfile.create([ "audio-transcription", ".webm" ]) do |file|
+      file.binmode
+      file.write("fake audio")
+      file.flush
+
+      response = Net::HTTPOK.new("1.1", "200", "OK")
+      allow(response).to receive(:body).and_return('{"text":"ok"}')
+
+      expect(Net::HTTP).to receive(:start).with(
+        "api.openai.com",
+        443,
+        use_ssl: true,
+        open_timeout: 8,
+        read_timeout: 600
+      ).and_yield(instance_double(Net::HTTP, request: response))
+
+      described_class.transcribe(
+        file_path: file.path,
+        api_key: "sk-test",
+        model: "gpt-4o-mini-transcribe",
+        response_format: "json"
+      )
+    end
+  end
 end

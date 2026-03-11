@@ -112,8 +112,10 @@ module Meetings
       begin
         attempt += 1
         Openai::AudioTranscriptionsClient.transcribe(**options)
-      rescue Openai::AudioTranscriptionsClient::ConnectionError
-        raise if attempt >= TRANSCRIPTION_CONNECTION_RETRY_ATTEMPTS
+      rescue Openai::AudioTranscriptionsClient::ConnectionError => error
+        if attempt >= TRANSCRIPTION_CONNECTION_RETRY_ATTEMPTS
+          raise Openai::AudioTranscriptionsClient::ConnectionError, "#{error.message} after #{attempt} attempts"
+        end
 
         sleep(TRANSCRIPTION_CONNECTION_RETRY_BASE_DELAY * attempt)
         retry
