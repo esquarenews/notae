@@ -153,4 +153,27 @@ RSpec.describe Search::WorkspaceSearchService do
 
     expect(results.first.title).to eq(strong_page.title)
   end
+
+  it "returns meeting sessions from lexical transcript search" do
+    user = User.create!(email: "semantic-meeting-search@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Semantic Meeting Search", slug: "semantic-meeting-search")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    MeetingSession.create!(
+      workspace: workspace,
+      created_by: user,
+      updated_by: user,
+      title: "Weekly sync",
+      capture_mode: "upload",
+      provider: "local",
+      status: "completed",
+      transcript_text: "Errol confirmed the webinar launch timeline.",
+      summary_markdown: "### Summary\n- Webinar launch timeline confirmed."
+    )
+
+    results = described_class.new(user: user, workspace: workspace, query: "webinar launch").call
+
+    expect(results.map(&:kind)).to include("Meeting session")
+    expect(results.map(&:title)).to include("Weekly sync")
+  end
 end

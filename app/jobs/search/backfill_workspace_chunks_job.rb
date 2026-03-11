@@ -17,6 +17,10 @@ module Search
       workspace.kalendarium_events.find_each do |kalendarium_event|
         Search::ChunkIndexingService.index_kalendarium_event!(kalendarium_event: kalendarium_event)
       end
+
+      workspace.meeting_sessions.find_each do |meeting_session|
+        Search::ChunkIndexingService.index_meeting_session!(meeting_session: meeting_session)
+      end
     end
   end
 end

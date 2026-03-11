@@ -76,4 +76,53 @@ RSpec.describe "Workspace home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Library")
   end
+
+  it "renders the daily brief on the home page and the proactive overlay in shell layout" do
+    user = User.create!(email: "home-knowledge-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Knowledge home", slug: "knowledge-home")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Database.create!(workspace: workspace, name: "Tasks")
+
+    KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Daily workspace brief",
+      summary: "Review the critical blockers before noon. [1]",
+      insights_json: [ "Approvals remain outstanding. [1]" ],
+      task_suggestions_json: [
+        { "title" => "Follow up with approver", "owner" => "Errol", "rationale" => "Approval is still missing. [1]" }
+      ],
+      sources_json: [ { "index" => 1, "title" => "Launch note", "url" => "/w/#{workspace.slug}/pages/test" } ],
+      generated_for_date: Date.current,
+      generated_at: Time.current
+    )
+    KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Suggested next step",
+      summary: "Escalate the approval gap this afternoon. [1]",
+      task_suggestions_json: [
+        { "title" => "Escalate approval gap", "owner" => "Errol", "rationale" => "This is blocking progress. [1]" }
+      ],
+      sources_json: [ { "index" => 1, "title" => "Launch note", "url" => "/w/#{workspace.slug}/pages/test" } ],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Daily workspace brief")
+    expect(response.body).to include("Review the critical blockers before noon. [1]")
+    expect(response.body).to include("notae-knowledge-overlay")
+    expect(response.body).to include("Escalate the approval gap this afternoon. [1]")
+    expect(response.body).to include("Choose tasks grid")
+    expect(response.body).to include("Create Nota")
+    expect(response.body).to include("Dismiss")
+  end
 end

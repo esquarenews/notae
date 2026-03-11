@@ -78,6 +78,14 @@ Rails.application.routes.draw do
         post :reject
       end
     end
+    resources :knowledge_suggestions, only: [] do
+      member do
+        post :dismiss
+        post :convert_to_task
+        post :convert_to_nota
+        post :refresh
+      end
+    end
     resources :memberships, only: :update
     resources :databases, only: %i[show create update destroy] do
       member do
@@ -183,6 +191,10 @@ Rails.application.routes.draw do
               get :transcript
             end
           end
+        end
+        namespace :knowledge do
+          resources :suggestions, only: :index
+          resources :ingestions, only: :create
         end
       end
     end

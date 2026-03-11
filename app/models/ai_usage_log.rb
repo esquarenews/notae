@@ -4,6 +4,7 @@ class AiUsageLog < ApplicationRecord
   OP_SEARCH_ANSWER = "search_answer_generation"
   OP_ASSISTANT_QUERY = "assistant_query_generation"
   OP_ASSISTANT_WRITE = "assistant_write_generation"
+  OP_KNOWLEDGE_SUGGESTION = "knowledge_suggestion_generation"
   OP_MEETING_TRANSCRIPTION = "meeting_transcription"
   OP_MEETING_SUMMARY = "meeting_summary_generation"
   OPERATIONS = [
@@ -12,6 +13,7 @@ class AiUsageLog < ApplicationRecord
     OP_SEARCH_ANSWER,
     OP_ASSISTANT_QUERY,
     OP_ASSISTANT_WRITE,
+    OP_KNOWLEDGE_SUGGESTION,
     OP_MEETING_TRANSCRIPTION,
     OP_MEETING_SUMMARY
   ].freeze
@@ -21,6 +23,7 @@ class AiUsageLog < ApplicationRecord
     OP_SEARCH_ANSWER => "Search answer generation",
     OP_ASSISTANT_QUERY => "Assistant query generation",
     OP_ASSISTANT_WRITE => "Assistant write generation",
+    OP_KNOWLEDGE_SUGGESTION => "Knowledge suggestion generation",
     OP_MEETING_TRANSCRIPTION => "Meeting diarization",
     OP_MEETING_SUMMARY => "Meeting summary generation"
   }.freeze

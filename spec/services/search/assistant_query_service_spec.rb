@@ -203,6 +203,37 @@ RSpec.describe Search::AssistantQueryService do
     expect(usage).to exist
   end
 
+  it "uses web search for live prompts even when document scope is selected" do
+    user = User.create!(email: "assistant-live-web@example.com", password: "password123", openai_api_key: "sk-test", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "Assistant Live Web", slug: "assistant-live-web")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Current page")
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:model]).to eq(Search::AssistantQueryService::GENERAL_MODEL)
+      expect(args[:tools]).to eq([ { type: Search::AssistantQueryService::WEB_SEARCH_TOOL_TYPE, user_location: { type: "approximate", timezone: "Australia/Melbourne" } } ])
+      expect(args[:include]).to eq([ "web_search_call.action.sources" ])
+      {
+        text: "I need your location to give today's weather forecast.",
+        usage: { prompt_tokens: 46, completion_tokens: 16, total_tokens: 62 },
+        sources: [ { title: "Weather example", url: "https://weather.example/forecast" } ]
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "What is the weather today going to be?",
+      scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
+      current_page_id: page.id
+    ).call
+
+    expect(response).to be_present
+    expect(response.answer).to include("location")
+    expect(response.sources.first[:url]).to eq("https://weather.example/forecast")
+    expect(response.model).to eq(Search::AssistantQueryService::GENERAL_MODEL)
+  end
+
   it "drops invalid citations and keeps mapped sources only" do
     user = User.create!(email: "assistant-citation@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Assistant Citation", slug: "assistant-citation")

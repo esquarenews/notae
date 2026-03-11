@@ -99,6 +99,11 @@ class Page < ApplicationRecord
     archived_at.present?
   end
 
+  def search_source_text
+    block_text = blocks.active.ordered.pluck(:search_text).join("\n")
+    [ title, block_text ].join("\n").squish
+  end
+
   private
 
   def set_workspace_from_parent

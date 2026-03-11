@@ -166,6 +166,8 @@ module ApplicationHelper
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.2" y="3.2" width="11.6" height="10.6" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.8v2.7M11 1.8v2.7M2.2 6h11.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>'
       when :ai_history
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3.2h10v7.3H7.3L4 13V10.5H3V3.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5.4 6.2h5.2M5.4 8.1h3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>'
+      when :suggestion
+        '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2.2a3.9 3.9 0 0 0-3.9 3.9c0 1.4.7 2.5 1.8 3.3.6.5.9 1.1 1 1.8h2.2c.1-.7.4-1.3 1-1.8A4 4 0 0 0 11.9 6 3.9 3.9 0 0 0 8 2.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.6 12.1h2.8M6.9 13.7h2.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>'
       when :settings
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.9v1.4M8 12.7v1.4M13.1 8h1.4M1.5 8h1.4M11.9 4.1l1 1M3.1 11.9l1-1M11.9 11.9l1-1M3.1 4.1l1 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>'
       when :trash
@@ -201,6 +203,49 @@ module ApplicationHelper
 
   def format_date_mention(date:, preference:)
     DateMentions::Formatter.format(date: date, preference: preference)
+  end
+
+  def knowledge_suggestion_task_database_options(databases)
+    Array(databases).map do |database|
+      icon = database.icon.presence || "🗃️"
+      [ "#{icon} #{database.name}", database.id ]
+    end
+  end
+
+  def ai_safe_sources(sources)
+    Array(sources).filter_map do |source|
+      normalized = source.respond_to?(:with_indifferent_access) ? source.with_indifferent_access : source
+      safe_url = ai_safe_source_url(normalized[:url])
+      next if safe_url.blank?
+
+      normalized.merge(url: safe_url)
+    end
+  end
+
+  def ai_safe_source_url(raw_url)
+    value = raw_url.to_s.strip
+    return nil if value.blank?
+
+    if value.start_with?("/")
+      return nil if value.start_with?("//")
+
+      parsed = URI.parse(value)
+      return nil if parsed.scheme.present? || parsed.host.present?
+
+      return value
+    end
+
+    parsed = URI.parse(value)
+    return nil unless %w[http https].include?(parsed.scheme)
+    return nil if parsed.host.blank?
+
+    value
+  rescue URI::InvalidURIError
+    nil
+  end
+
+  def ai_external_source_url?(url)
+    ai_safe_source_url(url).to_s.match?(%r{\Ahttps?://}i)
   end
 
   private

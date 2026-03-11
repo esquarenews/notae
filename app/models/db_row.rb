@@ -108,6 +108,10 @@ class DbRow < ApplicationRecord
     self.data_json = payload
   end
 
+  def search_source_text
+    [ title, search_text ].join("\n").squish
+  end
+
   private
 
   def set_workspace_from_database

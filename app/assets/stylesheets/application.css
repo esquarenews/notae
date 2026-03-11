@@ -1539,6 +1539,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   display: grid;
   gap: 0.2rem;
   background: color-mix(in srgb, var(--notae-surface-raised) 96%, transparent);
+  min-width: 0;
 }
 
 .notae-ai-message.is-user {
@@ -1570,6 +1571,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   color: var(--notae-text);
   white-space: pre-wrap;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .notae-ai-message-meta {
@@ -1690,6 +1694,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   color: var(--notae-text);
   max-height: 210px;
   overflow-y: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .notae-ai-assistant-sources {
@@ -1702,6 +1709,13 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-ai-assistant-sources li {
   display: grid;
   gap: 0.04rem;
+  min-width: 0;
+}
+
+.notae-ai-assistant-sources .notae-utility-link {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .notae-ai-sources-panel {
@@ -11343,5 +11357,231 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+.notae-knowledge-card {
+  display: grid;
+  gap: 0.95rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--notae-border-muted);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--notae-panel-elevated) 88%, transparent);
+}
+
+.notae-knowledge-card.is-compact {
+  padding: 0.85rem 0.9rem;
+  gap: 0.8rem;
+}
+
+.notae-knowledge-card-head,
+.notae-knowledge-card-title-wrap,
+.notae-knowledge-card-actions,
+.notae-knowledge-card-meta,
+.notae-knowledge-task-item,
+.notae-knowledge-overlay-head {
+  display: flex;
+  align-items: flex-start;
+}
+
+.notae-knowledge-card-head,
+.notae-knowledge-overlay-head {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.notae-knowledge-card-title-wrap {
+  gap: 0.7rem;
+}
+
+.notae-knowledge-card-icon,
+.notae-knowledge-overlay-toggle .notae-icon-svg {
+  color: var(--notae-accent-strong);
+}
+
+.notae-knowledge-card-kicker {
+  margin: 0 0 0.18rem;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--notae-text-subtle);
+}
+
+.notae-knowledge-card h3,
+.notae-knowledge-card h4 {
+  margin: 0;
+  color: var(--notae-text-strong);
+}
+
+.notae-knowledge-card h3 {
+  font-size: 1rem;
+}
+
+.notae-knowledge-card h4 {
+  font-size: 0.86rem;
+}
+
+.notae-knowledge-card-meta {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  color: var(--notae-text-subtle);
+}
+
+.notae-knowledge-card-summary {
+  color: var(--notae-text-strong);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.notae-knowledge-card-summary > div,
+.notae-ai-history-answer > p {
+  margin: 0;
+}
+
+.notae-knowledge-card-section {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.notae-knowledge-card-list,
+.notae-knowledge-task-list {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.notae-knowledge-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.notae-knowledge-task-item {
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--notae-border-muted);
+  border-radius: 0.9rem;
+  background: var(--notae-panel-bg);
+}
+
+.notae-knowledge-task-copy {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.notae-knowledge-task-copy strong,
+.notae-ai-history-prompt,
+.notae-ai-history-answer {
+  color: var(--notae-text-strong);
+}
+
+.notae-knowledge-task-copy span,
+.notae-knowledge-task-copy p {
+  margin: 0;
+  color: var(--notae-text-subtle);
+  font-size: 0.84rem;
+}
+
+.notae-knowledge-task-actions,
+.notae-knowledge-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notae-knowledge-inline-form .notae-auth-input {
+  min-width: 11rem;
+}
+
+.notae-knowledge-card-actions {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.notae-chip-button-subtle {
+  background: transparent;
+}
+
+.notae-knowledge-sources summary {
+  cursor: pointer;
+  color: var(--notae-text-subtle);
+  font-size: 0.84rem;
+}
+
+.notae-knowledge-overlay {
+  position: fixed;
+  right: 1.15rem;
+  bottom: 1.15rem;
+  z-index: 32;
+  width: min(26rem, calc(100vw - 2rem));
+}
+
+.notae-knowledge-overlay-panel,
+.notae-knowledge-overlay-toggle {
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.notae-knowledge-overlay-panel {
+  border-radius: 1.1rem;
+  border: 1px solid var(--notae-border-muted);
+  background: color-mix(in srgb, var(--notae-panel-elevated) 95%, transparent);
+  backdrop-filter: blur(14px);
+  padding: 0.8rem;
+}
+
+.notae-knowledge-overlay-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--notae-border-muted);
+  border-radius: 999px;
+  background: var(--notae-panel-elevated);
+  padding: 0.62rem 0.9rem;
+  color: var(--notae-text-strong);
+}
+
+.notae-knowledge-overlay-toggle.is-hidden,
+.notae-knowledge-overlay-panel.is-hidden {
+  display: none;
+}
+
+.notae-knowledge-overlay-title {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--notae-text-subtle);
+}
+
+.notae-knowledge-overlay .notae-knowledge-card {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.notae-knowledge-overlay .notae-knowledge-card-meta,
+.notae-knowledge-overlay .notae-knowledge-card-actions,
+.notae-knowledge-overlay .notae-knowledge-sources,
+.notae-knowledge-overlay .notae-knowledge-task-actions {
+  display: none;
+}
+
+.notae-knowledge-overlay .notae-knowledge-task-item {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 900px) {
+  .notae-knowledge-task-item,
+  .notae-knowledge-inline-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notae-knowledge-inline-form .notae-auth-input {
+    min-width: 0;
   }
 }

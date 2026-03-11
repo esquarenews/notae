@@ -20,6 +20,8 @@ class WorkspaceHomeController < ApplicationController
                     .limit(3)
                     .to_a
     @recent_databases = policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).limit(3).to_a
+    @knowledge_task_databases = knowledge_task_databases_for(@workspace)
+    @daily_knowledge_suggestion = resolve_daily_knowledge_suggestion
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_memberships = @memberships.any? { |membership| policy(membership).update? }
     @audit_events = policy_scope(AuditEvent)
@@ -53,6 +55,27 @@ class WorkspaceHomeController < ApplicationController
 
   def open_last_visited_page?
     current_user.open_on_start_preference == "last_visited_page"
+  end
+
+  def resolve_daily_knowledge_suggestion
+    return unless data_source_available?("knowledge_suggestions")
+
+    suggestion = policy_scope(KnowledgeSuggestion)
+                 .for_workspace(@workspace)
+                 .daily_summaries
+                 .active
+                 .find_by(generated_for_date: Date.current)
+    return suggestion if suggestion.present?
+
+    return unless current_user.openai_api_key_configured?
+
+    existing_for_today = policy_scope(KnowledgeSuggestion)
+                         .for_workspace(@workspace)
+                         .daily_summaries
+                         .find_by(generated_for_date: Date.current)
+    return nil if existing_for_today.present?
+
+    Search::PersistKnowledgeSuggestionService.ensure_daily_summary!(user: current_user, workspace: @workspace)
   end
 
   def redirect_to_last_visited_page

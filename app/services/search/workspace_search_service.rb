@@ -15,7 +15,7 @@ module Search
     def call
       return [] if query.blank?
 
-      merge_and_rank_results(page_results + block_results + db_row_results + kalendarium_event_results + semantic_chunk_results)
+      merge_and_rank_results(page_results + block_results + db_row_results + kalendarium_event_results + meeting_session_results + semantic_chunk_results)
     end
 
     private
@@ -99,6 +99,22 @@ module Search
       end
     end
 
+    def meeting_session_results
+      Pundit.policy_scope!(user, MeetingSession)
+            .for_workspace(workspace)
+            .search_full_text(query)
+            .limit(12)
+            .map do |session|
+        Result.new(
+          kind: "Meeting session",
+          title: session.title,
+          excerpt: highlighted_excerpt([ session.summary_markdown, session.transcript_text ].compact.join(" · ")),
+          url: Rails.application.routes.url_helpers.workspace_meetings_path(workspace_slug: workspace.slug, anchor: "meeting_session_#{session.id}"),
+          score: 16
+        )
+      end
+    end
+
     def semantic_chunk_results
       return [] unless user.openai_api_key_configured?
       return [] unless semantic_ai_allowed?
@@ -135,7 +151,7 @@ module Search
         scope = scope.where([ where_clause, *patterns ])
       end
 
-      scope.includes(:page, db_row: :database)
+      scope.includes(:page, { db_row: :database }, :meeting_session)
            .order(updated_at: :desc)
            .limit(SEMANTIC_CANDIDATE_LIMIT)
            .to_a
@@ -145,11 +161,13 @@ module Search
       page_ids = Pundit.policy_scope!(user, Page).for_workspace(workspace).active.select(:id)
       row_ids = Pundit.policy_scope!(user, DbRow).for_workspace(workspace).active.select(:id)
       event_ids = Pundit.policy_scope!(user, KalendariumEvent).for_workspace(workspace).select(:id)
+      meeting_ids = Pundit.policy_scope!(user, MeetingSession).for_workspace(workspace).select(:id)
       workspace_scope = SearchChunk.for_workspace(workspace)
 
       workspace_scope.where(page_id: page_ids)
                      .or(workspace_scope.where(db_row_id: row_ids))
                      .or(workspace_scope.where(kalendarium_event_id: event_ids))
+                     .or(workspace_scope.where(meeting_session_id: meeting_ids))
     end
 
     def embed_query
@@ -214,6 +232,15 @@ module Search
             date: event.starts_at_utc.to_date.iso8601,
             anchor: "kalendarium_event_#{event.id}"
           ),
+          score: 30 + (similarity * 12)
+        )
+      elsif chunk.meeting_session.present?
+        session = chunk.meeting_session
+        Result.new(
+          kind: "Meeting session",
+          title: session.title,
+          excerpt: highlighted_excerpt(chunk.text),
+          url: Rails.application.routes.url_helpers.workspace_meetings_path(workspace_slug: workspace.slug, anchor: "meeting_session_#{session.id}"),
           score: 30 + (similarity * 12)
         )
       end

@@ -84,6 +84,17 @@ class KalendariumEvent < ApplicationRecord
     meeting_sessions.order(created_at: :desc).first
   end
 
+  def search_source_text
+    [
+      title,
+      description,
+      location,
+      kalendarium_project&.name,
+      linked_page&.title,
+      linked_db_row&.title
+    ].compact.join("\n").squish
+  end
+
   private
 
   def valid_http_url?(raw_url)

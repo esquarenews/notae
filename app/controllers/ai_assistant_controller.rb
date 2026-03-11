@@ -160,11 +160,19 @@ class AiAssistantController < ApplicationController
   def sanitized_source_url(raw_url)
     value = raw_url.to_s.strip
     return nil if value.blank?
-    return nil unless value.start_with?("/")
-    return nil if value.start_with?("//")
+
+    if value.start_with?("/")
+      return nil if value.start_with?("//")
+
+      parsed = URI.parse(value)
+      return nil if parsed.scheme.present? || parsed.host.present?
+
+      return value
+    end
 
     parsed = URI.parse(value)
-    return nil if parsed.scheme.present? || parsed.host.present?
+    return nil unless %w[http https].include?(parsed.scheme)
+    return nil if parsed.host.blank?
 
     value
   rescue URI::InvalidURIError

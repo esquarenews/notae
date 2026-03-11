@@ -145,6 +145,50 @@ RSpec.describe "AI Assistant", type: :request do
     expect(AiConversation.order(:created_at).last.status).to eq(AiConversation::STATUS_SUCCESS)
   end
 
+  it "uses web-backed answers for live questions and renders safe external sources" do
+    user = User.create!(email: "ai-assistant-weather@example.com", password: "password123", openai_api_key: "sk-test", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "AI Assistant Weather", slug: "ai-assistant-weather")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Weather page")
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:tools]).to eq([ { type: Search::AssistantQueryService::WEB_SEARCH_TOOL_TYPE, user_location: { type: "approximate", timezone: "Australia/Melbourne" } } ])
+      {
+        text: "I need your location to answer today's weather.",
+        usage: { prompt_tokens: 52, completion_tokens: 14, total_tokens: 66 },
+        sources: [
+          { title: "Trusted weather", url: "https://weather.example/today" }
+        ]
+      }
+    end
+
+    sign_in user
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+
+    post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+         params: {
+           ai_assistant: {
+             prompt: "What is the weather today going to be?",
+             scope: Search::AssistantQueryService::SCOPE_AUTO,
+             current_page_id: page.id
+           }
+         },
+         headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("I need your location to answer today&#39;s weather.")
+    expect(response.body).to include("Trusted weather")
+    expect(response.body).to include("https://weather.example/today")
+    expect(response.body).to include("target=\"_blank\"")
+    expect(response.body).to include("Live web")
+    expect(response.body).to include("<details class=\"notae-ai-sources-panel\">")
+    expect(response.body).not_to include("<details class=\"notae-ai-sources-panel\" open>")
+    conversation = AiConversation.order(:created_at).last
+    expect(conversation.answer).to eq("I need your location to answer today's weather.")
+    expect(conversation.sources.first.fetch("url")).to eq("https://weather.example/today")
+    expect(conversation).to be_live_web
+  end
+
   it "restricts document scope to the current workspace page" do
     user = User.create!(email: "ai-assistant-document-scope@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "AI Assistant Scope", slug: "ai-assistant-scope")
@@ -253,7 +297,7 @@ RSpec.describe "AI Assistant", type: :request do
     expect(rendered_prompts).not_to include("rail-cap-prompt-0")
   end
 
-  it "renders only internal source links in AI conversation history" do
+  it "renders internal links and only safe external source links in AI conversation history" do
     user = User.create!(email: "ai-assistant-source-links@example.com", password: "password123")
     workspace = Workspace.create!(name: "AI Assistant Source Links", slug: "ai-assistant-source-links")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -267,8 +311,9 @@ RSpec.describe "AI Assistant", type: :request do
       status: AiConversation::STATUS_SUCCESS,
       sources: [
         { index: 1, title: "Internal page", kind: "Page", url: "/w/#{workspace.slug}" },
-        { index: 2, title: "External page", kind: "Page", url: "https://malicious.example/steal" },
-        { index: 3, title: "Scheme-relative", kind: "Page", url: "//malicious.example/steal" }
+        { index: 2, title: "Trusted external", kind: "Web source", url: "https://weather.example/today" },
+        { index: 3, title: "Scheme-relative", kind: "Page", url: "//malicious.example/steal" },
+        { index: 4, title: "Javascript", kind: "Page", url: "javascript:alert(1)" }
       ]
     )
 
@@ -277,7 +322,9 @@ RSpec.describe "AI Assistant", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Internal page")
-    expect(response.body).not_to include("External page")
+    expect(response.body).to include("Trusted external")
+    expect(response.body).to include("weather.example/today")
     expect(response.body).not_to include("malicious.example")
+    expect(response.body).not_to include("javascript:alert")
   end
 end

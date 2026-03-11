@@ -1,0 +1,18 @@
+<% if @active_knowledge_suggestion.present? %>
+  <section class="notae-knowledge-overlay"
+           data-controller="knowledge-suggestion-overlay"
+           data-knowledge-suggestion-overlay-delay-value="18000"
+           data-action="mouseenter->knowledge-suggestion-overlay#pause mouseleave->knowledge-suggestion-overlay#resume focusin->knowledge-suggestion-overlay#pause focusout->knowledge-suggestion-overlay#resume">
+    <button type="button" class="notae-knowledge-overlay-toggle is-hidden" data-knowledge-suggestion-overlay-target="toggle" data-action="click->knowledge-suggestion-overlay#expand">
+      <%= notae_icon_svg(:suggestion) %>
+      <span>Suggestion</span>
+    </button>
+    <div class="notae-knowledge-overlay-panel" data-knowledge-suggestion-overlay-target="panel">
+      <div class="notae-knowledge-overlay-head">
+        <span class="notae-knowledge-overlay-title">Suggestion</span>
+        <button type="button" class="notae-inline-icon-button" data-action="click->knowledge-suggestion-overlay#collapse" aria-label="Collapse suggestion">✕</button>
+      </div>
+      <%= render 'shared/knowledge_suggestion_card', suggestion: @active_knowledge_suggestion, workspace: @ai_rail_workspace, task_databases: @active_knowledge_task_databases, compact: true %>
+    </div>
+  </section>
+<% end %>

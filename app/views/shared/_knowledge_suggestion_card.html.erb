@@ -1,0 +1,113 @@
+<% compact = local_assigns.fetch(:compact, false) %>
+<% task_databases = local_assigns.fetch(:task_databases, []) %>
+<% workspace = local_assigns.fetch(:workspace, suggestion.workspace) %>
+<article class="notae-knowledge-card <%= 'is-compact' if compact %>" data-controller="copy-text">
+  <div class="notae-knowledge-card-head">
+    <div class="notae-knowledge-card-title-wrap">
+      <span class="notae-knowledge-card-icon"><%= notae_icon_svg(:suggestion) %></span>
+      <div>
+        <p class="notae-knowledge-card-kicker"><%= suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? 'Daily morning summary' : 'Suggested next step' %></p>
+        <h3><%= suggestion.title %></h3>
+      </div>
+    </div>
+    <div class="notae-knowledge-card-meta">
+      <span><%= time_ago_in_words(suggestion.generated_at) %> ago</span>
+      <% if suggestion.expires_at.present? %>
+        <span>Expires <%= time_ago_in_words(suggestion.expires_at) %></span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="notae-knowledge-card-body">
+    <div class="notae-knowledge-card-summary"><%= simple_format(h(suggestion.summary), {}, wrapper_tag: 'div') %></div>
+
+    <% insights = Array(suggestion.insights_json) %>
+    <% if insights.any? %>
+      <section class="notae-knowledge-card-section">
+        <h4>Insights</h4>
+        <ul class="notae-knowledge-card-list">
+          <% insights.first(compact ? 2 : 4).each do |insight| %>
+            <li><%= insight %></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <% tasks = Array(suggestion.task_suggestions_json) %>
+    <% if tasks.any? %>
+      <section class="notae-knowledge-card-section">
+        <h4>Task suggestions</h4>
+        <ul class="notae-knowledge-task-list">
+          <% tasks.first(compact ? 1 : tasks.length).each_with_index do |task, index| %>
+            <li class="notae-knowledge-task-item">
+              <div class="notae-knowledge-task-copy">
+                <strong><%= task['title'] %></strong>
+                <% if task['owner'].to_s.strip.present? %>
+                  <span>Owner: <%= task['owner'] %></span>
+                <% end %>
+                <% if task['rationale'].to_s.strip.present? %>
+                  <p><%= task['rationale'] %></p>
+                <% end %>
+              </div>
+              <% unless compact %>
+                <div class="notae-knowledge-task-actions">
+                  <%= form_with url: convert_to_task_knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id), method: :post, class: "notae-knowledge-inline-form" do |form| %>
+                    <%= form.hidden_field :task_index, value: index, name: 'knowledge_suggestion[task_index]' %>
+                    <%= form.select :database_id,
+                                    options_for_select(knowledge_suggestion_task_database_options(task_databases)),
+                                    { prompt: task_databases.any? ? 'Choose tasks grid' : 'No grids available' },
+                                    { name: 'knowledge_suggestion[database_id]', class: 'notae-auth-input', disabled: task_databases.empty? } %>
+                    <%= form.submit 'Add task', class: 'notae-chip-button', disabled: task_databases.empty? %>
+                  <% end %>
+                </div>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <% related_notes = Array(suggestion.related_notes_json) %>
+    <% if related_notes.any? && !compact %>
+      <section class="notae-knowledge-card-section">
+        <h4>Related notes</h4>
+        <ul class="notae-knowledge-card-list">
+          <% related_notes.first(4).each do |item| %>
+            <li><strong><%= item['title'] %></strong>: <%= item['reason'] %></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <details class="notae-knowledge-sources">
+      <summary>Sources</summary>
+      <ul class="notae-knowledge-card-list">
+        <% Array(suggestion.sources_json).each do |source| %>
+          <li>
+            <strong>[<%= source['index'] || source[:index] %>] <%= source['title'] || source[:title] %></strong>
+            <div class="notae-page-subtle"><%= source['url'] || source[:url] %></div>
+          </li>
+        <% end %>
+      </ul>
+    </details>
+  </div>
+
+  <div class="notae-knowledge-card-actions">
+    <button type="button"
+            class="notae-chip-button"
+            data-action="click->copy-text#copy"
+            data-copy-text-value="<%= [suggestion.summary, *Array(suggestion.insights_json), *Array(suggestion.task_suggestions_json).map { |item| item['title'] }].join("\n") %>">Copy</button>
+    <%= button_to 'Create Nota',
+                  convert_to_nota_knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id),
+                  method: :post,
+                  class: 'notae-chip-button' %>
+    <%= button_to 'Refresh',
+                  refresh_knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id),
+                  method: :post,
+                  class: 'notae-chip-button' %>
+    <%= button_to 'Dismiss',
+                  dismiss_knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id),
+                  method: :post,
+                  class: 'notae-chip-button notae-chip-button-subtle' %>
+  </div>
+</article>

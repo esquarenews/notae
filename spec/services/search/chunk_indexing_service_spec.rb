@@ -102,4 +102,32 @@ RSpec.describe Search::ChunkIndexingService do
     expect(chunk.database_id).to eq(database.id)
     expect(chunk.text).to include("Alpha row")
   end
+
+  it "indexes meeting transcripts with provenance metadata" do
+    user = User.create!(email: "chunk-meeting@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Chunk Meeting", slug: "chunk-meeting")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    session = MeetingSession.create!(
+      workspace: workspace,
+      created_by: user,
+      updated_by: user,
+      title: "Weekly standup",
+      capture_mode: "upload",
+      provider: "local",
+      status: "completed",
+      transcript_text: "[00:00] Errol: Review the launch checklist.",
+      summary_markdown: "### Summary\n- Review launch checklist."
+    )
+
+    described_class.index_meeting_session!(meeting_session: session)
+
+    chunk = SearchChunk.for_source(SearchChunk::SOURCE_MEETING_SESSION, session.id).first
+    expect(chunk).to be_present
+    expect(chunk.meeting_session_id).to eq(session.id)
+    expect(chunk.source_uri).to eq("/w/#{workspace.slug}/meetings#meeting_session_#{session.id}")
+    expect(chunk.source_title).to eq("Weekly standup")
+    expect(chunk.metadata_json.dig("entities", "names")).to include("Errol")
+    expect(chunk.hash_verification_succeeds?).to eq(true)
+  end
 end

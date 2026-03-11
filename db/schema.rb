@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_03_181000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_12_094500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -432,6 +432,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_181000) do
     t.index ["workspace_id", "status"], name: "index_kalendarium_write_proposals_on_workspace_and_status"
   end
 
+  create_table "knowledge_suggestions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "ai_conversation_id"
+    t.datetime "converted_at"
+    t.datetime "created_at", null: false
+    t.datetime "dismissed_at"
+    t.datetime "expires_at"
+    t.datetime "generated_at", null: false
+    t.date "generated_for_date"
+    t.jsonb "insights_json", default: [], null: false
+    t.string "kind", null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.jsonb "related_notes_json", default: [], null: false
+    t.jsonb "sources_json", default: [], null: false
+    t.string "status", default: "active", null: false
+    t.text "summary", null: false
+    t.jsonb "task_suggestions_json", default: [], null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["ai_conversation_id"], name: "index_knowledge_suggestions_on_ai_conversation_id"
+    t.index ["user_id", "workspace_id", "kind", "generated_for_date"], name: "idx_knowledge_suggestions_daily_unique", unique: true, where: "((kind)::text = 'daily_summary'::text)"
+    t.index ["user_id", "workspace_id", "status", "generated_at"], name: "idx_knowledge_suggestions_active_lookup"
+    t.index ["user_id"], name: "index_knowledge_suggestions_on_user_id"
+    t.index ["workspace_id"], name: "index_knowledge_suggestions_on_workspace_id"
+  end
+
   create_table "meeting_bot_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
@@ -651,9 +678,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_181000) do
     t.jsonb "embedding", default: [], null: false
     t.string "embedding_model"
     t.uuid "kalendarium_event_id"
+    t.uuid "meeting_session_id"
+    t.jsonb "metadata_json", default: {}, null: false
     t.uuid "page_id"
+    t.string "source_content_hash"
     t.uuid "source_id", null: false
+    t.string "source_title"
     t.string "source_type", null: false
+    t.string "source_uri"
     t.text "text", null: false
     t.integer "token_count", default: 0, null: false
     t.datetime "updated_at", null: false
@@ -662,7 +694,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_181000) do
     t.index ["database_id"], name: "index_search_chunks_on_database_id"
     t.index ["db_row_id"], name: "index_search_chunks_on_db_row_id"
     t.index ["kalendarium_event_id"], name: "index_search_chunks_on_kalendarium_event_id"
+    t.index ["meeting_session_id"], name: "index_search_chunks_on_meeting_session_id"
     t.index ["page_id"], name: "index_search_chunks_on_page_id"
+    t.index ["source_content_hash"], name: "index_search_chunks_on_source_content_hash"
     t.index ["source_type", "source_id", "chunk_index"], name: "idx_search_chunks_on_source_and_index", unique: true
     t.index ["workspace_id", "source_type"], name: "idx_search_chunks_on_workspace_and_source_type"
     t.index ["workspace_id", "updated_at"], name: "idx_search_chunks_on_workspace_and_updated_at"
@@ -837,6 +871,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_181000) do
   add_foreign_key "kalendarium_write_proposals", "kalendarium_events"
   add_foreign_key "kalendarium_write_proposals", "users"
   add_foreign_key "kalendarium_write_proposals", "workspaces"
+  add_foreign_key "knowledge_suggestions", "ai_conversations"
+  add_foreign_key "knowledge_suggestions", "users"
+  add_foreign_key "knowledge_suggestions", "workspaces"
   add_foreign_key "meeting_bot_runs", "meeting_sessions"
   add_foreign_key "meeting_sessions", "kalendarium_events"
   add_foreign_key "meeting_sessions", "pages"
@@ -872,6 +909,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_181000) do
   add_foreign_key "search_chunks", "databases"
   add_foreign_key "search_chunks", "db_rows"
   add_foreign_key "search_chunks", "kalendarium_events"
+  add_foreign_key "search_chunks", "meeting_sessions"
   add_foreign_key "search_chunks", "pages"
   add_foreign_key "search_chunks", "workspaces"
   add_foreign_key "share_link_views", "pages"

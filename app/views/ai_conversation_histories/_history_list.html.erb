@@ -5,10 +5,21 @@
         <li class="notae-ai-history-item">
           <div class="notae-ai-history-meta">
             <span class="notae-ai-history-workspace"><%= conversation.workspace.name %></span>
+            <% if conversation.status == AiConversation::STATUS_SUGGESTION %>
+              <span class="notae-workspace-home-role-badge">Suggestion</span>
+            <% end %>
+            <% if Rails.env.development? && conversation.live_web? %>
+              <span class="notae-workspace-home-role-badge">Live web</span>
+            <% end %>
             <span class="notae-ai-history-time"><%= time_ago_in_words(conversation.created_at) %> ago</span>
           </div>
-          <p class="notae-ai-history-prompt"><strong>Q:</strong> <%= conversation.prompt %></p>
-          <p class="notae-ai-history-answer"><strong>A:</strong> <%= conversation.answer %></p>
+          <% if conversation.status == AiConversation::STATUS_SUGGESTION %>
+            <p class="notae-ai-history-prompt"><strong>Suggestion:</strong> <%= conversation.prompt %></p>
+            <div class="notae-ai-history-answer"><%= simple_format(h(conversation.answer)) %></div>
+          <% else %>
+            <p class="notae-ai-history-prompt"><strong>Q:</strong> <%= conversation.prompt %></p>
+            <p class="notae-ai-history-answer"><strong>A:</strong> <%= conversation.answer %></p>
+          <% end %>
           <div class="notae-ai-history-actions">
             <button type="button"
                     class="notae-chip-button"

@@ -27,6 +27,7 @@ module Search
     SEARCH_MODEL = "gpt-4o-mini"
     WRITING_MODEL = "gpt-4.1-mini"
     GENERAL_MODEL = "gpt-4.1-mini"
+    WEB_SEARCH_TOOL_TYPE = "web_search".freeze
     CALENDAR_DIRECT_MODEL = "calendar-direct-v1"
     MAX_CONTEXT_ITEMS = 12
     CALENDAR_EVENT_LIMIT = 40
@@ -436,10 +437,40 @@ module Search
     end
 
     def use_general_knowledge_response?(resolved_scope:, context_entries:)
-      return false if resolved_scope == SCOPE_DOCUMENT
+      return true if live_web_prompt?
       return true if general_knowledge_prompt?
+      return false if resolved_scope == SCOPE_DOCUMENT
 
       context_entries.empty?
+    end
+
+    def live_web_prompt?
+      normalized = prompt.downcase.strip
+      return false if normalized.blank?
+      return false if context_bound_prompt?(normalized)
+
+      live_patterns = [
+        /\bweather\b/,
+        /\bforecast\b/,
+        /\btemperature\b/,
+        /\brain(?:ing)?\b/,
+        /\bhumidity\b/,
+        /\bwind(?:y|s)?\b/,
+        /\bnews\b/,
+        /\bheadline(?:s)?\b/,
+        /\blatest\b/,
+        /\bcurrent\b/,
+        /\bright now\b/,
+        /\btoday\b/,
+        /\btomorrow\b/,
+        /\bstock price\b/,
+        /\bprice of\b/,
+        /\bexchange rate\b/,
+        /\bwho won\b/,
+        /\bscore(?:s)?\b/
+      ]
+
+      live_patterns.any? { |pattern| normalized.match?(pattern) }
     end
 
     def general_knowledge_prompt?
@@ -473,6 +504,8 @@ module Search
     end
 
     def generate_general_knowledge_response(resolved_scope:, resolved_intent:)
+      return generate_live_web_response(resolved_scope: resolved_scope, resolved_intent: resolved_intent) if live_web_prompt?
+
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: general_prompt_for(resolved_scope: resolved_scope),
         api_key: user.openai_api_key,
@@ -498,6 +531,52 @@ module Search
       Response.new(
         answer: answer_text,
         sources: [],
+        scope: resolved_scope,
+        intent: resolved_intent,
+        auto_insert: false,
+        model: GENERAL_MODEL
+      )
+    end
+
+    def generate_live_web_response(resolved_scope:, resolved_intent:)
+      response = Openai::ResponsesClient.generate_text_with_usage(
+        prompt: live_web_prompt_for(resolved_scope: resolved_scope),
+        api_key: user.openai_api_key,
+        model: GENERAL_MODEL,
+        max_output_tokens: 420,
+        tools: [ web_search_tool ],
+        include: [ "web_search_call.action.sources" ]
+      )
+      answer_text = response[:text].to_s.strip
+      return unavailable(:empty_response) if answer_text.blank?
+
+      sources = Array(response[:sources]).first(6).map.with_index do |source, index|
+        {
+          index: index + 1,
+          title: source[:title],
+          kind: "Web source",
+          url: source[:url],
+          workspace_name: nil
+        }
+      end
+
+      Search::AiUsageLogger.log!(
+        user: user,
+        workspace: workspace,
+        operation: AiUsageLog::OP_ASSISTANT_QUERY,
+        model: GENERAL_MODEL,
+        usage: response[:usage],
+        metadata: {
+          scope: resolved_scope,
+          answer_mode: "live_web",
+          prompt_length: prompt.length,
+          source_count: sources.length
+        }
+      )
+
+      Response.new(
+        answer: answer_text,
+        sources: sources,
         scope: resolved_scope,
         intent: resolved_intent,
         auto_insert: false,
@@ -542,7 +621,7 @@ module Search
 
     def select_top_chunks(scope)
       terms = query_terms
-      records = scope.includes(:workspace, :page, { db_row: :database }, :kalendarium_event).order(updated_at: :desc).limit(220).to_a
+      records = scope.includes(:workspace, :page, { db_row: :database }, :kalendarium_event, :meeting_session).order(updated_at: :desc).limit(220).to_a
       return records.first(MAX_CONTEXT_ITEMS) if terms.empty?
 
       records.sort_by do |chunk|
@@ -569,11 +648,13 @@ module Search
       page_ids = accessible_pages_scope.select(:id)
       row_ids = accessible_rows_scope.select(:id)
       event_ids = accessible_kalendarium_events_scope.select(:id)
+      meeting_ids = accessible_meeting_sessions_scope.select(:id)
       base = SearchChunk.where(workspace_id: workspace_ids)
 
       base.where(page_id: page_ids)
           .or(base.where(db_row_id: row_ids))
           .or(base.where(kalendarium_event_id: event_ids))
+          .or(base.where(meeting_session_id: meeting_ids))
     end
 
     def accessible_pages_scope
@@ -586,6 +667,10 @@ module Search
 
     def accessible_kalendarium_events_scope
       Pundit.policy_scope!(user, KalendariumEvent)
+    end
+
+    def accessible_meeting_sessions_scope
+      Pundit.policy_scope!(user, MeetingSession)
     end
 
     def context_entry_for_chunk(chunk, index)
@@ -621,6 +706,19 @@ module Search
             view: "day",
             date: event.starts_at_utc.to_date.iso8601,
             anchor: "kalendarium_event_#{event.id}"
+          )
+        }
+      elsif chunk.meeting_session.present?
+        session = chunk.meeting_session
+        {
+          index: index,
+          kind: "Meeting session",
+          title: session.title,
+          excerpt: chunk.text,
+          workspace_name: chunk.workspace.name,
+          url: Rails.application.routes.url_helpers.workspace_meetings_path(
+            workspace_slug: chunk.workspace.slug,
+            anchor: "meeting_session_#{session.id}"
           )
         }
       end
@@ -660,6 +758,31 @@ module Search
         Scope: #{resolved_scope}
         Question: #{prompt}
       PROMPT
+    end
+
+    def live_web_prompt_for(resolved_scope:)
+      <<~PROMPT
+        You are Notae AI.
+        Answer the user's question using current web information when needed.
+        Keep the answer concise, practical, and directly responsive.
+        If the question depends on a location, account, or other missing detail, ask one short clarifying question instead of guessing.
+        Do not include raw URLs or citation markers in the answer body.
+
+        Scope: #{resolved_scope}
+        Question: #{prompt}
+      PROMPT
+    end
+
+    def web_search_tool
+      tool = { type: WEB_SEARCH_TOOL_TYPE }
+      timezone_name = user_time_zone&.tzinfo&.name.presence
+      if timezone_name.present?
+        tool[:user_location] = {
+          type: "approximate",
+          timezone: timezone_name
+        }
+      end
+      tool
     end
 
     def writing_prompt_for(resolved_scope:, resolved_intent:)

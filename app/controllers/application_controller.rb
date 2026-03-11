@@ -15,6 +15,7 @@ class ApplicationController < ActionController::Base
   before_action :set_ai_rail_context, if: :load_shell_context?
   before_action :set_ai_rail_conversations, if: :load_shell_context?
   before_action :set_ai_rail_usage_panel, if: :load_shell_context?
+  before_action :set_active_knowledge_suggestion, if: :load_shell_context?
   before_action :ensure_realtime_channel_loaded
   around_action :use_user_time_zone
   after_action :verify_pundit_authorization, unless: :devise_controller?
@@ -103,6 +104,26 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  def set_active_knowledge_suggestion
+    return unless user_signed_in?
+    return if @ai_rail_workspace.blank?
+    return unless data_source_available?("knowledge_suggestions")
+
+    @active_knowledge_suggestion = with_optional_schema_fallback(default: nil, feature: "knowledge suggestions") do
+      current_active_suggestion_for(@ai_rail_workspace)
+    end
+    @active_knowledge_task_databases = with_optional_schema_fallback(default: [], feature: "knowledge suggestion task targets") do
+      knowledge_task_databases_for(@ai_rail_workspace)
+    end
+
+    return if @active_knowledge_suggestion.present?
+    return unless should_generate_proactive_knowledge_suggestion?
+
+    @active_knowledge_suggestion = with_optional_schema_fallback(default: nil, feature: "proactive knowledge suggestion") do
+      Search::PersistKnowledgeSuggestionService.ensure_proactive!(user: current_user, workspace: @ai_rail_workspace)
+    end
+  end
+
   def recent_ai_conversations_for(user:, window: 1.week, limit: nil)
     return AiConversation.none unless data_source_available?("ai_conversations")
 
@@ -118,6 +139,40 @@ class ApplicationController < ActionController::Base
 
   def ai_rail_conversation_limit
     AI_RAIL_CONVERSATION_LIMIT
+  end
+
+  def current_active_suggestion_for(workspace)
+    policy_scope(KnowledgeSuggestion)
+      .for_workspace(workspace)
+      .active
+      .proactive
+      .recent_first
+      .first
+  end
+
+  def knowledge_task_databases_for(workspace)
+    policy_scope(Database)
+      .for_workspace(workspace)
+      .active
+      .select(:id, :name, :icon, :updated_at)
+      .order(updated_at: :desc)
+      .limit(24)
+      .to_a
+  end
+
+  def should_generate_proactive_knowledge_suggestion?
+    return false unless current_user.openai_api_key_configured?
+
+    current_hour = Time.zone.now.hour
+    return false unless current_hour >= 9 && current_hour < 18
+
+    recent_record = policy_scope(KnowledgeSuggestion)
+                    .for_workspace(@ai_rail_workspace)
+                    .proactive
+                    .where("generated_at >= ?", Search::PersistKnowledgeSuggestionService::PROACTIVE_INTERVAL.ago)
+                    .recent_first
+                    .first
+    recent_record.blank?
   end
 
   def build_ai_usage_panel(user:, workspace:)

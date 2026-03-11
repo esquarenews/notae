@@ -68,8 +68,7 @@
 
   <section class="notae-ai-thread" data-ai-rail-target="thread">
     <% ai_rail_conversations.each do |conversation| %>
-      <% sources = Array(conversation.sources).map { |source| source.respond_to?(:with_indifferent_access) ? source.with_indifferent_access : source } %>
-      <% safe_sources = sources.select { |source| source[:url].to_s.start_with?("/") && !source[:url].to_s.start_with?("//") } %>
+      <% safe_sources = ai_safe_sources(conversation.sources) %>
       <article class="notae-ai-message is-user is-compact">
         <p class="notae-ai-message-body"><%= conversation.prompt %></p>
       </article>
@@ -79,8 +78,13 @@
           <% if conversation.workspace.present? %>
             · <%= conversation.workspace.name %>
           <% end %>
-          <% if Rails.env.development? && conversation.respond_to?(:model) && conversation.model.present? %>
-            <span class="notae-ai-model-indicator">Model: <%= conversation.model %></span>
+          <% if Rails.env.development? %>
+            <% if conversation.respond_to?(:model) && conversation.model.present? %>
+              <span class="notae-ai-model-indicator">Model: <%= conversation.model %></span>
+            <% end %>
+            <% if conversation.live_web? %>
+              <span class="notae-ai-model-indicator">Live web</span>
+            <% end %>
           <% end %>
         </p>
         <p class="notae-ai-result-text"><%= conversation.answer %></p>
@@ -92,11 +96,14 @@
             </summary>
             <ul class="notae-ai-assistant-sources">
               <% safe_sources.each do |source| %>
+                <% external_source = ai_external_source_url?(source[:url]) %>
                 <li>
                   <%= link_to "[#{source[:index]}] #{source[:title]}",
                               source[:url],
                               class: "notae-utility-link",
-                              data: { turbo_frame: "_top" } %>
+                              data: { turbo_frame: "_top" },
+                              target: external_source ? "_blank" : nil,
+                              rel: external_source ? "noopener noreferrer nofollow" : nil %>
                   <% if source[:workspace_name].present? %>
                     <span class="notae-ai-copy"><%= source[:workspace_name] %></span>
                   <% end %>
