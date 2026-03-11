@@ -66,4 +66,25 @@ RSpec.describe Meetings::SpeakerResolutionService do
     service.apply_manual_mapping!({ "S2" => "Samantha" })
     expect(session.meeting_utterances.find_by!(speaker_key: "S2").speaker_name).to eq("Samantha")
   end
+
+  it "preserves provided speaker names when no alias exists" do
+    session = build_session(suffix: "provided-speaker-name")
+    service = described_class.new(session: session)
+
+    turns = [
+      Meetings::TranscriptIngestService::TurnInput.new(
+        position: 0,
+        started_ms: 0,
+        ended_ms: 1200,
+        speaker_key: "S9",
+        speaker_name: "Errol",
+        text: "Welcome everyone",
+        confidence: 0.82
+      )
+    ]
+
+    resolved = service.resolve(turns: turns)
+
+    expect(resolved.first.speaker_name).to eq("Errol")
+  end
 end

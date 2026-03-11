@@ -33,6 +33,7 @@ module Meetings
         alias_record = aliases_by_fingerprint[fingerprint]
         speaker_name =
           alias_record&.display_name.presence ||
+          speaker_name_for(turn) ||
           invitee_fallback_names[speaker_key].presence ||
           fallback_speaker_name(speaker_key)
 
@@ -88,6 +89,12 @@ module Meetings
       unique_keys.each_with_index.each_with_object({}) do |(speaker_key, index), memo|
         memo[speaker_key] = mapped_names[index] if mapped_names[index].present?
       end
+    end
+
+    def speaker_name_for(turn)
+      return unless turn.respond_to?(:speaker_name)
+
+      turn.speaker_name.to_s.strip.presence
     end
 
     def create_invitee_match_alias!(fingerprint:, speaker_name:)

@@ -3,7 +3,7 @@ module Internal
     MAX_UPLOAD_BYTES = 250.megabytes
 
     before_action :authenticate_internal_worker!
-    before_action :set_run, only: %i[heartbeat upload_complete failed]
+    before_action :set_run, only: %i[heartbeat upload_complete transcript_complete failed]
 
     def claim
       run = claim_next_run
@@ -18,12 +18,18 @@ module Internal
           workspace_id: run.meeting_session.workspace_id,
           heartbeat_path: heartbeat_internal_meeting_bot_run_path(run),
           upload_complete_path: upload_complete_internal_meeting_bot_run_path(run),
+          transcript_complete_path: transcript_complete_internal_meeting_bot_run_path(run),
           failed_path: failed_internal_meeting_bot_run_path(run)
         }
       }, status: :ok
     end
 
     def heartbeat
+      if worker_should_stop?
+        render json: { ok: false, continue: false, run_status: @run.status, session_status: @run.meeting_session.status }, status: :conflict
+        return
+      end
+
       metadata = @run.metadata_json.to_h
       metadata["heartbeat_payload"] = heartbeat_params.to_h if heartbeat_params.present?
       requested_status = normalized_status(@run.status)
@@ -34,7 +40,7 @@ module Internal
       )
       synchronize_session_status_from_run!(requested_status)
 
-      render json: { ok: true }, status: :ok
+      render json: { ok: true, continue: true }, status: :ok
     end
 
     def upload_complete
@@ -65,6 +71,39 @@ module Internal
       Meetings::ProcessSessionJob.perform_later(@run.meeting_session.id)
 
       render json: { ok: true }, status: :ok
+    end
+
+    def transcript_complete
+      utterances = transcript_complete_params[:utterances]
+      transcript_text = transcript_complete_params[:transcript_text]
+      if Array(utterances).empty? && transcript_text.to_s.strip.blank?
+        render json: { error: { code: "missing_transcript", message: "utterances or transcript_text is required" } }, status: :unprocessable_entity
+        return
+      end
+
+      Meetings::TranscriptIngestService.new(
+        session: @run.meeting_session,
+        actor: @run.meeting_session.updated_by || @run.meeting_session.created_by
+      ).ingest!(
+        utterances: Array(utterances),
+        transcript_text: transcript_text,
+        metadata: transcript_complete_params[:metadata].to_h.merge(
+          "worker_id" => @run.worker_id.to_s.presence,
+          "bot_provider" => @run.provider,
+          "transcript_source" => "meeting_bot_captions"
+        ).compact
+      )
+
+      @run.update!(
+        status: "finished",
+        finished_at: Time.current,
+        last_heartbeat_at: Time.current,
+        error_message: nil
+      )
+
+      render json: { ok: true }, status: :ok
+    rescue Meetings::TranscriptIngestService::Error => error
+      render json: { error: { code: "invalid_transcript", message: error.message } }, status: :unprocessable_entity
     end
 
     def failed
@@ -127,6 +166,10 @@ module Internal
       params.permit(:status, :worker_id, :error_message, metadata: {})
     end
 
+    def transcript_complete_params
+      params.permit(:transcript_text, metadata: {}, utterances: [ :speaker_key, :speaker_name, :text, :started_ms, :ended_ms, :confidence ])
+    end
+
     def validate_upload_file(upload_file)
       content_type = upload_file.content_type.to_s.strip
       upload_size = upload_size_for(upload_file)
@@ -160,6 +203,12 @@ module Internal
       return requested if MeetingBotRun::STATUSES.include?(requested)
 
       default_status
+    end
+
+    def worker_should_stop?
+      return true if @run.status == "finished"
+
+      @run.meeting_session.status.in?(%w[cancelled completed failed])
     end
 
     def synchronize_session_status_from_run!(run_status)

@@ -202,6 +202,7 @@ Rails.application.routes.draw do
       member do
         post :heartbeat
         post :upload_complete
+        post :transcript_complete
         post :failed
       end
     end
