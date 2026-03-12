@@ -71,7 +71,15 @@ module Openai
       raise Error, message
     rescue JSON::ParserError => e
       raise Error, "Invalid response from responses API: #{e.message}"
-    rescue Timeout::Error, SocketError, Errno::ECONNREFUSED => e
+    rescue Timeout::Error,
+           SocketError,
+           EOFError,
+           IOError,
+           Errno::ECONNREFUSED,
+           Errno::ECONNRESET,
+           Errno::EHOSTUNREACH,
+           Errno::ENETUNREACH,
+           OpenSSL::SSL::SSLError => e
       raise Error, "Responses API connection failed: #{e.message}"
     end
 

@@ -75,6 +75,25 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.body).to include("Configure an OpenAI key in Settings &gt; Connections first.")
   end
 
+  it "falls back to a notice instead of raising when the assistant service crashes" do
+    user = User.create!(email: "ai-assistant-service-crash@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Assistant Service Crash", slug: "ai-assistant-service-crash")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    sign_in user
+    allow_any_instance_of(Search::AssistantQueryService).to receive(:call).and_raise(EOFError, "connection reset by peer")
+
+    expect {
+      post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+           params: { ai_assistant: { prompt: "Will this crash?", scope: Search::AssistantQueryService::SCOPE_AUTO } },
+           headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    }.to change(AiConversation, :count).by(1)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Notae AI request failed. Please retry.")
+    expect(AiConversation.order(:created_at).last.answer).to eq("Notae AI request failed. Please retry.")
+  end
+
   it "shows a no-context notice for document scope without current document and stores notice history" do
     user = User.create!(email: "ai-assistant-no-context@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "AI Assistant No Context", slug: "ai-assistant-no-context")

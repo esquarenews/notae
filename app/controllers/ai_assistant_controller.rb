@@ -20,8 +20,8 @@ class AiAssistantController < ApplicationController
       intent: @ai_assistant_intent,
       target_block: target_block
     )
-    @ai_assistant_response = service.call
-    @ai_assistant_notice = notice_for(service.unavailable_reason)
+    @ai_assistant_response = call_assistant_service(service)
+    @ai_assistant_notice = notice_for(@ai_assistant_error_reason || service.unavailable_reason)
     @ai_insert_payload = insert_payload_for(@ai_assistant_response, target_block: target_block)
     record_ai_conversation!
     @ai_rail_workspace = @workspace
@@ -84,6 +84,17 @@ class AiAssistantController < ApplicationController
     return @target_block = nil if block_id.blank?
 
     @target_block = policy_scope(Block).for_workspace(@workspace).active.find_by(id: block_id)
+  end
+
+  def call_assistant_service(service)
+    service.call
+  rescue StandardError => e
+    @ai_assistant_error_reason = :provider_error
+    Rails.logger.error(
+      "AI assistant query crashed for workspace=#{@workspace.id} user=#{current_user.id} " \
+      "#{e.class}: #{e.message}\n#{Array(e.backtrace).first(20).join("\n")}"
+    )
+    nil
   end
 
   def notice_for(reason)
