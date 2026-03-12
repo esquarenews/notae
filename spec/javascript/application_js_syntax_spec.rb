@@ -1,0 +1,27 @@
+require "rails_helper"
+require "open3"
+
+RSpec.describe "Application JavaScript syntax" do
+  it "parses successfully" do
+    application_path = Rails.root.join("app/javascript/application.js")
+
+    stdout, status = Open3.capture2e("node", "--check", application_path.to_s)
+
+    expect(status.success?).to be(true), <<~MESSAGE
+      Expected #{application_path} to parse cleanly with node --check.
+      Output:
+      #{stdout}
+    MESSAGE
+  rescue Errno::ENOENT
+    skip "node is not available in this environment"
+  end
+
+  it "recovers ai rail frame-missing responses instead of showing Turbo's placeholder" do
+    source = Rails.root.join("app/javascript/application.js").read
+
+    expect(source).to include('turbo:frame-missing')
+    expect(source).to include('frame.id !== "ai_rail_panel"')
+    expect(source).to include("window.Turbo.renderStreamMessage")
+    expect(source).to include("await visit(response)")
+  end
+end
