@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import process from "node:process"
 import { chromium } from "playwright"
-import { buildAbsoluteUrl, sleep, truncateError, TranscriptCollector } from "./lib/core.mjs"
+import { buildAbsoluteUrl, classifyGoogleMeetJoinText, sleep, summarizeBodyText, truncateError, TranscriptCollector } from "./lib/core.mjs"
 
 const config = {
   baseUrl: env("MEETING_BOT_BASE_URL"),
@@ -29,7 +29,16 @@ async function main() {
   console.log(`[meeting-bot] worker ${config.workerId} started`)
 
   while (true) {
-    const run = await claimNextRun()
+    let run = null
+    try {
+      run = await claimNextRun()
+    } catch (error) {
+      console.warn(`[meeting-bot] claim polling failed: ${truncateError(error)}`)
+      if (config.once) throw error
+      await sleep(config.pollIntervalMs)
+      continue
+    }
+
     if (!run) {
       if (config.once) break
       await sleep(config.pollIntervalMs)
@@ -38,10 +47,14 @@ async function main() {
 
     await handleRun(run).catch(async (error) => {
       console.error(`[meeting-bot] run ${run.id} failed: ${truncateError(error)}`)
-      await postJson(run.failed_path, {
-        error_message: truncateError(error),
-        metadata: error?.metadata || {}
-      })
+      try {
+        await postJson(run.failed_path, {
+          error_message: truncateError(error),
+          metadata: error?.metadata || {}
+        })
+      } catch (reportError) {
+        console.error(`[meeting-bot] failed to report run ${run.id} failure: ${truncateError(reportError)}`)
+      }
     })
 
     if (config.once) break
@@ -104,7 +117,12 @@ async function handleRun(run) {
       }
       if (joinState.failure) {
         const artifacts = await captureArtifacts(page, run, "join_failure")
-        throw new Error(joinState.failureWithArtifacts(artifacts))
+        const error = new Error(joinState.failureWithArtifacts(artifacts))
+        error.metadata = artifactMetadata(artifacts, joinStage, page, joinState.metadata)
+        throw error
+      }
+      if (joinState.metadata) {
+        await sendHeartbeat(run, currentStatus, page, { join_stage: joinStage, ...joinState.metadata })
       }
       await sleep(1500)
     }
@@ -138,7 +156,7 @@ async function handleRun(run) {
   } catch (error) {
     const artifacts = await captureArtifacts(page, run, "run_error")
     const wrapped = new Error(appendArtifactMessage(truncateError(error), artifacts))
-    wrapped.metadata = artifactMetadata(artifacts, joinStage, page)
+    wrapped.metadata = artifactMetadata(artifacts, joinStage, page, error?.metadata || {})
     throw wrapped
   } finally {
     if (heartbeatTimer) clearInterval(heartbeatTimer)
@@ -156,7 +174,12 @@ async function progressGoogleMeet(page, joinStartedAt, previousStage) {
   }
 
   if (Date.now() - joinStartedAt > config.joinTimeoutMs) {
-    return failureState("Timed out waiting to join the meeting.", previousStage || "join_timeout")
+    const bodyText = await visibleBodyText(page)
+    const detected = classifyGoogleMeetJoinText(bodyText)
+    return failureState("Timed out waiting to join the meeting.", previousStage || "join_timeout", {
+      join_reason: detected.reason,
+      page_body_excerpt: summarizeBodyText(bodyText)
+    })
   }
 
   if (await clickJoinButton(page)) {
@@ -165,11 +188,35 @@ async function progressGoogleMeet(page, joinStartedAt, previousStage) {
     return { joined: false, stage: "requested_join" }
   }
 
-  if (await detectJoinDenied(page)) {
-    return failureState("Meeting join request was denied or the meeting is unavailable.", "join_denied")
+  const bodyText = await visibleBodyText(page)
+  const detected = classifyGoogleMeetJoinText(bodyText)
+
+  if (detected.state === "waiting") {
+    return {
+      joined: false,
+      stage: previousStage === "requested_join" ? "requested_join" : "waiting_room",
+      metadata: {
+        join_reason: detected.reason,
+        page_body_excerpt: summarizeBodyText(bodyText)
+      }
+    }
   }
 
-  return { joined: false, stage: previousStage || "waiting_room" }
+  if (detected.state === "denied") {
+    return failureState("Meeting join request was denied or the meeting is unavailable.", "join_denied", {
+      join_reason: detected.reason,
+      page_body_excerpt: summarizeBodyText(bodyText)
+    })
+  }
+
+  return {
+    joined: false,
+    stage: previousStage || "waiting_room",
+    metadata: {
+      join_reason: detected.reason,
+      page_body_excerpt: summarizeBodyText(bodyText)
+    }
+  }
 }
 
 async function dismissInterstitials(page) {
@@ -241,14 +288,13 @@ async function joinedGoogleMeet(page) {
   ])
 }
 
-async function detectJoinDenied(page) {
-  const bodyText = await page.locator("body").innerText().catch(() => "")
-  return /denied|cannot join|can't join|meeting ended|not allowed|someone removed you/i.test(bodyText)
-}
-
 async function meetingEnded(page) {
   const bodyText = await page.locator("body").innerText().catch(() => "")
   return /you left the meeting|meeting has ended|call ended|no one else is here/i.test(bodyText)
+}
+
+async function visibleBodyText(page) {
+  return page.locator("body").innerText().catch(() => "")
 }
 
 async function scrapeGoogleMeetCaptions(page) {
@@ -352,12 +398,13 @@ async function captureArtifacts(page, run, label) {
   return { screenshotPath, htmlPath }
 }
 
-function artifactMetadata(artifacts, joinStage, page) {
+function artifactMetadata(artifacts, joinStage, page, metadata = {}) {
   return {
     join_stage: joinStage,
     artifact_screenshot_path: artifacts?.screenshotPath || null,
     artifact_html_path: artifacts?.htmlPath || null,
-    page_url: page?.url?.() || null
+    page_url: page?.url?.() || null,
+    ...metadata
   }
 }
 
@@ -366,11 +413,12 @@ function appendArtifactMessage(message, artifacts) {
   return `${message} (artifact: ${artifacts.screenshotPath})`
 }
 
-function failureState(message, stage) {
+function failureState(message, stage, metadata = {}) {
   return {
     joined: false,
     stage,
     failure: message,
+    metadata,
     failureWithArtifacts(artifacts) {
       return appendArtifactMessage(message, artifacts)
     }
@@ -399,7 +447,14 @@ async function postJson(path, payload, { allowNoContent = false, allowConflict =
   }
 
   const text = await response.text()
-  const json = text ? JSON.parse(text) : null
+  let json = null
+  if (text) {
+    try {
+      json = JSON.parse(text)
+    } catch {
+      throw new Error(`Expected JSON from ${path}, received ${response.status} ${response.statusText}: ${text.slice(0, 120)}`)
+    }
+  }
 
   if (allowConflict && response.status === 409) {
     return { status: 409, json }

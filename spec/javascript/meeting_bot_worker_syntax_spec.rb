@@ -30,12 +30,14 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(source).to include("captureArtifacts")
     expect(source).to include("artifact_screenshot_path")
     expect(source).to include("google_meet")
+    expect(source).to include("claim polling failed")
+    expect(source).to include("Expected JSON from")
   end
 
   it "keeps transcript collector logic stable" do
     core_path = Rails.root.join("services/meeting_bot_worker/lib/core.mjs")
     command = <<~JS
-      import { buildAbsoluteUrl, TranscriptCollector } from #{core_path.to_s.inspect};
+      import { buildAbsoluteUrl, TranscriptCollector, classifyGoogleMeetJoinText } from #{core_path.to_s.inspect};
 
       const collector = new TranscriptCollector({ startedAt: 0 });
       collector.addEntries([{ speaker_name: "Errol", text: "Opening update" }], 1_000);
@@ -45,7 +47,10 @@ RSpec.describe "Meeting bot worker JavaScript" do
       const output = {
         url: buildAbsoluteUrl("https://notae.example", "/internal/meeting_bot_runs/claim"),
         utteranceCount: collector.utterances.length,
-        transcript: collector.transcriptText()
+        transcript: collector.transcriptText(),
+        waitingState: classifyGoogleMeetJoinText("You asked to join. Someone in the call should let you in soon."),
+        deniedState: classifyGoogleMeetJoinText("Your request to join was denied."),
+        joinedState: classifyGoogleMeetJoinText("Leave call Turn on captions")
       };
       console.log(JSON.stringify(output));
     JS
@@ -62,6 +67,9 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(payload.fetch("url")).to eq("https://notae.example/internal/meeting_bot_runs/claim")
     expect(payload.fetch("utteranceCount")).to eq(1)
     expect(payload.fetch("transcript")).to include("Opening update with extra detail")
+    expect(payload.fetch("waitingState")).to include("state" => "waiting")
+    expect(payload.fetch("deniedState")).to include("state" => "denied")
+    expect(payload.fetch("joinedState")).to include("state" => "joined")
   rescue Errno::ENOENT
     skip "node is not available in this environment"
   end
