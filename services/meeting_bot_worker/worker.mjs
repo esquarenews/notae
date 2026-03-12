@@ -86,6 +86,7 @@ async function handleRun(run) {
   let currentStatus = "joining"
   let page = null
   let joinStage = "launching"
+  let lastLoggedStage = null
 
   try {
     const context = await browser.newContext({
@@ -105,12 +106,22 @@ async function handleRun(run) {
     await sendHeartbeat(run, currentStatus, page, { join_stage: joinStage })
     console.log(`[meeting-bot] run ${run.id}: opening ${run.join_url}`)
     await page.goto(run.join_url, { waitUntil: "domcontentloaded", timeout: 60_000 })
+    joinStage = "page_loaded"
+    logJoinStage(run, joinStage)
+    await sendHeartbeat(run, currentStatus, page, { join_stage: joinStage })
     await waitForMeetHydration(page)
+    joinStage = "prejoin_ready"
+    logJoinStage(run, joinStage)
+    await sendHeartbeat(run, currentStatus, page, { join_stage: joinStage })
 
     const joinStartedAt = Date.now()
     while (shouldContinue) {
       const joinState = await progressGoogleMeet(page, joinStartedAt, joinStage)
       joinStage = joinState.stage || joinStage
+      if (joinStage !== lastLoggedStage) {
+        logJoinStage(run, joinStage, joinState.metadata)
+        lastLoggedStage = joinStage
+      }
       if (joinState.joined) {
         currentStatus = "recording"
         console.log(`[meeting-bot] run ${run.id}: joined meeting, entering recording state`)
@@ -316,6 +327,15 @@ async function visibleBodyText(page) {
 async function waitForMeetHydration(page) {
   await page.locator("body").waitFor({ state: "visible", timeout: 15_000 }).catch(() => {})
   await sleep(2500)
+}
+
+function logJoinStage(run, stage, metadata = {}) {
+  const summary = summarizeBodyText(metadata?.page_body_excerpt || "", 120)
+  if (summary) {
+    console.log(`[meeting-bot] run ${run.id}: stage=${stage} excerpt=${summary}`)
+  } else {
+    console.log(`[meeting-bot] run ${run.id}: stage=${stage}`)
+  }
 }
 
 async function scrapeGoogleMeetCaptions(page) {

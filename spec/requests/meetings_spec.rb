@@ -79,7 +79,11 @@ RSpec.describe "Meetings", type: :request do
       provider: "google_meet",
       status: "recording",
       worker_id: "worker-1",
-      last_heartbeat_at: Time.current
+      last_heartbeat_at: Time.current,
+      metadata_json: {
+        "join_stage" => "waiting_room",
+        "page_body_excerpt" => "You asked to join. Someone in the call should let you in soon."
+      }
     )
     sign_in user
 
@@ -89,6 +93,9 @@ RSpec.describe "Meetings", type: :request do
     expect(response.body).to include("Live / Joining Sessions")
     expect(response.body).to include("Live capture")
     expect(response.body).to include("Bot run")
+    expect(response.body).to include("Join stage")
+    expect(response.body).to include("Waiting room")
+    expect(response.body).to include("Someone in the call should let you in soon")
     expect(response.body).to include(">Stop<")
     expect(response.body).to include('data-meeting-sessions-poller-active-value="true"')
   end

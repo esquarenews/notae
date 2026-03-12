@@ -34,6 +34,8 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(source).to include("Expected JSON from")
     expect(source).to include("MEETING_BOT_MINIMUM_JOIN_DIAGNOSIS_MS")
     expect(source).to include("Continue without microphone and camera")
+    expect(source).to include("stage=")
+    expect(source).to include("prejoin_ready")
   end
 
   it "keeps transcript collector logic stable" do

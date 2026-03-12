@@ -23,6 +23,9 @@
     <p class="notae-form-error"><%= session.error_message %></p>
   <% end %>
   <% if latest_bot_run.present? %>
+    <% bot_metadata = latest_bot_run.metadata_json.to_h %>
+    <% join_stage = bot_metadata["join_stage"].to_s.presence %>
+    <% join_excerpt = bot_metadata["page_body_excerpt"].to_s.presence %>
     <p class="notae-doc-muted">
       Bot run: <strong><%= latest_bot_run.status.humanize %></strong>
       <% if latest_bot_run.worker_id.present? %>
@@ -34,6 +37,16 @@
         • waiting for first worker heartbeat
       <% end %>
     </p>
+    <% if join_stage.present? %>
+      <p class="notae-doc-muted">
+        Join stage: <strong><%= join_stage.to_s.tr("_", " ").humanize %></strong>
+      </p>
+    <% end %>
+    <% if join_excerpt.present? %>
+      <p class="notae-doc-muted">
+        <%= truncate(join_excerpt, length: 220) %>
+      </p>
+    <% end %>
     <% if latest_bot_run.last_heartbeat_at.blank? && latest_bot_run.status.in?(%w[queued claimed joining]) %>
       <p class="notae-doc-muted">
         Waiting for bot worker claim. If this does not change, verify worker process and internal token.
