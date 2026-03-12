@@ -37,7 +37,7 @@ class AiAssistantController < ApplicationController
     respond_to do |format|
       format.turbo_stream do
         render turbo_stream: [
-          turbo_stream.update("ai_rail_panel", partial: "shared/app_ai_rail"),
+          turbo_stream.replace("ai_rail_panel", partial: "shared/app_ai_rail_panel"),
           turbo_stream.update(
             "ai_conversation_history_list",
             partial: "ai_conversation_histories/history_list",
@@ -46,7 +46,11 @@ class AiAssistantController < ApplicationController
         ]
       end
       format.html do
-        redirect_back fallback_location: workspace_path(@workspace.slug), notice: @ai_assistant_notice
+        if turbo_frame_request?
+          render partial: "shared/app_ai_rail_panel"
+        else
+          redirect_back fallback_location: workspace_path(@workspace.slug), notice: @ai_assistant_notice
+        end
       end
     end
   end

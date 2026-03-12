@@ -35,6 +35,7 @@ RSpec.describe "AI Assistant", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("turbo-stream")
+    expect(response.body).to include('action="replace" target="ai_rail_panel"')
     expect(response.body).to include("ai_rail_panel")
     expect(response.body).to include("ai_conversation_history_list")
     expect(response.body).to include("notae-ai-thread")
@@ -50,6 +51,28 @@ RSpec.describe "AI Assistant", type: :request do
     expect(conversation.answer).to include("Yes, Mac is mentioned")
     expect(conversation.status).to eq(AiConversation::STATUS_SUCCESS)
     expect(conversation.model).to eq(Search::AssistantQueryService::SEARCH_MODEL)
+  end
+
+  it "renders the ai rail frame for html turbo-frame submissions" do
+    user = User.create!(email: "ai-assistant-frame-request@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Assistant Frame Request", slug: "ai-assistant-frame-request")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    sign_in user
+    expect {
+      post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+           params: { ai_assistant: { prompt: "Frame fallback prompt", scope: Search::AssistantQueryService::SCOPE_AUTO } },
+           headers: {
+             "ACCEPT" => "text/html,application/xhtml+xml",
+             "Turbo-Frame" => "ai_rail_panel"
+           }
+    }.to change(AiConversation, :count).by(1)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/html")
+    expect(response.body).to include('<turbo-frame id="ai_rail_panel">')
+    expect(response.body).to include("Frame fallback prompt")
+    expect(response.body).to include("Configure an OpenAI key in Settings &gt; Connections first.")
   end
 
   it "shows a no-context notice for document scope without current document and stores notice history" do

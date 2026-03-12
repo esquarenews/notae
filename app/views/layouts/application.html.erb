@@ -65,9 +65,7 @@
         </div>
 
         <% unless embedded_shell %>
-          <%= turbo_frame_tag "ai_rail_panel" do %>
-            <%= render "shared/app_ai_rail" %>
-          <% end %>
+          <%= render "shared/app_ai_rail_panel" %>
           <%= render "shared/knowledge_suggestion_overlay" %>
 
           <div class="notae-modal is-hidden" data-global-shortcuts-target="quickSwitcher" data-action="click->global-shortcuts#closeAll">
