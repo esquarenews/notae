@@ -621,7 +621,7 @@ module Search
 
     def select_top_chunks(scope)
       terms = query_terms
-      records = scope.includes(:workspace, :page, { db_row: :database }, :kalendarium_event, :meeting_session).order(updated_at: :desc).limit(220).to_a
+      records = scope.includes(SearchChunk.context_preload_associations).order(updated_at: :desc).limit(220).to_a
       return records.first(MAX_CONTEXT_ITEMS) if terms.empty?
 
       records.sort_by do |chunk|
@@ -651,10 +651,13 @@ module Search
       meeting_ids = accessible_meeting_sessions_scope.select(:id)
       base = SearchChunk.where(workspace_id: workspace_ids)
 
-      base.where(page_id: page_ids)
-          .or(base.where(db_row_id: row_ids))
-          .or(base.where(kalendarium_event_id: event_ids))
-          .or(base.where(meeting_session_id: meeting_ids))
+      SearchChunk.accessible_scope_from(
+        base: base,
+        page_ids: page_ids,
+        row_ids: row_ids,
+        event_ids: event_ids,
+        meeting_ids: meeting_ids
+      )
     end
 
     def accessible_pages_scope
@@ -693,7 +696,7 @@ module Search
           workspace_name: chunk.workspace.name,
           url: Rails.application.routes.url_helpers.database_path(workspace_slug: chunk.workspace.slug, id: chunk.database_id, anchor: "row_#{chunk.db_row_id}")
         }
-      elsif chunk.kalendarium_event.present?
+      elsif SearchChunk.reference_column_available?(:kalendarium_event_id) && chunk.kalendarium_event.present?
         event = chunk.kalendarium_event
         {
           index: index,
@@ -708,7 +711,7 @@ module Search
             anchor: "kalendarium_event_#{event.id}"
           )
         }
-      elsif chunk.meeting_session.present?
+      elsif SearchChunk.reference_column_available?(:meeting_session_id) && chunk.meeting_session.present?
         session = chunk.meeting_session
         {
           index: index,

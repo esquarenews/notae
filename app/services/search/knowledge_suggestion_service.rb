@@ -76,10 +76,13 @@ module Search
       meeting_ids = Pundit.policy_scope!(user, MeetingSession).for_workspace(workspace).select(:id)
       base = SearchChunk.for_workspace(workspace)
 
-      base.where(page_id: page_ids)
-          .or(base.where(db_row_id: row_ids))
-          .or(base.where(kalendarium_event_id: event_ids))
-          .or(base.where(meeting_session_id: meeting_ids))
+      SearchChunk.accessible_scope_from(
+        base: base,
+        page_ids: page_ids,
+        row_ids: row_ids,
+        event_ids: event_ids,
+        meeting_ids: meeting_ids
+      )
     end
 
     def prompt_for(context_chunks)

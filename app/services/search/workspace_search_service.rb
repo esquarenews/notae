@@ -151,7 +151,7 @@ module Search
         scope = scope.where([ where_clause, *patterns ])
       end
 
-      scope.includes(:page, { db_row: :database }, :meeting_session)
+      scope.includes(SearchChunk.context_preload_associations)
            .order(updated_at: :desc)
            .limit(SEMANTIC_CANDIDATE_LIMIT)
            .to_a
@@ -164,10 +164,13 @@ module Search
       meeting_ids = Pundit.policy_scope!(user, MeetingSession).for_workspace(workspace).select(:id)
       workspace_scope = SearchChunk.for_workspace(workspace)
 
-      workspace_scope.where(page_id: page_ids)
-                     .or(workspace_scope.where(db_row_id: row_ids))
-                     .or(workspace_scope.where(kalendarium_event_id: event_ids))
-                     .or(workspace_scope.where(meeting_session_id: meeting_ids))
+      SearchChunk.accessible_scope_from(
+        base: workspace_scope,
+        page_ids: page_ids,
+        row_ids: row_ids,
+        event_ids: event_ids,
+        meeting_ids: meeting_ids
+      )
     end
 
     def embed_query
@@ -220,7 +223,7 @@ module Search
           url: Rails.application.routes.url_helpers.database_path(workspace_slug: workspace.slug, id: chunk.database_id, anchor: "row_#{chunk.db_row_id}"),
           score: 30 + (similarity * 12)
         )
-      elsif chunk.kalendarium_event.present?
+      elsif SearchChunk.reference_column_available?(:kalendarium_event_id) && chunk.kalendarium_event.present?
         event = chunk.kalendarium_event
         Result.new(
           kind: "Kalendarium event",
@@ -234,7 +237,7 @@ module Search
           ),
           score: 30 + (similarity * 12)
         )
-      elsif chunk.meeting_session.present?
+      elsif SearchChunk.reference_column_available?(:meeting_session_id) && chunk.meeting_session.present?
         session = chunk.meeting_session
         Result.new(
           kind: "Meeting session",

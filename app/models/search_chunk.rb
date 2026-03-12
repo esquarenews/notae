@@ -29,6 +29,28 @@ class SearchChunk < ApplicationRecord
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
   scope :for_source, ->(source_type, source_id) { where(source_type: source_type, source_id: source_id) }
 
+  def self.reference_column_available?(column_name)
+    column_names.include?(column_name.to_s)
+  end
+
+  def self.context_preload_associations
+    associations = [ :workspace, :page, { db_row: :database } ]
+    associations << :kalendarium_event if reference_column_available?(:kalendarium_event_id)
+    associations << :meeting_session if reference_column_available?(:meeting_session_id)
+    associations
+  end
+
+  def self.accessible_scope_from(base:, page_ids:, row_ids:, event_ids:, meeting_ids:)
+    scopes = [
+      base.where(page_id: page_ids),
+      base.where(db_row_id: row_ids)
+    ]
+    scopes << base.where(kalendarium_event_id: event_ids) if reference_column_available?(:kalendarium_event_id)
+    scopes << base.where(meeting_session_id: meeting_ids) if reference_column_available?(:meeting_session_id)
+
+    scopes.reduce { |combined, relation| combined.or(relation) } || base.none
+  end
+
   def embedding_vector
     Array(embedding).map(&:to_f)
   end

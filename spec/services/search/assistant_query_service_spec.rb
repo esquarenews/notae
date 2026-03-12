@@ -157,6 +157,47 @@ RSpec.describe Search::AssistantQueryService do
     expect(usage).to exist
   end
 
+  it "keeps workspace AI queries working when meeting chunk columns are unavailable" do
+    user = User.create!(email: "assistant-schema-fallback@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Assistant Schema Fallback", slug: "assistant-schema-fallback")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Fallback Notes")
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "Fallback context still comes from page chunks",
+      token_count: 8,
+      content_hash: "assistant-schema-fallback-1",
+      embedding: [ 1.0, 0.0 ],
+      embedding_model: SearchChunk::EMBEDDING_MODEL
+    )
+
+    allow(SearchChunk).to receive(:column_names).and_call_original
+    allow(SearchChunk).to receive(:column_names).and_wrap_original do |original, *args|
+      original.call(*args) - [ "meeting_session_id", "kalendarium_event_id" ]
+    end
+    allow(Openai::ResponsesClient).to receive(:generate_text_with_usage).and_return(
+      {
+        text: "The fallback page chunk is still available [1].",
+        usage: { prompt_tokens: 80, completion_tokens: 20, total_tokens: 100 }
+      }
+    )
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "What context is available?",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+    ).call
+
+    expect(response).to be_present
+    expect(response.answer).to include("fallback page chunk")
+    expect(response.sources.first[:title]).to eq("Fallback Notes")
+  end
+
   it "returns no-context when document scope is requested without a page" do
     user = User.create!(email: "assistant-doc-empty@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Assistant Doc Empty", slug: "assistant-doc-empty")
