@@ -32,6 +32,8 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(source).to include("google_meet")
     expect(source).to include("claim polling failed")
     expect(source).to include("Expected JSON from")
+    expect(source).to include("MEETING_BOT_MINIMUM_JOIN_DIAGNOSIS_MS")
+    expect(source).to include("Continue without microphone and camera")
   end
 
   it "keeps transcript collector logic stable" do
@@ -49,6 +51,7 @@ RSpec.describe "Meeting bot worker JavaScript" do
         utteranceCount: collector.utterances.length,
         transcript: collector.transcriptText(),
         waitingState: classifyGoogleMeetJoinText("You asked to join. Someone in the call should let you in soon."),
+        readyState: classifyGoogleMeetJoinText("Ready to join Choose how you want to join"),
         deniedState: classifyGoogleMeetJoinText("Your request to join was denied."),
         joinedState: classifyGoogleMeetJoinText("Leave call Turn on captions")
       };
@@ -68,6 +71,7 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(payload.fetch("utteranceCount")).to eq(1)
     expect(payload.fetch("transcript")).to include("Opening update with extra detail")
     expect(payload.fetch("waitingState")).to include("state" => "waiting")
+    expect(payload.fetch("readyState")).to include("state" => "waiting")
     expect(payload.fetch("deniedState")).to include("state" => "denied")
     expect(payload.fetch("joinedState")).to include("state" => "joined")
   rescue Errno::ENOENT

@@ -13,6 +13,7 @@ const config = {
   pollIntervalMs: numberEnv("MEETING_BOT_POLL_INTERVAL_MS", 5000),
   heartbeatIntervalMs: numberEnv("MEETING_BOT_HEARTBEAT_INTERVAL_MS", 15000),
   joinTimeoutMs: numberEnv("MEETING_BOT_JOIN_TIMEOUT_MS", 10 * 60 * 1000),
+  minimumJoinDiagnosisMs: numberEnv("MEETING_BOT_MINIMUM_JOIN_DIAGNOSIS_MS", 15000),
   headed: env("MEETING_BOT_HEADED", "false") === "true",
   slowMoMs: numberEnv("MEETING_BOT_SLOW_MO_MS", 0),
   once: env("MEETING_BOT_RUN_ONCE", "false") === "true",
@@ -104,6 +105,7 @@ async function handleRun(run) {
     await sendHeartbeat(run, currentStatus, page, { join_stage: joinStage })
     console.log(`[meeting-bot] run ${run.id}: opening ${run.join_url}`)
     await page.goto(run.join_url, { waitUntil: "domcontentloaded", timeout: 60_000 })
+    await waitForMeetHydration(page)
 
     const joinStartedAt = Date.now()
     while (shouldContinue) {
@@ -168,6 +170,7 @@ async function progressGoogleMeet(page, joinStartedAt, previousStage) {
   await dismissInterstitials(page)
   await fillDisplayNameIfNeeded(page, config.displayName)
   await ensureMicAndCameraOff(page)
+  await dismissInterstitials(page)
 
   if (await joinedGoogleMeet(page)) {
     return { joined: true, stage: "joined" }
@@ -184,7 +187,7 @@ async function progressGoogleMeet(page, joinStartedAt, previousStage) {
 
   if (await clickJoinButton(page)) {
     console.log("[meeting-bot] join/request button clicked")
-    await sleep(2500)
+    await sleep(3500)
     return { joined: false, stage: "requested_join" }
   }
 
@@ -202,7 +205,7 @@ async function progressGoogleMeet(page, joinStartedAt, previousStage) {
     }
   }
 
-  if (detected.state === "denied") {
+  if (detected.state === "denied" && Date.now() - joinStartedAt >= config.minimumJoinDiagnosisMs) {
     return failureState("Meeting join request was denied or the meeting is unavailable.", "join_denied", {
       join_reason: detected.reason,
       page_body_excerpt: summarizeBodyText(bodyText)
@@ -223,13 +226,18 @@ async function dismissInterstitials(page) {
   await clickIfVisible(page, [
     /Got it/i,
     /Continue anyway/i,
+    /Continue without microphone and camera/i,
+    /Use without an account/i,
+    /Proceed anyway/i,
+    /Not now/i,
+    /Skip/i,
     /Dismiss/i,
     /Close/i
   ])
 }
 
 async function fillDisplayNameIfNeeded(page, displayName) {
-  const inputs = page.locator("input")
+  const inputs = page.locator("input, textarea, [contenteditable='true']")
   const count = await inputs.count()
 
   for (let index = 0; index < count; index += 1) {
@@ -238,15 +246,21 @@ async function fillDisplayNameIfNeeded(page, displayName) {
     const metadata = await input.evaluate((element) => ({
       ariaLabel: element.getAttribute("aria-label") || "",
       placeholder: element.getAttribute("placeholder") || "",
-      value: element.value || ""
+      name: element.getAttribute("name") || "",
+      type: element.getAttribute("type") || "",
+      value: element.value || element.textContent || ""
     })).catch(() => null)
     if (!metadata) continue
 
-    const descriptor = `${metadata.ariaLabel} ${metadata.placeholder}`.toLowerCase()
-    if (!descriptor.match(/name|guest/i)) continue
+    const descriptor = `${metadata.ariaLabel} ${metadata.placeholder} ${metadata.name} ${metadata.type}`.toLowerCase()
+    if (!descriptor.match(/name|guest|participant|your name/i)) continue
     if (String(metadata.value || "").trim().length > 0) return true
 
-    await input.fill(displayName).catch(() => {})
+    await input.fill(displayName).catch(async () => {
+      await input.click().catch(() => {})
+      await page.keyboard.press(process.platform === "darwin" ? "Meta+A" : "Control+A").catch(() => {})
+      await page.keyboard.type(displayName).catch(() => {})
+    })
     return true
   }
 
@@ -268,8 +282,10 @@ async function clickJoinButton(page) {
   return clickIfVisible(page, [
     /Ask to join/i,
     /Request to join/i,
+    /Join meeting/i,
     /Join now/i,
-    /^Join$/i
+    /^Join$/i,
+    /Ask to enter/i
   ])
 }
 
@@ -295,6 +311,11 @@ async function meetingEnded(page) {
 
 async function visibleBodyText(page) {
   return page.locator("body").innerText().catch(() => "")
+}
+
+async function waitForMeetHydration(page) {
+  await page.locator("body").waitFor({ state: "visible", timeout: 15_000 }).catch(() => {})
+  await sleep(2500)
 }
 
 async function scrapeGoogleMeetCaptions(page) {
