@@ -22,6 +22,7 @@ module Meetings
       end
 
       session.update!(status: "joining", updated_by: actor)
+      Meetings::GuardBotRunJob.set(wait: Meetings::GuardBotRunJob::GUARD_INTERVAL).perform_later(run.id)
       session
     end
 

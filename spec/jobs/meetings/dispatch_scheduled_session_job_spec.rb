@@ -53,6 +53,7 @@ RSpec.describe Meetings::DispatchScheduledSessionJob, type: :job do
     expect(session.status).to eq("joining")
     expect(session.meeting_bot_runs.active.count).to eq(1)
     expect(session.meeting_bot_runs.active.first.status).to eq("queued")
+    expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::GuardBotRunJob)
   end
 
   it "re-enqueues itself when the event start moves further into the future" do

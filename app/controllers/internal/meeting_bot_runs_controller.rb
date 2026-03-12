@@ -107,11 +107,14 @@ module Internal
     end
 
     def failed
+      metadata = @run.metadata_json.to_h
+      metadata.merge!(failed_params[:metadata].to_h) if failed_params[:metadata].present?
       @run.update!(
         status: "failed",
-        error_message: params[:error_message].to_s.truncate(500),
+        error_message: failed_params[:error_message].to_s.truncate(500),
         finished_at: Time.current,
-        last_heartbeat_at: Time.current
+        last_heartbeat_at: Time.current,
+        metadata_json: metadata
       )
       @run.meeting_session.update!(
         status: "failed",
@@ -168,6 +171,10 @@ module Internal
 
     def transcript_complete_params
       params.permit(:transcript_text, metadata: {}, utterances: [ :speaker_key, :speaker_name, :text, :started_ms, :ended_ms, :confidence ])
+    end
+
+    def failed_params
+      params.permit(:error_message, metadata: {})
     end
 
     def validate_upload_file(upload_file)

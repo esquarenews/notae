@@ -1,0 +1,22 @@
+[Unit]
+Description=Notae Meeting Bot Worker
+After=network-online.target notae.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{APP_USER}}
+Group={{APP_GROUP}}
+WorkingDirectory={{APP_ROOT}}/services/meeting_bot_worker
+Environment=NODE_ENV=production
+EnvironmentFile={{APP_ROOT}}/services/meeting_bot_worker/.env.production
+ExecStart=/usr/bin/env node worker.mjs
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths={{APP_ROOT}}/services/meeting_bot_worker/output
+
+[Install]
+WantedBy=multi-user.target

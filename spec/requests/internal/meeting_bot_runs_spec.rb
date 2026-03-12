@@ -232,4 +232,42 @@ RSpec.describe "Internal meeting bot runs", type: :request do
     expect(session.reload.capture_files).not_to be_attached
     expect(enqueued_jobs.map { |job| job[:job] }).not_to include(Meetings::ProcessSessionJob)
   end
+
+  it "persists failure metadata from the worker" do
+    user = User.create!(email: "internal-bot-failed-meta@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Internal bot failed meta", slug: "internal-bot-failed-meta")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    session = MeetingSession.create!(
+      workspace: workspace,
+      title: "Failure metadata session",
+      capture_mode: "online_bot",
+      provider: "google_meet",
+      status: "joining",
+      join_url: "https://meet.google.com/failure-meta-test",
+      created_by: user,
+      updated_by: user
+    )
+    run = MeetingBotRun.create!(
+      meeting_session: session,
+      provider: "google_meet",
+      status: "joining",
+      worker_id: "worker-meta",
+      claimed_at: Time.current
+    )
+
+    post "/internal/meeting_bot_runs/#{run.id}/failed",
+         params: {
+           error_message: "Meeting join request was denied.",
+           metadata: {
+             join_stage: "join_denied",
+             artifact_screenshot_path: "/tmp/notae/failed.png"
+           }
+         },
+         headers: headers
+
+    expect(response).to have_http_status(:ok)
+    expect(run.reload.metadata_json["join_stage"]).to eq("join_denied")
+    expect(run.metadata_json["artifact_screenshot_path"]).to eq("/tmp/notae/failed.png")
+    expect(session.reload.status).to eq("failed")
+  end
 end
