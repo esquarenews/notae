@@ -36,6 +36,7 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(source).to include("Continue without microphone and camera")
     expect(source).to include("stage=")
     expect(source).to include("prejoin_ready")
+    expect(source).to include("grantPermissions")
   end
 
   it "keeps transcript collector logic stable" do
@@ -54,6 +55,7 @@ RSpec.describe "Meeting bot worker JavaScript" do
         transcript: collector.transcriptText(),
         waitingState: classifyGoogleMeetJoinText("You asked to join. Someone in the call should let you in soon."),
         readyState: classifyGoogleMeetJoinText("Ready to join Choose how you want to join"),
+        hostWaitingState: classifyGoogleMeetJoinText("Please wait until a meeting host brings you into the call"),
         deniedState: classifyGoogleMeetJoinText("Your request to join was denied."),
         joinedState: classifyGoogleMeetJoinText("Leave call Turn on captions")
       };
@@ -74,6 +76,7 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(payload.fetch("transcript")).to include("Opening update with extra detail")
     expect(payload.fetch("waitingState")).to include("state" => "waiting")
     expect(payload.fetch("readyState")).to include("state" => "waiting")
+    expect(payload.fetch("hostWaitingState")).to include("state" => "waiting")
     expect(payload.fetch("deniedState")).to include("state" => "denied")
     expect(payload.fetch("joinedState")).to include("state" => "joined")
   rescue Errno::ENOENT

@@ -93,6 +93,7 @@ async function handleRun(run) {
       viewport: { width: 1440, height: 960 },
       ignoreHTTPSErrors: true
     })
+    await grantMeetPermissions(context, run.join_url)
     page = await context.newPage()
 
     heartbeatTimer = setInterval(() => {
@@ -335,6 +336,15 @@ function logJoinStage(run, stage, metadata = {}) {
     console.log(`[meeting-bot] run ${run.id}: stage=${stage} excerpt=${summary}`)
   } else {
     console.log(`[meeting-bot] run ${run.id}: stage=${stage}`)
+  }
+}
+
+async function grantMeetPermissions(context, joinUrl) {
+  try {
+    const origin = new URL(joinUrl).origin
+    await context.grantPermissions(["microphone", "camera"], { origin })
+  } catch {
+    // Ignore invalid URLs or permission grant failures; the join flow will surface the real error.
   }
 }
 

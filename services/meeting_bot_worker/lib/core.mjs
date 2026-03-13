@@ -18,7 +18,7 @@ export function classifyGoogleMeetJoinText(value) {
     return { state: "joined", reason: "in_meeting_controls_visible" }
   }
 
-  if (/\b(waiting to be let in|waiting for someone to let you in|someone in the call should let you in|you'll join when someone lets you in|you’ll join when someone lets you in|asking to join|asked to join|request to join sent|you asked to join|host hasn't joined yet|host hasn’t joined yet|waiting for the host|meeting hasn't started|meeting hasn’t started yet|check your audio and video|ready to join|join the meeting|use without an account|choose how you want to join)\b/i.test(text)) {
+  if (/\b(waiting to be let in|waiting for someone to let you in|someone in the call should let you in|you'll join when someone lets you in|you’ll join when someone lets you in|asking to join|asked to join|request to join sent|you asked to join|host hasn't joined yet|host hasn’t joined yet|waiting for the host|meeting hasn't started|meeting hasn’t started yet|please wait until a meeting host brings you into the call|check your audio and video|ready to join|join the meeting|use without an account|choose how you want to join)\b/i.test(text)) {
     return { state: "waiting", reason: "awaiting_admission" }
   }
 
