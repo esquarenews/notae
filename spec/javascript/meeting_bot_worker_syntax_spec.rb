@@ -37,6 +37,9 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(source).to include("stage=")
     expect(source).to include("prejoin_ready")
     expect(source).to include("grantPermissions")
+    expect(source).to include("findVisibleJoinControl")
+    expect(source).to include("force: true")
+    expect(source).to include(':text-matches("Ask to join|Request to join|Join meeting|Join now|Ask to enter", "i")')
   end
 
   it "keeps transcript collector logic stable" do

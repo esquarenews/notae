@@ -5,6 +5,12 @@ import process from "node:process"
 import { chromium } from "playwright"
 import { buildAbsoluteUrl, classifyGoogleMeetJoinText, sleep, summarizeBodyText, truncateError, TranscriptCollector } from "./lib/core.mjs"
 
+const DEFAULT_USER_AGENT = [
+  "Mozilla/5.0 (X11; Linux x86_64)",
+  "AppleWebKit/537.36 (KHTML, like Gecko)",
+  "Chrome/134.0.0.0 Safari/537.36"
+].join(" ")
+
 const config = {
   baseUrl: env("MEETING_BOT_BASE_URL"),
   internalToken: env("MEETING_BOT_INTERNAL_TOKEN"),
@@ -17,7 +23,8 @@ const config = {
   headed: env("MEETING_BOT_HEADED", "false") === "true",
   slowMoMs: numberEnv("MEETING_BOT_SLOW_MO_MS", 0),
   once: env("MEETING_BOT_RUN_ONCE", "false") === "true",
-  artifactDir: env("MEETING_BOT_ARTIFACT_DIR", path.resolve(process.cwd(), "output/playwright/meeting_bot_worker"))
+  artifactDir: env("MEETING_BOT_ARTIFACT_DIR", path.resolve(process.cwd(), "output/playwright/meeting_bot_worker")),
+  userAgent: env("MEETING_BOT_USER_AGENT", DEFAULT_USER_AGENT)
 }
 
 main().catch((error) => {
@@ -77,8 +84,10 @@ async function handleRun(run) {
     args: [
       "--disable-dev-shm-usage",
       "--use-fake-ui-for-media-stream",
-      "--disable-features=Translate,MediaRouter"
-    ]
+      "--disable-features=Translate,MediaRouter",
+      "--disable-blink-features=AutomationControlled"
+    ],
+    ignoreDefaultArgs: [ "--enable-automation" ]
   })
 
   let heartbeatTimer = null
@@ -91,7 +100,14 @@ async function handleRun(run) {
   try {
     const context = await browser.newContext({
       viewport: { width: 1440, height: 960 },
-      ignoreHTTPSErrors: true
+      ignoreHTTPSErrors: true,
+      userAgent: config.userAgent,
+      locale: "en-US"
+    })
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, "webdriver", {
+        get: () => undefined
+      })
     })
     await grantMeetPermissions(context, run.join_url)
     page = await context.newPage()
@@ -291,14 +307,42 @@ async function ensureMicAndCameraOff(page) {
 }
 
 async function clickJoinButton(page) {
-  return clickIfVisible(page, [
+  const patterns = [
     /Ask to join/i,
     /Request to join/i,
     /Join meeting/i,
     /Join now/i,
     /^Join$/i,
     /Ask to enter/i
-  ])
+  ]
+
+  const element = await findVisibleJoinControl(page, patterns)
+  if (!element) return false
+
+  try {
+    await element.scrollIntoViewIfNeeded().catch(() => {})
+    await element.click({ timeout: 2000 })
+    return true
+  } catch {
+    // Keep going through progressively more forceful fallbacks. Meet's prejoin
+    // UI can render nested button wrappers that intercept a vanilla click.
+  }
+
+  try {
+    await element.click({ timeout: 2000, force: true })
+    return true
+  } catch {
+    // Fall back to a DOM click below.
+  }
+
+  try {
+    await element.evaluate((node) => {
+      if (node instanceof HTMLElement) node.click()
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function ensureCaptionsEnabled(page) {
@@ -392,7 +436,7 @@ async function hasVisibleControl(page, patterns) {
 }
 
 async function findVisibleClickable(page, patterns) {
-  const candidates = page.locator("button, [role='button']")
+  const candidates = page.locator("button, [role='button'], a, input[type='button'], input[type='submit']")
   const count = await candidates.count()
 
   for (let index = 0; index < count; index += 1) {
@@ -405,6 +449,41 @@ async function findVisibleClickable(page, patterns) {
     }).catch(() => "")
 
     if (patterns.some((pattern) => pattern.test(description))) return candidate
+  }
+
+  return null
+}
+
+async function findVisibleJoinControl(page, patterns) {
+  const directCandidate = await findVisibleClickable(page, patterns)
+  if (directCandidate) return directCandidate
+
+  const selectors = [
+    ':text-matches("Ask to join|Request to join|Join meeting|Join now|Ask to enter", "i")',
+    '[aria-label*="Ask to join" i]',
+    '[aria-label*="Request to join" i]',
+    '[aria-label*="Join meeting" i]',
+    '[aria-label*="Join now" i]'
+  ]
+
+  for (const selector of selectors) {
+    const candidates = page.locator(selector)
+    const count = await candidates.count().catch(() => 0)
+    for (let index = 0; index < count; index += 1) {
+      const candidate = candidates.nth(index)
+      const visible = await candidate.isVisible().catch(() => false)
+      if (!visible) continue
+
+      const description = await candidate.evaluate((element) => {
+        return [
+          element.getAttribute?.("aria-label"),
+          element.textContent,
+          element.getAttribute?.("value")
+        ].filter(Boolean).join(" ")
+      }).catch(() => "")
+
+      if (patterns.some((pattern) => pattern.test(description))) return candidate
+    }
   }
 
   return null
