@@ -40,6 +40,9 @@ RSpec.describe "Meeting bot worker JavaScript" do
     expect(source).to include("findVisibleJoinControl")
     expect(source).to include("force: true")
     expect(source).to include(':text-matches("Ask to join|Request to join|Join meeting|Join now|Ask to enter", "i")')
+    expect(source).to include("promoteToClickableCandidate")
+    expect(source).to include("getByRole(\"button\"")
+    expect(source).to include("boundingBox()")
   end
 
   it "keeps transcript collector logic stable" do

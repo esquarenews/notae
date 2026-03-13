@@ -306,7 +306,7 @@ async function ensureMicAndCameraOff(page) {
   ])
 }
 
-async function clickJoinButton(page) {
+async function clickJoinButton(page, { timeoutMs = 5000 } = {}) {
   const patterns = [
     /Ask to join/i,
     /Request to join/i,
@@ -316,7 +316,15 @@ async function clickJoinButton(page) {
     /Ask to enter/i
   ]
 
-  const element = await findVisibleJoinControl(page, patterns)
+  const deadline = Date.now() + timeoutMs
+  let element = null
+
+  while (Date.now() < deadline) {
+    element = await findVisibleJoinControl(page, patterns)
+    if (element) break
+    await sleep(250)
+  }
+
   if (!element) return false
 
   try {
@@ -458,35 +466,49 @@ async function findVisibleJoinControl(page, patterns) {
   const directCandidate = await findVisibleClickable(page, patterns)
   if (directCandidate) return directCandidate
 
-  const selectors = [
-    ':text-matches("Ask to join|Request to join|Join meeting|Join now|Ask to enter", "i")',
-    '[aria-label*="Ask to join" i]',
-    '[aria-label*="Request to join" i]',
-    '[aria-label*="Join meeting" i]',
-    '[aria-label*="Join now" i]'
-  ]
+  const roleNames = [ "Ask to join", "Request to join", "Join meeting", "Join now", "Join", "Ask to enter" ]
+  for (const name of roleNames) {
+    const candidate = page.getByRole("button", { name: new RegExp(`^${escapeRegExp(name)}$`, "i") }).first()
+    if (await candidate.isVisible().catch(() => false)) return candidate
+  }
 
-  for (const selector of selectors) {
-    const candidates = page.locator(selector)
-    const count = await candidates.count().catch(() => 0)
-    for (let index = 0; index < count; index += 1) {
-      const candidate = candidates.nth(index)
-      const visible = await candidate.isVisible().catch(() => false)
-      if (!visible) continue
+  const textCandidates = page.locator(':text-matches("Ask to join|Request to join|Join meeting|Join now|Ask to enter", "i")')
+  const count = await textCandidates.count().catch(() => 0)
+  for (let index = 0; index < count; index += 1) {
+    const candidate = textCandidates.nth(index)
+    const visible = await candidate.isVisible().catch(() => false)
+    if (!visible) continue
 
-      const description = await candidate.evaluate((element) => {
-        return [
-          element.getAttribute?.("aria-label"),
-          element.textContent,
-          element.getAttribute?.("value")
-        ].filter(Boolean).join(" ")
-      }).catch(() => "")
-
-      if (patterns.some((pattern) => pattern.test(description))) return candidate
-    }
+    const promoted = await promoteToClickableCandidate(candidate)
+    if (promoted) return promoted
   }
 
   return null
+}
+
+async function promoteToClickableCandidate(locator) {
+  const handle = await locator.elementHandle().catch(() => null)
+  if (!handle) return null
+
+  const promotedHandle = await handle.evaluateHandle((node) => {
+    let current = node
+    while (current) {
+      if (
+        current instanceof HTMLElement &&
+        current.matches("button, [role='button'], a, input[type='button'], input[type='submit']")
+      ) {
+        return current
+      }
+      current = current.parentElement
+    }
+    return node
+  }).catch(() => null)
+
+  const promotedElement = promotedHandle?.asElement?.() || null
+  if (!promotedElement) return null
+
+  const visible = await promotedElement.boundingBox().then((box) => Boolean(box)).catch(() => false)
+  return visible ? promotedElement : null
 }
 
 async function sendHeartbeat(run, status, page, metadata = {}) {
@@ -553,6 +575,10 @@ function failureState(message, stage, metadata = {}) {
       return appendArtifactMessage(message, artifacts)
     }
   }
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 async function claimNextRun() {
