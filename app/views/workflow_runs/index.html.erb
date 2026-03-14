@@ -1,0 +1,82 @@
+<% content_for :title, "Workflows" %>
+<% content_for :content_class, "notae-content-page" %>
+
+<section class="notae-workspace-home notae-ai-history-page">
+  <header class="notae-utility-page-head">
+    <div>
+      <p class="notae-page-subtle">Internal-only automation</p>
+      <h1 class="notae-utility-title">Workflow Runs</h1>
+      <p class="notae-page-subtle">Only internal Notae actions are executable here: nota pages, task rows, and local calendar events.</p>
+    </div>
+    <div class="notae-utility-page-actions">
+      <%= link_to "New workflow", new_workflow_run_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+      <%= link_to "AI analytics", workspace_ai_analytics_settings_path(workspace_slug: @workspace.slug), class: "notae-chip-button notae-chip-button-subtle" %>
+    </div>
+  </header>
+
+  <div class="notae-workspace-home-grid">
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Queued / running</h2>
+      </div>
+      <% if @queued_workflows.any? %>
+        <ul class="notae-workspace-home-list">
+          <% @queued_workflows.each do |workflow_run| %>
+            <li class="notae-workspace-home-list-item">
+              <strong><%= workflow_run.workflow_kind.humanize %></strong>
+              <div class="notae-page-subtle"><%= workflow_run.status.humanize %> · attempt <%= workflow_run.attempts_count %>/<%= workflow_run.max_attempts %></div>
+              <%= link_to "Open", workflow_run_path(workspace_slug: @workspace.slug, id: workflow_run.id), class: "notae-chip-button" %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-page-subtle">No queued workflows.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Recent failures</h2>
+      </div>
+      <% if @failed_workflows.any? %>
+        <ul class="notae-workspace-home-list">
+          <% @failed_workflows.each do |workflow_run| %>
+            <li class="notae-workspace-home-list-item">
+              <strong><%= workflow_run.workflow_kind.humanize %></strong>
+              <div class="notae-page-subtle"><%= workflow_run.error_message.presence || "Workflow failed." %></div>
+              <%= link_to "Inspect", workflow_run_path(workspace_slug: @workspace.slug, id: workflow_run.id), class: "notae-chip-button" %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-page-subtle">No failed workflows.</p>
+      <% end %>
+    </section>
+  </div>
+
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Run history</h2>
+    </div>
+    <% if @workflow_runs.any? %>
+      <ul class="notae-ai-history-list">
+        <% @workflow_runs.each do |workflow_run| %>
+          <li class="notae-ai-history-item">
+            <div class="notae-ai-history-meta">
+              <span class="notae-ai-history-workspace"><%= workflow_run.workflow_kind.humanize %></span>
+              <span class="notae-workspace-home-role-badge"><%= workflow_run.status.humanize %></span>
+              <span class="notae-ai-history-time"><%= time_ago_in_words(workflow_run.created_at) %> ago</span>
+            </div>
+            <p class="notae-ai-history-prompt"><strong>Requested by:</strong> <%= workflow_run.user.email %></p>
+            <div class="notae-ai-history-answer"><%= simple_format(h(workflow_run.input_json.to_json)) %></div>
+            <div class="notae-ai-history-actions">
+              <%= link_to "Inspect", workflow_run_path(workspace_slug: @workspace.slug, id: workflow_run.id), class: "notae-chip-button" %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="notae-page-subtle">No workflow runs yet.</p>
+    <% end %>
+  </section>
+</section>

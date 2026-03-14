@@ -79,5 +79,71 @@
         </table>
       </div>
     </section>
+
+    <section class="notae-settings-section">
+      <h2>Workflow Metrics</h2>
+      <div class="notae-ai-analytics-grid">
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Suggestion quality</p>
+          <p class="notae-utility-title"><%= @suggestion_quality_rate.nil? ? "N/A" : number_to_percentage(@suggestion_quality_rate * 100, precision: 0) %></p>
+          <p class="notae-pref-description">Proxy metric based on knowledge suggestions converted into concrete outputs.</p>
+        </article>
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Approval rate</p>
+          <p class="notae-utility-title"><%= @approval_rate.nil? ? "N/A" : number_to_percentage(@approval_rate * 100, precision: 0) %></p>
+          <p class="notae-pref-description">Approved agent actions divided by total reviewed agent actions.</p>
+        </article>
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Automation success rate</p>
+          <p class="notae-utility-title"><%= @automation_success_rate.nil? ? "N/A" : number_to_percentage(@automation_success_rate * 100, precision: 0) %></p>
+          <p class="notae-pref-description">Successful internal workflow runs divided by all finished runs.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Automation Safety</h2>
+      <%= form_with url: workspace_ai_analytics_settings_path(workspace_slug: @workspace.slug),
+                    method: :patch,
+                    class: "notae-ai-guardrails-form" do |form| %>
+        <div class="notae-ai-guardrails-grid">
+          <label>
+            <span>Automation enabled</span>
+            <%= form.check_box :enabled, { checked: @automation_control.enabled?, name: "automation_control[enabled]" }, "1", "0" %>
+          </label>
+          <label>
+            <span>Pause reason</span>
+            <%= form.text_field :pause_reason,
+                                value: @automation_control.pause_reason,
+                                name: "automation_control[pause_reason]",
+                                class: "notae-pref-select" %>
+          </label>
+          <button type="submit" class="notae-chip-button">Update kill switch</button>
+        </div>
+      <% end %>
+      <p class="notae-pref-description">
+        Kill switch status:
+        <strong><%= @automation_control.enabled? ? "Automation active" : "Automation paused" %></strong>
+      </p>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Error Monitoring</h2>
+      <% if @recent_failed_workflows.any? %>
+        <ul class="notae-workspace-home-list">
+          <% @recent_failed_workflows.each do |workflow_run| %>
+            <li class="notae-workspace-home-list-item">
+              <strong><%= workflow_run.workflow_kind.humanize %></strong>
+              <div class="notae-page-subtle"><%= workflow_run.error_message.presence || "Workflow failed." %></div>
+              <%= link_to "Inspect workflow",
+                          workflow_run_path(workspace_slug: @workspace.slug, id: workflow_run.id),
+                          class: "notae-chip-button" %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-pref-description">No recent workflow failures.</p>
+      <% end %>
+    </section>
   </div>
 </section>

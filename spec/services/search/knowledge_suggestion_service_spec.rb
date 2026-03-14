@@ -56,4 +56,106 @@ RSpec.describe Search::KnowledgeSuggestionService do
     expect(response.sources.first[:source_content_hash]).to eq("source-hash-1")
     expect(AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION)).to exist
   end
+
+  it "builds delta suggestions only from changed context since the last report" do
+    user = User.create!(email: "knowledge-delta@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge delta", slug: "knowledge-delta")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    old_page = Page.create!(workspace: workspace, created_by: user, title: "Old brief")
+    new_page = Page.create!(workspace: workspace, created_by: user, title: "New brief")
+
+    old_chunk = SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: old_page.id,
+      page: old_page,
+      chunk_index: 0,
+      text: "Old context that was already reported.",
+      token_count: 6,
+      content_hash: "chunk-old-1",
+      source_content_hash: "source-old-1",
+      source_uri: "/w/#{workspace.slug}/pages/#{old_page.id}",
+      source_title: old_page.title,
+      metadata_json: { "entities" => { "names" => [ "Alex" ] } }
+    )
+    new_chunk = SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: new_page.id,
+      page: new_page,
+      chunk_index: 0,
+      text: "Fresh update says Sam will close the launch blockers.",
+      token_count: 9,
+      content_hash: "chunk-new-1",
+      source_content_hash: "source-new-1",
+      source_uri: "/w/#{workspace.slug}/pages/#{new_page.id}",
+      source_title: new_page.title,
+      metadata_json: { "entities" => { "names" => [ "Sam" ] } }
+    )
+    old_chunk.update_columns(updated_at: 3.hours.ago)
+    new_chunk.update_columns(updated_at: 30.minutes.ago)
+
+    previous_report = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Daily workspace brief",
+      summary: "Old brief already covered. [1]",
+      insights_json: [ "Alex owned the previous handoff. [1]" ],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      metadata_json: {
+        "context_snapshot" => [
+          {
+            "source_type" => SearchChunk::SOURCE_PAGE,
+            "source_id" => old_page.id,
+            "source_title" => old_page.title,
+            "source_content_hash" => "source-old-1",
+            "updated_at" => 3.hours.ago.iso8601
+          }
+        ]
+      },
+      generated_for_date: Date.current,
+      generated_at: 2.hours.ago
+    )
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:prompt]).to include("new or materially changed")
+      expect(args[:prompt]).to include("Previous report")
+      expect(args[:prompt]).to include("New brief")
+      {
+        text: {
+          summary: "Sam has a new blocker-closing task. [1]",
+          insights: [ "Sam is now the named owner of the update. [1]" ],
+          task_suggestions: [
+            {
+              title: "Confirm blocker closure",
+              owner: "Sam",
+              rationale: "The new brief says Sam will close the blockers. [1]",
+              citation_indices: [ 1 ]
+            }
+          ],
+          related_notes: []
+        }.to_json,
+        usage: { prompt_tokens: 30, completion_tokens: 16, total_tokens: 46 }
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      mode: described_class::MODE_DELTA,
+      since: 2.hours.ago,
+      previous_report: previous_report
+    ).call
+
+    expect(response).to be_present
+    expect(response.report_mode).to eq(described_class::MODE_DELTA)
+    expect(response.sources.length).to eq(1)
+    expect(response.sources.first[:title]).to eq("New brief")
+    expect(response.context_snapshot.first.fetch("source_title")).to eq("New brief")
+  end
 end

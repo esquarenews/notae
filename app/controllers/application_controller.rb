@@ -165,14 +165,7 @@ class ApplicationController < ActionController::Base
 
     current_hour = Time.zone.now.hour
     return false unless current_hour >= 9 && current_hour < 18
-
-    recent_record = policy_scope(KnowledgeSuggestion)
-                    .for_workspace(@ai_rail_workspace)
-                    .proactive
-                    .where("generated_at >= ?", Search::PersistKnowledgeSuggestionService::PROACTIVE_INTERVAL.ago)
-                    .recent_first
-                    .first
-    recent_record.blank?
+    true
   end
 
   def build_ai_usage_panel(user:, workspace:)

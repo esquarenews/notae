@@ -1,0 +1,34 @@
+<% payload = agent_action.payload %>
+
+<div class="notae-workspace-home-stack">
+  <% case agent_action.draft_type %>
+  <% when "email_draft" %>
+    <p class="notae-page-subtle">Recipients</p>
+    <div><strong>To:</strong> <%= Array(payload["to"]).presence&.join(", ") || "None yet" %></div>
+    <div><strong>CC:</strong> <%= Array(payload["cc"]).presence&.join(", ") || "None" %></div>
+    <div><strong>Subject:</strong> <%= payload["subject"].presence || "Untitled" %></div>
+    <p class="notae-page-subtle">Body</p>
+    <div class="notae-workspace-home-json"><%= payload["body"].to_s %></div>
+  <% when "github_comment_draft" %>
+    <div><strong>Repository:</strong> <%= payload["repository"].presence || "Not set" %></div>
+    <div><strong>Target:</strong> <%= payload["target_reference"].presence || "Not set" %></div>
+    <p class="notae-page-subtle">Comment</p>
+    <div class="notae-workspace-home-json"><%= payload["body"].to_s %></div>
+  <% when "calendar_hold" %>
+    <div><strong>Title:</strong> <%= payload["title"].presence || "Untitled hold" %></div>
+    <div><strong>Starts:</strong> <%= payload["starts_at"].presence || "Not set" %></div>
+    <div><strong>Ends:</strong> <%= payload["ends_at"].presence || "Not set" %></div>
+    <div><strong>Attendees:</strong> <%= Array(payload["attendees"]).presence&.join(", ") || "None yet" %></div>
+    <% if payload["body"].present? %>
+      <p class="notae-page-subtle">Notes</p>
+      <div class="notae-workspace-home-json"><%= payload["body"] %></div>
+    <% end %>
+  <% else %>
+    <div><strong>Project / Queue:</strong> <%= payload["project"].presence || "Not set" %></div>
+    <div><strong>Title:</strong> <%= payload["title"].presence || "Untitled ticket" %></div>
+    <div><strong>Assignee:</strong> <%= payload["assignee"].presence || "Unassigned" %></div>
+    <div><strong>Due:</strong> <%= payload["due_at"].presence || "Not set" %></div>
+    <p class="notae-page-subtle">Details</p>
+    <div class="notae-workspace-home-json"><%= payload["body"].to_s %></div>
+  <% end %>
+</div>

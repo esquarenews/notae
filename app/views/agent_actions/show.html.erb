@@ -1,0 +1,108 @@
+<% content_for :title, @agent_action.title %>
+<% content_for :content_class, "notae-content-page" %>
+
+<section class="notae-workspace-home notae-ai-history-page">
+  <header class="notae-utility-page-head">
+    <div>
+      <p class="notae-page-subtle"><%= @agent_action.target_system.titleize %> · <%= @agent_action.draft_type.humanize %></p>
+      <h1 class="notae-utility-title"><%= @agent_action.title %></h1>
+      <p class="notae-page-subtle">
+        Status: <%= agent_action_status_badge(@agent_action) %> ·
+        Approval required: <%= @agent_action.approval_required? ? "Yes" : "No" %> ·
+        Dry run: <%= @agent_action.dry_run? ? "Yes" : "No" %>
+      </p>
+    </div>
+    <div class="notae-utility-page-actions">
+      <%= link_to "All drafts", agent_actions_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+    </div>
+  </header>
+
+  <div class="notae-workspace-home-grid">
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Review panel</h2>
+      </div>
+      <%= render "preview", agent_action: @agent_action %>
+
+      <% if @agent_action.changes_requested? %>
+        <p class="notae-page-subtle">An approver requested revisions. Update the draft and save to resubmit it for approval.</p>
+      <% end %>
+
+      <% if policy(@agent_action).update? %>
+        <%= render "form", agent_action: @agent_action, workspace: @workspace, submit_label: "Save draft changes" %>
+      <% else %>
+        <p class="notae-page-subtle">This draft is now read-only.</p>
+      <% end %>
+
+      <% if policy(@agent_action).approve? || policy(@agent_action).request_changes? || policy(@agent_action).reject? %>
+        <div class="notae-workspace-home-stack">
+          <% if policy(@agent_action).approve? %>
+            <%= form_with url: approve_agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), method: :post, class: "notae-workspace-home-stack" do |form| %>
+              <%= form.text_area :decision_comment, placeholder: "Approval note or revision guidance", class: "notae-auth-input", rows: 3 %>
+              <%= form.submit "Approve draft", class: "notae-chip-button" %>
+            <% end %>
+          <% end %>
+
+          <% if policy(@agent_action).request_changes? %>
+            <%= form_with url: request_changes_agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), method: :post, class: "notae-workspace-home-stack" do |form| %>
+              <%= form.text_area :decision_comment, placeholder: "What needs to change before approval?", class: "notae-auth-input", rows: 3 %>
+              <%= form.submit "Request changes", class: "notae-chip-button notae-chip-button-subtle" %>
+            <% end %>
+          <% end %>
+
+          <% if policy(@agent_action).reject? %>
+            <%= form_with url: reject_agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), method: :post, class: "notae-workspace-home-stack" do |form| %>
+              <%= form.text_area :decision_comment, placeholder: "Why this draft is rejected or what should change", class: "notae-auth-input", rows: 3 %>
+              <%= form.submit "Reject draft", class: "notae-chip-button notae-chip-button-subtle" %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Policy & dry-run</h2>
+      </div>
+      <p class="notae-page-subtle">Policy evaluation</p>
+      <div class="notae-workspace-home-json"><%= @agent_action.policy_evaluation_json.to_json %></div>
+
+      <% if @agent_action.metadata_json.present? %>
+        <p class="notae-page-subtle">Draft metadata</p>
+        <div class="notae-workspace-home-json"><%= @agent_action.metadata_json.to_json %></div>
+      <% end %>
+
+      <% if @agent_action.result_json.present? %>
+        <p class="notae-page-subtle">Dry-run result</p>
+        <div class="notae-workspace-home-json"><%= @agent_action.result_json.to_json %></div>
+      <% else %>
+        <p class="notae-page-subtle">No dry-run result yet.</p>
+      <% end %>
+    </section>
+  </div>
+
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Decision history</h2>
+    </div>
+    <% if @review_history.any? %>
+      <ul class="notae-workspace-home-list">
+        <% @review_history.each do |event| %>
+          <li class="notae-workspace-home-list-item">
+            <div class="font-medium"><%= agent_action_event_title(event) %> · #<%= event.sequence_number %></div>
+            <div class="notae-page-subtle">
+              <%= event.actor&.email || "system" %> · <%= time_ago_in_words(event.occurred_at) %> ago
+            </div>
+            <% if event.comment.present? %>
+              <div><%= event.comment %></div>
+            <% end %>
+            <div class="notae-workspace-home-json"><%= event.details_json.to_json %></div>
+            <div class="notae-page-subtle">Hash verified: <%= event.hash_verification_succeeds? ? "Yes" : "No" %></div>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="notae-page-subtle">No events yet.</p>
+    <% end %>
+  </section>
+</section>

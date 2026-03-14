@@ -1,6 +1,6 @@
 class AuditEventPolicy < ApplicationPolicy
   def show?
-    workspace_membership&.admin_or_owner?
+    workspace_membership&.audit_reviewer?
   end
 
   class Scope < Scope
@@ -10,7 +10,7 @@ class AuditEventPolicy < ApplicationPolicy
       scope.where(
         workspace_id: Membership.where(
           user_id: user.id,
-          role: [ Membership.roles.fetch("admin"), Membership.roles.fetch("owner") ]
+          role: [ Membership.roles.fetch("admin"), Membership.roles.fetch("owner"), Membership.roles.fetch("auditor") ]
         ).select(:workspace_id)
       )
     end

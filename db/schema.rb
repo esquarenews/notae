@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_12_094500) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_14_124000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -42,6 +42,77 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_12_094500) do
     t.uuid "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "agent_action_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "actor_id"
+    t.uuid "agent_action_id", null: false
+    t.text "comment"
+    t.datetime "created_at", null: false
+    t.jsonb "details_json", default: {}, null: false
+    t.string "entry_hash", null: false
+    t.string "event_type", null: false
+    t.datetime "occurred_at", null: false
+    t.string "previous_entry_hash"
+    t.integer "sequence_number", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["actor_id"], name: "index_agent_action_events_on_actor_id"
+    t.index ["agent_action_id", "sequence_number"], name: "idx_agent_action_events_on_action_and_sequence", unique: true
+    t.index ["agent_action_id"], name: "index_agent_action_events_on_agent_action_id"
+    t.index ["event_type", "created_at"], name: "idx_agent_action_events_on_type_created_at"
+    t.index ["workspace_id", "created_at"], name: "idx_agent_action_events_on_workspace_created_at"
+    t.index ["workspace_id"], name: "index_agent_action_events_on_workspace_id"
+  end
+
+  create_table "agent_actions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "approval_required", default: true, null: false
+    t.datetime "approved_at"
+    t.uuid "approved_by_id"
+    t.datetime "created_at", null: false
+    t.string "draft_type", null: false
+    t.boolean "dry_run", default: true, null: false
+    t.datetime "executed_at"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.jsonb "payload_json", default: {}, null: false
+    t.jsonb "policy_evaluation_json", default: {}, null: false
+    t.string "proposed_by", default: "manual", null: false
+    t.datetime "rejected_at"
+    t.uuid "rejected_by_id"
+    t.jsonb "result_json", default: {}, null: false
+    t.string "status", default: "pending", null: false
+    t.string "target_system", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["approved_by_id"], name: "index_agent_actions_on_approved_by_id"
+    t.index ["rejected_by_id"], name: "index_agent_actions_on_rejected_by_id"
+    t.index ["target_system", "draft_type"], name: "idx_agent_actions_on_system_and_type"
+    t.index ["user_id", "created_at"], name: "idx_agent_actions_on_user_created_at"
+    t.index ["user_id"], name: "index_agent_actions_on_user_id"
+    t.index ["workspace_id", "status", "created_at"], name: "idx_agent_actions_on_workspace_status_created_at"
+    t.index ["workspace_id"], name: "index_agent_actions_on_workspace_id"
+  end
+
+  create_table "agent_policies", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "allow_internal_automation", default: true, null: false
+    t.jsonb "allowed_draft_types_json", default: [], null: false
+    t.jsonb "allowed_internal_actions_json", default: [], null: false
+    t.jsonb "allowed_lifecycle_operations_json", default: [], null: false
+    t.jsonb "allowed_target_systems_json", default: [], null: false
+    t.boolean "approval_required", default: true, null: false
+    t.jsonb "approver_roles_json", default: [], null: false
+    t.jsonb "author_roles_json", default: [], null: false
+    t.decimal "automation_confidence_threshold", precision: 4, scale: 2, default: "0.7", null: false
+    t.integer "automation_retry_limit", default: 2, null: false
+    t.datetime "created_at", null: false
+    t.boolean "dry_run_required", default: true, null: false
+    t.decimal "max_estimated_cost_usd", precision: 10, scale: 2, default: "0.0", null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["workspace_id"], name: "index_agent_policies_on_workspace_id", unique: true
   end
 
   create_table "ai_conversations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -116,6 +187,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_12_094500) do
     t.index ["auditable_type", "auditable_id"], name: "index_audit_events_on_auditable_type_and_auditable_id"
     t.index ["workspace_id", "created_at"], name: "index_audit_events_on_workspace_id_and_created_at"
     t.index ["workspace_id"], name: "index_audit_events_on_workspace_id"
+  end
+
+  create_table "automation_controls", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "enabled", default: true, null: false
+    t.text "pause_reason"
+    t.datetime "paused_at"
+    t.string "scope_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["scope_name"], name: "index_automation_controls_on_scope_name", unique: true
   end
 
   create_table "blocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -795,6 +876,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_12_094500) do
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
+  create_table "workflow_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "attempts_count", default: 0, null: false
+    t.datetime "cancelled_at"
+    t.decimal "confidence_score", precision: 4, scale: 2, default: "1.0", null: false
+    t.datetime "created_at", null: false
+    t.text "error_message"
+    t.datetime "finished_at"
+    t.jsonb "input_json", default: {}, null: false
+    t.integer "max_attempts", default: 2, null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.jsonb "plan_json", default: {}, null: false
+    t.jsonb "policy_snapshot_json", default: {}, null: false
+    t.datetime "queued_at", null: false
+    t.jsonb "result_json", default: {}, null: false
+    t.datetime "started_at"
+    t.string "status", default: "queued", null: false
+    t.string "trigger_source", default: "manual", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.string "workflow_kind", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["user_id", "created_at"], name: "idx_workflow_runs_on_user_created_at"
+    t.index ["user_id"], name: "index_workflow_runs_on_user_id"
+    t.index ["workflow_kind", "status"], name: "idx_workflow_runs_on_kind_status"
+    t.index ["workspace_id", "status", "created_at"], name: "idx_workflow_runs_on_workspace_status_created_at"
+    t.index ["workspace_id"], name: "index_workflow_runs_on_workspace_id"
+  end
+
   create_table "workspaces", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "analytics_enabled", default: true, null: false
     t.datetime "archived_at"
@@ -812,6 +921,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_12_094500) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agent_action_events", "agent_actions"
+  add_foreign_key "agent_action_events", "users", column: "actor_id"
+  add_foreign_key "agent_action_events", "workspaces"
+  add_foreign_key "agent_actions", "users"
+  add_foreign_key "agent_actions", "users", column: "approved_by_id"
+  add_foreign_key "agent_actions", "users", column: "rejected_by_id"
+  add_foreign_key "agent_actions", "workspaces"
+  add_foreign_key "agent_policies", "workspaces"
   add_foreign_key "ai_conversations", "pages"
   add_foreign_key "ai_conversations", "users"
   add_foreign_key "ai_conversations", "workspaces"
@@ -918,4 +1035,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_12_094500) do
   add_foreign_key "share_links", "pages"
   add_foreign_key "share_links", "users", column: "created_by_id"
   add_foreign_key "share_links", "workspaces"
+  add_foreign_key "workflow_runs", "users"
+  add_foreign_key "workflow_runs", "workspaces"
 end

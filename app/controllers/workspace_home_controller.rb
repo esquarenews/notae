@@ -22,6 +22,7 @@ class WorkspaceHomeController < ApplicationController
     @recent_databases = policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).limit(3).to_a
     @knowledge_task_databases = knowledge_task_databases_for(@workspace)
     @daily_knowledge_suggestion = resolve_daily_knowledge_suggestion
+    @pending_agent_actions = resolve_pending_agent_actions
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_memberships = @memberships.any? { |membership| policy(membership).update? }
     @audit_events = policy_scope(AuditEvent)
@@ -76,6 +77,19 @@ class WorkspaceHomeController < ApplicationController
     return nil if existing_for_today.present?
 
     Search::PersistKnowledgeSuggestionService.ensure_daily_summary!(user: current_user, workspace: @workspace)
+  end
+
+  def resolve_pending_agent_actions
+    return [] unless data_source_available?("agent_actions")
+
+    with_optional_schema_fallback(default: [], feature: "agent action drafts") do
+      policy_scope(AgentAction)
+        .for_workspace(@workspace)
+        .pending
+        .recent_first
+        .limit(4)
+        .to_a
+    end
   end
 
   def redirect_to_last_visited_page

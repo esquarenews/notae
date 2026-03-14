@@ -163,6 +163,68 @@ RSpec.describe "AI Assistant", type: :request do
     expect(AiConversation.order(:created_at).last.answer).to include("polished launch paragraph")
   end
 
+  it "creates agent action drafts from AI rail prompts and stores suggestion history" do
+    user = User.create!(email: "ai-assistant-draft-action@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Assistant Draft Action", slug: "ai-assistant-draft-action")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Launch brief")
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "Launch slipped by two days and the team wants an email update.",
+      token_count: 12,
+      content_hash: "assistant-draft-action-hash",
+      embedding: [ 0.3, 0.6 ],
+      embedding_model: SearchChunk::EMBEDDING_MODEL
+    )
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:model]).to eq(Search::AssistantQueryService::WRITING_MODEL)
+      expect(args[:prompt]).to include("Requested draft type: email_draft")
+      {
+        text: {
+          title: "Customer launch update draft",
+          summary: "Created a launch update email draft for review.",
+          payload: {
+            to: [ "team@example.com" ],
+            cc: [],
+            subject: "Launch update",
+            body: "Hi team,\n\nThe launch moved by two days. Please use the revised schedule.\n"
+          },
+          used_source_indices: [ 1 ]
+        }.to_json,
+        usage: { prompt_tokens: 88, completion_tokens: 44, total_tokens: 132 }
+      }
+    end
+
+    sign_in user
+    expect {
+      post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+           params: {
+             ai_assistant: {
+               prompt: "Draft an email to team@example.com about the two day launch delay.",
+               scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+             }
+           },
+           headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    }.to change(AgentAction, :count).by(1).and change(AiConversation, :count).by(1)
+
+    agent_action = AgentAction.order(:created_at).last
+    expect(agent_action.proposed_by).to eq("ai_assistant")
+    expect(agent_action.draft_type).to eq("email_draft")
+    expect(agent_action.payload_json.fetch("subject")).to eq("Launch update")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Review draft action")
+    expect(response.body).to include("Created a launch update email draft for review.")
+
+    conversation = AiConversation.order(:created_at).last
+    expect(conversation.status).to eq(AiConversation::STATUS_SUGGESTION)
+    expect(conversation.sources.map { |source| source["kind"] }).to include("Draft action")
+  end
+
   it "falls back to general-knowledge answers when workspace context is not required" do
     user = User.create!(email: "ai-assistant-general-knowledge@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "AI Assistant General Knowledge", slug: "ai-assistant-general-knowledge")

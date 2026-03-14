@@ -1,6 +1,6 @@
 module Search
   class AssistantQueryService
-    Response = Struct.new(:answer, :sources, :scope, :intent, :auto_insert, :model, keyword_init: true)
+    Response = Struct.new(:answer, :sources, :scope, :intent, :auto_insert, :model, :agent_action, keyword_init: true)
 
     SCOPE_AUTO = "auto"
     SCOPE_DOCUMENT = "document"
@@ -16,14 +16,17 @@ module Search
     INTENT_SEARCH = "search"
     INTENT_COMPOSE = "compose"
     INTENT_SUGGEST_EDITS = "suggest_edits"
+    INTENT_DRAFT_ACTION = "draft_action"
     INTENT_ASK_AI = "ask_ai"
     INTENT_OPTIONS = [
       INTENT_SEARCH,
       INTENT_COMPOSE,
       INTENT_SUGGEST_EDITS,
+      INTENT_DRAFT_ACTION,
       INTENT_ASK_AI
     ].freeze
 
+    SUPPORTED_DRAFT_TARGETS = AgentAction::TARGET_SYSTEM_OPTIONS.freeze
     SEARCH_MODEL = "gpt-4o-mini"
     WRITING_MODEL = "gpt-4.1-mini"
     GENERAL_MODEL = "gpt-4.1-mini"
@@ -62,6 +65,9 @@ module Search
 
       resolved_scope = resolve_scope
       resolved_intent = resolve_intent
+      if draft_action_intent?(resolved_intent)
+        return generate_draft_action_response(resolved_scope: resolved_scope, resolved_intent: resolved_intent)
+      end
       if writing_intent?(resolved_intent)
         return generate_writing_response(resolved_scope: resolved_scope, resolved_intent: resolved_intent)
       end
@@ -127,13 +133,32 @@ module Search
     def resolve_intent
       return INTENT_COMPOSE if intent == INTENT_ASK_AI
       return intent if INTENT_OPTIONS.include?(intent)
+      return INTENT_DRAFT_ACTION if prompt_requests_draft_action?
       return INTENT_COMPOSE if prompt_requests_writing?
 
       INTENT_SEARCH
     end
 
+    def draft_action_intent?(resolved_intent)
+      resolved_intent == INTENT_DRAFT_ACTION
+    end
+
     def writing_intent?(resolved_intent)
       [ INTENT_COMPOSE, INTENT_SUGGEST_EDITS ].include?(resolved_intent)
+    end
+
+    def prompt_requests_draft_action?
+      normalized = prompt.downcase
+      return false if normalized.blank?
+
+      patterns = [
+        /\b(draft|write|compose|prepare|create)\b.*\b(email|e-mail|mail|reply)\b/,
+        /\b(draft|write|compose|prepare|create)\b.*\b(github|pull request|pull-request|pr|issue)\b.*\b(comment|reply|response)\b/,
+        /\b(draft|create|prepare)\b.*\b(ticket|task|todo|to-do|action item|handoff)\b/,
+        /\b(draft|create|prepare|schedule|book|reserve)\b.*\b(calendar|meeting|invite|hold|time slot|timeslot)\b/
+      ]
+
+      patterns.any? { |pattern| normalized.match?(pattern) }
     end
 
     def prompt_requests_writing?
@@ -146,6 +171,83 @@ module Search
       ]
 
       patterns.any? { |pattern| normalized.match?(pattern) }
+    end
+
+    def generate_draft_action_response(resolved_scope:, resolved_intent:)
+      requested_draft = draft_request_for_prompt
+      return unavailable(:unsupported_draft_request) if requested_draft.blank?
+
+      context_entries = build_context_entries(resolved_scope)
+      response = Openai::ResponsesClient.generate_text_with_usage(
+        prompt: draft_action_prompt_for(
+          resolved_scope: resolved_scope,
+          requested_draft: requested_draft,
+          context_entries: context_entries
+        ),
+        api_key: user.openai_api_key,
+        model: WRITING_MODEL,
+        max_output_tokens: 720
+      )
+
+      parsed = parse_json_object(response[:text])
+      source_indices = normalized_source_indices(parsed["used_source_indices"], context_entries)
+      payload = normalize_ai_draft_payload(
+        payload: parsed.fetch("payload", {}),
+        requested_draft: requested_draft,
+        parsed_title: parsed["title"]
+      )
+      agent_action = AgentActions::DraftCreator.new(
+        workspace: workspace,
+        actor: user,
+        attributes: {
+          title: draft_title_for(parsed: parsed, payload: payload, requested_draft: requested_draft),
+          proposed_by: "ai_assistant",
+          target_system: requested_draft.fetch(:target_system),
+          draft_type: requested_draft.fetch(:draft_type),
+          payload_json: payload,
+          metadata_json: {
+            "origin_prompt" => prompt,
+            "resolved_scope" => resolved_scope,
+            "source_indices" => source_indices,
+            "source_snapshot" => source_snapshot_for_indices(source_indices, context_entries),
+            "model" => WRITING_MODEL
+          }
+        }
+      ).call
+
+      Search::AiUsageLogger.log!(
+        user: user,
+        workspace: workspace,
+        operation: AiUsageLog::OP_ASSISTANT_WRITE,
+        model: WRITING_MODEL,
+        usage: response[:usage],
+        metadata: {
+          scope: resolved_scope,
+          intent: resolved_intent,
+          prompt_length: prompt.length,
+          draft_type: requested_draft.fetch(:draft_type),
+          target_system: requested_draft.fetch(:target_system),
+          context_items: context_entries.length
+        }
+      )
+
+      used_sources = source_indices.map { |index| context_entries[index - 1].slice(:index, :title, :kind, :url, :workspace_name) }
+      used_sources << review_source_for(agent_action)
+
+      Response.new(
+        answer: parsed["summary"].to_s.strip.presence || default_draft_summary_for(requested_draft: requested_draft, agent_action: agent_action),
+        sources: used_sources,
+        scope: resolved_scope,
+        intent: resolved_intent,
+        auto_insert: false,
+        model: WRITING_MODEL,
+        agent_action: agent_action
+      )
+    rescue JSON::ParserError, KeyError
+      unavailable(:draft_generation_failed)
+    rescue AgentActions::DraftCreator::Error => e
+      Rails.logger.warn("AI assistant draft creation failed for workspace=#{workspace.id}: #{e.message}")
+      unavailable(:draft_validation_failed)
     end
 
     def generate_writing_response(resolved_scope:, resolved_intent:)
@@ -747,6 +849,165 @@ module Search
         Context:
         #{context_lines.join("\n")}
       PROMPT
+    end
+
+    def draft_request_for_prompt
+      normalized = prompt.downcase
+      if normalized.match?(/\b(email|e-mail|mail|reply)\b/)
+        return { draft_type: "email_draft", target_system: "gmail" }
+      end
+      if normalized.match?(/\b(github|pull request|pull-request|pr|issue)\b/) && normalized.match?(/\b(comment|reply|response)\b/)
+        return { draft_type: "github_comment_draft", target_system: "github" }
+      end
+      if normalized.match?(/\b(calendar|meeting|invite|hold|time slot|timeslot)\b/) &&
+         normalized.match?(/\b(draft|create|prepare|schedule|book|reserve|hold)\b/)
+        return { draft_type: "calendar_hold", target_system: "calendar" }
+      end
+      return nil unless normalized.match?(/\b(ticket|task|todo|to-do|action item|handoff)\b/)
+
+      {
+        draft_type: "task_ticket",
+        target_system: task_ticket_target_system_for_prompt(normalized)
+      }
+    end
+
+    def task_ticket_target_system_for_prompt(normalized_prompt)
+      return "github" if normalized_prompt.match?(/\bgithub\b|\brepo\b|\bissue\b|\bpr\b|\bpull request\b/)
+      return "slack" if normalized_prompt.match?(/\bslack\b|\bchannel\b|\bthread\b/)
+
+      "crm"
+    end
+
+    def draft_action_prompt_for(resolved_scope:, requested_draft:, context_entries:)
+      context_lines = context_entries.map do |entry|
+        "[#{entry[:index]}] Workspace=#{entry[:workspace_name]}; Kind=#{entry[:kind]}; Title=#{entry[:title]}; Excerpt=#{entry[:excerpt]}"
+      end
+
+      <<~PROMPT
+        You are Notae AI creating a non-destructive draft action for human review.
+        Return valid JSON only with these top-level keys:
+        - title: short review title
+        - summary: one concise sentence describing the created draft
+        - payload: object that matches the requested draft schema
+        - used_source_indices: array of integer context entry ids you relied on
+
+        Requested target system: #{requested_draft.fetch(:target_system)}
+        Requested draft type: #{requested_draft.fetch(:draft_type)}
+        Scope: #{resolved_scope}
+
+        Draft schema requirements:
+        - email_draft payload: to (array), cc (array), subject (string), body (string)
+        - github_comment_draft payload: repository (string), target_reference (string), body (string)
+        - task_ticket payload: project (string), title (string), body (string), assignee (string optional), due_at (string optional)
+        - calendar_hold payload: title (string), starts_at (ISO-like datetime string), ends_at (ISO-like datetime string), attendees (array), body (string optional)
+
+        Rules:
+        - Use workspace context when it helps.
+        - Keep payload practical and editable.
+        - Do not invent citations inside summary text.
+        - If context is thin, still generate the best safe draft from the user's request.
+        - Do not include markdown fences or prose outside JSON.
+
+        User request:
+        #{prompt}
+
+        Context:
+        #{context_lines.join("\n")}
+      PROMPT
+    end
+
+    def parse_json_object(raw_text)
+      text = raw_text.to_s.strip
+      return {} if text.blank?
+
+      JSON.parse(text)
+    rescue JSON::ParserError
+      match = text.match(/\{.*\}/m)
+      raise unless match
+
+      JSON.parse(match[0])
+    end
+
+    def normalize_ai_draft_payload(payload:, requested_draft:, parsed_title:)
+      normalized_payload = payload.respond_to?(:to_h) ? payload.to_h.stringify_keys : {}
+      case requested_draft.fetch(:draft_type)
+      when "email_draft"
+        {
+          "to" => normalize_string_array(normalized_payload["to"] || normalized_payload["recipients"]),
+          "cc" => normalize_string_array(normalized_payload["cc"]),
+          "subject" => normalized_payload["subject"].to_s.strip,
+          "body" => normalized_payload["body"].to_s
+        }
+      when "github_comment_draft"
+        {
+          "repository" => normalized_payload["repository"].to_s.strip,
+          "target_reference" => normalized_payload["target_reference"].presence || normalized_payload["issue"].presence || normalized_payload["pull_request"].presence,
+          "body" => normalized_payload["body"].to_s
+        }.transform_values { |value| value.is_a?(String) ? value.strip : value }
+      when "calendar_hold"
+        {
+          "title" => normalized_payload["title"].presence || parsed_title.to_s.strip,
+          "starts_at" => normalized_payload["starts_at"].to_s.strip,
+          "ends_at" => normalized_payload["ends_at"].to_s.strip,
+          "attendees" => normalize_string_array(normalized_payload["attendees"]),
+          "body" => normalized_payload["body"].to_s
+        }
+      else
+        {
+          "project" => normalized_payload["project"].to_s.strip,
+          "title" => normalized_payload["title"].presence || parsed_title.to_s.strip,
+          "body" => normalized_payload["body"].to_s,
+          "assignee" => normalized_payload["assignee"].to_s.strip,
+          "due_at" => normalized_payload["due_at"].to_s.strip
+        }
+      end
+    end
+
+    def normalize_string_array(value)
+      Array(value).flat_map { |entry| entry.to_s.split(/\r?\n|,/) }.map(&:strip).reject(&:blank?).uniq
+    end
+
+    def normalized_source_indices(raw_indices, context_entries)
+      Array(raw_indices).map(&:to_i).select { |index| index.between?(1, context_entries.length) }.uniq
+    end
+
+    def source_snapshot_for_indices(source_indices, context_entries)
+      source_indices.map do |index|
+        context_entries[index - 1].slice(:index, :title, :kind, :url, :workspace_name)
+      end
+    end
+
+    def draft_title_for(parsed:, payload:, requested_draft:)
+      parsed["title"].to_s.strip.presence ||
+        payload["title"].to_s.strip.presence ||
+        payload["subject"].to_s.strip.presence ||
+        "#{requested_draft.fetch(:draft_type).humanize} review"
+    end
+
+    def default_draft_summary_for(requested_draft:, agent_action:)
+      case requested_draft.fetch(:draft_type)
+      when "email_draft"
+        "Created an email draft for review: #{agent_action.title}."
+      when "github_comment_draft"
+        "Created a GitHub comment draft for review: #{agent_action.title}."
+      when "calendar_hold"
+        "Created a calendar hold draft for review: #{agent_action.title}."
+      else
+        "Created a task draft for review: #{agent_action.title}."
+      end
+    end
+
+    def review_source_for(agent_action)
+      {
+        index: nil,
+        title: "Review draft action",
+        kind: "Draft action",
+        url: Rails.application.routes.url_helpers.agent_action_path(
+          workspace_slug: agent_action.workspace.slug,
+          id: agent_action.id
+        ),
+        workspace_name: agent_action.workspace.name
+      }
     end
 
     def general_prompt_for(resolved_scope:)

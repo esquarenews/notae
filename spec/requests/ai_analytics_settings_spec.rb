@@ -5,6 +5,47 @@ RSpec.describe "AI Analytics settings", type: :request do
     user = User.create!(email: "ai-analytics-settings@example.com", password: "password123")
     workspace = Workspace.create!(name: "AI Analytics Settings", slug: "ai-analytics-settings")
     Membership.create!(workspace: workspace, user: user, role: :owner)
+    KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_CONVERTED,
+      title: "Daily quality signal",
+      summary: "Converted suggestion",
+      generated_at: Time.current,
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: []
+    )
+    AgentAction.create!(
+      workspace: workspace,
+      user: user,
+      title: "Approved action",
+      proposed_by: "manual",
+      target_system: "gmail",
+      draft_type: "email_draft",
+      status: AgentAction::STATUS_APPROVED,
+      approval_required: true,
+      dry_run: true,
+      payload_json: {
+        "to" => [ "team@example.com" ],
+        "cc" => [],
+        "subject" => "Approved",
+        "body" => "Approved."
+      }
+    )
+    WorkflowRun.create!(
+      workspace: workspace,
+      user: user,
+      workflow_kind: WorkflowRun::KIND_CREATE_NOTA,
+      status: WorkflowRun::STATUS_FAILED,
+      trigger_source: "manual",
+      queued_at: Time.current,
+      finished_at: Time.current,
+      confidence_score: 1.0,
+      error_message: "Create note failed"
+    )
 
     first_log = AiUsageLog.create!(
       user: user,
@@ -41,5 +82,25 @@ RSpec.describe "AI Analytics settings", type: :request do
     expect(response.body).to include("Assistant query generation")
     expect(response.body).to include("Search answer generation")
     expect(response.body).to include("Meeting diarization")
+    expect(response.body).to include("Workflow Metrics")
+    expect(response.body).to include("Automation Safety")
+    expect(response.body).to include("Error Monitoring")
+    expect(response.body).to include("Create note failed")
+    expect(response.body).to include("Inspect workflow")
+  end
+
+  it "updates the automation kill switch" do
+    user = User.create!(email: "ai-analytics-kill-switch@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Analytics Kill Switch", slug: "ai-analytics-kill-switch")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_ai_analytics_settings_path(workspace_slug: workspace.slug),
+          params: { automation_control: { enabled: "0", pause_reason: "Maintenance window" } }
+
+    expect(response).to redirect_to(workspace_ai_analytics_settings_path(workspace_slug: workspace.slug))
+    control = AutomationControl.current
+    expect(control.enabled).to eq(false)
+    expect(control.pause_reason).to eq("Maintenance window")
   end
 end

@@ -7,7 +7,14 @@ class Invitation < ApplicationRecord
   belongs_to :invited_by, class_name: "User"
   belongs_to :accepted_by, class_name: "User", optional: true
 
-  enum :role, { member: 0, admin: 1, owner: 2, guest: 3 }, default: :guest
+  enum :role, {
+    member: 0,
+    admin: 1,
+    owner: 2,
+    guest: 3,
+    auditor: 4,
+    automation_agent: 5
+  }, default: :guest
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :token, presence: true, uniqueness: true

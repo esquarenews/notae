@@ -1,0 +1,64 @@
+<%= form_with model: agent_action,
+              url: agent_action.persisted? ? agent_action_path(workspace_slug: workspace.slug, id: agent_action.id) : agent_actions_path(workspace_slug: workspace.slug),
+              method: agent_action.persisted? ? :patch : :post,
+              class: "notae-workspace-home-stack",
+              data: {
+                controller: "agent-action-form",
+                agent_action_form_target_matrix_value: agent_action_target_matrix_json
+              } do |form| %>
+  <%= form.text_field :title, required: true, class: "notae-auth-input", placeholder: "Draft title" %>
+
+  <% if agent_action.persisted? %>
+    <%= form.hidden_field :target_system %>
+    <%= form.hidden_field :draft_type %>
+    <%= form.hidden_field :proposed_by %>
+  <% else %>
+    <%= form.select :draft_type,
+                    AgentAction::DRAFT_TYPE_OPTIONS.map { |value| [ value.humanize, value ] },
+                    {},
+                    class: "notae-auth-input",
+                    data: { agent_action_form_target: "draftTypeSelect", action: "change->agent-action-form#sync" } %>
+    <%= form.select :target_system,
+                    AgentAction::TARGET_SYSTEM_OPTIONS.map { |value| [ value.titleize, value ] },
+                    {},
+                    class: "notae-auth-input",
+                    data: { agent_action_form_target: "targetSystemSelect" } %>
+    <%= form.hidden_field :proposed_by, value: agent_action.proposed_by.presence || "manual" %>
+  <% end %>
+
+  <div data-agent-action-form-target="section" data-draft-types="email_draft" class="notae-workspace-home-stack">
+    <p class="notae-page-subtle">Email fields</p>
+    <%= form.text_area :to_line, value: agent_action_payload_lines(agent_action, :to), class: "notae-auth-input", rows: 2, placeholder: "Recipients, one per line" %>
+    <%= form.text_area :cc_line, value: agent_action_payload_lines(agent_action, :cc), class: "notae-auth-input", rows: 2, placeholder: "CC recipients, one per line" %>
+    <%= form.text_field :subject, value: agent_action_payload_value(agent_action, :subject), class: "notae-auth-input", placeholder: "Email subject" %>
+  </div>
+
+  <div data-agent-action-form-target="section" data-draft-types="github_comment_draft" class="notae-workspace-home-stack">
+    <p class="notae-page-subtle">GitHub fields</p>
+    <%= form.text_field :repository, value: agent_action_payload_value(agent_action, :repository), class: "notae-auth-input", placeholder: "Repository (owner/name)" %>
+    <%= form.text_field :target_reference, value: agent_action_payload_value(agent_action, :target_reference), class: "notae-auth-input", placeholder: "Issue or PR reference" %>
+  </div>
+
+  <div data-agent-action-form-target="section" data-draft-types="task_ticket" class="notae-workspace-home-stack">
+    <p class="notae-page-subtle">Task / CRM / Slack fields</p>
+    <%= form.text_field :project, value: agent_action_payload_value(agent_action, :project), class: "notae-auth-input", placeholder: "Project / board / queue" %>
+    <%= form.text_field :assignee, value: agent_action_payload_value(agent_action, :assignee), class: "notae-auth-input", placeholder: "Assignee" %>
+    <%= form.date_field :due_at, value: agent_action_payload_value(agent_action, :due_at), class: "notae-auth-input" %>
+  </div>
+
+  <div data-agent-action-form-target="section" data-draft-types="calendar_hold" class="notae-workspace-home-stack">
+    <p class="notae-page-subtle">Calendar fields</p>
+    <%= form.datetime_local_field :starts_at, value: agent_action_payload_value(agent_action, :starts_at), class: "notae-auth-input" %>
+    <%= form.datetime_local_field :ends_at, value: agent_action_payload_value(agent_action, :ends_at), class: "notae-auth-input" %>
+    <%= form.text_area :attendees_line, value: agent_action_payload_lines(agent_action, :attendees), class: "notae-auth-input", rows: 2, placeholder: "Attendees, one per line" %>
+  </div>
+
+  <p class="notae-page-subtle">Draft body</p>
+  <%= form.text_area :body, value: agent_action_payload_value(agent_action, :body), class: "notae-auth-input", rows: 8, placeholder: "Draft content or notes" %>
+
+  <% if agent_action.persisted? %>
+    <%= form.text_area :revision_comment, class: "notae-auth-input", rows: 3, placeholder: "Revision comment for the audit trail" %>
+  <% end %>
+
+  <%= form.submit submit_label, class: "notae-chip-button" %>
+<% end %>

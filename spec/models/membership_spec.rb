@@ -26,4 +26,23 @@ RSpec.describe Membership, type: :model do
 
     expect(membership).to be_guest
   end
+
+  it "treats auditors as read-only and automation agents as draft authors" do
+    workspace = Workspace.create!(name: "Extended Roles", slug: "extended-roles")
+    auditor_user = User.create!(email: "auditor-role@example.com", password: "password123")
+    agent_user = User.create!(email: "automation-agent-role@example.com", password: "password123")
+
+    auditor = described_class.create!(user: auditor_user, workspace: workspace, role: :auditor)
+    automation_agent = described_class.create!(user: agent_user, workspace: workspace, role: :automation_agent)
+
+    expect(auditor).to be_auditor
+    expect(auditor.read_only?).to eq(true)
+    expect(auditor.audit_reviewer?).to eq(true)
+    expect(auditor.can_author_agent_actions?).to eq(false)
+
+    expect(automation_agent).to be_automation_agent
+    expect(automation_agent.read_only?).to eq(false)
+    expect(automation_agent.content_editor?).to eq(false)
+    expect(automation_agent.can_author_agent_actions?).to eq(true)
+  end
 end

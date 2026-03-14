@@ -2,16 +2,33 @@ require "json"
 
 module Search
   class KnowledgeSuggestionService
-    Response = Struct.new(:summary, :insights, :task_suggestions, :related_notes, :sources, :model, keyword_init: true)
+    Response = Struct.new(
+      :summary,
+      :insights,
+      :task_suggestions,
+      :related_notes,
+      :sources,
+      :model,
+      :report_mode,
+      :context_snapshot,
+      :baseline_generated_at,
+      :recent_since,
+      keyword_init: true
+    )
 
     MODEL = "gpt-4.1-mini".freeze
     CONTEXT_LIMIT = 12
+    MODE_FULL = "full".freeze
+    MODE_DELTA = "delta".freeze
 
     attr_reader :unavailable_reason
 
-    def initialize(user:, workspace:)
+    def initialize(user:, workspace:, mode: MODE_FULL, since: nil, previous_report: nil)
       @user = user
       @workspace = workspace
+      @mode = normalize_mode(mode)
+      @since = since
+      @previous_report = previous_report
       @unavailable_reason = nil
     end
 
@@ -21,7 +38,7 @@ module Search
       return unavailable(:rate_limited) unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
 
       context_chunks = select_context_chunks
-      return unavailable(:no_context) if context_chunks.empty?
+      return unavailable(delta_mode? ? :no_recent_changes : :no_context) if context_chunks.empty?
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: prompt_for(context_chunks),
@@ -40,7 +57,10 @@ module Search
         usage: response[:usage],
         metadata: {
           context_chunks: context_chunks.length,
-          feature: "knowledge_suggestion_service"
+          feature: "knowledge_suggestion_service",
+          report_mode: mode,
+          baseline_generated_at: previous_report&.generated_at&.iso8601,
+          recent_since: since&.iso8601
         }
       )
 
@@ -50,7 +70,11 @@ module Search
         task_suggestions: normalized[:task_suggestions],
         related_notes: normalized[:related_notes],
         sources: normalized[:used_indices].map { |index| source_payload_for(context_chunks[index - 1], index) },
-        model: MODEL
+        model: MODEL,
+        report_mode: mode,
+        context_snapshot: context_snapshot_for(context_chunks),
+        baseline_generated_at: previous_report&.generated_at,
+        recent_since: since
       )
     rescue Openai::ResponsesClient::Error => error
       Rails.logger.warn("Knowledge suggestion generation failed for workspace=#{workspace.id}: #{error.message}")
@@ -59,14 +83,16 @@ module Search
 
     private
 
-    attr_reader :user, :workspace
+    attr_reader :user, :workspace, :mode, :since, :previous_report
 
     def select_context_chunks
-      accessible_chunks_scope.order(updated_at: :desc).limit(80).to_a
-                             .group_by { |chunk| [ chunk.source_type, chunk.source_id ] }
-                             .values
-                             .map(&:first)
-                             .first(CONTEXT_LIMIT)
+      chunks = accessible_chunks_scope.order(updated_at: :desc).limit(80).to_a
+                                     .group_by { |chunk| [ chunk.source_type, chunk.source_id ] }
+                                     .values
+                                     .map(&:first)
+      return chunks.first(CONTEXT_LIMIT) unless delta_mode?
+
+      filter_delta_chunks(chunks).first(CONTEXT_LIMIT)
     end
 
     def accessible_chunks_scope
@@ -86,6 +112,12 @@ module Search
     end
 
     def prompt_for(context_chunks)
+      return delta_prompt_for(context_chunks) if delta_mode?
+
+      full_prompt_for(context_chunks)
+    end
+
+    def full_prompt_for(context_chunks)
       context_lines = context_chunks.map.with_index do |chunk, index|
         entities = Array(chunk.metadata_json.to_h["entities"]&.values).flatten.uniq.first(8).join(", ")
         "[#{index + 1}] Kind=#{chunk.source_type}; Title=#{chunk.source_title}; URI=#{chunk.source_uri}; Entities=#{entities}; Excerpt=#{chunk.text}"
@@ -123,6 +155,52 @@ module Search
         Workspace: #{workspace.name}
 
         Context:
+        #{context_lines.join("\n")}
+      PROMPT
+    end
+
+    def delta_prompt_for(context_chunks)
+      context_lines = context_chunks.map.with_index do |chunk, index|
+        entities = Array(chunk.metadata_json.to_h["entities"]&.values).flatten.uniq.first(8).join(", ")
+        "[#{index + 1}] Kind=#{chunk.source_type}; Title=#{chunk.source_title}; URI=#{chunk.source_uri}; Entities=#{entities}; Excerpt=#{chunk.text}"
+      end
+
+      <<~PROMPT
+        You are building a read-only incremental knowledge brief for a workspace.
+        Use only the changed context provided below.
+        Return JSON only with this shape:
+        {
+          "summary": "short paragraph with citations like [1]",
+          "insights": ["insight with citations"],
+          "task_suggestions": [
+            {
+              "title": "short suggestion",
+              "owner": "person name or empty string",
+              "rationale": "why this matters with citations",
+              "citation_indices": [1, 2]
+            }
+          ],
+          "related_notes": [
+            {
+              "title": "note or source title",
+              "reason": "why it is related with citations",
+              "citation_indices": [1]
+            }
+          ]
+        }
+        Rules:
+        - Mention only information that is new or materially changed since the previous report.
+        - Do not restate unchanged insights, tasks, or related notes.
+        - Every summary, insight, suggestion rationale, and related note reason must be grounded in citations.
+        - Do not invent owners or tasks.
+        - Keep the response concise and actionable.
+
+        Workspace: #{workspace.name}
+        Previous report generated at: #{previous_report_generated_at_label}
+        Previous report:
+        #{previous_report_digest}
+
+        Changed context since #{recent_since_label}:
         #{context_lines.join("\n")}
       PROMPT
     end
@@ -245,6 +323,91 @@ module Search
     def unavailable(reason)
       @unavailable_reason = reason
       nil
+    end
+
+    def delta_mode?
+      mode == MODE_DELTA
+    end
+
+    def normalize_mode(value)
+      value.to_s == MODE_DELTA ? MODE_DELTA : MODE_FULL
+    end
+
+    def filter_delta_chunks(chunks)
+      return [] if chunks.empty?
+
+      snapshot_index = previous_snapshot_index
+      chunks.select do |chunk|
+        next false if since.present? && chunk.updated_at < since
+        next true if snapshot_index.empty?
+
+        previous_entry = snapshot_index[snapshot_key_for(source_type: chunk.source_type, source_id: chunk.source_id)]
+        previous_entry.blank? || previous_entry["source_content_hash"].to_s != chunk.source_content_hash.to_s
+      end
+    end
+
+    def previous_snapshot_index
+      @previous_snapshot_index ||= Array(previous_report&.metadata_json.to_h["context_snapshot"]).each_with_object({}) do |entry, memo|
+        next unless entry.is_a?(Hash)
+
+        key = snapshot_key_for(source_type: entry["source_type"] || entry[:source_type], source_id: entry["source_id"] || entry[:source_id])
+        memo[key] = entry.stringify_keys if key.present?
+      end
+    end
+
+    def snapshot_key_for(source_type:, source_id:)
+      return if source_type.blank? || source_id.blank?
+
+      "#{source_type}:#{source_id}"
+    end
+
+    def context_snapshot_for(chunks)
+      chunks.map do |chunk|
+        {
+          "source_type" => chunk.source_type,
+          "source_id" => chunk.source_id,
+          "source_title" => chunk.source_title,
+          "source_content_hash" => chunk.source_content_hash,
+          "updated_at" => chunk.updated_at.iso8601
+        }
+      end
+    end
+
+    def previous_report_generated_at_label
+      previous_report&.generated_at&.iso8601 || "none"
+    end
+
+    def recent_since_label
+      since&.iso8601 || "the last report"
+    end
+
+    def previous_report_digest
+      return "No previous report." if previous_report.blank?
+
+      sections = []
+      sections << "Summary: #{previous_report.summary.to_s.strip}" if previous_report.summary.to_s.strip.present?
+
+      insights = Array(previous_report.insights_json).first(4)
+      sections << "Insights: #{insights.join(' | ')}" if insights.any?
+
+      tasks = Array(previous_report.task_suggestions_json).first(4).map do |item|
+        next unless item.is_a?(Hash)
+
+        title = item["title"].to_s.strip
+        owner = item["owner"].to_s.strip
+        rationale = item["rationale"].to_s.strip
+        [ title.presence, owner.presence && "owner=#{owner}", rationale.presence ].compact.join(" | ")
+      end.compact
+      sections << "Task suggestions: #{tasks.join(' || ')}" if tasks.any?
+
+      related = Array(previous_report.related_notes_json).first(4).map do |item|
+        next unless item.is_a?(Hash)
+
+        [ item["title"].to_s.strip.presence, item["reason"].to_s.strip.presence ].compact.join(" | ")
+      end.compact
+      sections << "Related notes: #{related.join(' || ')}" if related.any?
+
+      sections.join("\n").presence || "No previous report."
     end
   end
 end

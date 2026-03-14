@@ -16,8 +16,20 @@
         <li class="notae-workspace-home-list-item notae-utility-notification-item">
           <div class="notae-utility-result-head">
             <span class="notae-utility-link">
-              <% if notification.notification_type == "calendar_reminder" %>
+              <% if notification.notification_type == Notification::TYPE_CALENDAR_REMINDER %>
                 Reminder from <%= notification.workspace.name %>
+              <% elsif notification.notification_type == Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED %>
+                Agent draft awaiting approval
+              <% elsif notification.notification_type == Notification::TYPE_AGENT_ACTION_RESUBMITTED %>
+                Agent draft resubmitted
+              <% elsif notification.notification_type == Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED %>
+                Changes requested on a draft
+              <% elsif notification.notification_type == Notification::TYPE_AGENT_ACTION_APPROVED %>
+                Draft approved
+              <% elsif notification.notification_type == Notification::TYPE_AGENT_ACTION_REJECTED %>
+                Draft rejected
+              <% elsif notification.notification_type == Notification::TYPE_WORKFLOW_FAILED %>
+                Workflow failed
               <% else %>
                 <%= notification.actor.email %> mentioned you
               <% end %>
@@ -27,7 +39,7 @@
             <% end %>
           </div>
 
-          <% if notification.notification_type == "calendar_reminder" && notification.notifiable.is_a?(KalendariumEvent) %>
+          <% if notification.notification_type == Notification::TYPE_CALENDAR_REMINDER && notification.notifiable.is_a?(KalendariumEvent) %>
             <% event = notification.notifiable %>
             <p class="notae-utility-copy">
               <strong><%= event.title %></strong>
@@ -52,6 +64,28 @@
                           database_path(workspace_slug: @workspace.slug, id: commentable.id, anchor: "database-comments-menu"),
                           class: "notae-utility-link notae-utility-mini-link" %>
             <% end %>
+          <% elsif notification.agent_action_notification? && notification.notifiable.is_a?(AgentAction) %>
+            <% agent_action = notification.notifiable %>
+            <p class="notae-utility-copy">
+              <strong><%= agent_action.title %></strong>
+              · <%= agent_action.target_system.titleize %>
+              · <%= agent_action.draft_type.humanize %>
+            </p>
+            <% if notification.metadata["comment"].present? %>
+              <p class="notae-utility-copy"><%= notification.metadata["comment"] %></p>
+            <% end %>
+            <%= link_to "Open draft",
+                        agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id),
+                        class: "notae-utility-link notae-utility-mini-link" %>
+          <% elsif notification.notification_type == Notification::TYPE_WORKFLOW_FAILED && notification.notifiable.is_a?(WorkflowRun) %>
+            <% workflow_run = notification.notifiable %>
+            <p class="notae-utility-copy">
+              <strong><%= workflow_run.workflow_kind.humanize %></strong>
+              · <%= workflow_run.error_message.presence || "The workflow did not complete." %>
+            </p>
+            <%= link_to "Open workflow",
+                        workflow_run_path(workspace_slug: @workspace.slug, id: workflow_run.id),
+                        class: "notae-utility-link notae-utility-mini-link" %>
           <% end %>
 
           <% if notification.read_at.nil? %>

@@ -7,11 +7,15 @@ RSpec.describe InvitationPolicy do
     admin = User.create!(email: "inv-pol-admin@example.com", password: "password123")
     member = User.create!(email: "inv-pol-member@example.com", password: "password123")
     guest = User.create!(email: "inv-pol-guest@example.com", password: "password123")
+    auditor = User.create!(email: "inv-pol-auditor@example.com", password: "password123")
+    automation_agent = User.create!(email: "inv-pol-agent@example.com", password: "password123")
 
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     Membership.create!(workspace: workspace, user: admin, role: :admin)
     Membership.create!(workspace: workspace, user: member, role: :member)
     Membership.create!(workspace: workspace, user: guest, role: :guest)
+    Membership.create!(workspace: workspace, user: auditor, role: :auditor)
+    Membership.create!(workspace: workspace, user: automation_agent, role: :automation_agent)
 
     invitation = Invitation.new(workspace: workspace, invited_by: owner, email: "target@example.com", role: :guest, expires_at: 2.days.from_now)
 
@@ -19,6 +23,8 @@ RSpec.describe InvitationPolicy do
     expect(described_class.new(admin, invitation).create?).to be(true)
     expect(described_class.new(member, invitation).create?).to be(false)
     expect(described_class.new(guest, invitation).create?).to be(false)
+    expect(described_class.new(auditor, invitation).create?).to be(false)
+    expect(described_class.new(automation_agent, invitation).create?).to be(false)
   end
 
   it "allows acceptance only for the invited email owner" do

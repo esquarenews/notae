@@ -1,17 +1,21 @@
 require "rails_helper"
 
 RSpec.describe PagePolicy do
-  it "allows owner/admin/member to create and blocks guest from creating pages" do
+  it "allows owner/admin/member to create and blocks guest, auditor, and automation agent from creating pages" do
     workspace = Workspace.create!(name: "Page Policy", slug: "page-policy")
     owner = User.create!(email: "page-pol-owner@example.com", password: "password123")
     admin = User.create!(email: "page-pol-admin@example.com", password: "password123")
     member = User.create!(email: "page-pol-member@example.com", password: "password123")
     guest = User.create!(email: "page-pol-guest@example.com", password: "password123")
+    auditor = User.create!(email: "page-pol-auditor@example.com", password: "password123")
+    automation_agent = User.create!(email: "page-pol-agent@example.com", password: "password123")
 
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     Membership.create!(workspace: workspace, user: admin, role: :admin)
     Membership.create!(workspace: workspace, user: member, role: :member)
     Membership.create!(workspace: workspace, user: guest, role: :guest)
+    Membership.create!(workspace: workspace, user: auditor, role: :auditor)
+    Membership.create!(workspace: workspace, user: automation_agent, role: :automation_agent)
 
     new_page = Page.new(workspace: workspace, created_by: owner, title: "X")
 
@@ -19,6 +23,8 @@ RSpec.describe PagePolicy do
     expect(described_class.new(admin, new_page).create?).to be(true)
     expect(described_class.new(member, new_page).create?).to be(true)
     expect(described_class.new(guest, new_page).create?).to be(false)
+    expect(described_class.new(auditor, new_page).create?).to be(false)
+    expect(described_class.new(automation_agent, new_page).create?).to be(false)
   end
 
   it "enforces private and specific user visibility modes" do

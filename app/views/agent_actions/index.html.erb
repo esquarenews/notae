@@ -1,0 +1,78 @@
+<% content_for :title, "Agent Draft Actions" %>
+<% content_for :content_class, "notae-content-page" %>
+
+<section class="notae-workspace-home notae-ai-history-page">
+  <header class="notae-utility-page-head">
+    <div>
+      <p class="notae-page-subtle">Human-in-the-loop review</p>
+      <h1 class="notae-utility-title">Agent Draft Actions</h1>
+      <p class="notae-page-subtle">All external integrations remain in dry-run mode until a human approves the draft.</p>
+    </div>
+    <div class="notae-utility-page-actions">
+      <%= link_to "New draft action", new_agent_action_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+    </div>
+  </header>
+
+  <% if @pending_approval_actions.any? || @needs_revision_actions.any? %>
+    <div class="notae-workspace-home-grid">
+      <% if @pending_approval_actions.any? %>
+        <section class="notae-auth-card notae-home-card">
+          <div class="notae-home-card-head">
+            <h2>Pending approvals</h2>
+          </div>
+          <ul class="notae-workspace-home-list">
+            <% @pending_approval_actions.limit(8).each do |agent_action| %>
+              <li class="notae-workspace-home-list-item">
+                <strong><%= agent_action.title %></strong>
+                <div class="notae-page-subtle"><%= agent_action.user.email %> · <%= agent_action.target_system.titleize %> · <%= agent_action.draft_type.humanize %></div>
+                <div><%= agent_action_preview_summary(agent_action) %></div>
+                <%= link_to "Review", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+
+      <% if @needs_revision_actions.any? %>
+        <section class="notae-auth-card notae-home-card">
+          <div class="notae-home-card-head">
+            <h2>Needs your revision</h2>
+          </div>
+          <ul class="notae-workspace-home-list">
+            <% @needs_revision_actions.limit(8).each do |agent_action| %>
+              <li class="notae-workspace-home-list-item">
+                <strong><%= agent_action.title %></strong>
+                <div class="notae-page-subtle"><%= agent_action.target_system.titleize %> · <%= agent_action.draft_type.humanize %></div>
+                <div><%= agent_action_preview_summary(agent_action) %></div>
+                <%= link_to "Revise", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @agent_actions.any? %>
+    <ul class="notae-ai-history-list">
+      <% @agent_actions.each do |agent_action| %>
+        <li class="notae-ai-history-item">
+          <div class="notae-ai-history-meta">
+            <span class="notae-ai-history-workspace"><%= agent_action.target_system.titleize %></span>
+            <span class="notae-workspace-home-role-badge"><%= agent_action_status_badge(agent_action) %></span>
+            <span class="notae-ai-history-time"><%= time_ago_in_words(agent_action.created_at) %> ago</span>
+          </div>
+          <p class="notae-ai-history-prompt"><strong><%= agent_action.draft_type.humanize %>:</strong> <%= agent_action.title %></p>
+          <div class="notae-ai-history-answer"><%= simple_format(h(agent_action_preview_summary(agent_action))) %></div>
+          <div class="notae-ai-history-actions">
+            <%= link_to "Review", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <div class="notae-auth-card">
+      <p class="notae-page-subtle">No draft actions yet.</p>
+    </div>
+  <% end %>
+</section>

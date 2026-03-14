@@ -1,0 +1,15 @@
+<% content_for :title, "New Agent Draft Action" %>
+<% content_for :content_class, "notae-content-page" %>
+
+<section class="notae-workspace-home notae-ai-history-page">
+  <header class="notae-utility-page-head">
+    <div>
+      <p class="notae-page-subtle">Draft external action</p>
+      <h1 class="notae-utility-title">New Agent Draft Action</h1>
+    </div>
+  </header>
+
+  <div class="notae-auth-card">
+    <%= render "form", agent_action: @agent_action, workspace: @workspace, submit_label: "Create draft action" %>
+  </div>
+</section>

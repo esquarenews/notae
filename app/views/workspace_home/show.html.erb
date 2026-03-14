@@ -65,6 +65,33 @@
     </section>
   <% end %>
 
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Agent draft actions</h2>
+      <div class="notae-utility-page-actions">
+        <%= link_to "Review drafts", agent_actions_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+        <%= link_to "New draft", new_agent_action_path(workspace_slug: @workspace.slug), class: "notae-chip-button notae-chip-button-subtle" %>
+      </div>
+    </div>
+    <% if @pending_agent_actions.any? %>
+      <ul class="notae-workspace-home-list">
+        <% @pending_agent_actions.each do |agent_action| %>
+          <li class="notae-workspace-home-list-item">
+            <div class="notae-workspace-home-list-row">
+              <div>
+                <strong><%= agent_action.title %></strong>
+                <div class="notae-page-subtle"><%= agent_action.target_system.titleize %> · <%= agent_action.draft_type.humanize %></div>
+              </div>
+              <%= link_to "Review", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="notae-page-subtle">No pending draft actions.</p>
+    <% end %>
+  </section>
+
   <section class="notae-workspace-home-grid">
     <% if policy(Page.new(workspace: @workspace)).create? %>
       <div class="notae-auth-card notae-home-card">

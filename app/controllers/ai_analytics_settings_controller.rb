@@ -2,6 +2,7 @@ class AiAnalyticsSettingsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_user
+  before_action :set_automation_control
 
   def show
     authorize @workspace, :show?
@@ -37,6 +38,40 @@ class AiAnalyticsSettingsController < ApplicationController
       }
     end
     @ai_analytics_operations = @ai_analytics_operations.sort_by { |entry| -entry[:tokens] }
+
+    suggestion_scope = policy_scope(KnowledgeSuggestion).for_workspace(@workspace).where(generated_at: (now - 30.days)..now)
+    suggestion_total = suggestion_scope.count
+    suggestion_converted = suggestion_scope.where(status: KnowledgeSuggestion::STATUS_CONVERTED).count
+    @suggestion_quality_rate = suggestion_total.zero? ? nil : (suggestion_converted.to_f / suggestion_total)
+
+    decided_agent_actions = policy_scope(AgentAction)
+                              .for_workspace(@workspace)
+                              .where(status: [ AgentAction::STATUS_APPROVED, AgentAction::STATUS_REJECTED ])
+    approved_agent_actions = decided_agent_actions.where(status: AgentAction::STATUS_APPROVED).count
+    decided_count = decided_agent_actions.count
+    @approval_rate = decided_count.zero? ? nil : (approved_agent_actions.to_f / decided_count)
+
+    workflow_scope = policy_scope(WorkflowRun).for_workspace(@workspace)
+    finished_workflows = workflow_scope.where(status: [ WorkflowRun::STATUS_SUCCEEDED, WorkflowRun::STATUS_FAILED, WorkflowRun::STATUS_KILLED, WorkflowRun::STATUS_CANCELLED ])
+    successful_workflows = finished_workflows.where(status: WorkflowRun::STATUS_SUCCEEDED).count
+    finished_workflow_count = finished_workflows.count
+    @automation_success_rate = finished_workflow_count.zero? ? nil : (successful_workflows.to_f / finished_workflow_count)
+    @recent_failed_workflows = workflow_scope.failed.recent_first.limit(10)
+  end
+
+  def update
+    authorize @workspace, :update?
+
+    enabled = ActiveModel::Type::Boolean.new.cast(params.dig(:automation_control, :enabled))
+    if enabled
+      @automation_control.resume!
+      notice = "Automation kill switch disabled."
+    else
+      @automation_control.pause!(reason: params.dig(:automation_control, :pause_reason))
+      notice = "Automation kill switch enabled."
+    end
+
+    redirect_to workspace_ai_analytics_settings_path(workspace_slug: @workspace.slug), notice: notice
   end
 
   private
@@ -47,6 +82,10 @@ class AiAnalyticsSettingsController < ApplicationController
 
   def set_user
     @user = policy_scope(User).find(current_user.id)
+  end
+
+  def set_automation_control
+    @automation_control = AutomationControl.current
   end
 
   def daily_series(scope:, days:, end_time:)

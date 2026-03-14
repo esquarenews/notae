@@ -34,6 +34,7 @@ Rails.application.routes.draw do
     get "settings/notae-ai", to: "notae_ai_settings#show", as: :workspace_notae_ai_settings
     patch "settings/notae-ai", to: "notae_ai_settings#update"
     get "settings/ai-analytics", to: "ai_analytics_settings#show", as: :workspace_ai_analytics_settings
+    patch "settings/ai-analytics", to: "ai_analytics_settings#update"
     get "settings/favicon-lab", to: "favicon_settings#show", as: :workspace_favicon_settings
     get "settings/connections", to: "connection_settings#show", as: :workspace_connection_settings
     patch "settings/connections", to: "connection_settings#update"
@@ -86,6 +87,14 @@ Rails.application.routes.draw do
         post :refresh
       end
     end
+    resources :agent_actions, path: "agent-actions", only: %i[index show new create update] do
+      member do
+        post :approve
+        post :request_changes
+        post :reject
+      end
+    end
+    resources :workflow_runs, path: "workflows", only: %i[index show new create]
     resources :memberships, only: :update
     resources :databases, only: %i[show create update destroy] do
       member do

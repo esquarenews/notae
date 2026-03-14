@@ -111,6 +111,10 @@ class AiAssistantController < ApplicationController
       "Configure an OpenAI key in Settings > Connections first."
     when :missing_prompt
       "Enter a prompt to ask Notae AI."
+    when :unsupported_draft_request
+      "Notae AI can draft emails, GitHub comments, task tickets, and calendar holds."
+    when :draft_generation_failed, :draft_validation_failed
+      "Notae AI could not turn that into a valid draft. Add recipients, references, or timing and retry."
     else
       nil
     end
@@ -156,7 +160,7 @@ class AiAssistantController < ApplicationController
       workspace: @workspace,
       page_id: page_id,
       scope: @ai_assistant_response&.scope.presence || @ai_assistant_scope,
-      status: @ai_assistant_response.present? ? AiConversation::STATUS_SUCCESS : AiConversation::STATUS_NOTICE,
+      status: ai_conversation_status_for_response,
       prompt: @ai_assistant_prompt,
       answer: answer,
       sources: sources
@@ -170,6 +174,13 @@ class AiAssistantController < ApplicationController
     )
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.warn("AI conversation persist failed for workspace=#{@workspace.id}: #{e.message}")
+  end
+
+  def ai_conversation_status_for_response
+    return AiConversation::STATUS_NOTICE if @ai_assistant_response.blank?
+    return AiConversation::STATUS_SUGGESTION if @ai_assistant_response.agent_action.present?
+
+    AiConversation::STATUS_SUCCESS
   end
 
   def sanitized_source_url(raw_url)

@@ -27,6 +27,9 @@ RSpec.describe "People settings", type: :request do
     )
     selected_option = workspace_picker.css("option").find { |option| option["selected"].present? }
     expect(selected_option&.[]("value")).to eq(workspace_people_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
+
+    invite_role_options = document.css(".notae-people-add-form select[name='invitation[role]'] option").map(&:text)
+    expect(invite_role_options).to include("Auditor", "Automation Agent")
   end
 
   it "updates add-members-by-link toggle and can regenerate the link token" do

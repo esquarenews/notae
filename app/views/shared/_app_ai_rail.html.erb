@@ -63,12 +63,14 @@
 
   <div class="notae-ai-card">
     <p class="notae-ai-title">Notae AI assistant</p>
-    <p class="notae-ai-copy">Ask search questions (for example: "Is Mac mentioned?") or summary requests.</p>
+    <p class="notae-ai-copy">Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.</p>
   </div>
 
   <section class="notae-ai-thread" data-ai-rail-target="thread">
     <% ai_rail_conversations.each do |conversation| %>
       <% safe_sources = ai_safe_sources(conversation.sources) %>
+      <% draft_action_sources = safe_sources.select { |source| source[:kind].to_s == "Draft action" } %>
+      <% evidence_sources = safe_sources.reject { |source| source[:kind].to_s == "Draft action" } %>
       <article class="notae-ai-message is-user is-compact">
         <p class="notae-ai-message-body"><%= conversation.prompt %></p>
       </article>
@@ -88,17 +90,28 @@
           <% end %>
         </p>
         <p class="notae-ai-result-text"><%= conversation.answer %></p>
-        <% if safe_sources.any? %>
+        <% if draft_action_sources.any? %>
+          <div class="notae-ai-compose-actions">
+            <% draft_action_sources.each do |source| %>
+              <%= link_to source[:title],
+                          source[:url],
+                          class: "notae-chip-button",
+                          data: { turbo_frame: "_top" } %>
+            <% end %>
+          </div>
+        <% end %>
+        <% if evidence_sources.any? %>
           <details class="notae-ai-sources-panel">
             <summary class="notae-chip-button notae-ai-sources-toggle">
               <span class="notae-ai-sources-when-closed">Sources</span>
               <span class="notae-ai-sources-when-open">Hide</span>
             </summary>
             <ul class="notae-ai-assistant-sources">
-              <% safe_sources.each do |source| %>
+              <% evidence_sources.each do |source| %>
                 <% external_source = ai_external_source_url?(source[:url]) %>
                 <li>
-                  <%= link_to "[#{source[:index]}] #{source[:title]}",
+                  <% source_label = source[:index].present? ? "[#{source[:index]}] #{source[:title]}" : source[:title] %>
+                  <%= link_to source_label,
                               source[:url],
                               class: "notae-utility-link",
                               data: { turbo_frame: "_top" },
@@ -165,7 +178,7 @@
                              ai_rail_target: "promptInput",
                              action: "keydown->ai-rail#submitOnShortcut"
                            },
-                           placeholder: "Ask search questions or summary requests." %>
+                           placeholder: "Ask a question or request a draft action for review." %>
         <div class="notae-ai-compose-loading" data-ai-rail-target="loading">
           <span class="notae-ai-compose-swirl" aria-hidden="true"></span>
           <%= render "shared/ai_loader_icon",

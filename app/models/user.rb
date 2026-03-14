@@ -111,6 +111,7 @@ class User < ApplicationRecord
   has_many :favorites, dependent: :destroy
   has_many :ai_usage_logs, dependent: :destroy
   has_many :ai_conversations, dependent: :destroy
+  has_many :workflow_runs, dependent: :destroy
   has_many :kalendarium_connections, as: :owner, dependent: :destroy
   has_many :created_kalendarium_connections, class_name: "KalendariumConnection", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :created_kalendarium_calendars, class_name: "KalendariumCalendar", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy

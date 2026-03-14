@@ -1,6 +1,6 @@
 module Search
   class PersistKnowledgeSuggestionService
-    PROACTIVE_INTERVAL = 4.hours
+    PROACTIVE_INTERVAL = 6.hours
     PROACTIVE_EXPIRY = 6.hours
 
     def initialize(user:, workspace:, kind:, force: false)
@@ -12,9 +12,15 @@ module Search
 
     def call
       return existing_daily_summary if daily_summary? && !force?
-      return recent_proactive if proactive? && !force? && recent_proactive.present?
+      return active_recent_proactive if proactive? && !force? && active_recent_proactive.present?
 
-      response = Search::KnowledgeSuggestionService.new(user: user, workspace: workspace).call
+      response = Search::KnowledgeSuggestionService.new(
+        user: user,
+        workspace: workspace,
+        mode: suggestion_mode,
+        since: proactive_recent_since,
+        previous_report: latest_report
+      ).call
       return nil if response.blank?
 
       ActiveRecord::Base.transaction do
@@ -53,8 +59,8 @@ module Search
       policy_scope_scope.find_by(kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY, generated_for_date: current_local_date)
     end
 
-    def recent_proactive
-      policy_scope_scope.proactive.where("generated_at >= ?", PROACTIVE_INTERVAL.ago).recent_first.first
+    def active_recent_proactive
+      policy_scope_scope.active.proactive.recent_first.first
     end
 
     def policy_scope_scope
@@ -77,7 +83,7 @@ module Search
         task_suggestions_json: response.task_suggestions,
         related_notes_json: response.related_notes,
         sources_json: response.sources,
-        metadata_json: { "model" => response.model },
+        metadata_json: suggestion_metadata_for(response),
         generated_at: Time.current,
         expires_at: proactive? ? PROACTIVE_EXPIRY.from_now : nil,
         dismissed_at: nil,
@@ -115,7 +121,7 @@ module Search
       return "Daily morning summary" if daily_summary?
 
       task_title = Array(response.task_suggestions).first&.fetch("title", nil).to_s.strip
-      task_title.presence || "Suggested next step"
+      task_title.presence || (response.report_mode == Search::KnowledgeSuggestionService::MODE_DELTA ? "What's changed" : "Suggested next step")
     end
 
     def render_conversation_answer(suggestion:, response:)
@@ -134,6 +140,33 @@ module Search
       end
       sections << [ "Task suggestions", tasks.join("\n") ].join("\n") if tasks.any?
       sections.join("\n\n")
+    end
+
+    def suggestion_mode
+      proactive? ? Search::KnowledgeSuggestionService::MODE_DELTA : Search::KnowledgeSuggestionService::MODE_FULL
+    end
+
+    def latest_report
+      return nil unless proactive?
+
+      @latest_report ||= policy_scope_scope.recent_first.first
+    end
+
+    def proactive_recent_since
+      return nil unless proactive?
+
+      [ latest_report&.generated_at, PROACTIVE_INTERVAL.ago ].compact.max
+    end
+
+    def suggestion_metadata_for(response)
+      metadata = {
+        "model" => response.model,
+        "report_mode" => response.report_mode
+      }
+      metadata["baseline_generated_at"] = response.baseline_generated_at&.iso8601 if response.baseline_generated_at.present?
+      metadata["recent_since"] = response.recent_since&.iso8601 if response.recent_since.present?
+      metadata["context_snapshot"] = response.context_snapshot if response.context_snapshot.present?
+      metadata
     end
   end
 end

@@ -121,5 +121,154 @@
         </div>
       <% end %>
     </section>
+
+    <section class="notae-settings-section">
+      <h2>Agent Action Policy</h2>
+
+      <% if policy(@workspace).update? %>
+        <%= form_with model: @agent_policy,
+                      url: workspace_notae_ai_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-ai-guardrails-form" do |form| %>
+          <div class="notae-pref-row notae-pref-row--stacked">
+            <div class="notae-pref-copy">
+              <p class="notae-pref-label">Workspace rules</p>
+              <p class="notae-pref-description">Control which systems, draft types, lifecycle operations, and member roles are allowed for agent-assisted actions.</p>
+            </div>
+
+            <div class="notae-ai-guardrails-grid">
+              <label>
+                <span>Approval required</span>
+                <%= form.check_box :approval_required %>
+              </label>
+              <label>
+                <span>Dry-run required</span>
+                <%= form.check_box :dry_run_required %>
+              </label>
+              <label>
+                <span>Max estimated cost (USD)</span>
+                <%= form.number_field :max_estimated_cost_usd, min: 0, step: 0.01, class: "notae-pref-select" %>
+              </label>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--stacked">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Allowed systems</p>
+              </div>
+              <div class="notae-ai-loader-options-grid is-two-column">
+                <% AgentAction::TARGET_SYSTEM_OPTIONS.each do |value| %>
+                  <label class="notae-ai-loader-option">
+                    <%= check_box_tag "agent_policy[allowed_target_systems_json][]",
+                                      value,
+                                      @agent_policy.allowed_target_systems.include?(value) %>
+                    <span class="notae-ai-loader-option-title"><%= value.titleize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--stacked">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Allowed draft types</p>
+              </div>
+              <div class="notae-ai-loader-options-grid is-two-column">
+                <% AgentAction::DRAFT_TYPE_OPTIONS.each do |value| %>
+                  <label class="notae-ai-loader-option">
+                    <%= check_box_tag "agent_policy[allowed_draft_types_json][]",
+                                      value,
+                                      @agent_policy.allowed_draft_types.include?(value) %>
+                    <span class="notae-ai-loader-option-title"><%= value.humanize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--stacked">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Allowed lifecycle operations</p>
+              </div>
+              <div class="notae-ai-loader-options-grid is-two-column">
+                <% AgentActions::PolicyEngine::LIFECYCLE_OPTIONS.each do |value| %>
+                  <label class="notae-ai-loader-option">
+                    <%= check_box_tag "agent_policy[allowed_lifecycle_operations_json][]",
+                                      value,
+                                      @agent_policy.allowed_lifecycle_operations.include?(value) %>
+                    <span class="notae-ai-loader-option-title"><%= value.humanize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--stacked">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Author roles</p>
+              </div>
+              <div class="notae-ai-loader-options-grid is-two-column">
+                <% Membership.roles.keys.each do |value| %>
+                  <label class="notae-ai-loader-option">
+                    <%= check_box_tag "agent_policy[author_roles_json][]",
+                                      value,
+                                      @agent_policy.author_roles.include?(value) %>
+                    <span class="notae-ai-loader-option-title"><%= value.humanize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--stacked">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Approver roles</p>
+              </div>
+              <div class="notae-ai-loader-options-grid is-two-column">
+                <% Membership.roles.keys.each do |value| %>
+                  <label class="notae-ai-loader-option">
+                    <%= check_box_tag "agent_policy[approver_roles_json][]",
+                                      value,
+                                      @agent_policy.approver_roles.include?(value) %>
+                    <span class="notae-ai-loader-option-title"><%= value.humanize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--stacked">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Internal automation</p>
+                <p class="notae-pref-description">Only internal actions are eligible for full automation: nota pages, task rows, and local calendar events.</p>
+              </div>
+              <div class="notae-ai-guardrails-grid">
+                <label>
+                  <span>Allow internal automation</span>
+                  <%= form.check_box :allow_internal_automation %>
+                </label>
+                <label>
+                  <span>Retry limit</span>
+                  <%= form.number_field :automation_retry_limit, min: 0, step: 1, class: "notae-pref-select" %>
+                </label>
+                <label>
+                  <span>Confidence threshold</span>
+                  <%= form.number_field :automation_confidence_threshold, min: 0, max: 1, step: 0.01, class: "notae-pref-select" %>
+                </label>
+              </div>
+              <div class="notae-ai-loader-options-grid is-two-column">
+                <% AgentPolicy::INTERNAL_ACTION_OPTIONS.each do |value| %>
+                  <label class="notae-ai-loader-option">
+                    <%= check_box_tag "agent_policy[allowed_internal_actions_json][]",
+                                      value,
+                                      @agent_policy.allowed_internal_actions.include?(value) %>
+                    <span class="notae-ai-loader-option-title"><%= value.humanize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+
+            <button type="submit" class="notae-chip-button">Save workspace policy</button>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="notae-pref-description">Workspace owners or admins manage the agent action policy.</p>
+        <div class="notae-workspace-home-json"><%= @agent_policy.policy_snapshot.to_json %></div>
+      <% end %>
+    </section>
   </div>
 </section>

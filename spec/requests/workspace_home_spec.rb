@@ -125,4 +125,37 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Create Nota")
     expect(response.body).to include("Dismiss")
   end
+
+  it "renders pending agent draft actions on the workspace home page" do
+    user = User.create!(email: "home-agent-action-owner@example.com", password: "password123")
+    author = User.create!(email: "home-agent-action-author@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Agent action home", slug: "agent-action-home")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Membership.create!(workspace: workspace, user: author, role: :member)
+
+    AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: author,
+      attributes: {
+        title: "Draft standup summary email",
+        proposed_by: "manual",
+        target_system: "gmail",
+        draft_type: "email_draft",
+        payload_json: {
+          "to" => [ "team@example.com" ],
+          "subject" => "Standup summary",
+          "body" => "Dry-run summary."
+        }
+      }
+    ).call
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Agent draft actions")
+    expect(response.body).to include("Draft standup summary email")
+    expect(response.body).to include("Review drafts")
+    expect(response.body).to include("New draft")
+  end
 end

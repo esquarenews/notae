@@ -30,6 +30,7 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response.body).to include("This document only")
     expect(response.body).to include("This workspace only")
     expect(response.body).to include("Whole account")
+    expect(response.body).to include("Agent Action Policy")
     expect(response.body).to include("notae-settings-nav-item active")
   end
 
@@ -120,5 +121,39 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(user.ai_search_daily_budget_usd.to_f).to eq(2.25)
     expect(user.ai_search_semantic_rate_limit_per_minute).to eq(15)
     expect(user.ai_search_answer_rate_limit_per_minute).to eq(8)
+  end
+
+  it "updates the workspace agent action policy for owners" do
+    user = User.create!(email: "notae-ai-settings-policy@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notae AI policy", slug: "notae-ai-policy")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_notae_ai_settings_path(workspace_slug: workspace.slug),
+          params: {
+            agent_policy: {
+              approval_required: "1",
+              dry_run_required: "1",
+              max_estimated_cost_usd: "0.50",
+              allow_internal_automation: "1",
+              automation_retry_limit: "3",
+              automation_confidence_threshold: "0.80",
+              allowed_target_systems_json: %w[gmail github],
+              allowed_draft_types_json: %w[email_draft github_comment_draft],
+              allowed_lifecycle_operations_json: %w[draft update approve reject request_changes],
+              allowed_internal_actions_json: %w[create_nota create_task],
+              author_roles_json: %w[member owner automation_agent],
+              approver_roles_json: %w[owner]
+            }
+          }
+
+    expect(response).to redirect_to(workspace_notae_ai_settings_path(workspace_slug: workspace.slug))
+    policy = workspace.reload.agent_policy
+    expect(policy.allowed_target_systems).to eq(%w[gmail github])
+    expect(policy.allowed_internal_actions).to eq(%w[create_nota create_task])
+    expect(policy.approver_roles).to eq(%w[owner])
+    expect(policy.automation_retry_limit).to eq(3)
+    expect(policy.automation_confidence_threshold.to_f).to eq(0.8)
+    expect(policy.max_estimated_cost_usd.to_f).to eq(0.5)
   end
 end

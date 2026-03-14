@@ -8,7 +8,7 @@ class KalendariumCalendarPolicy < ApplicationPolicy
   end
 
   def create?
-    membership.present? && !membership.guest?
+    membership&.content_editor?
   end
 
   def update?
@@ -17,7 +17,7 @@ class KalendariumCalendarPolicy < ApplicationPolicy
     if record.kalendarium_connection.present?
       KalendariumConnectionPolicy.new(user, record.kalendarium_connection).update?
     else
-      !membership.guest?
+      membership.content_editor?
     end
   end
 

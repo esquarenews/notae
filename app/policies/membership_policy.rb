@@ -18,7 +18,7 @@ class MembershipPolicy < ApplicationPolicy
     if workspace_membership.owner?
       !record.owner?
     elsif workspace_membership.admin?
-      record.member? || record.guest?
+      record.member? || record.guest? || record.auditor? || record.automation_agent?
     else
       false
     end

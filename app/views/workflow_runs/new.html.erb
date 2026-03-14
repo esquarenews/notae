@@ -1,0 +1,46 @@
+<% content_for :title, "New Workflow" %>
+<% content_for :content_class, "notae-content-page" %>
+
+<section class="notae-workspace-home notae-ai-history-page">
+  <header class="notae-utility-page-head">
+    <div>
+      <p class="notae-page-subtle">Internal-only automation</p>
+      <h1 class="notae-utility-title">Launch Workflow</h1>
+      <p class="notae-page-subtle">These workflows can only create internal Notae records. External systems remain blocked.</p>
+    </div>
+  </header>
+
+  <div class="notae-auth-card">
+    <%= form_with model: @workflow_run, url: workflow_runs_path(workspace_slug: @workspace.slug), method: :post, class: "notae-workspace-home-stack" do |form| %>
+      <%= form.select :workflow_kind,
+                      WorkflowRun::KINDS.map { |value| [ value.humanize, value ] },
+                      {},
+                      class: "notae-auth-input" %>
+      <%= form.number_field :confidence_score, min: 0, max: 1, step: 0.01, value: @workflow_run.confidence_score.presence || 1.0, class: "notae-auth-input" %>
+
+      <p class="notae-page-subtle">Shared fields</p>
+      <%= form.text_field :title, class: "notae-auth-input", placeholder: "Title" %>
+      <%= form.text_area :body, class: "notae-auth-input", rows: 6, placeholder: "Nota body or task details" %>
+
+      <p class="notae-page-subtle">Task fields</p>
+      <%= form.select :database_id,
+                      @task_databases.map { |database| [ database.name, database.id ] },
+                      { include_blank: "Select database" },
+                      class: "notae-auth-input" %>
+      <%= form.text_field :owner_name, class: "notae-auth-input", placeholder: "Owner name" %>
+      <%= form.date_field :due_on, class: "notae-auth-input" %>
+
+      <p class="notae-page-subtle">Calendar fields</p>
+      <%= form.select :kalendarium_calendar_id,
+                      @internal_calendars.map { |calendar| [ calendar.name, calendar.id ] },
+                      { include_blank: "Select local / project calendar" },
+                      class: "notae-auth-input" %>
+      <%= form.datetime_local_field :starts_at_local, class: "notae-auth-input" %>
+      <%= form.datetime_local_field :ends_at_local, class: "notae-auth-input" %>
+      <%= form.text_field :location, class: "notae-auth-input", placeholder: "Location" %>
+      <%= form.text_area :description, class: "notae-auth-input", rows: 4, placeholder: "Calendar event description" %>
+
+      <%= form.submit "Queue workflow", class: "notae-chip-button" %>
+    <% end %>
+  </div>
+</section>

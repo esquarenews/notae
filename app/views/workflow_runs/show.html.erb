@@ -1,0 +1,44 @@
+<% content_for :title, "Workflow Run" %>
+<% content_for :content_class, "notae-content-page" %>
+
+<section class="notae-workspace-home notae-ai-history-page">
+  <header class="notae-utility-page-head">
+    <div>
+      <p class="notae-page-subtle">Internal-only automation</p>
+      <h1 class="notae-utility-title"><%= @workflow_run.workflow_kind.humanize %></h1>
+      <p class="notae-page-subtle">Status: <%= @workflow_run.status.humanize %> · Attempts: <%= @workflow_run.attempts_count %>/<%= @workflow_run.max_attempts %></p>
+    </div>
+    <div class="notae-utility-page-actions">
+      <%= link_to "All workflows", workflow_runs_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+      <% if @workflow_run.result_json["url"].present? %>
+        <%= link_to "Open created record", @workflow_run.result_json["url"], class: "notae-chip-button", data: { turbo_frame: "_top" } %>
+      <% end %>
+    </div>
+  </header>
+
+  <div class="notae-workspace-home-grid">
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Request</h2>
+      </div>
+      <div class="notae-workspace-home-json"><%= @workflow_run.input_json.to_json %></div>
+    </section>
+
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <h2>Plan</h2>
+      </div>
+      <div class="notae-workspace-home-json"><%= @workflow_run.plan_json.to_json %></div>
+    </section>
+  </div>
+
+  <section class="notae-auth-card notae-home-card">
+    <div class="notae-home-card-head">
+      <h2>Result</h2>
+    </div>
+    <% if @workflow_run.error_message.present? %>
+      <p class="notae-page-subtle"><%= @workflow_run.error_message %></p>
+    <% end %>
+    <div class="notae-workspace-home-json"><%= @workflow_run.result_json.to_json %></div>
+  </section>
+</section>

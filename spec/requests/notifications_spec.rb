@@ -122,4 +122,70 @@ RSpec.describe "Notifications", type: :request do
     expect(response).to have_http_status(:not_found)
     expect(notification.reload.read_at).to be_nil
   end
+
+  it "renders agent action approval notifications in the inbox" do
+    author = User.create!(email: "notif-agent-author@example.com", password: "password123")
+    approver = User.create!(email: "notif-agent-approver@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Agent", slug: "notif-agent")
+    Membership.create!(workspace: workspace, user: author, role: :member)
+    Membership.create!(workspace: workspace, user: approver, role: :owner)
+
+    agent_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: author,
+      attributes: {
+        title: "Draft release email",
+        proposed_by: "manual",
+        target_system: "gmail",
+        draft_type: "email_draft",
+        payload_json: {
+          "to" => [ "team@example.com" ],
+          "cc" => [],
+          "subject" => "Release update",
+          "body" => "Please review."
+        }
+      }
+    ).call
+
+    sign_in approver
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Agent draft awaiting approval")
+    expect(response.body).to include(agent_action.title)
+    expect(response.body).to include("Open draft")
+  end
+
+  it "renders workflow failure notifications in the inbox" do
+    actor = User.create!(email: "notif-workflow-actor@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Workflow", slug: "notif-workflow")
+    Membership.create!(workspace: workspace, user: actor, role: :owner)
+    workflow_run = WorkflowRun.create!(
+      workspace: workspace,
+      user: actor,
+      workflow_kind: WorkflowRun::KIND_CREATE_TASK,
+      status: WorkflowRun::STATUS_FAILED,
+      trigger_source: "manual",
+      queued_at: Time.current,
+      finished_at: Time.current,
+      confidence_score: 1.0,
+      error_message: "Database lookup failed"
+    )
+    Notification.create!(
+      workspace: workspace,
+      actor: actor,
+      recipient: actor,
+      notifiable: workflow_run,
+      notification_type: Notification::TYPE_WORKFLOW_FAILED,
+      metadata: { "error_message" => "Database lookup failed" }
+    )
+
+    sign_in actor
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Workflow failed")
+    expect(response.body).to include("Database lookup failed")
+    expect(response.body).to include("Open workflow")
+  end
 end

@@ -21,4 +21,21 @@ RSpec.describe MembershipPolicy do
     expect(described_class.new(admin, owner_membership).update?).to be(false)
     expect(described_class.new(member, member_membership).update?).to be(false)
   end
+
+  it "lets admins manage auditor and automation agent roles but not owners" do
+    workspace = Workspace.create!(name: "Membership Policy Extended", slug: "membership-policy-extended")
+    admin = User.create!(email: "mem-pol-admin-extended@example.com", password: "password123")
+    auditor_target = User.create!(email: "mem-pol-auditor-target@example.com", password: "password123")
+    automation_target = User.create!(email: "mem-pol-agent-target@example.com", password: "password123")
+    owner_target = User.create!(email: "mem-pol-owner-target-extended@example.com", password: "password123")
+
+    Membership.create!(workspace: workspace, user: admin, role: :admin)
+    auditor_membership = Membership.create!(workspace: workspace, user: auditor_target, role: :auditor)
+    automation_membership = Membership.create!(workspace: workspace, user: automation_target, role: :automation_agent)
+    owner_membership = Membership.create!(workspace: workspace, user: owner_target, role: :owner)
+
+    expect(described_class.new(admin, auditor_membership).update?).to be(true)
+    expect(described_class.new(admin, automation_membership).update?).to be(true)
+    expect(described_class.new(admin, owner_membership).update?).to be(false)
+  end
 end

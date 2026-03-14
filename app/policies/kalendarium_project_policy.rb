@@ -4,7 +4,7 @@ class KalendariumProjectPolicy < ApplicationPolicy
   end
 
   def create?
-    membership.present? && !membership.guest?
+    membership&.content_editor?
   end
 
   def update?
