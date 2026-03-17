@@ -227,13 +227,15 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("🧠 Campaign grid")
   end
 
-  it "renders collapsible sidebar sections with inline create actions for notes, grids, and meetings" do
+  it "renders collapsible sidebar sections with inline create actions where supported" do
     owner = User.create!(email: "page-sidebar-sections-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Sidebar sections", slug: "sidebar-sections")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     Page.create!(workspace: workspace, created_by: owner, title: "Alpha note")
     Page.create!(workspace: workspace, created_by: owner, title: "Weekly meeting notes", page_kind: "meeting_note")
     Database.create!(workspace: workspace, name: "Projects")
+    Workspace.create!(name: "Secondary workspace", slug: "secondary-workspace")
+    Favorite.create!(user: owner, workspace: workspace, favoritable: workspace.pages.find_by!(title: "Alpha note"))
     sign_in owner
 
     get workspace_path(workspace.slug)
@@ -242,9 +244,11 @@ RSpec.describe "Pages", type: :request do
     document = Nokogiri::HTML.parse(response.body)
 
     {
+      "Workspaces" => "#{workspace.slug}:workspaces",
       "Notarum" => "#{workspace.slug}:notarum",
       "Grids" => "#{workspace.slug}:grids",
-      "Meetings" => "#{workspace.slug}:meetings"
+      "Meetings" => "#{workspace.slug}:meetings",
+      "Favorites" => "#{workspace.slug}:favorites"
     }.each do |label, key|
       section = document.css(".notae-sidebar-section").find do |node|
         node.at_css(".notae-sidebar-label")&.text.to_s.strip == label
@@ -260,9 +264,17 @@ RSpec.describe "Pages", type: :request do
       expect(toggle.at_css(".notae-sidebar-section-chevron")&.text.to_s).to include("▾")
 
       create_button = section.at_css("button.notae-sidebar-section-create")
-      expect(create_button).to be_present
-      expect(create_button.text).to eq("[+]")
+      if [ "Favorites" ].include?(label)
+        expect(create_button).to be_nil
+      else
+        expect(create_button).to be_present
+        expect(create_button.text).to eq("[+]")
+      end
     end
+
+    workspaces_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Workspaces" }
+    workspaces_create_button = workspaces_section.at_css("button.notae-sidebar-section-create")
+    expect(workspaces_create_button["data-action"]).to include("shell#openWorkspaceDialog")
 
     notes_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Notarum" }
     expect(notes_section.at_css("input[name='page[title]']")["value"]).to eq("Untitled")
@@ -274,6 +286,9 @@ RSpec.describe "Pages", type: :request do
     meetings_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Meetings" }
     expect(meetings_section.at_css("input[name='page[title]']")["value"]).to eq("Meeting notes")
     expect(meetings_section.at_css("input[name='page[page_kind]']")["value"]).to eq("meeting_note")
+
+    favorites_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Favorites" }
+    expect(favorites_section.text).to include("Alpha note")
   end
 
   it "renders a document-first page canvas with topbar options menu" do

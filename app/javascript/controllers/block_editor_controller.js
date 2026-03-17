@@ -6,6 +6,7 @@ import TaskItem from "@tiptap/extension-task-item"
 
 const DEBOUNCE_MS = 300
 const EDITING_IDLE_MS = 3000
+const BLOCK_DRAG_MIME = "application/x-notae-block-id"
 
 const SLASH_COMMANDS = [
   {
@@ -161,7 +162,11 @@ export default class extends Controller {
       ],
       content: this.parseContent(),
       editorProps: {
-        handleKeyDown: (_view, event) => this.handleEditorKeydown(event)
+        handleKeyDown: (_view, event) => this.handleEditorKeydown(event),
+        handleDOMEvents: {
+          dragover: (_view, event) => this.handleBlockReorderDragOver(event),
+          drop: (_view, event) => this.handleBlockReorderDrop(event)
+        }
       },
       onUpdate: ({ editor }) => {
         if (this.suppressUpdateCycle) {
@@ -294,6 +299,25 @@ export default class extends Controller {
     }
 
     return false
+  }
+
+  handleBlockReorderDragOver(event) {
+    if (!this.blockReorderDragEvent(event)) return false
+
+    event.preventDefault()
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move"
+    return true
+  }
+
+  handleBlockReorderDrop(event) {
+    if (!this.blockReorderDragEvent(event)) return false
+
+    event.preventDefault()
+    return true
+  }
+
+  blockReorderDragEvent(event) {
+    return Array.from(event.dataTransfer?.types || []).includes(BLOCK_DRAG_MIME)
   }
 
   handleSlashMenuMouseDown(event) {

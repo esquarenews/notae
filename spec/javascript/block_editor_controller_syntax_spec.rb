@@ -15,4 +15,13 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
   rescue Errno::ENOENT
     skip "node is not available in this environment"
   end
+
+  it "guards the editor against block reorder drag payloads" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("handleDOMEvents")
+    expect(source).to include("handleBlockReorderDragOver")
+    expect(source).to include("handleBlockReorderDrop")
+    expect(source).to include("application/x-notae-block-id")
+  end
 end

@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 const DRAG_MOVE_THRESHOLD_PX = 2
+const BLOCK_DRAG_MIME = "application/x-notae-block-id"
 
 export default class extends Controller {
   static targets = ["item"]
@@ -28,7 +29,7 @@ export default class extends Controller {
     this.element.classList.add("is-drag-active")
     this.draggedItem.classList.add("is-dragging")
     event.dataTransfer.effectAllowed = "move"
-    event.dataTransfer.setData("text/plain", this.draggedItem.dataset.blockId)
+    event.dataTransfer.setData(BLOCK_DRAG_MIME, this.draggedItem.dataset.blockId)
   }
 
   handleDragOver(event) {
@@ -87,7 +88,7 @@ export default class extends Controller {
     event.preventDefault()
     event.stopPropagation()
 
-    const draggedId = event.dataTransfer.getData("text/plain") || this.draggedItem?.dataset.blockId
+    const draggedId = event.dataTransfer.getData(BLOCK_DRAG_MIME) || this.draggedItem?.dataset.blockId
     const siblings = this.directSiblingItems()
     const targetIndex = siblings.findIndex((item) => item.dataset.blockId === draggedId)
 

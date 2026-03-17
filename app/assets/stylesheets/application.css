@@ -4389,7 +4389,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-db-title-input {
-  padding-bottom: 0.32rem;
+  min-height: calc(1.4em + 0.62rem + 2px);
+  line-height: 1.4;
+  padding-bottom: 0.38rem;
 }
 
 .notae-db-cell-select-status {

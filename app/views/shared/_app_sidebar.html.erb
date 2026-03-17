@@ -228,25 +228,46 @@
     </nav>
 
     <% if workspace %>
-      <section class="notae-sidebar-section">
-        <p class="notae-sidebar-label">Workspaces</p>
-        <% if recent_workspaces.any? %>
-          <ul class="notae-sidebar-list is-indented">
-            <% recent_workspaces.each do |sidebar_workspace| %>
-              <% sidebar_workspace_slug = sidebar_workspace.slug.to_s.strip %>
-              <% next if sidebar_workspace_slug.blank? %>
-              <li>
-                <%= link_to workspace_path(sidebar_workspace_slug),
-                            class: notae_sidebar_link_classes(workspace_path(sidebar_workspace_slug)),
-                            data: notae_shell_link_data do %>
-                  <span class="notae-sidebar-page-title"><%= sidebar_workspace.display_icon %> <%= sidebar_workspace.name %></span>
-                <% end %>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="notae-sidebar-empty">No workspaces yet.</p>
-        <% end %>
+      <section class="notae-sidebar-section notae-sidebar-section-collapsible"
+               data-controller="sidebar-section"
+               data-sidebar-section-key-value="<%= "#{workspace.slug}:workspaces" %>"
+               data-sidebar-section-default-open-value="true">
+        <div class="notae-sidebar-section-head">
+          <button type="button"
+                  class="notae-sidebar-section-toggle"
+                  data-sidebar-section-target="toggle"
+                  data-action="sidebar-section#toggle"
+                  aria-expanded="true">
+            <span class="notae-sidebar-section-chevron" aria-hidden="true">▾</span>
+            <span class="notae-sidebar-label">Workspaces</span>
+          </button>
+          <% if can_create_workspace %>
+            <button type="button"
+                    class="notae-sidebar-section-create"
+                    data-action="click->shell#openWorkspaceDialog"
+                    aria-label="Create new Workspace"
+                    title="Create new Workspace">[+]</button>
+          <% end %>
+        </div>
+        <div class="notae-sidebar-section-body" data-sidebar-section-target="content">
+          <% if recent_workspaces.any? %>
+            <ul class="notae-sidebar-list is-indented">
+              <% recent_workspaces.each do |sidebar_workspace| %>
+                <% sidebar_workspace_slug = sidebar_workspace.slug.to_s.strip %>
+                <% next if sidebar_workspace_slug.blank? %>
+                <li>
+                  <%= link_to workspace_path(sidebar_workspace_slug),
+                              class: notae_sidebar_link_classes(workspace_path(sidebar_workspace_slug)),
+                              data: notae_shell_link_data do %>
+                    <span class="notae-sidebar-page-title"><%= sidebar_workspace.display_icon %> <%= sidebar_workspace.name %></span>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            <p class="notae-sidebar-empty">No workspaces yet.</p>
+          <% end %>
+        </div>
       </section>
 
       <section class="notae-sidebar-section notae-sidebar-section-collapsible"
@@ -383,33 +404,47 @@
         </div>
       </section>
 
-      <section class="notae-sidebar-section">
-        <p class="notae-sidebar-label">Favorites</p>
-        <% if recent_favorites.any? %>
-          <ul class="notae-sidebar-list is-indented">
-            <% recent_favorites.each do |item| %>
-              <li>
-                <% if item[:type] == :page %>
-                  <% page = item[:record] %>
-                  <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
-                              class: notae_sidebar_link_classes(page_path(workspace_slug: workspace.slug, id: page.id)),
-                              data: notae_shell_link_data do %>
-                    <span class="notae-sidebar-page-title">⭐ <%= page.title %></span>
+      <section class="notae-sidebar-section notae-sidebar-section-collapsible"
+               data-controller="sidebar-section"
+               data-sidebar-section-key-value="<%= "#{workspace.slug}:favorites" %>"
+               data-sidebar-section-default-open-value="true">
+        <div class="notae-sidebar-section-head">
+          <button type="button"
+                  class="notae-sidebar-section-toggle"
+                  data-sidebar-section-target="toggle"
+                  data-action="sidebar-section#toggle"
+                  aria-expanded="true">
+            <span class="notae-sidebar-section-chevron" aria-hidden="true">▾</span>
+            <span class="notae-sidebar-label">Favorites</span>
+          </button>
+        </div>
+        <div class="notae-sidebar-section-body" data-sidebar-section-target="content">
+          <% if recent_favorites.any? %>
+            <ul class="notae-sidebar-list is-indented">
+              <% recent_favorites.each do |item| %>
+                <li>
+                  <% if item[:type] == :page %>
+                    <% page = item[:record] %>
+                    <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
+                                class: notae_sidebar_link_classes(page_path(workspace_slug: workspace.slug, id: page.id)),
+                                data: notae_shell_link_data do %>
+                      <span class="notae-sidebar-page-title">⭐ <%= page.title %></span>
+                    <% end %>
+                  <% else %>
+                    <% database = item[:record] %>
+                    <%= link_to database_path(workspace_slug: workspace.slug, id: database.id),
+                                class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: database.id)),
+                                data: notae_shell_link_data do %>
+                      <span class="notae-sidebar-page-title">⭐ <%= database.icon.presence || "🗃️" %> <%= database.name %></span>
+                    <% end %>
                   <% end %>
-                <% else %>
-                  <% database = item[:record] %>
-                  <%= link_to database_path(workspace_slug: workspace.slug, id: database.id),
-                              class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: database.id)),
-                              data: notae_shell_link_data do %>
-                    <span class="notae-sidebar-page-title">⭐ <%= database.icon.presence || "🗃️" %> <%= database.name %></span>
-                  <% end %>
-                <% end %>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="notae-sidebar-empty">No favorites yet.</p>
-        <% end %>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            <p class="notae-sidebar-empty">No favorites yet.</p>
+          <% end %>
+        </div>
       </section>
     <% end %>
   </div>
