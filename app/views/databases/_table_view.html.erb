@@ -6,6 +6,7 @@
   filter_property_id: params[:filter_property_id],
   filter_value: params[:filter_value],
   filter_operator: params[:filter_operator],
+  highlight_row_id: params[:highlight_row_id],
   split_page_id: params[:split_page_id],
   split_source: params[:split_source],
   split_row_id: params[:split_row_id]
@@ -35,6 +36,7 @@ end %>
   ["Pink", "pink"],
   ["Red", "red"]
 ] %>
+<% highlight_row_id = params[:highlight_row_id].presence %>
 
 <div class="notae-db-grid-wrap"
      data-controller="db-column-resize"
@@ -157,7 +159,8 @@ end %>
                    visible_properties: visible_properties,
                    cells_by_key: @cells_by_key,
                    can_create_rows: can_create_rows,
-                   row_color_options: row_color_options %>
+                   row_color_options: row_color_options,
+                   highlight_row_id: highlight_row_id %>
       <% end %>
     </tbody>
 
@@ -183,6 +186,7 @@ end %>
               <%= hidden_field_tag :filter_property_id, row_params[:filter_property_id] %>
               <%= hidden_field_tag :filter_value, row_params[:filter_value] %>
               <%= hidden_field_tag :filter_operator, row_params[:filter_operator] %>
+              <%= hidden_field_tag :highlight_row_id, row_params[:highlight_row_id] %>
               <%= hidden_field_tag :split_page_id, row_params[:split_page_id] %>
               <%= hidden_field_tag :split_source, row_params[:split_source] %>
               <%= hidden_field_tag :split_row_id, row_params[:split_row_id] %>

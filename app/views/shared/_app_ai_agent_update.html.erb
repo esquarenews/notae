@@ -1,0 +1,19 @@
+<article class="notae-ai-message is-agent-update"
+         data-ai-rail-target="agentUpdate"
+         data-ai-agent-update-id="<%= update[:id] %>"
+         data-ai-agent-update-updated-at="<%= update[:updated_at_iso8601] %>">
+  <p class="notae-ai-message-label">Update available from Agent</p>
+  <% if update[:title].present? %>
+    <p class="notae-ai-message-body"><strong><%= update[:title] %></strong></p>
+  <% end %>
+  <p class="notae-ai-result-text notae-ai-agent-update-preview"><%= ai_agent_update_preview(update) %></p>
+  <div class="notae-ai-compose-actions">
+    <%= link_to update[:action_label].presence || "Open full window",
+                update[:url],
+                class: "notae-chip-button",
+                data: { turbo_frame: "_top" } %>
+  </div>
+  <% if (updated_at = ai_agent_update_time(update)).present? %>
+    <p class="notae-ai-message-meta"><%= time_ago_in_words(updated_at) %> ago</p>
+  <% end %>
+</article>

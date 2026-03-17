@@ -139,6 +139,8 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("New grid")
     expect(response.body).to include("New meeting")
     expect(response.body).to include("New Workspace")
+    expect(response.body).to include("notae-create-menu")
+    expect(response.body).to include("notae-create-menu-button")
     expect(response.body).to include("notae-create-menu-icon-page")
     expect(response.body).to include("notae-create-menu-icon-database")
     expect(response.body).to include("notae-create-menu-icon-meeting")
@@ -225,6 +227,55 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("🧠 Campaign grid")
   end
 
+  it "renders collapsible sidebar sections with inline create actions for notes, grids, and meetings" do
+    owner = User.create!(email: "page-sidebar-sections-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Sidebar sections", slug: "sidebar-sections")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Page.create!(workspace: workspace, created_by: owner, title: "Alpha note")
+    Page.create!(workspace: workspace, created_by: owner, title: "Weekly meeting notes", page_kind: "meeting_note")
+    Database.create!(workspace: workspace, name: "Projects")
+    sign_in owner
+
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+
+    {
+      "Notarum" => "#{workspace.slug}:notarum",
+      "Grids" => "#{workspace.slug}:grids",
+      "Meetings" => "#{workspace.slug}:meetings"
+    }.each do |label, key|
+      section = document.css(".notae-sidebar-section").find do |node|
+        node.at_css(".notae-sidebar-label")&.text.to_s.strip == label
+      end
+      expect(section).to be_present
+      expect(section["data-controller"]).to include("sidebar-section")
+      expect(section["data-sidebar-section-key-value"]).to eq(key)
+
+      toggle = section.at_css(".notae-sidebar-section-toggle")
+      expect(toggle).to be_present
+      expect(toggle["data-action"]).to include("sidebar-section#toggle")
+      expect(toggle["aria-expanded"]).to eq("true")
+      expect(toggle.at_css(".notae-sidebar-section-chevron")&.text.to_s).to include("▾")
+
+      create_button = section.at_css("button.notae-sidebar-section-create")
+      expect(create_button).to be_present
+      expect(create_button.text).to eq("[+]")
+    end
+
+    notes_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Notarum" }
+    expect(notes_section.at_css("input[name='page[title]']")["value"]).to eq("Untitled")
+
+    grids_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Grids" }
+    expect(grids_section.at_css("input[name='quick_create']")["value"]).to eq("1")
+    expect(grids_section.at_css("input[name='database[name]']")["value"]).to eq("Untitled grid")
+
+    meetings_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Meetings" }
+    expect(meetings_section.at_css("input[name='page[title]']")["value"]).to eq("Meeting notes")
+    expect(meetings_section.at_css("input[name='page[page_kind]']")["value"]).to eq("meeting_note")
+  end
+
   it "renders a document-first page canvas with topbar options menu" do
     owner = User.create!(email: "page-document-layout-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Document layout", slug: "document-layout")
@@ -243,6 +294,45 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Turn into")
     expect(response.body).to include("Block equation")
     expect(response.body).to include("Synced block")
+  end
+
+  it "renders embedded page previews without full page chrome and keeps block actions embedded" do
+    owner = User.create!(email: "page-embedded-preview-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Embedded page preview", slug: "embedded-page-preview")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embedded page")
+    block = page.blocks.create!(workspace: workspace, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id, embedded: 1)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-shell-embedded")
+    expect(response.body).not_to include("notae-topbar")
+    expect(response.body).not_to include("notae-actions-menu")
+    expect(response.body).not_to include("notae-options-menu")
+
+    document = Nokogiri::HTML.parse(response.body)
+    add_block_actions = document.css("form.notae-doc-add-form").map { |form| form["action"] }
+    expect(add_block_actions).not_to be_empty
+    expect(add_block_actions).to all(include("embedded=1"))
+    expect(response.body).to include(page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, embedded: 1))
+    expect(response.body).to include(command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, embedded: 1))
+  end
+
+  it "keeps embedded page redirects when creating blocks from split previews" do
+    owner = User.create!(email: "page-embedded-block-create-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Embedded block create", slug: "embedded-block-create")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embedded block page")
+    sign_in owner
+
+    expect do
+      post page_blocks_path(workspace_slug: workspace.slug, page_id: page.id, embedded: 1),
+           params: { block: { block_type: "paragraph" } }
+    end.to change { page.blocks.count }.by(1)
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, embedded: 1))
   end
 
   it "updates actions settings on a page and duplicates the page with blocks" do

@@ -2,6 +2,31 @@ class AiAssistantController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
 
+  def updates
+    authorize @workspace, :show?
+
+    updates = with_optional_schema_fallback(default: [], feature: "AI agent updates endpoint") do
+      recent_ai_agent_updates_for(
+        workspace: @workspace,
+        limit: ai_agent_update_limit,
+        since: parsed_ai_agent_updates_since
+      )
+    end
+
+    render json: {
+      data: {
+        count: updates.length,
+        html: render_to_string(
+          partial: "shared/app_ai_agent_update",
+          collection: updates.sort_by { |update| update.fetch(:updated_at) },
+          as: :update,
+          formats: [ :html ]
+        ),
+        latest_at: updates.max_by { |update| update.fetch(:updated_at) }&.fetch(:updated_at_iso8601, nil)
+      }
+    }
+  end
+
   def create
     authorize @workspace, :show?
 
@@ -33,6 +58,7 @@ class AiAssistantController < ApplicationController
     ).to_a.reverse
     @ai_usage_panel = build_ai_usage_panel(user: current_user, workspace: @workspace)
     @ai_conversations = recent_ai_conversations_for(user: current_user, window: 1.week, limit: 300).to_a
+    @ai_agent_updates = recent_ai_agent_updates_for(workspace: @workspace, limit: ai_agent_update_limit)
 
     respond_to do |format|
       format.turbo_stream do
@@ -202,6 +228,15 @@ class AiAssistantController < ApplicationController
 
     value
   rescue URI::InvalidURIError
+    nil
+  end
+
+  def parsed_ai_agent_updates_since
+    value = params[:since].to_s.strip
+    return nil if value.blank?
+
+    Time.iso8601(value)
+  rescue ArgumentError
     nil
   end
 end

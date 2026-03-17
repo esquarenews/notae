@@ -2,6 +2,9 @@
 <% content_for :topbar_page_icon, @page.icon.presence || "📄" %>
 <% content_for :topbar_privacy, @page.permission_mode.humanize %>
 <% content_for :content_class, "notae-content-page" %>
+<% embedded_page_params = params[:embedded].to_s == "1" ? { embedded: "1" } : {} %>
+<% page_route_params = { workspace_slug: @workspace.slug, id: @page.id }.merge(embedded_page_params) %>
+<% page_blocks_route_params = { workspace_slug: @workspace.slug, page_id: @page.id }.merge(embedded_page_params) %>
 <% content_for :topbar_actions do %>
   <span id="page_topbar_edited_at" class="notae-topbar-meta">Edited <%= time_ago_in_words(@page.updated_at) %> ago</span>
   <% unless @page.locked? %>
@@ -83,7 +86,7 @@
                 <% Page::COVER_PRESET_KEYS.each do |preset_key| %>
                   <% preset_asset = page_cover_asset_path(preset_key) %>
                   <% next if preset_asset.blank? %>
-                  <%= button_to page_path(workspace_slug: @workspace.slug, id: @page.id),
+                  <%= button_to page_path(page_route_params),
                                 method: :patch,
                                 params: { page: { cover_action: "preset", cover_preset_key: preset_key } },
                                 class: [ "notae-cover-picker-tile-button", ("is-active" if @page.cover_preset_key == preset_key) ].compact.join(" "),
@@ -96,18 +99,18 @@
               </div>
               <div class="notae-cover-picker-quick-actions">
                 <%= button_to "Random",
-                              page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              page_path(page_route_params),
                               method: :patch,
                               params: { page: { cover_action: "random" } },
                               class: "notae-cover-picker-action" %>
                 <%= button_to "Remove",
-                              page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              page_path(page_route_params),
                               method: :patch,
                               params: { page: { cover_action: "clear" } },
                               class: "notae-cover-picker-action is-danger" %>
               </div>
               <%= form_with model: @page,
-                            url: page_path(workspace_slug: @workspace.slug, id: @page.id),
+                            url: page_path(page_route_params),
                             method: :patch,
                             class: "notae-cover-picker-upload-form" do |form| %>
                 <%= hidden_field_tag "page[cover_action]", "upload" %>
@@ -117,14 +120,14 @@
             </div>
           </details>
           <%= button_to "↑",
-                        page_path(workspace_slug: @workspace.slug, id: @page.id),
+                        page_path(page_route_params),
                         method: :patch,
                         params: { page: { cover_shift: "up" } },
                         class: "notae-chip-button notae-cover-chip",
                         title: "Move cover up",
                         aria: { label: "Move cover up" } %>
           <%= button_to "↓",
-                        page_path(workspace_slug: @workspace.slug, id: @page.id),
+                        page_path(page_route_params),
                         method: :patch,
                         params: { page: { cover_shift: "down" } },
                         class: "notae-chip-button notae-cover-chip",
@@ -155,7 +158,7 @@
               <summary><span class="notae-page-header-action-icon">◌</span> <%= @page.icon.present? ? "Change icon" : "Add icon" %></summary>
               <div class="notae-page-header-panel">
                 <%= form_with model: @page,
-                              url: page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              url: page_path(page_route_params),
                               method: :patch,
                               class: "notae-page-header-panel-form" do |form| %>
                   <%= hidden_field_tag "page[icon_action]", "set" %>
@@ -168,7 +171,7 @@
                 <% end %>
                 <div class="notae-page-emoji-grid">
                   <% Page::ICON_SUGGESTIONS.each do |emoji| %>
-                    <%= button_to page_path(workspace_slug: @workspace.slug, id: @page.id),
+                    <%= button_to page_path(page_route_params),
                                   method: :patch,
                                   params: { page: { icon_action: "set", icon: emoji } },
                                   class: "notae-page-emoji-button",
@@ -179,7 +182,7 @@
                 </div>
                 <% if @page.icon.present? %>
                   <%= button_to "Remove icon",
-                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                page_path(page_route_params),
                                 method: :patch,
                                 params: { page: { icon_action: "clear" } },
                                 class: "notae-page-header-link-button" %>
@@ -192,23 +195,23 @@
               <div class="notae-page-header-panel">
                 <div class="notae-page-cover-panel-actions">
                   <%= button_to "Random cover",
-                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                page_path(page_route_params),
                                 method: :patch,
                                 params: { page: { cover_action: "random" } },
                                 class: "notae-chip-button" %>
                   <%= button_to "Move up",
-                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                page_path(page_route_params),
                                 method: :patch,
                                 params: { page: { cover_shift: "up" } },
                                 class: "notae-chip-button" %>
                   <%= button_to "Move down",
-                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                page_path(page_route_params),
                                 method: :patch,
                                 params: { page: { cover_shift: "down" } },
                                 class: "notae-chip-button" %>
                 </div>
                 <%= form_with model: @page,
-                              url: page_path(workspace_slug: @workspace.slug, id: @page.id),
+                              url: page_path(page_route_params),
                               method: :patch,
                               class: "notae-page-header-panel-form" do |form| %>
                   <%= hidden_field_tag "page[cover_action]", "upload" %>
@@ -217,7 +220,7 @@
                 <% end %>
                 <% if has_cover %>
                   <%= button_to "Remove cover",
-                                page_path(workspace_slug: @workspace.slug, id: @page.id),
+                                page_path(page_route_params),
                                 method: :patch,
                                 params: { page: { cover_action: "clear" } },
                                 class: "notae-page-header-link-button" %>
@@ -235,12 +238,12 @@
       <% end %>
 
       <%= form_with model: @page,
-                    url: page_path(workspace_slug: @workspace.slug, id: @page.id),
+                    url: page_path(page_route_params),
                     method: :patch,
                     class: "notae-page-title-form",
                     data: {
                       controller: "page-title",
-                      page_title_url_value: page_path(workspace_slug: @workspace.slug, id: @page.id)
+                      page_title_url_value: page_path(page_route_params)
                     } do |form| %>
         <%= form.text_field :title,
                             placeholder: "New page",
@@ -263,12 +266,13 @@
                  blocks_by_parent: @blocks_by_parent,
                  parent_id: nil,
                  all_pages: @move_target_pages,
-                 reader_mode: @page_reader_mode
+                 reader_mode: @page_reader_mode,
+                 embedded_page_params: embedded_page_params
                } %>
 
     <% if !@page_reader_mode && policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create? %>
       <%= form_with model: Block.new,
-                    url: page_blocks_path(workspace_slug: @workspace.slug, page_id: @page.id),
+                    url: page_blocks_path(page_blocks_route_params),
                     class: "notae-doc-add-form" do |form| %>
         <%= form.hidden_field :parent_block_id %>
         <%= form.hidden_field :block_type, value: "paragraph" %>
@@ -285,7 +289,7 @@
         <% backlink_pages.each do |source_page| %>
           <li>
             <%= link_to source_page.title,
-                        page_path(workspace_slug: @workspace.slug, id: source_page.id),
+                        page_path({ workspace_slug: @workspace.slug, id: source_page.id }.merge(embedded_page_params)),
                         data: { backlink_source: source_page.id } %>
           </li>
         <% end %>

@@ -1,8 +1,10 @@
 <% autofocus_title = local_assigns.fetch(:autofocus_title, false) %>
+<% highlight_row_id = local_assigns[:highlight_row_id].presence %>
 <% linked_page = linkable_pages_by_id[row.linked_page_id] %>
 <% row_can_update = policy(row).update? && !database.locked? %>
 <% row_can_destroy = policy(row).destroy? && !database.locked? %>
 <% row_style_classes = [] %>
+<% row_style_classes << "is-new-row-highlight" if highlight_row_id.to_s == row.id.to_s && row.title.to_s == "Untitled row" %>
 <% row_style_classes << "is-row-bold" if row.row_bold? %>
 <% row_style_classes << "is-row-italic" if row.row_italic? %>
 <% row_color_class = row.row_text_color %>

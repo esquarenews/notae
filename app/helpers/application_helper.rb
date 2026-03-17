@@ -244,6 +244,23 @@ module ApplicationHelper
     nil
   end
 
+  def ai_agent_update_preview(update, line_limit: 6)
+    Array(update[:preview].to_s.split(/\r?\n/))
+      .map(&:strip)
+      .reject(&:blank?)
+      .first(line_limit)
+      .join("\n")
+  end
+
+  def ai_agent_update_time(update)
+    value = update[:updated_at]
+    return value if value.respond_to?(:to_time)
+
+    Time.iso8601(update[:updated_at_iso8601].to_s)
+  rescue ArgumentError, TypeError
+    nil
+  end
+
   def ai_external_source_url?(url)
     ai_safe_source_url(url).to_s.match?(%r{\Ahttps?://}i)
   end

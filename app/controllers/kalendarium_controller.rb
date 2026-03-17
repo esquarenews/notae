@@ -60,6 +60,9 @@ class KalendariumController < ApplicationController
     @events = @events.to_a
 
     @events_by_day = @events.group_by { |event| event.starts_at_utc.in_time_zone(current_user.time_zone).to_date }
+    @year_all_day_events_by_day = build_year_events_by_day(@events.select(&:all_day?))
+    @year_events_by_day = build_year_events_by_day(@events)
+    @year_month_event_counts = build_year_month_event_counts(@events)
     @workspace_options = policy_scope(Workspace).order(:name).to_a
     @week_days = build_week_days
     @month_days = build_month_days
@@ -342,6 +345,62 @@ class KalendariumController < ApplicationController
       all_day_events: all_day_events,
       timed_events: layout_timed_events(timed_events)
     }
+  end
+
+  def build_year_events_by_day(events)
+    events.each_with_object(Hash.new { |index, day| index[day] = [] }) do |event, index|
+      visible_year_dates_for_event(event).each do |day|
+        index[day] << event
+      end
+    end.transform_values { |day_events| prioritize_year_day_events(day_events) }
+  end
+
+  def build_year_month_event_counts(events)
+    events.each_with_object(Hash.new(0)) do |event, counts|
+      visible_year_dates_for_event(event).map(&:month).uniq.each do |month|
+        counts[month] += 1
+      end
+    end
+  end
+
+  def visible_year_dates_for_event(event)
+    start_of_year = @selected_date.beginning_of_year
+    end_of_year = @selected_date.end_of_year
+
+    dates =
+      if event.all_day?
+        year_label_dates_for_all_day_event(event)
+      else
+        [ event.starts_at_utc.in_time_zone(current_user.time_zone).to_date ]
+      end
+
+    dates.select { |day| day >= start_of_year && day <= end_of_year }
+  end
+
+  def year_label_dates_for_all_day_event(event)
+    starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone)
+    ends_local = event.ends_at_utc.in_time_zone(current_user.time_zone)
+    end_date =
+      if ends_local == ends_local.beginning_of_day && ends_local > starts_local
+        (ends_local - 1.second).to_date
+      else
+        ends_local.to_date
+      end
+
+    start_date = starts_local.to_date
+    end_date = start_date if end_date < start_date
+    (start_date..end_date).to_a
+  end
+
+  def prioritize_year_day_events(events)
+    events.sort_by do |event|
+      starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone)
+      [
+        event.all_day? ? 0 : 1,
+        starts_local,
+        event.id
+      ]
+    end
   end
 
   def layout_timed_events(events)

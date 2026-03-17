@@ -18,6 +18,14 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     [ user, workspace, connection ]
   end
 
+  def http_response(code:, headers: {})
+    double("http_response", code: code.to_s, body: "").tap do |response|
+      allow(response).to receive(:[]) do |name|
+        headers[name]
+      end
+    end
+  end
+
   it "raises when iCloud credentials are missing" do
     _user, _workspace, connection = build_stack(suffix: "missing-creds")
     connection.update_columns(provider_username: nil, provider_password: nil)
@@ -78,7 +86,8 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
           name: "Home",
           color_hex: "#6F4BFFCC",
           ctag: "ctag-1",
-          time_zone_hint: "Australia/Melbourne"
+          time_zone_hint: "Australia/Melbourne",
+          writable: true
         }
       ]
     )
@@ -121,9 +130,11 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     expect(calendar.name).to eq("Home")
     expect(calendar.color_hex).to eq("#6F4BFF")
     expect(calendar.time_zone).to eq("Australia/Melbourne")
-    expect(calendar.read_only).to be(true)
+    expect(calendar.read_only).to be(false)
+    expect(calendar.user_writable?).to be(true)
     expect(calendar.source_kind).to eq("provider")
     expect(calendar.metadata_json["ctag"]).to eq("ctag-1")
+    expect(calendar.metadata_json["writable"]).to be(true)
 
     imported_event = calendar.kalendarium_events.find_by(remote_event_id: "event-uid-1::2026-03-03T09:00:00.000000Z")
     expect(imported_event).to be_present
@@ -265,7 +276,8 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
           name: "Home",
           color_hex: "#3B82F6",
           ctag: "ctag-home",
-          time_zone_hint: "UTC"
+          time_zone_hint: "UTC",
+          writable: true
         }
       ]
     )
@@ -274,8 +286,160 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     adapter.sync!
 
     expect(calendar.reload.enabled).to be(true)
+    expect(calendar.read_only).to be(false)
     expect(calendar.metadata_json["auto_disabled_missing"]).to be_nil
     expect(calendar.metadata_json["auto_disabled_missing_at"]).to be_nil
+  end
+
+  it "creates a new remote event for writable iCloud calendars and updates the local event" do
+    user, workspace, connection = build_stack(suffix: "write-create")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: true,
+      metadata_json: { "subscribed" => false }
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Local provider event",
+      description: "Write this remotely",
+      starts_at_utc: Time.zone.parse("2026-03-12 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-12 10:00:00"),
+      source_kind: "local"
+    )
+
+    adapter = described_class.new(connection: connection)
+    captured = nil
+    allow(adapter).to receive(:perform_caldav_write_request) do |**args|
+      captured = args
+      http_response(code: 201, headers: { "ETag" => "\"etag-created\"" })
+    end
+
+    adapter.upsert_remote_event!(calendar: calendar, event: event)
+
+    expect(captured[:method]).to eq("PUT")
+    expect(captured[:href]).to start_with("/123/calendars/home/")
+    expect(captured[:body]).to include("BEGIN:VEVENT")
+    expect(captured[:body]).to include("UID:#{event.id}@notae.local")
+    expect(captured[:body]).to include("SUMMARY:Local provider event")
+    expect(captured[:body]).to include("DESCRIPTION:Write this remotely")
+    expect(captured[:headers]).to eq({})
+
+    event.reload
+    expect(event.remote_event_id).to eq("#{event.id}@notae.local::#{event.starts_at_utc.utc.iso8601(6)}")
+    expect(event.uid).to eq("#{event.id}@notae.local")
+    expect(event.etag).to eq("\"etag-created\"")
+    expect(event.sequence).to eq(0)
+    expect(event.source_kind).to eq("provider")
+    expect(event.metadata_json["remote_href"]).to eq(captured[:href])
+  end
+
+  it "updates an existing remote event for writable iCloud calendars" do
+    user, workspace, connection = build_stack(suffix: "write-update")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      metadata_json: { "subscribed" => false, "writable" => true }
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Remote existing",
+      starts_at_utc: Time.zone.parse("2026-03-13 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-13 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "legacy-remote-id",
+      uid: "remote-existing-uid",
+      etag: "\"etag-old\"",
+      sequence: 3,
+      metadata_json: { "remote_href" => "/123/calendars/home/existing.ics" }
+    )
+
+    adapter = described_class.new(connection: connection)
+    captured = nil
+    allow(adapter).to receive(:perform_caldav_write_request) do |**args|
+      captured = args
+      http_response(code: 204, headers: { "ETag" => "\"etag-updated\"" })
+    end
+
+    adapter.upsert_remote_event!(calendar: calendar, event: event)
+
+    expect(captured[:method]).to eq("PUT")
+    expect(captured[:href]).to eq("/123/calendars/home/existing.ics")
+    expect(captured[:headers]).to eq({ "If-Match" => "\"etag-old\"" })
+    expect(captured[:body]).to include("UID:remote-existing-uid")
+    expect(captured[:body]).to include("SEQUENCE:4")
+
+    event.reload
+    expect(event.remote_event_id).to eq("remote-existing-uid::#{event.starts_at_utc.utc.iso8601(6)}")
+    expect(event.etag).to eq("\"etag-updated\"")
+    expect(event.sequence).to eq(4)
+    expect(event.metadata_json["remote_href"]).to eq("/123/calendars/home/existing.ics")
+  end
+
+  it "deletes an existing remote event for writable iCloud calendars" do
+    user, workspace, connection = build_stack(suffix: "write-delete")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      metadata_json: { "subscribed" => false, "writable" => true }
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Delete remote",
+      starts_at_utc: Time.zone.parse("2026-03-14 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-14 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "remote-delete-1",
+      uid: "remote-delete-uid",
+      etag: "\"etag-delete\"",
+      metadata_json: { "remote_href" => "/123/calendars/home/delete.ics" }
+    )
+
+    adapter = described_class.new(connection: connection)
+    captured = nil
+    allow(adapter).to receive(:perform_caldav_write_request) do |**args|
+      captured = args
+      http_response(code: 204)
+    end
+
+    result = adapter.delete_remote_event!(calendar: calendar, event: event)
+
+    expect(result).to be(true)
+    expect(captured[:method]).to eq("DELETE")
+    expect(captured[:href]).to eq("/123/calendars/home/delete.ics")
+    expect(captured[:headers]).to eq({ "If-Match" => "\"etag-delete\"" })
   end
 
   it "syncs only the provided calendar when calendar parameter is given" do

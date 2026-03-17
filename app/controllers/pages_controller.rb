@@ -259,6 +259,7 @@ class PagesController < ApplicationController
 
   def page_redirect_path(page_id = @page.id, anchor: nil)
     redirect_params = { workspace_slug: @workspace.slug, id: page_id }.merge(open_menu_query_params)
+    redirect_params[:embedded] = "1" if embedded_page_shell?
     redirect_params[:anchor] = anchor if anchor.present?
     page_path(redirect_params)
   end
@@ -268,6 +269,10 @@ class PagesController < ApplicationController
     query[:actions_menu] = "open" if params[:actions_menu].to_s == "open"
     query[:options_menu] = "open" if params[:options_menu].to_s == "open"
     query
+  end
+
+  def embedded_page_shell?
+    params[:embedded].to_s == "1"
   end
 
   def remember_last_page_visit!

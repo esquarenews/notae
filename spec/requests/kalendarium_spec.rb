@@ -8,8 +8,13 @@ RSpec.describe "Kalendarium", type: :request do
     clear_enqueued_jobs
   end
 
-  def build_stack(suffix:)
-    user = User.create!(email: "kal-request-#{suffix}@example.com", password: "password123")
+  def build_stack(suffix:, theme_preference: nil)
+    user_attributes = {
+      email: "kal-request-#{suffix}@example.com",
+      password: "password123"
+    }
+    user_attributes[:theme_preference] = theme_preference if theme_preference.present?
+    user = User.create!(**user_attributes)
     workspace = Workspace.create!(name: "Kal Request #{suffix}", slug: "kal-request-#{suffix}")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     calendar = KalendariumCalendar.create!(
@@ -47,8 +52,53 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.headers["X-Notae-Perf-Action"]).to eq("KalendariumController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     document = Nokogiri::HTML.parse(response.body)
+    sticky_sidebar = document.at_css("aside.notae-kalendarium-sidebar.is-pinned")
+    expect(sticky_sidebar).to be_present
+    expect(sticky_sidebar.at_css(".notae-kalendarium-sidebar-accordion-summary")&.text.to_s.strip).to eq("Create event")
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
+  end
+
+  it "ships dark theme contrast overrides for kalendarium controls and cards" do
+    user, workspace, calendar = build_stack(suffix: "dark-contrast", theme_preference: "dark")
+    sign_in user
+
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: calendar,
+      name: "Roadmap",
+      slug: "roadmap",
+      color_hex: "#10B981"
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Dark contrast review",
+      description: "Contrast audit event",
+      starts_at_utc: Time.zone.parse("2026-03-18 09:30:00"),
+      ends_at_utc: Time.zone.parse("2026-03-18 10:30:00")
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-17")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-theme-dark")
+    document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css(".notae-kalendarium-date-label")).to be_present
+    expect(document.at_css(".notae-kalendarium-sidebar-accordion-summary")).to be_present
+    expect(document.at_css(".notae-kalendarium-month-weekday")).to be_present
+    expect(document.at_css(".notae-kalendarium-event-card")).to be_present
+    expect(document.at_css(".notae-kalendarium-project-action-link.is-toggle")).to be_present
+
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    expect(stylesheet).to include("color: var(--notae-text, #292524);")
+    expect(stylesheet).to include(".notae-kalendarium-week-header-days .notae-kalendarium-day-focus-link.is-selected strong")
+    expect(stylesheet).to include(".notae-kalendarium-project-action-link.is-toggle.is-active")
+    expect(stylesheet).to include(".notae-kalendarium-workspace-filter::after")
   end
 
   it "renders day and week timelines with hourly rails and half-hour markers" do
@@ -176,6 +226,65 @@ RSpec.describe "Kalendarium", type: :request do
     expect(toggle_checkbox).to be_present
     expect(toggle_checkbox["checked"]).to eq("checked")
     expect(day_link["href"]).to include("year_daily_events=1")
+  end
+
+  it "shows all-day events across covered days in year view without hiding them behind timed events" do
+    user, workspace, calendar = build_stack(suffix: "year-all-day-coverage")
+    sign_in user
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Offsite retreat",
+      starts_at_utc: Time.zone.parse("2026-03-25 00:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-27 00:00:00"),
+      all_day: true
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Budget review",
+      starts_at_utc: Time.zone.parse("2026-03-25 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-25 10:00:00")
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "year", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+
+    march_twenty_fifth = document.at_css("a.notae-kalendarium-year-day[data-day-date='2026-03-25']")
+    expect(march_twenty_fifth).to be_present
+    march_twenty_fifth_label = march_twenty_fifth.at_css(".notae-kalendarium-year-day-event-label")
+    expect(march_twenty_fifth_label).to be_present
+    expect(march_twenty_fifth_label.text).to include("Offsite")
+    expect(march_twenty_fifth_label.text).not_to include("+1")
+
+    march_twenty_sixth = document.at_css("a.notae-kalendarium-year-day[data-day-date='2026-03-26']")
+    expect(march_twenty_sixth).to be_present
+    march_twenty_sixth_label = march_twenty_sixth.at_css(".notae-kalendarium-year-day-event-label")
+    expect(march_twenty_sixth_label).to be_present
+    expect(march_twenty_sixth_label.text).to include("Offsite")
+
+    march_twenty_seventh = document.at_css("a.notae-kalendarium-year-day[data-day-date='2026-03-27']")
+    expect(march_twenty_seventh).to be_present
+    expect(march_twenty_seventh.at_css(".notae-kalendarium-year-day-event-label")).to be_nil
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "year", date: "2026-03-01", year_daily_events: "1")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    march_twenty_fifth = document.at_css("a.notae-kalendarium-year-day[data-day-date='2026-03-25']")
+    expect(march_twenty_fifth).to be_present
+    march_twenty_fifth_label = march_twenty_fifth.at_css(".notae-kalendarium-year-day-event-label")
+    expect(march_twenty_fifth_label).to be_present
+    expect(march_twenty_fifth_label.text).to include("Offsite")
+    expect(march_twenty_fifth_label.text).to include("+1")
+    expect(response.body).to include("2 events")
   end
 
   it "shows invitees and join links when meeting metadata is available" do
@@ -1420,6 +1529,57 @@ RSpec.describe "Kalendarium", type: :request do
       date: "2026-03-01"
     }
     expect(delete_sync_service).to have_received(:delete_remote!)
+  end
+
+  it "allows event creation for legacy writable iCloud calendars that were previously marked read-only" do
+    user, workspace, = build_stack(suffix: "legacy-icloud-writable")
+    sign_in user
+    create_start = 2.days.from_now.change(hour: 10, min: 0, sec: 0)
+    create_end = create_start + 1.hour
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "icloud_caldav",
+      label: "iCloud sync",
+      provider_username: "apple-id@example.com",
+      provider_password: "abcd-efgh-ijkl-mnop",
+      enabled: true,
+      status: "connected"
+    )
+    provider_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "iCloud Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: true,
+      enabled: true,
+      metadata_json: { "subscribed" => false }
+    )
+
+    sync_service = instance_double(Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).and_return(sync_service)
+
+    expect do
+      post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+        view: "day",
+        date: "2026-03-01",
+        kalendarium_event: {
+          kalendarium_calendar_id: provider_calendar.id,
+          title: "Legacy iCloud write",
+          starts_at_local: create_start.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+          ends_at_local: create_end.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
+        }
+      }
+    end.to change(KalendariumEvent, :count).by(1)
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01"))
+    expect(sync_service).to have_received(:upsert_remote!)
   end
 
   it "marks provider-backed events as pending remote sync when immediate write fails" do

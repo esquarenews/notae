@@ -18,7 +18,7 @@ RSpec.describe Meetings::GuardBotRunJob, type: :job do
       updated_by: user
     )
 
-    [user, workspace, session]
+    [ user, workspace, session ]
   end
 
   before do

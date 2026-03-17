@@ -4,7 +4,7 @@ class KalendariumEventPolicy < ApplicationPolicy
   end
 
   def create?
-    calendar_policy.update? && !record.kalendarium_calendar.read_only?
+    calendar_policy.update? && record.kalendarium_calendar.user_writable?
   end
 
   def update?

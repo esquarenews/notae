@@ -123,6 +123,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Escalate the approval gap this afternoon. [1]")
     expect(response.body).to include("Choose tasks grid")
     expect(response.body).to include("Create Nota")
+    expect(response.body).to include("Create Grid")
     expect(response.body).to include("Dismiss")
   end
 
@@ -157,5 +158,61 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Draft standup summary email")
     expect(response.body).to include("Review drafts")
     expect(response.body).to include("New draft")
+  end
+
+  it "renders AI agent updates in the rail and exposes the polling endpoint" do
+    user = User.create!(email: "home-ai-agent-updates@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Home AI Agent Updates", slug: "home-ai-agent-updates")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    agent_action = AgentAction.create!(
+      workspace: workspace,
+      user: user,
+      proposed_by: "ai_assistant",
+      target_system: "gmail",
+      draft_type: "email_draft",
+      title: "Quarterly review email",
+      payload_json: {
+        "to" => [ "team@example.com" ],
+        "cc" => [],
+        "subject" => "Quarterly review",
+        "body" => "Please review the quarterly update."
+      },
+      status: AgentAction::STATUS_PENDING,
+      approval_required: true,
+      dry_run: true
+    )
+    agent_action.update_column(:updated_at, 10.minutes.ago)
+
+    workflow_run = WorkflowRun.create!(
+      workspace: workspace,
+      user: user,
+      workflow_kind: WorkflowRun::KIND_CREATE_TASK,
+      status: WorkflowRun::STATUS_SUCCEEDED,
+      trigger_source: "automation_agent",
+      queued_at: 7.minutes.ago,
+      finished_at: 6.minutes.ago,
+      confidence_score: 1.0,
+      result_json: { "title" => "Roadmap follow-up" }
+    )
+    workflow_run.update_column(:updated_at, 5.minutes.ago)
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-ai-agent-toast")
+    expect(response.body).to include("data-ai-rail-agent-updates-path-value=\"#{workspace_ai_assistant_updates_path(workspace_slug: workspace.slug)}\"")
+    expect(response.body).to include("Update available from Agent")
+    expect(response.body).to include("Open full window")
+    expect(response.body).to include("Quarterly review email")
+    expect(response.body).to include("Roadmap follow-up")
+
+    document = Nokogiri::HTML.parse(response.body)
+    update_cards = document.css(".notae-ai-message.is-agent-update")
+    update_titles = update_cards.css(".notae-ai-message-body").map(&:text)
+
+    expect(update_cards.count).to eq(2)
+    expect(update_titles).to include("Quarterly review email", "Roadmap follow-up")
   end
 end

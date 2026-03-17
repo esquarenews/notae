@@ -2,6 +2,9 @@ class ApplicationController < ActionController::Base
   include Pundit::Authorization
 
   AI_RAIL_CONVERSATION_LIMIT = 20
+  AI_AGENT_UPDATE_LIMIT = 8
+  AI_AGENT_TRIGGER_SOURCES = %w[ai_assistant automation_agent].freeze
+  AI_AGENT_PROPOSED_BY = %w[ai_assistant automation_agent].freeze
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -14,6 +17,7 @@ class ApplicationController < ActionController::Base
   before_action :set_unread_notifications_count
   before_action :set_ai_rail_context, if: :load_shell_context?
   before_action :set_ai_rail_conversations, if: :load_shell_context?
+  before_action :set_ai_agent_updates, if: :load_shell_context?
   before_action :set_ai_rail_usage_panel, if: :load_shell_context?
   before_action :set_active_knowledge_suggestion, if: :load_shell_context?
   before_action :ensure_realtime_channel_loaded
@@ -104,6 +108,15 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  def set_ai_agent_updates
+    return unless user_signed_in?
+    return if @ai_rail_workspace.blank?
+
+    @ai_agent_updates = with_optional_schema_fallback(default: [], feature: "AI agent updates") do
+      recent_ai_agent_updates_for(workspace: @ai_rail_workspace, limit: ai_agent_update_limit)
+    end
+  end
+
   def set_active_knowledge_suggestion
     return unless user_signed_in?
     return if @ai_rail_workspace.blank?
@@ -139,6 +152,88 @@ class ApplicationController < ActionController::Base
 
   def ai_rail_conversation_limit
     AI_RAIL_CONVERSATION_LIMIT
+  end
+
+  def ai_agent_update_limit
+    AI_AGENT_UPDATE_LIMIT
+  end
+
+  def recent_ai_agent_updates_for(workspace:, limit:, since: nil)
+    updates = []
+
+    if data_source_available?("workflow_runs")
+      workflow_scope = policy_scope(WorkflowRun)
+                       .for_workspace(workspace)
+                       .where(trigger_source: AI_AGENT_TRIGGER_SOURCES)
+      workflow_scope = workflow_scope.where("updated_at > ?", since) if since.present?
+      updates.concat(
+        workflow_scope
+          .order(updated_at: :desc)
+          .limit(limit)
+          .map { |workflow_run| ai_agent_update_for_workflow_run(workflow_run) }
+      )
+    end
+
+    if data_source_available?("agent_actions")
+      action_scope = policy_scope(AgentAction)
+                     .for_workspace(workspace)
+                     .where(proposed_by: AI_AGENT_PROPOSED_BY)
+      action_scope = action_scope.where("updated_at > ?", since) if since.present?
+      updates.concat(
+        action_scope
+          .order(updated_at: :desc)
+          .limit(limit)
+          .map { |agent_action| ai_agent_update_for_agent_action(agent_action) }
+      )
+    end
+
+    updates.sort_by { |entry| -entry.fetch(:updated_at).to_i }.first(limit)
+  end
+
+  def ai_agent_update_for_workflow_run(workflow_run)
+    result_payload = workflow_run.result_json.to_h
+    input_payload = workflow_run.input_json.to_h
+    target_title = result_payload["title"].presence || input_payload["title"].presence || workflow_run.workflow_kind.humanize
+    preview_lines = [
+      "Workflow: #{workflow_run.workflow_kind.humanize}",
+      "Status: #{workflow_run.status.humanize}",
+      ("Record: #{target_title}" if target_title.present?),
+      ("Error: #{workflow_run.error_message}" if workflow_run.error_message.present?),
+      ("Source: #{workflow_run.trigger_source.to_s.humanize}" if workflow_run.trigger_source.present?)
+    ].compact
+
+    {
+      id: "workflow_run:#{workflow_run.id}",
+      title: target_title,
+      preview: preview_lines.join("\n"),
+      url: workflow_run_path(workspace_slug: workflow_run.workspace.slug, id: workflow_run.id),
+      action_label: "Open full window",
+      kind_label: "Workflow update",
+      updated_at: workflow_run.updated_at,
+      updated_at_iso8601: workflow_run.updated_at.iso8601
+    }
+  end
+
+  def ai_agent_update_for_agent_action(agent_action)
+    summary = helpers.agent_action_preview_summary(agent_action)
+    preview_lines = [
+      "Draft: #{agent_action.draft_type.to_s.humanize}",
+      "Status: #{helpers.agent_action_status_badge(agent_action)}",
+      ("Title: #{agent_action.title}" if agent_action.title.present?),
+      ("Summary: #{summary}" if summary.present?),
+      ("Target: #{agent_action.target_system.to_s.titleize}" if agent_action.target_system.present?)
+    ].compact
+
+    {
+      id: "agent_action:#{agent_action.id}",
+      title: agent_action.title,
+      preview: preview_lines.join("\n"),
+      url: agent_action_path(workspace_slug: agent_action.workspace.slug, id: agent_action.id),
+      action_label: "Open full window",
+      kind_label: "Draft update",
+      updated_at: agent_action.updated_at,
+      updated_at_iso8601: agent_action.updated_at.iso8601
+    }
   end
 
   def current_active_suggestion_for(workspace)

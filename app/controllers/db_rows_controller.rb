@@ -30,7 +30,7 @@ class DbRowsController < ApplicationController
       if @redirect_split_source == "row" && @redirect_split_page_id.present?
         @redirect_split_row_id ||= @db_row.id
       end
-      redirect_to database_redirect_location, notice: "Row created."
+      redirect_to database_redirect_location(highlight_row_id: highlight_new_row_id_for_response(@db_row)), notice: "Row created."
     else
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @db_row.errors.full_messages.to_sentence
     end
@@ -80,7 +80,10 @@ class DbRowsController < ApplicationController
         render turbo_stream: turbo_stream_create_next_row_response(next_row)
       elsif next_row.present?
         close_row_split_for_row_switch!
-        redirect_to database_redirect_location(anchor: "row_#{next_row.id}"), notice: "Row updated."
+        redirect_to database_redirect_location(
+          anchor: "row_#{next_row.id}",
+          highlight_row_id: highlight_new_row_id_for_response(next_row)
+        ), notice: "Row updated."
       else
         redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), notice: "Row updated."
       end
@@ -246,7 +249,7 @@ class DbRowsController < ApplicationController
     )
   end
 
-  def database_redirect_location(anchor: nil)
+  def database_redirect_location(anchor: nil, highlight_row_id: nil)
     split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
     split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
     split_row_id = @clear_split_page ? nil : (@redirect_split_row_id || params[:split_row_id].presence)
@@ -266,7 +269,8 @@ class DbRowsController < ApplicationController
       options_menu: params[:options_menu].presence,
       split_page_id: split_page_id,
       split_source: split_source,
-      split_row_id: split_row_id
+      split_row_id: split_row_id,
+      highlight_row_id: highlight_row_id.presence || params[:highlight_row_id].presence
     }.compact
     path_params[:anchor] = anchor if anchor.present?
     database_path(path_params)
@@ -436,7 +440,7 @@ class DbRowsController < ApplicationController
       turbo_stream.after(
         "row_#{@db_row.id}",
         partial: "databases/table_row",
-        locals: table_row_locals(row: next_row, autofocus_title: true)
+        locals: table_row_locals(row: next_row, autofocus_title: true, highlight_row_id: next_row.id)
       ),
       turbo_stream.update(
         "database_table_placeholders",
@@ -530,7 +534,7 @@ class DbRowsController < ApplicationController
     end
   end
 
-  def table_row_locals(row:, autofocus_title: false)
+  def table_row_locals(row:, autofocus_title: false, highlight_row_id: params[:highlight_row_id].presence)
     {
       row: row,
       workspace: @workspace,
@@ -543,7 +547,8 @@ class DbRowsController < ApplicationController
       cells_by_key: @cells_by_key,
       can_create_rows: policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked?,
       row_color_options: row_color_options,
-      autofocus_title: autofocus_title
+      autofocus_title: autofocus_title,
+      highlight_row_id: highlight_row_id
     }
   end
 
@@ -556,10 +561,22 @@ class DbRowsController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      highlight_row_id: params[:highlight_row_id].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence
     }.compact
+  end
+
+  def highlight_new_row_id_for_response(row)
+    return unless row.title.to_s == "Untitled row"
+    return unless table_view_response?
+
+    row.id
+  end
+
+  def table_view_response?
+    (current_database_view_for_response&.view_type || "table") == "table"
   end
 
   def row_color_options

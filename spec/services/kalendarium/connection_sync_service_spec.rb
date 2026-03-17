@@ -195,4 +195,65 @@ RSpec.describe Kalendarium::ConnectionSyncService do
     expect(connection.last_error).to be_nil
     expect(connection.last_synced_at).to be_present
   end
+
+  it "retries pending writes for legacy writable iCloud calendars after sync" do
+    user = User.create!(email: "kal-connection-sync-icloud-retry@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Kal Connection Sync iCloud Retry", slug: "kal-connection-sync-icloud-retry")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "icloud_caldav",
+      label: "iCloud sync",
+      provider_username: "user@example.com",
+      provider_password: "abcd-efgh-ijkl-mnop",
+      enabled: true,
+      status: "connected"
+    )
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/home/",
+      name: "Home",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: true,
+      enabled: true,
+      metadata_json: { "subscribed" => false }
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Pending iCloud event",
+      starts_at_utc: Time.zone.parse("2026-03-09 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-09 10:00:00"),
+      source_kind: "local",
+      metadata_json: {
+        "pending_remote_sync" => true,
+        "pending_remote_sync_error" => "Previous failure"
+      }
+    )
+
+    adapter = instance_double(Kalendarium::Providers::IcloudCaldavAdapter, sync!: true)
+    provider_sync = instance_double(Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    allow(Kalendarium::Providers::IcloudCaldavAdapter).to receive(:new).with(connection: connection).and_return(adapter)
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).with(event: event).and_return(provider_sync)
+
+    described_class.new(connection: connection).call
+
+    event.reload
+    connection.reload
+    expect(Kalendarium::ProviderEventSyncService).to have_received(:new).with(event: event)
+    expect(provider_sync).to have_received(:upsert_remote!)
+    expect(event.metadata_json["pending_remote_sync"]).to be_nil
+    expect(event.metadata_json["pending_remote_sync_error"]).to be_nil
+    expect(connection.status).to eq("connected")
+    expect(connection.last_error).to be_nil
+  end
 end

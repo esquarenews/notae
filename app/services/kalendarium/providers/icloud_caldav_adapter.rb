@@ -42,6 +42,52 @@ module Kalendarium
         true
       end
 
+      def upsert_remote_event!(calendar:, event:)
+        ensure_credentials!
+        ensure_calendar_belongs_to_connection!(calendar)
+        raise "This iCloud calendar is read-only." unless calendar.user_writable?
+
+        remote_uid = event.uid.to_s.strip.presence || generated_event_uid(event)
+        remote_href = resolve_remote_event_href(calendar: calendar, event: event, uid: remote_uid)
+        response = perform_caldav_write_request(
+          method: "PUT",
+          href: remote_href,
+          body: build_icalendar_payload(
+            event: event,
+            calendar: calendar,
+            uid: remote_uid,
+            sequence: next_remote_sequence(event)
+          ),
+          headers: write_headers_for(event)
+        )
+
+        apply_remote_write_to_local_event!(
+          event: event,
+          remote_href: normalize_href(response["Location"].presence || remote_href),
+          uid: remote_uid,
+          etag: response["ETag"].to_s.presence || response["Etag"].to_s.presence,
+          sequence: next_remote_sequence(event)
+        )
+      end
+
+      def delete_remote_event!(calendar:, event:)
+        ensure_credentials!
+        ensure_calendar_belongs_to_connection!(calendar)
+        return true if event.remote_event_id.blank?
+
+        remote_href = resolve_remote_event_href(calendar: calendar, event: event, uid: event.uid)
+        perform_caldav_write_request(
+          method: "DELETE",
+          href: remote_href,
+          headers: delete_headers_for(event)
+        )
+        true
+      rescue RuntimeError => error
+        return true if error.message.include?("(404)")
+
+        raise
+      end
+
       private
 
       def sync_all_calendars(range_start:, range_end:)
@@ -167,6 +213,7 @@ module Kalendarium
             <d:prop>
               <d:resourcetype />
               <d:displayname />
+              <d:current-user-privilege-set />
               <apple:calendar-color />
               <c:calendar-timezone />
               <cs:getctag />
@@ -190,7 +237,8 @@ module Kalendarium
             color_hex: text_at(prop, "apple:calendar-color"),
             ctag: text_at(prop, "cs:getctag"),
             time_zone_hint: extract_calendar_time_zone_hint(text_at(prop, "c:calendar-timezone")),
-            subscribed: resource[:subscribed]
+            subscribed: resource[:subscribed],
+            writable: calendar_writable?(prop)
           }
         end
       end
@@ -267,7 +315,7 @@ module Kalendarium
         calendar.name = remote_calendar[:name].presence || "iCloud calendar"
         calendar.color_hex = normalize_color_hex(remote_calendar[:color_hex])
         calendar.time_zone = time_zone_name
-        calendar.read_only = true
+        calendar.read_only = remote_calendar[:subscribed] || remote_calendar[:writable] == false
         calendar.source_kind = "provider"
         calendar.enabled = true if calendar.new_record?
         if metadata["auto_disabled_missing"] == true
@@ -277,7 +325,8 @@ module Kalendarium
         end
         calendar.metadata_json = metadata.merge(
           "ctag" => remote_calendar[:ctag].to_s.presence,
-          "subscribed" => remote_calendar[:subscribed]
+          "subscribed" => remote_calendar[:subscribed],
+          "writable" => remote_calendar[:writable]
         ).compact
         calendar.save!
         calendar
@@ -327,6 +376,138 @@ module Kalendarium
           "provider" => connection.provider
         ).compact
         event.save!
+      end
+
+      def apply_remote_write_to_local_event!(event:, remote_href:, uid:, etag:, sequence:)
+        event.remote_event_id = normalize_remote_event_id(
+          remote_href: remote_href,
+          uid: uid,
+          recurrence_id: nil,
+          starts_at_utc: event.starts_at_utc,
+          index: 0
+        )
+        event.uid = uid
+        event.etag = etag.presence || event.etag
+        event.sequence = sequence
+        event.source_kind = "provider"
+        event.last_synced_at = Time.current
+        event.metadata_json = event.metadata_json.to_h.merge(
+          "remote_href" => remote_href.to_s.presence,
+          "provider" => connection.provider
+        ).compact
+        event.save!
+        event
+      end
+
+      def build_icalendar_payload(event:, calendar:, uid:, sequence:)
+        lines = [
+          "BEGIN:VCALENDAR",
+          "PRODID:-//Notae//Kalendarium//EN",
+          "VERSION:2.0",
+          "CALSCALE:GREGORIAN",
+          "BEGIN:VEVENT",
+          "UID:#{uid}",
+          "DTSTAMP:#{format_ical_timestamp(Time.current.utc)}",
+          "SEQUENCE:#{sequence}",
+          "SUMMARY:#{escape_ical_text(event.title.to_s.strip.presence || '(Untitled event)')}"
+        ]
+
+        if event.all_day?
+          start_date, end_date = all_day_write_dates(event: event, calendar: calendar)
+          lines << "DTSTART;VALUE=DATE:#{format_ical_date(start_date)}"
+          lines << "DTEND;VALUE=DATE:#{format_ical_date(end_date)}"
+        else
+          lines << "DTSTART:#{format_ical_timestamp(event.starts_at_utc.utc)}"
+          lines << "DTEND:#{format_ical_timestamp(event.ends_at_utc.utc)}"
+        end
+
+        lines << "DESCRIPTION:#{escape_ical_text(event.description)}" if event.description.present?
+        lines << "LOCATION:#{escape_ical_text(event.location)}" if event.location.present?
+        lines << "URL:#{escape_ical_text(event.meeting_join_url)}" if event.meeting_join_url.present?
+
+        status = ical_status(event.status)
+        lines << "STATUS:#{status}" if status.present?
+
+        visibility = ical_visibility(event.visibility)
+        lines << "CLASS:#{visibility}" if visibility.present?
+
+        lines << "RRULE:#{event.rrule.to_s.strip}" if event.rrule.present?
+        lines << "END:VEVENT"
+        lines << "END:VCALENDAR"
+        lines.join("\r\n") + "\r\n"
+      end
+
+      def all_day_write_dates(event:, calendar:)
+        starts_local = event.starts_at_utc.in_time_zone(calendar.time_zone)
+        ends_local = event.ends_at_utc.in_time_zone(calendar.time_zone)
+        start_date = starts_local.to_date
+        end_date = ends_local.to_date
+        end_date = start_date + 1.day if end_date <= start_date
+        [ start_date, end_date ]
+      end
+
+      def generated_event_uid(event)
+        "#{event.id}@notae.local"
+      end
+
+      def resolve_remote_event_href(calendar:, event:, uid:)
+        stored_href = event.metadata_json.to_h["remote_href"].to_s.strip
+        return normalize_href(stored_href) if stored_href.present?
+
+        calendar_root = normalize_href(calendar.remote_id).sub(%r{/\z}, "")
+        identifier = uid.to_s.strip.presence || generated_event_uid(event)
+        safe_prefix = identifier.gsub(/[^A-Za-z0-9._-]+/, "-").gsub(/\A-+|-+\z/, "")[0, 80].presence || "event"
+        digest = Digest::SHA256.hexdigest(identifier)[0, 12]
+        "#{calendar_root}/#{safe_prefix}-#{digest}.ics"
+      end
+
+      def next_remote_sequence(event)
+        base_sequence = event.sequence.to_i
+        event.metadata_json.to_h["remote_href"].present? ? base_sequence + 1 : base_sequence
+      end
+
+      def write_headers_for(event)
+        return {} if event.metadata_json.to_h["remote_href"].blank? || event.etag.blank?
+
+        { "If-Match" => event.etag }
+      end
+
+      def delete_headers_for(event)
+        return {} if event.etag.blank?
+
+        { "If-Match" => event.etag }
+      end
+
+      def format_ical_timestamp(time)
+        time.utc.strftime("%Y%m%dT%H%M%SZ")
+      end
+
+      def format_ical_date(date)
+        date.strftime("%Y%m%d")
+      end
+
+      def escape_ical_text(value)
+        value.to_s.gsub("\\", "\\\\").gsub("\r\n", "\\n").gsub("\n", "\\n").gsub("\r", "\\n").gsub(";", "\\;").gsub(",", "\\,")
+      end
+
+      def ical_status(status)
+        case status.to_s
+        when "tentative"
+          "TENTATIVE"
+        when "cancelled"
+          "CANCELLED"
+        when "confirmed"
+          "CONFIRMED"
+        end
+      end
+
+      def ical_visibility(visibility)
+        case visibility.to_s
+        when "public"
+          "PUBLIC"
+        when "private"
+          "PRIVATE"
+        end
       end
 
       def cancel_stale_provider_events(calendar:, seen_remote_event_ids:, range_start:, range_end:)
@@ -615,6 +796,36 @@ module Kalendarium
         request_multistatus(method: "REPORT", href: href, body: body, depth: depth)
       end
 
+      def perform_caldav_write_request(method:, href:, body: nil, headers: {})
+        uri = build_uri(href)
+        response = perform_request(
+          method: method,
+          uri: uri,
+          body: body,
+          depth: nil,
+          redirects: 0,
+          extra_headers: headers,
+          content_type: body.present? ? "text/calendar; charset=utf-8" : nil,
+          accept: "application/xml, text/xml, text/calendar, */*"
+        )
+        status = response.code.to_i
+        return response if [ 200, 201, 204 ].include?(status)
+
+        if status == 401
+          raise "CalDAV authentication failed (401). Use Apple ID email and an app-specific password."
+        end
+
+        if status == 403
+          raise "CalDAV write permission is missing for this calendar. The iCloud calendar may be shared without edit access."
+        end
+
+        if status == 412
+          raise "CalDAV write failed (412). The remote event changed on iCloud; refresh the calendar and try again."
+        end
+
+        raise "CalDAV write request failed (#{status})"
+      end
+
       def request_multistatus(method:, href:, body:, depth:)
         xml_body = perform_xml_request(method: method, href: href, body: body, depth: depth)
         document = REXML::Document.new(xml_body)
@@ -625,7 +836,15 @@ module Kalendarium
 
       def perform_xml_request(method:, href:, body:, depth:)
         uri = build_uri(href)
-        response = perform_request(method: method, uri: uri, body: body, depth: depth, redirects: 0)
+        response = perform_request(
+          method: method,
+          uri: uri,
+          body: body,
+          depth: depth,
+          redirects: 0,
+          content_type: "application/xml; charset=utf-8",
+          accept: "application/xml, text/xml, */*"
+        )
         status = response.code.to_i
         return response.body.to_s if status == 207 || (200..299).cover?(status)
         if [ 401, 403 ].include?(status)
@@ -635,15 +854,16 @@ module Kalendarium
         raise "CalDAV request failed (#{status})"
       end
 
-      def perform_request(method:, uri:, body:, depth:, redirects:)
+      def perform_request(method:, uri:, body:, depth:, redirects:, extra_headers: {}, content_type: nil, accept: nil)
         raise "CalDAV request redirected too many times" if redirects > MAX_REDIRECTS
 
         headers = {
           "Authorization" => "Basic #{Base64.strict_encode64("#{connection.provider_username}:#{connection.provider_password}")}",
-          "Content-Type" => "application/xml; charset=utf-8",
-          "Accept" => "application/xml, text/xml, */*"
+          "Accept" => accept.presence || "application/xml, text/xml, */*"
         }
+        headers["Content-Type"] = content_type if content_type.present?
         headers["Depth"] = depth if depth.present?
+        headers.merge!(extra_headers)
 
         request = Net::HTTPGenericRequest.new(method, body.present?, true, uri.request_uri.presence || "/", headers)
         request.body = body if body.present?
@@ -716,6 +936,15 @@ module Kalendarium
           calendar: REXML::XPath.first(prop_node, "d:resourcetype/c:calendar", XML_NS).present?,
           subscribed: REXML::XPath.first(prop_node, "d:resourcetype/cs:subscribed", XML_NS).present?
         }
+      end
+
+      def calendar_writable?(prop_node)
+        return nil unless REXML::XPath.first(prop_node, "d:current-user-privilege-set", XML_NS).present?
+
+        REXML::XPath.first(prop_node, "d:current-user-privilege-set/d:privilege/d:write", XML_NS).present? ||
+          REXML::XPath.first(prop_node, "d:current-user-privilege-set/d:privilege/d:write-content", XML_NS).present? ||
+          REXML::XPath.first(prop_node, "d:current-user-privilege-set/d:privilege/d:bind", XML_NS).present? ||
+          REXML::XPath.first(prop_node, "d:current-user-privilege-set/d:privilege/d:unbind", XML_NS).present?
       end
 
       def text_at(node, path)

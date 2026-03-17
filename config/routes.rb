@@ -174,6 +174,7 @@ Rails.application.routes.draw do
 
     get "exports/:token", to: "page_exports#download", as: :workspace_export
     get "join/:token", to: "workspace_join_links#show", as: :workspace_join_link
+    get "ai-assistant/updates", to: "ai_assistant#updates", as: :workspace_ai_assistant_updates
     post "ai-assistant", to: "ai_assistant#create", as: :workspace_ai_assistant
   end
 

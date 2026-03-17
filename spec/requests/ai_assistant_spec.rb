@@ -431,4 +431,74 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.body).not_to include("malicious.example")
     expect(response.body).not_to include("javascript:alert")
   end
+
+  it "returns recent AI agent updates as rendered cards and respects the since cursor" do
+    user = User.create!(email: "ai-assistant-updates@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Assistant Updates", slug: "ai-assistant-updates")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    stale_action = AgentAction.create!(
+      workspace: workspace,
+      user: user,
+      proposed_by: "ai_assistant",
+      target_system: "gmail",
+      draft_type: "email_draft",
+      title: "Stale email draft",
+      payload_json: {
+        "to" => [ "team@example.com" ],
+        "cc" => [],
+        "subject" => "Stale subject",
+        "body" => "Older body copy."
+      },
+      status: AgentAction::STATUS_PENDING,
+      approval_required: true,
+      dry_run: true
+    )
+    stale_action.update_column(:updated_at, 2.hours.ago)
+
+    WorkflowRun.create!(
+      workspace: workspace,
+      user: user,
+      workflow_kind: WorkflowRun::KIND_CREATE_NOTA,
+      status: WorkflowRun::STATUS_SUCCEEDED,
+      trigger_source: "manual",
+      queued_at: 8.minutes.ago,
+      finished_at: 7.minutes.ago,
+      confidence_score: 1.0,
+      result_json: { "title" => "Ignored manual workflow" }
+    )
+
+    fresh_workflow_run = WorkflowRun.create!(
+      workspace: workspace,
+      user: user,
+      workflow_kind: WorkflowRun::KIND_CREATE_TASK,
+      status: WorkflowRun::STATUS_SUCCEEDED,
+      trigger_source: "automation_agent",
+      queued_at: 6.minutes.ago,
+      finished_at: 5.minutes.ago,
+      confidence_score: 1.0,
+      result_json: { "title" => "Roadmap follow-up task" }
+    )
+    fresh_workflow_run.update_column(:updated_at, 5.minutes.ago)
+
+    sign_in user
+    get workspace_ai_assistant_updates_path(workspace_slug: workspace.slug),
+        params: { since: 30.minutes.ago.iso8601 },
+        headers: { "ACCEPT" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+
+    payload = JSON.parse(response.body)
+    expect(payload.dig("data", "count")).to eq(1)
+    expect(payload.dig("data", "latest_at")).to eq(fresh_workflow_run.reload.updated_at.iso8601)
+
+    html = payload.dig("data", "html")
+    expect(html).to include("Update available from Agent")
+    expect(html).to include("Roadmap follow-up task")
+    expect(html).to include("Workflow: Create task")
+    expect(html).to include("Open full window")
+    expect(html).to include(workflow_run_path(workspace_slug: workspace.slug, id: fresh_workflow_run.id))
+    expect(html).not_to include("Stale email draft")
+    expect(html).not_to include("Ignored manual workflow")
+  end
 end

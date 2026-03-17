@@ -27,7 +27,7 @@ module Kalendarium
     end
 
     def retry_pending_provider_writes!
-      return unless connection.provider == "google"
+      return unless retryable_write_provider?
 
       failed_syncs = []
       writable_events_scope.find_each do |event|
@@ -43,7 +43,7 @@ module Kalendarium
       return if failed_syncs.empty?
 
       if failed_syncs.all? { |failure| authentication_failure_message?(failure) }
-        raise "Google write sync is paused until this connection is re-authorized. Existing local events are kept and will retry automatically afterward."
+        raise "#{provider_name} write sync is paused until this connection is re-authorized. Existing local events are kept and will retry automatically afterward."
       end
 
       raise "Remote write sync failed for #{failed_syncs.size} event(s): #{failed_syncs.first(3).join(' | ')}"
@@ -52,7 +52,8 @@ module Kalendarium
     def writable_events_scope
       scope = KalendariumEvent
                 .joins(:kalendarium_calendar)
-                .where(kalendarium_calendars: { kalendarium_connection_id: connection.id, read_only: false })
+                .merge(KalendariumCalendar.user_writable)
+                .where(kalendarium_calendars: { kalendarium_connection_id: connection.id })
                 .where(status: %w[confirmed tentative])
                 .where("kalendarium_events.source_kind = ? OR kalendarium_events.remote_event_id IS NULL OR COALESCE(kalendarium_events.metadata_json ->> 'pending_remote_sync', 'false') = 'true'", "local")
 
@@ -85,8 +86,25 @@ module Kalendarium
       lowered = message.to_s.downcase
       lowered.include?("google authentication failed") ||
         lowered.include?("reconnect google") ||
-        lowered.include?("permission is missing") ||
-        lowered.include?("token refresh failed")
+        lowered.include?("google calendar write permission is missing") ||
+        lowered.include?("token refresh failed") ||
+        lowered.include?("caldav authentication failed") ||
+        lowered.include?("app-specific password")
+    end
+
+    def retryable_write_provider?
+      %w[google icloud_caldav].include?(connection.provider)
+    end
+
+    def provider_name
+      case connection.provider
+      when "google"
+        "Google"
+      when "icloud_caldav"
+        "iCloud"
+      else
+        connection.provider.to_s.titleize
+      end
     end
 
     def adapter

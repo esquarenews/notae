@@ -13,7 +13,11 @@ RSpec.describe AgentActionEvent do
       proposed_by: "manual",
       target_system: "gmail",
       draft_type: "email_draft",
-      payload_json: { "to" => [ "team@example.com" ], "subject" => "Launch review" },
+      payload_json: {
+        "to" => [ "team@example.com" ],
+        "subject" => "Launch review",
+        "body" => "Please review the launch email draft before sending."
+      },
       approval_required: true,
       dry_run: true,
       status: AgentAction::STATUS_PENDING

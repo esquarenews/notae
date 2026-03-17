@@ -196,7 +196,7 @@
   </header>
 
   <section class="notae-kalendarium-grid">
-    <aside class="notae-kalendarium-sidebar notae-auth-card">
+    <aside class="notae-kalendarium-sidebar notae-auth-card is-pinned">
       <details class="notae-kalendarium-sidebar-accordion">
         <summary class="notae-kalendarium-sidebar-accordion-summary">Create event</summary>
         <div class="notae-kalendarium-sidebar-accordion-body">
@@ -488,7 +488,7 @@
         <h2><%= @selected_date.strftime("%Y") %></h2>
         <div class="notae-kalendarium-year-grid">
           <% @year_months.each do |month_date| %>
-            <% month_count = @events.count { |event| event.starts_at_utc.in_time_zone(current_user.time_zone).month == month_date.month } %>
+            <% month_count = @year_month_event_counts.fetch(month_date.month, 0) %>
             <% month_grid_start = month_date.beginning_of_month.beginning_of_week(@week_start_day) %>
             <% month_grid_end = month_date.end_of_month.end_of_week(@week_start_day) %>
             <article class="notae-kalendarium-year-card">
@@ -509,7 +509,11 @@
                 <% end %>
                 <% (month_grid_start..month_grid_end).each do |day| %>
                   <% in_month = day.month == month_date.month %>
-                  <% day_events = @show_year_daily_events ? (@events_by_day[day] || []) : [] %>
+                  <% day_events = if @show_year_daily_events
+                                    @year_events_by_day[day] || []
+                                  else
+                                    @year_all_day_events_by_day[day] || []
+                                  end %>
                   <% first_day_event = day_events.first %>
                   <% hidden_day_event_count = [day_events.size - 1, 0].max %>
                   <% first_event_color = first_day_event&.kalendarium_project&.color_hex.presence || first_day_event&.kalendarium_calendar&.color_hex.presence || "#3b82f6" %>

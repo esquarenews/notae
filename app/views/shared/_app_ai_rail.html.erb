@@ -7,8 +7,14 @@
 <% ai_target_block_value = @ai_assistant_target_block_id.to_s %>
 <% ai_prompt_value = "" %>
 <% ai_rail_conversations = Array(@ai_rail_conversations) %>
+<% ai_agent_updates = Array(@ai_agent_updates) %>
 
-<div class="notae-ai-rail-shell" data-controller="ai-rail">
+<div class="notae-ai-rail-shell"
+     data-controller="ai-rail"
+     <% if ai_rail_workspace_ready %>
+       data-ai-rail-agent-updates-path-value="<%= workspace_ai_assistant_updates_path(workspace_slug: ai_rail_workspace_slug) %>"
+       data-ai-rail-workspace-key-value="<%= ai_rail_workspace.id %>"
+     <% end %>>
   <button type="button"
           class="notae-ai-floating-toggle"
           data-ai-rail-target="floatingToggle"
@@ -28,6 +34,23 @@
           data-action="click->ai-rail#closeFloatingRail"
           aria-label="Close AI assistant panel"
           hidden></button>
+
+  <section class="notae-ai-agent-toast"
+           data-ai-rail-target="agentToast"
+           hidden
+           aria-live="polite"
+           aria-atomic="true">
+    <button type="button"
+            class="notae-ai-agent-toast-main"
+            data-action="click->ai-rail#openAgentToast">
+      <span class="notae-ai-agent-toast-title">AI Agent</span>
+      <span class="notae-ai-agent-toast-body" data-ai-rail-target="agentToastBody"></span>
+    </button>
+    <button type="button"
+            class="notae-ai-agent-toast-dismiss"
+            data-action="click->ai-rail#dismissAgentToast"
+            aria-label="Dismiss AI agent updates">×</button>
+  </section>
 
   <aside class="notae-ai-rail">
   <button type="button"
@@ -132,7 +155,9 @@
       </article>
     <% end %>
 
-    <% if ai_rail_conversations.empty? && @ai_assistant_notice.present? %>
+    <%= render partial: "shared/app_ai_agent_update", collection: ai_agent_updates, as: :update %>
+
+    <% if ai_rail_conversations.empty? && ai_agent_updates.empty? && @ai_assistant_notice.present? %>
       <article class="notae-ai-message is-assistant">
         <p class="notae-ai-message-label">Notae AI</p>
         <p class="notae-ai-copy notae-ai-assistant-notice"><%= @ai_assistant_notice %></p>

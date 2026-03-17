@@ -56,7 +56,7 @@ module Meetings
 
     def target_calendar
       session.kalendarium_event&.kalendarium_calendar ||
-        KalendariumCalendar.where(workspace_id: session.workspace_id, enabled: true, read_only: false).order(:created_at).first
+        KalendariumCalendar.user_writable.where(workspace_id: session.workspace_id, enabled: true).order(:created_at).first
     end
 
     def parse_due_at(raw_due_at)
