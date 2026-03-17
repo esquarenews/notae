@@ -34,6 +34,55 @@ module Search
     CALENDAR_DIRECT_MODEL = "calendar-direct-v1"
     MAX_CONTEXT_ITEMS = 12
     CALENDAR_EVENT_LIMIT = 40
+    QUERY_TERM_STOPWORDS = %w[
+      a
+      an
+      and
+      are
+      but
+      can
+      could
+      did
+      do
+      does
+      for
+      from
+      had
+      has
+      have
+      how
+      in
+      into
+      is
+      it
+      its
+      mentioned
+      no
+      nota
+      notae
+      of
+      on
+      or
+      our
+      page
+      search
+      specific
+      term
+      that
+      the
+      their
+      there
+      this
+      what
+      where
+      which
+      who
+      why
+      will
+      with
+      within
+      workspace
+    ].freeze
     WEEKDAY_INDEX_BY_NAME = {
       "sunday" => 0,
       "monday" => 1,
@@ -691,9 +740,9 @@ module Search
       when SCOPE_DOCUMENT
         document_context_entries
       when SCOPE_ACCOUNT
-        chunk_context_entries(scope: account_chunks_scope)
+        finalize_context_entries(chunk_context_entry_candidates(scope: account_chunks_scope, resolved_scope: resolved_scope))
       else
-        chunk_context_entries(scope: workspace_chunks_scope)
+        finalize_context_entries(chunk_context_entry_candidates(scope: workspace_chunks_scope, resolved_scope: resolved_scope))
       end
     end
 
@@ -702,9 +751,10 @@ module Search
       return [] if page.blank?
 
       text = [ page.title, page.blocks.active.ordered.pluck(:search_text).join("\n") ].join("\n").squish
-      chunks = Search::TextChunker.call(text, target_words: 150, overlap_words: 25).first(MAX_CONTEXT_ITEMS)
+      chunks = Search::TextChunker.call(text, target_words: 150, overlap_words: 25)
+      selected_chunks = select_top_text_chunks(chunks)
 
-      chunks.map.with_index do |chunk_text, index|
+      selected_chunks.map.with_index do |chunk_text, index|
         {
           index: index + 1,
           kind: "Page",
@@ -716,9 +766,11 @@ module Search
       end
     end
 
-    def chunk_context_entries(scope:)
-      chunks = select_top_chunks(scope)
-      chunks.each_with_index.map { |chunk, index| context_entry_for_chunk(chunk, index + 1) }.compact
+    def chunk_context_entry_candidates(scope:, resolved_scope:)
+      chunk_entries = select_top_chunks(scope).filter_map { |chunk| context_entry_candidate_for_chunk(chunk) }
+      live_entries = live_context_entry_candidates(resolved_scope: resolved_scope)
+
+      rank_context_entry_candidates(chunk_entries + live_entries)
     end
 
     def select_top_chunks(scope)
@@ -726,15 +778,20 @@ module Search
       records = scope.includes(SearchChunk.context_preload_associations).order(updated_at: :desc).limit(220).to_a
       return records.first(MAX_CONTEXT_ITEMS) if terms.empty?
 
-      records.sort_by do |chunk|
-        text = chunk.text.to_s.downcase
-        score = terms.sum { |term| text.split(term).length - 1 }
-        [ -score, -chunk.updated_at.to_i ]
-      end.first(MAX_CONTEXT_ITEMS)
+      ranked_records = records.sort_by do |chunk|
+        [ -text_match_score(chunk.text), -chunk.updated_at.to_i ]
+      end
+      return records.first(MAX_CONTEXT_ITEMS) if ranked_records.first && text_match_score(ranked_records.first.text).zero?
+
+      ranked_records.first(MAX_CONTEXT_ITEMS)
     end
 
     def query_terms
-      @query_terms ||= prompt.downcase.scan(/[a-z0-9]{3,}/).uniq.first(8)
+      @query_terms ||= prompt.downcase
+                             .scan(/[a-z0-9]{2,}/)
+                             .uniq
+                             .reject { |term| QUERY_TERM_STOPWORDS.include?(term) }
+                             .first(10)
     end
 
     def workspace_chunks_scope
@@ -778,10 +835,9 @@ module Search
       Pundit.policy_scope!(user, MeetingSession)
     end
 
-    def context_entry_for_chunk(chunk, index)
+    def context_entry_candidate_for_chunk(chunk)
       if chunk.page.present?
         {
-          index: index,
           kind: "Page",
           title: chunk.page.title,
           excerpt: chunk.text,
@@ -791,7 +847,6 @@ module Search
       elsif chunk.db_row.present?
         database = chunk.database || chunk.db_row.database
         {
-          index: index,
           kind: "Row",
           title: chunk.db_row.title.presence || database&.name || "Row",
           excerpt: chunk.text,
@@ -801,7 +856,6 @@ module Search
       elsif SearchChunk.reference_column_available?(:kalendarium_event_id) && chunk.kalendarium_event.present?
         event = chunk.kalendarium_event
         {
-          index: index,
           kind: "Kalendarium event",
           title: event.title,
           excerpt: chunk.text,
@@ -816,7 +870,6 @@ module Search
       elsif SearchChunk.reference_column_available?(:meeting_session_id) && chunk.meeting_session.present?
         session = chunk.meeting_session
         {
-          index: index,
           kind: "Meeting session",
           title: session.title,
           excerpt: chunk.text,
@@ -827,6 +880,210 @@ module Search
           )
         }
       end
+    end
+
+    def finalize_context_entries(candidates)
+      candidates.first(MAX_CONTEXT_ITEMS).map.with_index do |entry, index|
+        entry.merge(index: index + 1)
+      end
+    end
+
+    def select_top_text_chunks(chunks)
+      return chunks.first(MAX_CONTEXT_ITEMS) if query_terms.empty?
+
+      ranked_chunks = chunks.each_with_index.sort_by do |chunk_text, original_index|
+        [ -text_match_score(chunk_text), original_index ]
+      end
+      return chunks.first(MAX_CONTEXT_ITEMS) if ranked_chunks.first && text_match_score(ranked_chunks.first.first).zero?
+
+      ranked_chunks.first(MAX_CONTEXT_ITEMS)
+                   .sort_by { |_chunk_text, original_index| original_index }
+                   .map(&:first)
+    end
+
+    def rank_context_entry_candidates(entries)
+      unique_entries = entries.uniq { |entry| [ entry[:kind], entry[:title], entry[:url], entry[:excerpt] ] }
+      return unique_entries if query_terms.empty?
+
+      ranked_entries = unique_entries.each_with_index.sort_by do |entry, original_index|
+        [ -context_entry_match_score(entry), original_index ]
+      end
+      return unique_entries if ranked_entries.first && context_entry_match_score(ranked_entries.first.first).zero?
+
+      ranked_entries.map(&:first)
+    end
+
+    def context_entry_match_score(entry)
+      (text_match_score(entry[:title]) * 3) + (text_match_score(entry[:excerpt]) * 2)
+    end
+
+    def text_match_score(text)
+      normalized_text = text.to_s.downcase
+      return 0 if normalized_text.blank? || query_terms.empty?
+
+      query_terms.sum { |term| normalized_text.scan(Regexp.new(Regexp.escape(term))).length }
+    end
+
+    def live_context_entry_candidates(resolved_scope:)
+      return [] if query_terms.empty?
+
+      entries = []
+      entries.concat(live_page_context_entries(resolved_scope: resolved_scope))
+      entries.concat(live_block_context_entries(resolved_scope: resolved_scope))
+      entries.concat(live_db_row_context_entries(resolved_scope: resolved_scope))
+      entries.concat(live_kalendarium_event_context_entries(resolved_scope: resolved_scope))
+      entries.concat(live_meeting_session_context_entries(resolved_scope: resolved_scope))
+      entries
+    end
+
+    def live_page_context_entries(resolved_scope:)
+      scoped_pages_for(resolved_scope)
+        .search_full_text(query_terms.join(" "))
+        .distinct(false)
+        .limit(4)
+        .preload(:workspace)
+        .map do |page|
+          {
+            kind: "Page",
+            title: page.title,
+            excerpt: relevant_excerpt(page.search_source_text),
+            workspace_name: page.workspace.name,
+            url: Rails.application.routes.url_helpers.page_path(workspace_slug: page.workspace.slug, id: page.id)
+          }
+        end
+    end
+
+    def live_block_context_entries(resolved_scope:)
+      scoped_blocks_for(resolved_scope)
+        .search_full_text(query_terms.join(" "))
+        .distinct(false)
+        .limit(8)
+        .preload(:page, :workspace)
+        .map do |block|
+          {
+            kind: "Block",
+            title: block.page.title,
+            excerpt: relevant_excerpt(block.search_text),
+            workspace_name: block.workspace.name,
+            url: "#{Rails.application.routes.url_helpers.page_path(workspace_slug: block.workspace.slug, id: block.page_id)}#block_#{block.id}"
+          }
+        end
+    end
+
+    def live_db_row_context_entries(resolved_scope:)
+      scoped_rows_for(resolved_scope)
+        .search_full_text(query_terms.join(" "))
+        .distinct(false)
+        .limit(4)
+        .preload(:database, :workspace)
+        .map do |row|
+          {
+            kind: "Row",
+            title: row.title.presence || row.database.name,
+            excerpt: relevant_excerpt(row.search_text),
+            workspace_name: row.workspace.name,
+            url: Rails.application.routes.url_helpers.database_path(workspace_slug: row.workspace.slug, id: row.database_id, anchor: "row_#{row.id}")
+          }
+        end
+    end
+
+    def live_kalendarium_event_context_entries(resolved_scope:)
+      scoped_kalendarium_events_for(resolved_scope)
+        .search_full_text(query_terms.join(" "))
+        .distinct(false)
+        .limit(4)
+        .preload(:workspace)
+        .map do |event|
+          {
+            kind: "Kalendarium event",
+            title: event.title,
+            excerpt: relevant_excerpt(event.search_source_text),
+            workspace_name: event.workspace.name,
+            url: Rails.application.routes.url_helpers.kalendarium_path(
+              workspace_slug: event.workspace.slug,
+              view: "day",
+              date: event.starts_at_utc.to_date.iso8601,
+              anchor: "kalendarium_event_#{event.id}"
+            )
+          }
+        end
+    end
+
+    def live_meeting_session_context_entries(resolved_scope:)
+      scoped_meeting_sessions_for(resolved_scope)
+        .search_full_text(query_terms.join(" "))
+        .distinct(false)
+        .limit(4)
+        .preload(:workspace)
+        .map do |session|
+          {
+            kind: "Meeting session",
+            title: session.title,
+            excerpt: relevant_excerpt(session.search_source_text),
+            workspace_name: session.workspace.name,
+            url: Rails.application.routes.url_helpers.workspace_meetings_path(
+              workspace_slug: session.workspace.slug,
+              anchor: "meeting_session_#{session.id}"
+            )
+          }
+        end
+    end
+
+    def scoped_pages_for(resolved_scope)
+      scope = accessible_pages_scope
+      return scope if resolved_scope == SCOPE_ACCOUNT
+
+      scope.where(workspace_id: workspace.id)
+    end
+
+    def scoped_blocks_for(resolved_scope)
+      scope = Pundit.policy_scope!(user, Block).active
+      return scope if resolved_scope == SCOPE_ACCOUNT
+
+      scope.where(workspace_id: workspace.id)
+    end
+
+    def scoped_rows_for(resolved_scope)
+      scope = accessible_rows_scope
+      return scope if resolved_scope == SCOPE_ACCOUNT
+
+      scope.where(workspace_id: workspace.id)
+    end
+
+    def scoped_kalendarium_events_for(resolved_scope)
+      scope = accessible_kalendarium_events_scope
+      return scope if resolved_scope == SCOPE_ACCOUNT
+
+      scope.where(workspace_id: workspace.id)
+    end
+
+    def scoped_meeting_sessions_for(resolved_scope)
+      scope = accessible_meeting_sessions_scope
+      return scope if resolved_scope == SCOPE_ACCOUNT
+
+      scope.where(workspace_id: workspace.id)
+    end
+
+    def relevant_excerpt(text, max_words: 80)
+      normalized = text.to_s.squish
+      return "" if normalized.blank?
+
+      words = normalized.split(/\s+/)
+      return normalized if words.length <= max_words
+
+      query_terms.each do |term|
+        match_index = words.index { |word| word.downcase.include?(term) }
+        next unless match_index
+
+        start_index = [ match_index - (max_words / 3), 0 ].max
+        excerpt_words = words[start_index, max_words]
+        excerpt = excerpt_words.join(" ")
+        excerpt = "... #{excerpt}" if start_index.positive?
+        excerpt = "#{excerpt} ..." if (start_index + max_words) < words.length
+        return excerpt
+      end
+
+      "#{words.first(max_words).join(' ')} ..."
     end
 
     def prompt_for(context_entries, resolved_scope)

@@ -157,6 +157,45 @@ RSpec.describe Search::AssistantQueryService do
     expect(usage).to exist
   end
 
+  it "falls back to live workspace records when search chunks are missing" do
+    user = User.create!(email: "assistant-live-fallback@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Assistant Live Fallback", slug: "assistant-live-fallback")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Imported launch brief")
+    Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: user,
+      block_type: "paragraph",
+      content_json: {
+        type: "doc",
+        content: [ { type: "paragraph", content: [ { type: "text", text: "Project auric-needle appears in the imported nota body." } ] } ]
+      }
+    )
+
+    expect(SearchChunk.for_workspace(workspace)).to be_empty
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:prompt]).to include("auric-needle")
+      expect(args[:prompt]).to include("Imported launch brief")
+      {
+        text: "Yes, auric-needle is mentioned in the imported nota [1].",
+        usage: { prompt_tokens: 82, completion_tokens: 18, total_tokens: 100 }
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "Is auric-needle mentioned in this workspace?",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+    ).call
+
+    expect(response).to be_present
+    expect(response.answer).to include("auric-needle")
+    expect(response.sources.first[:title]).to eq("Imported launch brief")
+  end
+
   it "keeps workspace AI queries working when meeting chunk columns are unavailable" do
     user = User.create!(email: "assistant-schema-fallback@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Assistant Schema Fallback", slug: "assistant-schema-fallback")
@@ -213,6 +252,44 @@ RSpec.describe Search::AssistantQueryService do
 
     expect(response).to be_nil
     expect(service.unavailable_reason).to eq(:no_context)
+  end
+
+  it "selects relevant chunks from large current documents instead of only the first page slices" do
+    user = User.create!(email: "assistant-large-document@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Assistant Large Document", slug: "assistant-large-document")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Deep archive")
+    long_text = (1..2600).map { |index| index == 2300 ? "zephyr-needle" : "word#{index}" }.join(" ")
+    Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: user,
+      block_type: "paragraph",
+      content_json: {
+        type: "doc",
+        content: [ { type: "paragraph", content: [ { type: "text", text: long_text } ] } ]
+      }
+    )
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:prompt]).to include("zephyr-needle")
+      {
+        text: "Yes, zephyr-needle appears in this document [1].",
+        usage: { prompt_tokens: 120, completion_tokens: 18, total_tokens: 138 }
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "Is zephyr-needle mentioned in this document?",
+      scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
+      current_page_id: page.id
+    ).call
+
+    expect(response).to be_present
+    expect(response.answer).to include("zephyr-needle")
+    expect(response.sources.first[:title]).to eq("Deep archive")
   end
 
   it "uses a full-model general knowledge response for definition-style prompts" do
