@@ -7181,13 +7181,17 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   border: 0;
   background: transparent;
   box-sizing: border-box;
-  min-height: 1.35em;
-  padding: 0.1rem 0 0.22rem;
+  min-height: calc(1.1em + 0.22rem);
+  height: calc(1.1em + 0.22rem);
+  padding: 0 0 0.22rem;
   font-size: clamp(2.1rem, 4vw, 2.95rem);
-  line-height: 1.14;
+  line-height: 1.1;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--notae-heading-ink);
+  resize: none;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .notae-page-title-input::placeholder {

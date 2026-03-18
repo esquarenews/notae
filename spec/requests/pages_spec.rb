@@ -309,6 +309,11 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Turn into")
     expect(response.body).to include("Block equation")
     expect(response.body).to include("Synced block")
+
+    html = Nokogiri::HTML(response.body)
+    title_field = html.at_css("textarea.notae-page-title-input[name='page[title]']")
+    expect(title_field).to be_present
+    expect(title_field["rows"]).to eq("1")
   end
 
   it "renders embedded page previews without full page chrome and keeps block actions embedded" do

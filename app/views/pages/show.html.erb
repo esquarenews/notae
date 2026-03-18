@@ -245,14 +245,16 @@
                       controller: "page-title",
                       page_title_url_value: page_path(page_route_params)
                     } do |form| %>
-        <%= form.text_field :title,
-                            placeholder: "New page",
-                            class: "notae-page-title-input",
-                            data: {
-                              page_title_target: "input",
-                              action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
-                            },
-                            aria: { label: "Page title" } %>
+        <%= form.text_area :title,
+                           rows: 1,
+                           wrap: "off",
+                           placeholder: "New page",
+                           class: "notae-page-title-input",
+                           data: {
+                             page_title_target: "input",
+                             action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
+                           },
+                           aria: { label: "Page title" } %>
         <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
       <% end %>
     </div>

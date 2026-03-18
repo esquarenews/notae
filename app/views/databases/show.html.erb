@@ -282,15 +282,17 @@
                       page_title_resource_value: "database",
                       page_title_field_value: "name"
                     } do |form| %>
-        <%= form.text_field :name,
-                            value: @database.name,
-                            class: "notae-page-title-input",
-                            required: true,
-                            aria: { label: "Grid title" },
-                            data: {
-                              page_title_target: "input",
-                              action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
-                            } %>
+        <%= form.text_area :name,
+                           value: @database.name,
+                           rows: 1,
+                           wrap: "off",
+                           class: "notae-page-title-input",
+                           required: true,
+                           aria: { label: "Grid title" },
+                           data: {
+                             page_title_target: "input",
+                             action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
+                           } %>
         <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
       <% end %>
     <% else %>

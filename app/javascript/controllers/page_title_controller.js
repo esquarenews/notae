@@ -15,6 +15,7 @@ export default class extends Controller {
     this.pendingTitle = null
     this.saveTimeout = null
     this.lastSavedTitle = this.inputTarget.value
+    this.resizeInput()
     this.pageHideHandler = () => this.flushSave({ keepalive: true, force: true })
     window.addEventListener("pagehide", this.pageHideHandler)
   }
@@ -25,6 +26,7 @@ export default class extends Controller {
   }
 
   queueSave() {
+    this.resizeInput()
     this.setStatus("Saving...")
     clearTimeout(this.saveTimeout)
     this.saveTimeout = setTimeout(() => this.flushSave(), DEBOUNCE_MS)
@@ -144,5 +146,12 @@ export default class extends Controller {
     if (deltaSeconds < 545 * 24 * 60 * 60) return "about 1 year"
 
     return `${Math.round(deltaSeconds / (365 * 24 * 60 * 60))} years`
+  }
+
+  resizeInput() {
+    if (!(this.inputTarget instanceof HTMLTextAreaElement)) return
+
+    this.inputTarget.style.height = "0px"
+    this.inputTarget.style.height = `${this.inputTarget.scrollHeight}px`
   }
 }

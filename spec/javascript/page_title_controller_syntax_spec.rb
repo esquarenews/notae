@@ -15,4 +15,12 @@ RSpec.describe "PageTitleController JavaScript syntax" do
   rescue Errno::ENOENT
     skip "node is not available in this environment"
   end
+
+  it "autosizes textarea-based page titles to avoid descender clipping" do
+    source = Rails.root.join("app/javascript/controllers/page_title_controller.js").read
+
+    expect(source).to include("resizeInput()")
+    expect(source).to include("HTMLTextAreaElement")
+    expect(source).to include("this.inputTarget.scrollHeight")
+  end
 end

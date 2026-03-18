@@ -777,6 +777,9 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).not_to include("notae-db-view-plus")
 
     html = Nokogiri::HTML(response.body)
+    title_field = html.at_css("textarea.notae-page-title-input[name='database[name]']")
+    expect(title_field).to be_present
+    expect(title_field["rows"]).to eq("1")
     permissions_form = html.at_css("form[action*='/permissions']")
     expect(permissions_form).to be_present
     expect(permissions_form.at_css("select[name='database[permission_mode]']")).to be_present
