@@ -15,4 +15,14 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
   rescue Errno::ENOENT
     skip "node is not available in this environment"
   end
+
+  it "anchors the block menu to the viewport so the nota scroller does not clip it" do
+    source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
+
+    expect(source).to include("computeViewportPlacement")
+    expect(source).to include("is-viewport-positioned")
+    expect(source).to include("--notae-menu-left")
+    expect(source).to include("--notae-menu-top")
+    expect(source).to include("--notae-menu-max-height")
+  end
 end

@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 const MENU_VIEWPORT_MARGIN = 12
+const MENU_TRIGGER_GAP = 6
 
 export default class extends Controller {
   static values = {
@@ -100,45 +101,53 @@ export default class extends Controller {
 
   applyPanelPosition(details) {
     const panel = details.querySelector(".notae-block-menu-panel")
-    if (!panel) return
+    const trigger = details.querySelector(".notae-block-menu-trigger")
+    if (!panel || !trigger) return
 
-    panel.style.setProperty("--notae-menu-shift-x", "0px")
-    panel.style.setProperty("--notae-menu-shift-y", "0px")
+    panel.classList.add("is-viewport-positioned")
+    panel.style.setProperty("--notae-menu-left", `${MENU_VIEWPORT_MARGIN}px`)
+    panel.style.setProperty("--notae-menu-top", `${MENU_VIEWPORT_MARGIN}px`)
+    panel.style.setProperty("--notae-menu-max-height", `${Math.max(160, window.innerHeight - MENU_VIEWPORT_MARGIN * 2)}px`)
     panel.style.visibility = "hidden"
     panel.style.pointerEvents = "none"
 
-    const rect = panel.getBoundingClientRect()
-    const maxX = window.innerWidth - MENU_VIEWPORT_MARGIN
-    const maxY = window.innerHeight - MENU_VIEWPORT_MARGIN
-    let shiftX = 0
-    let shiftY = 0
-
-    if (rect.right > maxX) {
-      shiftX -= rect.right - maxX
-    }
-    if (rect.left + shiftX < MENU_VIEWPORT_MARGIN) {
-      shiftX += MENU_VIEWPORT_MARGIN - (rect.left + shiftX)
-    }
-
-    if (rect.bottom > maxY) {
-      shiftY -= rect.bottom - maxY
-    }
-    if (rect.top + shiftY < MENU_VIEWPORT_MARGIN) {
-      shiftY += MENU_VIEWPORT_MARGIN - (rect.top + shiftY)
-    }
-
-    panel.style.setProperty("--notae-menu-shift-x", `${Math.round(shiftX)}px`)
-    panel.style.setProperty("--notae-menu-shift-y", `${Math.round(shiftY)}px`)
+    const placement = this.computeViewportPlacement(trigger.getBoundingClientRect(), panel.getBoundingClientRect())
+    panel.style.setProperty("--notae-menu-left", `${Math.round(placement.left)}px`)
+    panel.style.setProperty("--notae-menu-top", `${Math.round(placement.top)}px`)
+    panel.style.setProperty("--notae-menu-max-height", `${Math.round(placement.maxHeight)}px`)
     panel.style.visibility = ""
     panel.style.pointerEvents = ""
+  }
+
+  computeViewportPlacement(triggerRect, panelRect) {
+    const viewportWidth = Math.max(window.innerWidth || 0, 0)
+    const viewportHeight = Math.max(window.innerHeight || 0, 0)
+    const maxHeight = Math.max(160, viewportHeight - MENU_VIEWPORT_MARGIN * 2)
+    const panelWidth = Math.min(Math.max(panelRect.width || 0, 0), Math.max(0, viewportWidth - MENU_VIEWPORT_MARGIN * 2))
+    const panelHeight = Math.min(Math.max(panelRect.height || 0, 0), maxHeight)
+
+    let left = triggerRect.right - panelWidth
+    left = Math.min(left, viewportWidth - MENU_VIEWPORT_MARGIN - panelWidth)
+    left = Math.max(MENU_VIEWPORT_MARGIN, left)
+
+    let top = triggerRect.bottom + MENU_TRIGGER_GAP
+    if (top + panelHeight > viewportHeight - MENU_VIEWPORT_MARGIN) {
+      top = triggerRect.top - MENU_TRIGGER_GAP - panelHeight
+    }
+    top = Math.min(top, viewportHeight - MENU_VIEWPORT_MARGIN - panelHeight)
+    top = Math.max(MENU_VIEWPORT_MARGIN, top)
+
+    return { left, top, maxHeight }
   }
 
   resetPanelPosition(details) {
     const panel = details.querySelector(".notae-block-menu-panel")
     if (!panel) return
 
-    panel.style.setProperty("--notae-menu-shift-x", "0px")
-    panel.style.setProperty("--notae-menu-shift-y", "0px")
+    panel.classList.remove("is-viewport-positioned")
+    panel.style.removeProperty("--notae-menu-left")
+    panel.style.removeProperty("--notae-menu-top")
+    panel.style.removeProperty("--notae-menu-max-height")
     panel.style.visibility = ""
     panel.style.pointerEvents = ""
   }
