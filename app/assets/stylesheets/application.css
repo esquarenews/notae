@@ -3733,12 +3733,22 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-db-grid-property-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
   color: inherit;
   text-decoration: none;
+  font: inherit;
+  cursor: pointer;
 }
 
 .notae-db-grid-property-link:hover {
   text-decoration: underline;
+}
+
+.notae-db-grid-property-sort-form {
+  margin: 0;
+  display: inline-flex;
 }
 
 .notae-db-grid-property-header {

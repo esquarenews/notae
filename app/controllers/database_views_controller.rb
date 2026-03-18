@@ -12,14 +12,7 @@ class DatabaseViewsController < ApplicationController
 
     if @database_view.save
       @database_view.set_as_default! if @database_view.default?
-      redirect_to database_path(
-        workspace_slug: @workspace.slug,
-        id: @database.id,
-        view_id: @database_view.id,
-        view_settings: params[:view_settings].presence,
-        view_settings_section: params[:view_settings_section].presence,
-        actions_menu: params[:actions_menu].presence
-      ), notice: "View saved."
+      redirect_to database_path(database_view_redirect_params(@database_view)), notice: "View saved."
     else
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @database_view.errors.full_messages.to_sentence
     end
@@ -32,14 +25,7 @@ class DatabaseViewsController < ApplicationController
       @database_view.set_as_default! if @database_view.default?
       respond_to do |format|
         format.html do
-          redirect_to database_path(
-            workspace_slug: @workspace.slug,
-            id: @database.id,
-            view_id: @database_view.id,
-            view_settings: params[:view_settings].presence,
-            view_settings_section: params[:view_settings_section].presence,
-            actions_menu: params[:actions_menu].presence
-          ), notice: "View updated."
+          redirect_to database_path(database_view_redirect_params(@database_view)), notice: "View updated."
         end
         format.json do
           render json: {
@@ -61,14 +47,7 @@ class DatabaseViewsController < ApplicationController
   def set_default
     authorize @database_view, :set_default?
     @database_view.set_as_default!
-    redirect_to database_path(
-      workspace_slug: @workspace.slug,
-      id: @database.id,
-      view_id: @database_view.id,
-      view_settings: params[:view_settings].presence,
-      view_settings_section: params[:view_settings_section].presence,
-      actions_menu: params[:actions_menu].presence
-    ), notice: "Default view set."
+    redirect_to database_path(database_view_redirect_params(@database_view)), notice: "Default view set."
   end
 
   private
@@ -211,5 +190,23 @@ class DatabaseViewsController < ApplicationController
     Integer(value.to_s, 10)
   rescue ArgumentError, TypeError
     nil
+  end
+
+  def database_view_redirect_params(database_view)
+    {
+      workspace_slug: @workspace.slug,
+      id: @database.id,
+      view_id: database_view.id,
+      month: params[:month].presence,
+      filter_property_id: params[:filter_property_id].presence,
+      filter_value: params[:filter_value].presence,
+      filter_operator: params[:filter_operator].presence,
+      split_page_id: params[:split_page_id].presence,
+      split_source: params[:split_source].presence,
+      split_row_id: params[:split_row_id].presence,
+      view_settings: params[:view_settings].presence,
+      view_settings_section: params[:view_settings_section].presence,
+      actions_menu: params[:actions_menu].presence
+    }.compact
   end
 end

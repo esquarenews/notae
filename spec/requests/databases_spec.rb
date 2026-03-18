@@ -239,6 +239,56 @@ RSpec.describe "Databases", type: :request do
     expect(response.body.index("Alpha Row")).to be < response.body.index("Bravo Row")
   end
 
+  it "persists table header sorts in the current view config" do
+    owner = User.create!(email: "database-persistent-sort-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Persistent sort tables", slug: "persistent-sort-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Pipeline")
+    db_property = DbProperty.create!(workspace: workspace, database: database, name: "Company", property_type: :text)
+    alpha_row = DbRow.create!(workspace: workspace, database: database, title: "Alpha Row")
+    bravo_row = DbRow.create!(workspace: workspace, database: database, title: "Bravo Row")
+    DbCell.create!(workspace: workspace, db_row: alpha_row, db_property: db_property, value_text: "Zulu")
+    DbCell.create!(workspace: workspace, db_row: bravo_row, db_property: db_property, value_text: "Acme")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    sort_form = html.at_css("form.notae-db-grid-property-sort-form[action='#{database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id)}']")
+    expect(sort_form).to be_present
+    expect(sort_form.at_css("input[name='_method'][value='patch']")).to be_present
+    expect(sort_form.at_css("input[name='database_view[sort_property_id]'][value='#{db_property.id}']")).to be_present
+    expect(sort_form.at_css("input[name='database_view[sort_direction]'][value='asc']")).to be_present
+
+    patch database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id),
+          params: {
+            database_view: {
+              sort_property_id: db_property.id,
+              sort_direction: "asc"
+            }
+          }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id))
+    expect(view.reload.config_json).to include(
+      "sort_property_id" => db_property.id,
+      "sort_direction" => "asc"
+    )
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index("Bravo Row")).to be < response.body.index("Alpha Row")
+  end
+
   it "supports typed property filtering and sorting for number, date, and checkbox columns" do
     owner = User.create!(email: "database-typed-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Typed tables", slug: "typed-tables")
