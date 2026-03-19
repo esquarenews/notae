@@ -11,7 +11,9 @@ export default class extends Controller {
   }
 
   connect() {
-    this.repositionOpenMenuHandler = () => this.repositionOpenMenu()
+    this.repositionOpenMenuHandler = (event) => this.repositionOpenMenu(event)
+    this.windowPointerDownHandler = (event) => this.handleWindowPointerDown(event)
+    this.documentKeydownHandler = (event) => this.handleDocumentKeydown(event)
     window.addEventListener("resize", this.repositionOpenMenuHandler)
     window.addEventListener("scroll", this.repositionOpenMenuHandler, true)
   }
@@ -19,6 +21,7 @@ export default class extends Controller {
   disconnect() {
     window.removeEventListener("resize", this.repositionOpenMenuHandler)
     window.removeEventListener("scroll", this.repositionOpenMenuHandler, true)
+    this.removeDismissHandlers()
   }
 
   async copyLink(event) {
@@ -76,27 +79,74 @@ export default class extends Controller {
 
   closeMenu(event) {
     const details = event.currentTarget.closest("details")
-    if (details) {
-      details.open = false
-      this.resetPanelPosition(details)
-    }
+    if (details) this.closeDetails(details)
   }
 
   positionMenu(event) {
     const details = event.currentTarget
     if (!details || !details.open) {
-      if (details) this.resetPanelPosition(details)
+      if (details) this.closeDetails(details)
       return
     }
+
+    this.installDismissHandlers()
+    this.applyPanelPosition(details)
+  }
+
+  repositionOpenMenu(event) {
+    const details = this.currentOpenMenu()
+    if (!details) return
+
+    const panel = details.querySelector(".notae-block-menu-panel")
+    const scrollTarget = event?.target
+    if (panel && scrollTarget instanceof Node && panel.contains(scrollTarget)) return
 
     this.applyPanelPosition(details)
   }
 
-  repositionOpenMenu() {
-    const details = this.element.querySelector(".notae-block-menu[open]")
+  currentOpenMenu() {
+    return this.element.querySelector(".notae-block-menu[open]")
+  }
+
+  installDismissHandlers() {
+    if (this.dismissHandlersInstalled) return
+
+    document.addEventListener("pointerdown", this.windowPointerDownHandler, true)
+    document.addEventListener("keydown", this.documentKeydownHandler)
+    this.dismissHandlersInstalled = true
+  }
+
+  removeDismissHandlers() {
+    if (!this.dismissHandlersInstalled) return
+
+    document.removeEventListener("pointerdown", this.windowPointerDownHandler, true)
+    document.removeEventListener("keydown", this.documentKeydownHandler)
+    this.dismissHandlersInstalled = false
+  }
+
+  handleWindowPointerDown(event) {
+    const details = this.currentOpenMenu()
     if (!details) return
 
-    this.applyPanelPosition(details)
+    const target = event.target
+    if (target instanceof Node && details.contains(target)) return
+
+    this.closeDetails(details)
+  }
+
+  handleDocumentKeydown(event) {
+    if (event.key !== "Escape") return
+
+    const details = this.currentOpenMenu()
+    if (!details) return
+
+    this.closeDetails(details)
+  }
+
+  closeDetails(details) {
+    details.open = false
+    this.resetPanelPosition(details)
+    this.removeDismissHandlers()
   }
 
   applyPanelPosition(details) {
@@ -109,14 +159,12 @@ export default class extends Controller {
     panel.style.setProperty("--notae-menu-top", `${MENU_VIEWPORT_MARGIN}px`)
     panel.style.setProperty("--notae-menu-max-height", `${Math.max(160, window.innerHeight - MENU_VIEWPORT_MARGIN * 2)}px`)
     panel.style.visibility = "hidden"
-    panel.style.pointerEvents = "none"
 
     const placement = this.computeViewportPlacement(trigger.getBoundingClientRect(), panel.getBoundingClientRect())
     panel.style.setProperty("--notae-menu-left", `${Math.round(placement.left)}px`)
     panel.style.setProperty("--notae-menu-top", `${Math.round(placement.top)}px`)
     panel.style.setProperty("--notae-menu-max-height", `${Math.round(placement.maxHeight)}px`)
     panel.style.visibility = ""
-    panel.style.pointerEvents = ""
   }
 
   computeViewportPlacement(triggerRect, panelRect) {
@@ -149,7 +197,6 @@ export default class extends Controller {
     panel.style.removeProperty("--notae-menu-top")
     panel.style.removeProperty("--notae-menu-max-height")
     panel.style.visibility = ""
-    panel.style.pointerEvents = ""
   }
 
   prefillAiRail({ prompt, intent, targetBlockId, autoSubmit = false, clearPrompt = false }) {

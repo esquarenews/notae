@@ -108,6 +108,32 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Cmd/Ctrl + K")
   end
 
+  it "ships dark-theme editor overrides so focused nota text stays readable" do
+    owner = User.create!(
+      email: "page-dark-editor-owner@example.com",
+      password: "password123",
+      theme_preference: "dark"
+    )
+    workspace = Workspace.create!(name: "Dark editor", slug: "dark-editor")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Dark editor page")
+    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-theme-dark")
+    document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css(".notae-doc-editor")).to be_present
+
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    expect(stylesheet).to include("body.notae-theme-dark .notae-doc-block.is-focused .notae-doc-editor .ProseMirror")
+    expect(stylesheet).to include("body.notae-theme-dark .notae-doc-editor.is-callout .ProseMirror")
+    expect(stylesheet).to include("body.notae-theme-dark .notae-doc-editor.is-color-blue .ProseMirror")
+    expect(stylesheet).to include("body.notae-theme-system .notae-doc-block.is-focused .notae-doc-editor .ProseMirror")
+  end
+
   it "includes the compiled app stylesheet and keeps the tailwind entrypoint present" do
     tailwind_entrypoint = Rails.root.join("app/assets/tailwind/application.css")
     expect(tailwind_entrypoint).to exist
