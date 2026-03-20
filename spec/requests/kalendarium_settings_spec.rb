@@ -267,6 +267,34 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(response.headers["Location"]).to include("accounts.google.com/o/oauth2")
   end
 
+  it "uses the configured public app host for Google OAuth when the request arrives via localhost" do
+    user, workspace = build_stack(suffix: "google-oauth-public-host")
+    sign_in user
+    oauth_service = instance_double(Kalendarium::GoogleOauthService)
+    allow(Kalendarium::GoogleOauthService).to receive(:new).and_return(oauth_service)
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with("APP_BASE_URL").and_return(nil)
+    allow(ENV).to receive(:[]).with("APP_HOST").and_return("notae.example.com")
+    allow(ENV).to receive(:[]).with("APP_PORT").and_return("443")
+    allow(ENV).to receive(:[]).with("APP_PROTOCOL").and_return(nil)
+    allow(oauth_service).to receive(:authorization_url) do |redirect_uri:, state:|
+      payload = Rails.application.message_verifier("kalendarium_google_oauth_state").verify(state)
+      expect(payload["workspace_id"]).to eq(workspace.id)
+      expect(redirect_uri).to eq("https://notae.example.com#{kalendarium_google_callback_path}")
+      "https://accounts.google.com/o/oauth2/v2/auth?state=#{CGI.escape(state)}"
+    end
+
+    get google_authorize_kalendarium_connections_path(workspace_slug: workspace.slug), params: {
+      owner_scope: "workspace",
+      label: "Team Google"
+    }, headers: {
+      "Host" => "localhost:4000"
+    }
+
+    expect(response).to have_http_status(:found)
+    expect(response.headers["Location"]).to include("accounts.google.com/o/oauth2")
+  end
+
   it "redirects to Google OAuth for Turbo requests without rendering a handoff page" do
     user, workspace = build_stack(suffix: "google-oauth-turbo")
     sign_in user

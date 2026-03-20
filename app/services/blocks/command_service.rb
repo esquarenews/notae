@@ -65,6 +65,8 @@ module Blocks
         move_to_page!
       when "delete"
         delete_block!
+      when "insert_media"
+        insert_media!
       when "suggest_edits"
         suggest_edits!
       when "copy_link", "ask_ai"
@@ -158,6 +160,33 @@ module Blocks
       @focus_anchor = nil
       @notice = "Block deleted."
       @synced_source_block = synced_root_for(block)
+    end
+
+    def insert_media!
+      new_block_type =
+        case target
+        when "image" then "image"
+        when "video" then "video"
+        else
+          raise ArgumentError, "Unsupported media target."
+        end
+
+      inserted_block = block.page.blocks.create!(
+        workspace: block.workspace,
+        page: block.page,
+        parent_block: block.parent_block,
+        created_by: actor,
+        block_type: new_block_type
+      )
+
+      Blocks::ReorderService.call(
+        block: inserted_block,
+        target_parent_id: block.parent_block_id,
+        target_index: sibling_index_for(block) + 1
+      )
+
+      @focus_anchor = "block_#{inserted_block.id}"
+      @notice = "#{new_block_type.titleize} block added."
     end
 
     def suggest_edits!
@@ -307,6 +336,11 @@ module Blocks
       return value.deep_dup if value.respond_to?(:deep_dup)
 
       JSON.parse(value.to_json)
+    end
+
+    def sibling_index_for(target_block)
+      siblings = Block.active.where(page_id: target_block.page_id, parent_block_id: target_block.parent_block_id).ordered.to_a
+      siblings.index { |sibling| sibling.id == target_block.id } || siblings.length
     end
   end
 end

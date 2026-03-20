@@ -71,9 +71,9 @@
         <%= image_tag @page.cover_image,
                       class: "notae-page-cover-image",
                       style: "object-position: center #{@page.cover_focal_y}%" %>
-      <% elsif (cover_asset = page_cover_asset_path(@page.cover_preset_key)).present? %>
+      <% elsif (cover_style = page_cover_preset_style(@page.cover_preset_key, focal_y: @page.cover_focal_y)).present? %>
         <div class="notae-page-cover-preset"
-             style="background-image: url('<%= asset_path(cover_asset) %>'); background-position: center <%= @page.cover_focal_y %>%;">
+             style="<%= cover_style %>">
         </div>
       <% end %>
 
@@ -81,43 +81,10 @@
         <div class="notae-page-cover-controls">
           <details class="notae-cover-picker">
             <summary class="notae-chip-button notae-cover-chip">Change</summary>
-            <div class="notae-cover-picker-panel">
-              <div class="notae-cover-picker-grid">
-                <% Page::COVER_PRESET_KEYS.each do |preset_key| %>
-                  <% preset_asset = page_cover_asset_path(preset_key) %>
-                  <% next if preset_asset.blank? %>
-                  <%= button_to page_path(page_route_params),
-                                method: :patch,
-                                params: { page: { cover_action: "preset", cover_preset_key: preset_key } },
-                                class: [ "notae-cover-picker-tile-button", ("is-active" if @page.cover_preset_key == preset_key) ].compact.join(" "),
-                                title: preset_key.humanize,
-                                aria: { label: "Use #{preset_key.humanize} cover" } do %>
-                    <span class="notae-cover-picker-tile"
-                          style="background-image: url('<%= asset_path(preset_asset) %>');"></span>
-                  <% end %>
-                <% end %>
-              </div>
-              <div class="notae-cover-picker-quick-actions">
-                <%= button_to "Random",
-                              page_path(page_route_params),
-                              method: :patch,
-                              params: { page: { cover_action: "random" } },
-                              class: "notae-cover-picker-action" %>
-                <%= button_to "Remove",
-                              page_path(page_route_params),
-                              method: :patch,
-                              params: { page: { cover_action: "clear" } },
-                              class: "notae-cover-picker-action is-danger" %>
-              </div>
-              <%= form_with model: @page,
-                            url: page_path(page_route_params),
-                            method: :patch,
-                            class: "notae-cover-picker-upload-form" do |form| %>
-                <%= hidden_field_tag "page[cover_action]", "upload" %>
-                <%= form.file_field :cover_image, accept: "image/*", class: "notae-cover-picker-upload-input" %>
-                <%= form.submit "Upload", class: "notae-cover-picker-action" %>
-              <% end %>
-            </div>
+            <%= render "shared/cover_picker_panel",
+                       update_url: page_path(page_route_params),
+                       param_key: :page,
+                       selected_cover_key: @page.cover_preset_key %>
           </details>
           <%= button_to "↑",
                         page_path(page_route_params),
@@ -192,13 +159,8 @@
 
             <details class="notae-page-header-action">
               <summary><span class="notae-page-header-action-icon">▭</span> <%= has_cover ? "Change cover" : "Add cover" %></summary>
-              <div class="notae-page-header-panel">
+              <div class="notae-page-header-panel notae-page-header-cover-panel">
                 <div class="notae-page-cover-panel-actions">
-                  <%= button_to "Random cover",
-                                page_path(page_route_params),
-                                method: :patch,
-                                params: { page: { cover_action: "random" } },
-                                class: "notae-chip-button" %>
                   <%= button_to "Move up",
                                 page_path(page_route_params),
                                 method: :patch,
@@ -210,21 +172,13 @@
                                 params: { page: { cover_shift: "down" } },
                                 class: "notae-chip-button" %>
                 </div>
-                <%= form_with model: @page,
-                              url: page_path(page_route_params),
-                              method: :patch,
-                              class: "notae-page-header-panel-form" do |form| %>
-                  <%= hidden_field_tag "page[cover_action]", "upload" %>
-                  <%= form.file_field :cover_image, accept: "image/*", class: "notae-options-input" %>
-                  <%= form.submit "Upload cover", class: "notae-chip-button" %>
-                <% end %>
-                <% if has_cover %>
-                  <%= button_to "Remove cover",
-                                page_path(page_route_params),
-                                method: :patch,
-                                params: { page: { cover_action: "clear" } },
-                                class: "notae-page-header-link-button" %>
-                <% end %>
+                <%= render "shared/cover_picker_panel",
+                           update_url: page_path(page_route_params),
+                           param_key: :page,
+                           selected_cover_key: @page.cover_preset_key,
+                           embedded: true,
+                           allow_remove: has_cover,
+                           remove_label: "Remove cover" %>
               </div>
             </details>
           <% end %>

@@ -236,6 +236,7 @@ body.notae-theme-dark .notae-pref-select,
 body.notae-theme-dark .notae-auth-input,
 body.notae-theme-dark .notae-sidebar-input,
 body.notae-theme-dark .notae-doc-input,
+body.notae-theme-dark .notae-cover-picker-nav,
 body.notae-theme-dark .notae-cover-picker-action,
 body.notae-theme-dark .notae-cover-picker-upload-input {
   background: #1f252c;
@@ -516,6 +517,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   body.notae-theme-system .notae-auth-input,
   body.notae-theme-system .notae-sidebar-input,
   body.notae-theme-system .notae-doc-input,
+  body.notae-theme-system .notae-cover-picker-nav,
   body.notae-theme-system .notae-cover-picker-action,
   body.notae-theme-system .notae-cover-picker-upload-input {
     background: #1f252c;
@@ -6921,7 +6923,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   position: absolute;
   right: 0;
   top: calc(100% + 0.3rem);
-  width: min(336px, calc(100vw - 1rem));
+  width: min(352px, calc(100vw - 1rem));
   border: 1px solid #e7e5e4;
   border-radius: 0.52rem;
   background: #fff;
@@ -6930,6 +6932,65 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   display: grid;
   gap: 0.35rem;
   z-index: 95;
+}
+
+.notae-cover-picker-panel.is-embedded {
+  position: static;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.notae-cover-picker-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.notae-cover-picker-toolbar-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.08rem;
+  text-align: center;
+}
+
+.notae-cover-picker-toolbar-copy strong {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--notae-text-strong, #292524);
+}
+
+.notae-cover-picker-toolbar-copy span {
+  font-size: 0.66rem;
+  color: var(--notae-text-soft, #78716c);
+}
+
+.notae-cover-picker-nav {
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 999px;
+  background: #fff;
+  color: #57534e;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notae-cover-picker-nav:hover {
+  background: #f8f7f6;
+}
+
+.notae-cover-picker-screens {
+  min-height: 150px;
+}
+
+.notae-cover-picker-screen[hidden] {
+  display: none;
 }
 
 .notae-cover-picker-grid {
@@ -6969,6 +7030,27 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
+}
+
+.notae-cover-picker-pagination {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.notae-cover-picker-dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border: 0;
+  border-radius: 999px;
+  background: #d6d3d1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.notae-cover-picker-dot.is-active {
+  background: #57534e;
 }
 
 .notae-cover-picker-quick-actions {
@@ -7030,6 +7112,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-cover-picker-action.is-danger {
   color: #b91c1c;
+}
+
+.notae-page-header-cover-panel {
+  width: min(372px, calc(100vw - 2rem));
 }
 
 .notae-doc-header {
@@ -7387,6 +7473,28 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   box-shadow: inset 0 0 0 1px #e7e5e4, 0 1px 2px rgba(41, 37, 36, 0.08);
 }
 
+body.notae-theme-dark .notae-doc-block:hover {
+  background: color-mix(in srgb, var(--notae-surface-raised) 88%, #ffffff 4%);
+}
+
+body.notae-theme-dark .notae-doc-block.is-focused {
+  background: color-mix(in srgb, var(--notae-surface-raised) 94%, var(--notae-accent) 6%);
+  color: var(--notae-text);
+  box-shadow: inset 0 0 0 1px var(--notae-border), 0 10px 24px rgba(3, 7, 18, 0.34);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-doc-block:hover {
+    background: color-mix(in srgb, var(--notae-surface-raised) 88%, #ffffff 4%);
+  }
+
+  body.notae-theme-system .notae-doc-block.is-focused {
+    background: color-mix(in srgb, var(--notae-surface-raised) 94%, var(--notae-accent) 6%);
+    color: var(--notae-text);
+    box-shadow: inset 0 0 0 1px var(--notae-border), 0 10px 24px rgba(3, 7, 18, 0.34);
+  }
+}
+
 .notae-doc-block-row {
   position: absolute;
   top: 0.2rem;
@@ -7397,6 +7505,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   gap: 0.3rem;
   pointer-events: none;
   z-index: 2;
+}
+
+.notae-doc-block-row.is-menu-open {
+  z-index: 220;
 }
 
 .notae-doc-handle {
@@ -7555,6 +7667,132 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   padding: 0.34rem 0.44rem;
 }
 
+body.notae-theme-dark .notae-block-menu-trigger {
+  color: var(--notae-text-soft);
+}
+
+body.notae-theme-dark .notae-block-menu[open] .notae-block-menu-trigger,
+body.notae-theme-dark .notae-block-menu-trigger:hover {
+  border-color: var(--notae-border);
+  background: color-mix(in srgb, var(--notae-surface-raised) 82%, var(--notae-accent) 8%);
+  color: var(--notae-text-strong);
+}
+
+body.notae-theme-dark .notae-block-menu-panel {
+  background: var(--notae-surface-raised);
+  border-color: var(--notae-border);
+  box-shadow: 0 20px 42px rgba(3, 7, 18, 0.46);
+}
+
+body.notae-theme-dark .notae-block-menu-section h4 {
+  color: var(--notae-text-soft);
+}
+
+body.notae-theme-dark .notae-block-menu-item {
+  background: color-mix(in srgb, var(--notae-surface-raised) 92%, #000000 8%);
+  border-color: var(--notae-border);
+  color: var(--notae-text);
+}
+
+body.notae-theme-dark .notae-block-menu-item:hover {
+  background: color-mix(in srgb, var(--notae-surface-raised) 80%, var(--notae-accent) 10%);
+}
+
+body.notae-theme-dark .notae-block-menu-item.is-active {
+  background: color-mix(in srgb, var(--notae-surface-raised) 72%, var(--notae-accent) 18%) !important;
+  border-color: color-mix(in srgb, var(--notae-accent) 44%, var(--notae-border)) !important;
+  color: var(--notae-text-strong) !important;
+}
+
+body.notae-theme-dark .notae-block-menu-item.is-active .notae-menu-item-icon,
+body.notae-theme-dark .notae-block-menu-item.is-active .notae-menu-item-label {
+  color: #dbe8ff !important;
+}
+
+body.notae-theme-dark .notae-block-menu-item.is-danger {
+  color: #fca5a5;
+}
+
+body.notae-theme-dark .notae-block-menu-select {
+  background: var(--notae-bg);
+  color: var(--notae-text);
+  border-color: var(--notae-border);
+}
+
+body.notae-theme-dark .notae-menu-item-icon {
+  background: color-mix(in srgb, var(--notae-surface-raised) 78%, #000000 12%);
+  border-color: var(--notae-border);
+  color: var(--notae-text-soft);
+}
+
+body.notae-theme-dark .notae-menu-color-dot {
+  border-color: color-mix(in srgb, var(--notae-border) 78%, #ffffff 12%);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-block-menu-trigger {
+    color: var(--notae-text-soft);
+  }
+
+  body.notae-theme-system .notae-block-menu[open] .notae-block-menu-trigger,
+  body.notae-theme-system .notae-block-menu-trigger:hover {
+    border-color: var(--notae-border);
+    background: color-mix(in srgb, var(--notae-surface-raised) 82%, var(--notae-accent) 8%);
+    color: var(--notae-text-strong);
+  }
+
+  body.notae-theme-system .notae-block-menu-panel {
+    background: var(--notae-surface-raised);
+    border-color: var(--notae-border);
+    box-shadow: 0 20px 42px rgba(3, 7, 18, 0.46);
+  }
+
+  body.notae-theme-system .notae-block-menu-section h4 {
+    color: var(--notae-text-soft);
+  }
+
+  body.notae-theme-system .notae-block-menu-item {
+    background: color-mix(in srgb, var(--notae-surface-raised) 92%, #000000 8%);
+    border-color: var(--notae-border);
+    color: var(--notae-text);
+  }
+
+  body.notae-theme-system .notae-block-menu-item:hover {
+    background: color-mix(in srgb, var(--notae-surface-raised) 80%, var(--notae-accent) 10%);
+  }
+
+  body.notae-theme-system .notae-block-menu-item.is-active {
+    background: color-mix(in srgb, var(--notae-surface-raised) 72%, var(--notae-accent) 18%) !important;
+    border-color: color-mix(in srgb, var(--notae-accent) 44%, var(--notae-border)) !important;
+    color: var(--notae-text-strong) !important;
+  }
+
+  body.notae-theme-system .notae-block-menu-item.is-active .notae-menu-item-icon,
+  body.notae-theme-system .notae-block-menu-item.is-active .notae-menu-item-label {
+    color: #dbe8ff !important;
+  }
+
+  body.notae-theme-system .notae-block-menu-item.is-danger {
+    color: #fca5a5;
+  }
+
+  body.notae-theme-system .notae-block-menu-select {
+    background: var(--notae-bg);
+    color: var(--notae-text);
+    border-color: var(--notae-border);
+  }
+
+  body.notae-theme-system .notae-menu-item-icon {
+    background: color-mix(in srgb, var(--notae-surface-raised) 78%, #000000 12%);
+    border-color: var(--notae-border);
+    color: var(--notae-text-soft);
+  }
+
+  body.notae-theme-system .notae-menu-color-dot {
+    border-color: color-mix(in srgb, var(--notae-border) 78%, #ffffff 12%);
+  }
+}
+
 .notae-menu-item-icon {
   min-width: 1.2rem;
   height: 1.2rem;
@@ -7620,6 +7858,12 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-doc-block.is-focused .notae-doc-editor .ProseMirror {
   background: #fff;
   color: inherit;
+}
+
+body.notae-theme-dark .notae-doc-editor,
+body.notae-theme-dark .notae-doc-editor .ProseMirror {
+  color: var(--notae-text);
+  caret-color: var(--notae-text-strong);
 }
 
 .notae-doc-editor .ProseMirror p {
@@ -7777,6 +8021,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 body.notae-theme-dark .notae-doc-block.is-focused .notae-doc-editor .ProseMirror {
   background: color-mix(in srgb, var(--notae-surface-raised) 88%, var(--notae-accent) 12%);
+  color: var(--notae-text-strong);
 }
 
 body.notae-theme-dark .notae-doc-editor.is-callout .ProseMirror {
@@ -7805,8 +8050,15 @@ body.notae-theme-dark .notae-doc-editor.is-color-pink .ProseMirror { color: #f9a
 body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror { color: #fca5a5; }
 
 @media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-doc-editor,
+  body.notae-theme-system .notae-doc-editor .ProseMirror {
+    color: var(--notae-text);
+    caret-color: var(--notae-text-strong);
+  }
+
   body.notae-theme-system .notae-doc-block.is-focused .notae-doc-editor .ProseMirror {
     background: color-mix(in srgb, var(--notae-surface-raised) 88%, var(--notae-accent) 12%);
+    color: var(--notae-text-strong);
   }
 
   body.notae-theme-system .notae-doc-editor.is-callout .ProseMirror {
@@ -7883,6 +8135,14 @@ body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror { color: #fca5
   border-radius: 0.5rem;
 }
 
+.notae-doc-video {
+  width: 100%;
+  max-height: 420px;
+  border: 1px solid #ecebea;
+  border-radius: 0.5rem;
+  background: #000;
+}
+
 .notae-doc-inline-actions {
   display: flex;
   align-items: center;
@@ -7893,6 +8153,52 @@ body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror { color: #fca5
   margin: 0;
   font-size: 0.74rem;
   color: var(--notae-muted);
+}
+
+body.notae-theme-dark .notae-doc-media,
+body.notae-theme-dark .notae-doc-embed {
+  border-color: var(--notae-border);
+  background: color-mix(in srgb, var(--notae-surface-raised) 92%, #000000 8%);
+}
+
+body.notae-theme-dark .notae-doc-dropzone,
+body.notae-theme-dark .notae-doc-embed-frame,
+body.notae-theme-dark .notae-doc-image,
+body.notae-theme-dark .notae-doc-video {
+  border-color: var(--notae-border);
+}
+
+body.notae-theme-dark .notae-doc-dropzone {
+  background: color-mix(in srgb, var(--notae-surface-raised) 80%, #000000 14%);
+  color: var(--notae-text-soft);
+}
+
+body.notae-theme-dark .notae-doc-muted {
+  color: var(--notae-text-soft);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-doc-media,
+  body.notae-theme-system .notae-doc-embed {
+    border-color: var(--notae-border);
+    background: color-mix(in srgb, var(--notae-surface-raised) 92%, #000000 8%);
+  }
+
+  body.notae-theme-system .notae-doc-dropzone,
+  body.notae-theme-system .notae-doc-embed-frame,
+  body.notae-theme-system .notae-doc-image,
+  body.notae-theme-system .notae-doc-video {
+    border-color: var(--notae-border);
+  }
+
+  body.notae-theme-system .notae-doc-dropzone {
+    background: color-mix(in srgb, var(--notae-surface-raised) 80%, #000000 14%);
+    color: var(--notae-text-soft);
+  }
+
+  body.notae-theme-system .notae-doc-muted {
+    color: var(--notae-text-soft);
+  }
 }
 
 .notae-doc-children {
@@ -11924,5 +12230,312 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
 
   .notae-knowledge-inline-form .notae-auth-input {
     min-width: 0;
+  }
+}
+
+.notae-epistularium-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notae-epistularium-grid {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(18rem, 24rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.notae-epistularium-pane {
+  min-height: 42rem;
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  align-self: start;
+}
+
+.notae-epistularium-pane-list {
+  position: relative;
+  overflow: hidden;
+}
+
+.notae-epistularium-pane-list.has-account-accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0.95rem;
+  right: 0.95rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 94%, white 6%) 0%,
+    color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 68%, transparent) 56%,
+    color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 30%, transparent) 100%
+  );
+  box-shadow: 0 0 0.9rem color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 18%, transparent);
+}
+
+.notae-epistularium-pane-accounts,
+.notae-epistularium-pane-list {
+  position: sticky;
+  top: 1rem;
+}
+
+.notae-epistularium-account-list,
+.notae-epistularium-message-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.notae-epistularium-account-item,
+.notae-epistularium-message-link {
+  border: 1px solid var(--notae-border-muted);
+  border-radius: 0.95rem;
+  background: var(--notae-panel-muted);
+}
+
+.notae-epistularium-account-item {
+  padding: 0.85rem;
+  position: relative;
+  border-left-width: 0.35rem;
+  border-left-color: color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 52%, var(--notae-border-muted));
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.notae-epistularium-account-item.is-active {
+  border-color: color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 44%, var(--notae-border-muted));
+  background: color-mix(in srgb, var(--notae-panel-elevated) 82%, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 10%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 18%, transparent);
+}
+
+.notae-epistularium-account-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.notae-epistularium-account-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.notae-epistularium-account-indicator {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  margin-top: 0.35rem;
+  background: var(--notae-epistularium-accent, var(--notae-accent, #2563eb));
+  box-shadow: 0 0 0 0.18rem color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 18%, transparent);
+}
+
+.notae-epistularium-account-item.is-active .notae-epistularium-account-indicator {
+  box-shadow: 0 0 0 0.28rem color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 26%, transparent);
+}
+
+.notae-epistularium-account-name,
+.notae-epistularium-message-subject {
+  color: var(--notae-text-strong);
+  font-weight: 600;
+}
+
+.notae-epistularium-account-name {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notae-epistularium-folder-links,
+.notae-epistularium-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.notae-epistularium-account-item .notae-chip-button.is-active {
+  border-color: color-mix(in srgb, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 44%, var(--notae-border-muted));
+  background: color-mix(in srgb, var(--notae-panel-elevated) 75%, var(--notae-epistularium-accent, var(--notae-accent, #2563eb)) 12%);
+}
+
+.notae-epistularium-message-link {
+  display: block;
+  padding: 0.85rem;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.notae-epistularium-message-link:hover,
+.notae-epistularium-message-link.is-active {
+  border-color: color-mix(in srgb, var(--notae-accent, #2563eb) 42%, var(--notae-border-muted));
+  background: color-mix(in srgb, var(--notae-panel-elevated) 78%, var(--notae-accent, #2563eb) 8%);
+  transform: translateY(-1px);
+}
+
+.notae-epistularium-message-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: 0.35rem;
+  min-width: 0;
+}
+
+.notae-epistularium-message-from {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notae-epistularium-message-time {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.notae-epistularium-message-subject,
+.notae-epistularium-message-snippet {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.notae-epistularium-message-subject {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notae-epistularium-message-snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notae-epistularium-message-meta {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  background: var(--notae-panel-muted);
+  border: 1px solid var(--notae-border-muted);
+  margin-bottom: 1rem;
+  min-width: 0;
+}
+
+.notae-epistularium-message-meta-row {
+  display: grid;
+  grid-template-columns: 5.4rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.notae-epistularium-message-meta-label {
+  font-weight: 700;
+  color: var(--notae-text-strong);
+}
+
+.notae-epistularium-message-meta-value {
+  min-width: 0;
+  color: var(--notae-text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.notae-epistularium-message-body {
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--notae-border-muted);
+  background: var(--notae-panel-elevated);
+  color: var(--notae-text-strong);
+  line-height: 1.6;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.notae-epistularium-message-body p:first-child {
+  margin-top: 0;
+}
+
+.notae-epistularium-message-body p:last-child {
+  margin-bottom: 0;
+}
+
+.notae-epistularium-message-body a {
+  color: var(--notae-accent, #2563eb);
+}
+
+.notae-epistularium-message-body p,
+.notae-epistularium-message-body div,
+.notae-epistularium-message-body li,
+.notae-epistularium-message-body blockquote,
+.notae-epistularium-message-body td,
+.notae-epistularium-message-body th {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.notae-epistularium-message-body table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0.9rem 0;
+}
+
+.notae-epistularium-message-body td,
+.notae-epistularium-message-body th {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--notae-border-muted);
+  vertical-align: top;
+}
+
+.notae-epistularium-message-body blockquote {
+  margin: 1rem 0;
+  padding-left: 0.9rem;
+  border-left: 3px solid color-mix(in srgb, var(--notae-accent, #2563eb) 30%, var(--notae-border-muted));
+  color: var(--notae-text-muted);
+}
+
+.notae-epistularium-thread-context,
+.notae-epistularium-ai-panel {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--notae-border-muted);
+  background: var(--notae-panel-muted);
+}
+
+.notae-epistularium-thread-context h3,
+.notae-epistularium-ai-panel h3 {
+  margin-top: 0;
+}
+
+@media (max-width: 1100px) {
+  .notae-epistularium-grid {
+    grid-template-columns: minmax(13rem, 16rem) minmax(16rem, 20rem) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .notae-epistularium-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notae-epistularium-pane-accounts,
+  .notae-epistularium-pane-list {
+    position: static;
+    min-height: 0;
   }
 }

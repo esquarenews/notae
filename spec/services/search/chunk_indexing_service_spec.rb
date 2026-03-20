@@ -130,4 +130,39 @@ RSpec.describe Search::ChunkIndexingService do
     expect(chunk.metadata_json.dig("entities", "names")).to include("Errol")
     expect(chunk.hash_verification_succeeds?).to eq(true)
   end
+
+  it "indexes epistularium emails with message provenance" do
+    user = User.create!(email: "chunk-email@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Chunk Email", slug: "chunk-email")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+    message = EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "email-1",
+      subject: "Launch status email",
+      from_name: "Alex",
+      from_email: "alex@example.com",
+      body_text: "The launch status email confirms Friday as the deadline."
+    )
+
+    described_class.index_epistularium_message!(epistularium_message: message)
+
+    chunk = SearchChunk.for_source(SearchChunk::SOURCE_EPISTULARIUM_MESSAGE, message.id).first
+    expect(chunk).to be_present
+    expect(chunk.epistularium_message_id).to eq(message.id)
+    expect(chunk.source_uri).to eq("/w/#{workspace.slug}/epistularium/messages/#{message.id}")
+    expect(chunk.source_title).to eq("Launch status email")
+    expect(chunk.metadata_json["mailbox"]).to eq("inbox")
+    expect(chunk.hash_verification_succeeds?).to eq(true)
+  end
 end

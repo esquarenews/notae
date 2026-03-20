@@ -43,6 +43,8 @@ class Workspace < ApplicationRecord
   has_many :search_chunks, dependent: :destroy
   has_many :ai_usage_logs, dependent: :destroy
   has_many :ai_conversations, dependent: :destroy
+  has_many :epistularium_accounts, dependent: :destroy
+  has_many :epistularium_messages, dependent: :destroy
   has_many :kalendarium_connections, dependent: :destroy
   has_many :kalendarium_calendars, dependent: :destroy
   has_many :kalendarium_projects, dependent: :destroy

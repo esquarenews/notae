@@ -814,7 +814,8 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Kanban board")
     expect(response.body).to include("Map")
     expect(response.body).not_to include("Open linked page")
-    expect(response.body).to include("Random cover")
+    expect(response.body).to include("notae-page-header-cover-panel")
+    expect(response.body).to include("data-controller=\"cover-carousel\"")
     expect(response.body).to include("Move up")
     expect(response.body).to include("Move down")
     expect(response.body).to include("notae-db-settings-menu")
@@ -1103,6 +1104,11 @@ RSpec.describe "Databases", type: :request do
     expect(Database::COVER_PRESET_KEYS).to include(database.cover_preset_key)
 
     patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { cover_action: "preset", cover_preset_key: "bold-cobalt" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.cover_preset_key).to eq("bold-cobalt")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
           params: { database: { cover_shift: "up" } }
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
     expect(database.reload.cover_focal_y).to eq(40)
@@ -1111,6 +1117,12 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("🚀")
     expect(response.body).to include("notae-page-cover")
+    expect(response.body).to include("data-controller=\"cover-carousel\"")
+    expect(response.body).to include("Original")
+    expect(response.body).to include("Vector")
+    expect(response.body).to include("Pastel")
+    expect(response.body).to include("Bold")
+    expect(response.body).to include("Gradient")
 
     patch database_path(workspace_slug: workspace.slug, id: database.id),
           params: { database: { description_action: "set", description: "Tracks launch tasks" } }

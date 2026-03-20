@@ -51,7 +51,8 @@ module Search
         rows = workspace.db_rows.active.to_a
         events = workspace.kalendarium_events.includes(:kalendarium_project, :linked_page, :linked_db_row).to_a
         meetings = workspace.meeting_sessions.includes(:kalendarium_event, :page).to_a
-        pages + rows + events + meetings
+        emails = workspace.epistularium_messages.includes(:epistularium_account).to_a
+        pages + rows + events + meetings + emails
       end
     end
 
@@ -65,6 +66,8 @@ module Search
         Search::ChunkIndexingService.index_kalendarium_event!(kalendarium_event: record)
       when MeetingSession
         Search::ChunkIndexingService.index_meeting_session!(meeting_session: record)
+      when EpistulariumMessage
+        Search::ChunkIndexingService.index_epistularium_message!(epistularium_message: record)
       end
     end
 
@@ -74,6 +77,7 @@ module Search
       when DbRow then SearchChunk::SOURCE_DB_ROW
       when KalendariumEvent then SearchChunk::SOURCE_KALENDARIUM_EVENT
       when MeetingSession then SearchChunk::SOURCE_MEETING_SESSION
+      when EpistulariumMessage then SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
       else raise ArgumentError, "Unsupported source record: #{record.class.name}"
       end
     end

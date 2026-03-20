@@ -1,0 +1,48 @@
+<% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
+<% block_route_params = { workspace_slug: workspace.slug, page_id: page.id, id: block.id }.merge(embedded_page_params) %>
+<% attach_url = attach_page_block_path(block_route_params) %>
+<% media_upload_accept =
+     case block.block_type
+     when "image" then "image/*"
+     when "video" then "video/*"
+     end %>
+
+<% if block.asset.attached? %>
+  <div class="notae-doc-media">
+<% else %>
+  <div class="notae-doc-media" data-controller="block-upload" data-block-upload-url-value="<%= attach_url %>">
+<% end %>
+  <% unless block.asset.attached? %>
+    <div data-block-upload-target="dropzone"
+         data-action="dragover->block-upload#dragover dragleave->block-upload#dragleave drop->block-upload#drop click->block-upload#openPicker"
+         class="notae-doc-dropzone">
+      Drag and drop <%= block.block_type %>
+    </div>
+    <%= tag.input type: "file",
+                  class: "hidden",
+                  data: { block_upload_target: "input", action: "change->block-upload#upload" },
+                  accept: media_upload_accept %>
+  <% end %>
+
+  <% if block.asset.attached? %>
+    <% if block.asset.content_type.to_s.start_with?("image/") %>
+      <%= image_tag url_for(block.asset), class: "notae-doc-image" %>
+    <% elsif block.asset.content_type.to_s.start_with?("video/") %>
+      <%= video_tag url_for(block.asset), controls: true, preload: "metadata", class: "notae-doc-video" %>
+    <% else %>
+      <p class="notae-doc-muted"><%= block.asset.filename.to_s %></p>
+    <% end %>
+    <div class="notae-doc-inline-actions">
+      <%= link_to "Download",
+                  download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+                  class: "notae-chip-button" %>
+      <% if block.asset.content_type.to_s.start_with?("image/") || block.asset.content_type.to_s.start_with?("video/") %>
+        <%= link_to "Open",
+                    download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, disposition: "inline"),
+                    class: "notae-chip-button",
+                    target: "_blank",
+                    rel: "noopener noreferrer" %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

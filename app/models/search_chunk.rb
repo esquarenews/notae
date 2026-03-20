@@ -5,7 +5,14 @@ class SearchChunk < ApplicationRecord
   SOURCE_DB_ROW = "db_row"
   SOURCE_KALENDARIUM_EVENT = "kalendarium_event"
   SOURCE_MEETING_SESSION = "meeting_session"
-  SOURCE_TYPES = [ SOURCE_PAGE, SOURCE_DB_ROW, SOURCE_KALENDARIUM_EVENT, SOURCE_MEETING_SESSION ].freeze
+  SOURCE_EPISTULARIUM_MESSAGE = "epistularium_message"
+  SOURCE_TYPES = [
+    SOURCE_PAGE,
+    SOURCE_DB_ROW,
+    SOURCE_KALENDARIUM_EVENT,
+    SOURCE_MEETING_SESSION,
+    SOURCE_EPISTULARIUM_MESSAGE
+  ].freeze
 
   EMBEDDING_MODEL = "text-embedding-3-small"
 
@@ -15,6 +22,7 @@ class SearchChunk < ApplicationRecord
   belongs_to :database, optional: true
   belongs_to :kalendarium_event, optional: true
   belongs_to :meeting_session, optional: true
+  belongs_to :epistularium_message, optional: true
 
   before_validation :set_default_source_content_hash
 
@@ -37,16 +45,18 @@ class SearchChunk < ApplicationRecord
     associations = [ :workspace, :page, { db_row: :database } ]
     associations << :kalendarium_event if reference_column_available?(:kalendarium_event_id)
     associations << :meeting_session if reference_column_available?(:meeting_session_id)
+    associations << { epistularium_message: :epistularium_account } if reference_column_available?(:epistularium_message_id)
     associations
   end
 
-  def self.accessible_scope_from(base:, page_ids:, row_ids:, event_ids:, meeting_ids:)
+  def self.accessible_scope_from(base:, page_ids:, row_ids:, event_ids:, meeting_ids:, message_ids: nil)
     scopes = [
       base.where(page_id: page_ids),
       base.where(db_row_id: row_ids)
     ]
     scopes << base.where(kalendarium_event_id: event_ids) if reference_column_available?(:kalendarium_event_id)
     scopes << base.where(meeting_session_id: meeting_ids) if reference_column_available?(:meeting_session_id)
+    scopes << base.where(epistularium_message_id: message_ids) if reference_column_available?(:epistularium_message_id) && message_ids.present?
 
     scopes.reduce { |combined, relation| combined.or(relation) } || base.none
   end
@@ -87,6 +97,7 @@ class SearchChunk < ApplicationRecord
       when SOURCE_DB_ROW then db_row
       when SOURCE_KALENDARIUM_EVENT then kalendarium_event
       when SOURCE_MEETING_SESSION then meeting_session
+      when SOURCE_EPISTULARIUM_MESSAGE then epistularium_message
       end
     return if record.blank? || !record.respond_to?(:search_source_text)
 

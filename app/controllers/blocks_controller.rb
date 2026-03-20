@@ -42,9 +42,32 @@ class BlocksController < ApplicationController
     file = params.dig(:block, :file)
     if file.present?
       @block.asset.attach(file)
-      redirect_to page_redirect_path, notice: "File uploaded."
+      @block.touch
+      touched_at = touch_pages_for_blocks!([ @block ])
+      respond_to do |format|
+        format.json do
+          render json: {
+            html: render_to_string(
+              partial: "pages/block_media",
+              formats: [ :html ],
+              locals: {
+                workspace: @workspace,
+                page: @page,
+                block: @block.reload,
+                embedded_page_params: current_embedded_page_params
+              }
+            ),
+            updated_at: @block.updated_at&.iso8601(6),
+            page_updated_at: touched_at&.iso8601(6)
+          }, status: :ok
+        end
+        format.html { redirect_to page_redirect_path, notice: "File uploaded." }
+      end
     else
-      redirect_to page_redirect_path, alert: "Please choose a file."
+      respond_to do |format|
+        format.json { render json: { errors: [ "Please choose a file." ] }, status: :unprocessable_entity }
+        format.html { redirect_to page_redirect_path, alert: "Please choose a file." }
+      end
     end
   end
 
@@ -236,5 +259,9 @@ class BlocksController < ApplicationController
 
   def embedded_page_shell?
     params[:embedded].to_s == "1"
+  end
+
+  def current_embedded_page_params
+    embedded_page_shell? ? { embedded: "1" } : {}
   end
 end

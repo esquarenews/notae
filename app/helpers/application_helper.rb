@@ -1,4 +1,19 @@
 module ApplicationHelper
+  EPISTULARIUM_ACCOUNT_ACCENTS = %w[
+    #2563eb
+    #0d9488
+    #c2410c
+    #7c3aed
+    #be185d
+    #0891b2
+    #65a30d
+    #b45309
+    #4f46e5
+    #0f766e
+    #dc2626
+    #1d4ed8
+  ].freeze
+
   def ui_workspaces
     return [] unless user_signed_in?
 
@@ -164,6 +179,8 @@ module ApplicationHelper
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.3" y="2.6" width="3" height="10.8" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="6.6" y="2.6" width="3" height="10.8" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10.9" y="2.6" width="2.8" height="10.8" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>'
       when :kalendarium
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.2" y="3.2" width="11.6" height="10.6" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.8v2.7M11 1.8v2.7M2.2 6h11.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>'
+      when :epistularium
+        '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.2 4.2h11.6v7.6H2.2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="m2.7 4.8 5.3 4 5.3-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       when :ai_history
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3.2h10v7.3H7.3L4 13V10.5H3V3.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5.4 6.2h5.2M5.4 8.1h3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>'
       when :suggestion
@@ -182,10 +199,61 @@ module ApplicationHelper
   end
 
   def page_cover_asset_path(cover_preset_key)
-    return nil if cover_preset_key.blank?
-    return nil unless Page::COVER_PRESET_KEYS.include?(cover_preset_key.to_s)
+    definition = Page.cover_preset_definition(cover_preset_key)
+    return nil unless definition&.fetch(:kind, nil) == :asset
 
-    "page_covers/#{cover_preset_key}.svg"
+    "page_covers/#{definition.fetch(:key)}.svg"
+  end
+
+  def page_cover_picker_groups
+    Page::COVER_PRESET_GROUPS
+  end
+
+  def epistularium_account_indicator_style(account)
+    accent = epistularium_account_accent(account)
+    "--notae-epistularium-accent: #{accent}"
+  end
+
+  def epistularium_account_accent(account)
+    seed = [
+      account.id,
+      account.provider,
+      account.label,
+      account.provider_username
+    ].join(":")
+    checksum = seed.each_byte.with_index.sum { |byte, index| byte * (index + 1) }
+
+    EPISTULARIUM_ACCOUNT_ACCENTS[checksum % EPISTULARIUM_ACCOUNT_ACCENTS.length]
+  end
+
+  def page_cover_preset_group_index(cover_preset_key)
+    Page.cover_preset_group_index(cover_preset_key)
+  end
+
+  def page_cover_preset_style(cover_preset_key, focal_y: 50)
+    definition = Page.cover_preset_definition(cover_preset_key)
+    return nil if definition.blank?
+
+    style_parts = [
+      "background-size: cover",
+      "background-repeat: no-repeat",
+      "background-position: center #{focal_y.to_i.clamp(0, 100)}%"
+    ]
+
+    case definition.fetch(:kind)
+    when :asset
+      asset_path_value = page_cover_asset_path(cover_preset_key)
+      return nil if asset_path_value.blank?
+
+      style_parts.unshift("background-image: url('#{asset_path(asset_path_value)}')")
+    when :style
+      style_parts.unshift("background: #{definition.fetch(:background)}")
+      style_parts[-1] = "background-position: center"
+    else
+      return nil
+    end
+
+    style_parts.join("; ")
   end
 
   def notae_theme_body_class

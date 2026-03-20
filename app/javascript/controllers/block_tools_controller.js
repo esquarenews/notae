@@ -21,6 +21,8 @@ export default class extends Controller {
   disconnect() {
     window.removeEventListener("resize", this.repositionOpenMenuHandler)
     window.removeEventListener("scroll", this.repositionOpenMenuHandler, true)
+    const details = this.currentOpenMenu()
+    if (details) this.setMenuOpenState(details, false)
     this.removeDismissHandlers()
   }
 
@@ -89,6 +91,7 @@ export default class extends Controller {
       return
     }
 
+    this.setMenuOpenState(details, true)
     this.installDismissHandlers()
     this.applyPanelPosition(details)
   }
@@ -128,8 +131,12 @@ export default class extends Controller {
     const details = this.currentOpenMenu()
     if (!details) return
 
+    const panel = details.querySelector(".notae-block-menu-panel")
+    const trigger = details.querySelector(".notae-block-menu-trigger")
     const target = event.target
-    if (target instanceof Node && details.contains(target)) return
+    if (!(target instanceof Node)) return
+    if (panel && panel.contains(target)) return
+    if (trigger && trigger.contains(target)) return
 
     this.closeDetails(details)
   }
@@ -144,9 +151,17 @@ export default class extends Controller {
   }
 
   closeDetails(details) {
+    this.setMenuOpenState(details, false)
     details.open = false
     this.resetPanelPosition(details)
     this.removeDismissHandlers()
+  }
+
+  setMenuOpenState(details, isOpen) {
+    const blockRow = details?.closest(".notae-doc-block-row")
+    if (!blockRow) return
+
+    blockRow.classList.toggle("is-menu-open", isOpen)
   }
 
   applyPanelPosition(details) {

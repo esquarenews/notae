@@ -18,6 +18,10 @@ module Search
       new(source_type: SearchChunk::SOURCE_MEETING_SESSION, source_record: meeting_session).index!
     end
 
+    def self.index_epistularium_message!(epistularium_message:)
+      new(source_type: SearchChunk::SOURCE_EPISTULARIUM_MESSAGE, source_record: epistularium_message).index!
+    end
+
     def self.delete_source!(source_type:, source_id:)
       SearchChunk.for_source(source_type, source_id).delete_all
     end
@@ -58,6 +62,8 @@ module Search
         source_record.present?
       when SearchChunk::SOURCE_MEETING_SESSION
         source_record.present?
+      when SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+        source_record.present?
       else
         false
       end
@@ -79,6 +85,8 @@ module Search
         kalendarium_event_text
       when SearchChunk::SOURCE_MEETING_SESSION
         meeting_session_text
+      when SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+        epistularium_message_text
       else
         ""
       end
@@ -100,6 +108,10 @@ module Search
       source_record.search_source_text
     end
 
+    def epistularium_message_text
+      source_record.search_source_text
+    end
+
     def upsert_chunk!(chunk_text:, chunk_index:)
       hash = Digest::SHA256.hexdigest(chunk_text)
       source_hash = Digest::SHA256.hexdigest(source_text)
@@ -112,6 +124,7 @@ module Search
         database_id: database_id_for_chunk,
         kalendarium_event_id: kalendarium_event_id_for_chunk,
         meeting_session_id: meeting_session_id_for_chunk,
+        epistularium_message_id: epistularium_message_id_for_chunk,
         text: chunk_text,
         token_count: chunk_text.split(/\s+/).size,
         content_hash: hash,
@@ -158,6 +171,12 @@ module Search
       nil
     end
 
+    def epistularium_message_id_for_chunk
+      return source_record.id if source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+
+      nil
+    end
+
     def source_uri
       routes = Rails.application.routes.url_helpers
 
@@ -175,6 +194,8 @@ module Search
         )
       when SearchChunk::SOURCE_MEETING_SESSION
         routes.workspace_meetings_path(workspace_slug: source_record.workspace.slug, anchor: "meeting_session_#{source_record.id}")
+      when SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+        routes.workspace_epistularium_message_path(workspace_slug: source_record.workspace.slug, id: source_record.id)
       end
     end
 
@@ -188,6 +209,8 @@ module Search
         source_record.title
       when SearchChunk::SOURCE_MEETING_SESSION
         source_record.title
+      when SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+        source_record.display_subject
       end
     end
 
@@ -204,6 +227,11 @@ module Search
       elsif source_type == SearchChunk::SOURCE_KALENDARIUM_EVENT
         metadata["calendar_id"] = source_record.kalendarium_calendar_id
         metadata["starts_at_utc"] = source_record.starts_at_utc&.iso8601
+      elsif source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+        metadata["epistularium_account_id"] = source_record.epistularium_account_id
+        metadata["mailbox"] = source_record.mailbox
+        metadata["from_email"] = source_record.from_email
+        metadata["received_at"] = source_record.received_at&.iso8601
       end
 
       metadata

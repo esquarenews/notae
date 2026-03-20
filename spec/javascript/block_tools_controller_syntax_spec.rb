@@ -32,7 +32,8 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     expect(source).to include("document.addEventListener(\"pointerdown\", this.windowPointerDownHandler, true)")
     expect(source).to include("document.addEventListener(\"keydown\", this.documentKeydownHandler)")
     expect(source).to include("if (event.key !== \"Escape\") return")
-    expect(source).to include("details.contains(target)")
+    expect(source).to include("panel.contains(target)")
+    expect(source).to include("trigger.contains(target)")
     expect(source).to include("this.closeDetails(details)")
   end
 
@@ -41,5 +42,17 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
 
     expect(source).to include("panel.contains(scrollTarget)")
     expect(source).not_to include("panel.style.pointerEvents = \"none\"")
+  end
+
+  it "raises the owning block row while the menu is open so it clears the page title" do
+    source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(source).to include("this.setMenuOpenState(details, true)")
+    expect(source).to include("this.setMenuOpenState(details, false)")
+    expect(source).to include("closest(\".notae-doc-block-row\")")
+    expect(source).to include("classList.toggle(\"is-menu-open\", isOpen)")
+    expect(stylesheet).to include(".notae-doc-block-row.is-menu-open")
+    expect(stylesheet).to include("z-index: 220;")
   end
 end

@@ -1,9 +1,9 @@
 class AgentAction < ApplicationRecord
   PROPOSED_BY_OPTIONS = %w[manual ai_assistant automation_agent api].freeze
-  TARGET_SYSTEM_OPTIONS = %w[gmail github slack calendar crm].freeze
+  TARGET_SYSTEM_OPTIONS = %w[gmail email github slack calendar crm].freeze
   DRAFT_TYPE_OPTIONS = %w[email_draft github_comment_draft task_ticket calendar_hold].freeze
   TARGET_SYSTEMS_BY_DRAFT_TYPE = {
-    "email_draft" => %w[gmail],
+    "email_draft" => %w[gmail email],
     "github_comment_draft" => %w[github],
     "task_ticket" => %w[github slack crm],
     "calendar_hold" => %w[calendar]

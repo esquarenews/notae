@@ -1,0 +1,122 @@
+<% content_for :title, "Epistularium settings" %>
+<% content_for :topbar_page_icon, "✉️" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Open Epistularium", workspace_epistularium_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :epistularium %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>Connect Gmail with OAuth</h2>
+      <p class="notae-pref-description">Use Google OAuth for read-only Gmail access. Message history is backfilled and indexed for AI context.</p>
+      <% unless @google_oauth_configured %>
+        <p class="notae-page-subtle">Google OAuth is not configured on the server. Set <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code>.</p>
+      <% end %>
+      <%= form_with url: google_authorize_epistularium_accounts_path(workspace_slug: @workspace.slug),
+                    method: :get,
+                    local: true,
+                    html: {
+                      class: "notae-kalendarium-connection-form",
+                      "data-controller": "google-oauth-launch",
+                      "data-action": "submit->google-oauth-launch#submit",
+                      "data-google-oauth-launch": "true"
+                    } do %>
+        <%= text_field_tag :label, "Gmail mailbox", placeholder: "Mailbox label", required: true, class: "notae-auth-input" %>
+        <%= select_tag "epistularium_account[owner_scope]",
+                       options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
+                       class: "notae-auth-input" %>
+        <%= submit_tag "Connect Gmail", class: "notae-chip-button" %>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Add IMAP or Amazon WorkMail</h2>
+      <p class="notae-pref-description">For Amazon WorkMail, use the incoming IMAP host on port 993, not the SMTP host. The username must be the full mailbox email address. Example host: <code>imap.mail.&lt;region&gt;.awsapps.com</code>.</p>
+      <%= form_with model: EpistulariumAccount.new, url: epistularium_accounts_path(workspace_slug: @workspace.slug), class: "notae-kalendarium-connection-form" do |form| %>
+        <%= form.text_field :label, placeholder: "Mailbox label", required: true, class: "notae-auth-input" %>
+        <%= form.select :provider,
+                        options_for_select([["IMAP mailbox", "imap"], ["Amazon WorkMail", "amazon_workmail"]]),
+                        {},
+                        class: "notae-auth-input" %>
+        <%= select_tag "epistularium_account[owner_scope]",
+                       options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
+                       class: "notae-auth-input" %>
+        <%= form.text_field :imap_host, placeholder: "IMAP host (incoming server)", required: true, class: "notae-auth-input" %>
+        <%= form.number_field :imap_port, value: 993, class: "notae-auth-input" %>
+        <%= form.text_field :provider_username, placeholder: "IMAP username", required: true, class: "notae-auth-input" %>
+        <%= form.password_field :provider_password, placeholder: "IMAP password", required: true, class: "notae-auth-input" %>
+        <%= form.text_field :sent_mailbox, placeholder: "Sent mailbox name (optional)", class: "notae-auth-input" %>
+        <label class="notae-options-checkbox"><%= form.check_box :imap_ssl, checked: true %><span>Use SSL/TLS</span></label>
+        <label class="notae-options-checkbox"><%= form.check_box :enabled, checked: true %><span>Enabled</span></label>
+        <label class="notae-options-checkbox"><%= check_box_tag :sync_now, "1", true %><span>Queue initial backfill</span></label>
+        <%= form.submit "Add Epistulum", class: "notae-chip-button" %>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Manage Epistula</h2>
+      <% if @accounts.any? %>
+        <ul class="notae-kalendarium-connections-list">
+          <% @accounts.each do |account| %>
+            <li>
+              <div>
+                <strong><%= account.label %></strong>
+                <p><%= account.provider.to_s.humanize %> · <%= account.shared_account? ? "Workspace shared" : "Personal" %></p>
+                <p>Status: <%= account.status %> <% if account.last_synced_at.present? %>· Last sync <%= time_ago_in_words(account.last_synced_at) %> ago<% end %></p>
+                <% if account.last_error.present? %>
+                  <p class="notae-page-subtle"><%= account.last_error %></p>
+                <% end %>
+                <% if account.provider == "gmail" %>
+                  <%= link_to "Re-authorize Google",
+                              google_authorize_epistularium_accounts_path(workspace_slug: @workspace.slug, account_id: account.id, label: account.label),
+                              class: "notae-chip-button",
+                              data: { turbo: false } %>
+                <% end %>
+              </div>
+              <div class="notae-kalendarium-connection-actions">
+                <% if account.provider == "gmail" %>
+                  <%= form_with model: account,
+                                url: epistularium_account_path(workspace_slug: @workspace.slug, id: account.id),
+                                method: :patch,
+                                class: "notae-workspace-home-stack" do |form| %>
+                    <%= form.text_field :label, value: account.label, class: "notae-auth-input", placeholder: "Mailbox label" %>
+                    <label class="notae-options-checkbox"><%= form.check_box :enabled, checked: account.enabled? %><span>Enabled</span></label>
+                    <%= form.submit "Save", class: "notae-chip-button" %>
+                  <% end %>
+                <% else %>
+                  <%= form_with model: account,
+                                url: epistularium_account_path(workspace_slug: @workspace.slug, id: account.id),
+                                method: :patch,
+                                class: "notae-workspace-home-stack" do |form| %>
+                    <%= form.text_field :label, value: account.label, class: "notae-auth-input", placeholder: "Mailbox label" %>
+                    <%= form.text_field :imap_host, value: account.imap_host, class: "notae-auth-input", placeholder: "IMAP host (incoming server)" %>
+                    <%= form.number_field :imap_port, value: account.imap_port, class: "notae-auth-input" %>
+                    <%= form.text_field :provider_username, value: account.provider_username, class: "notae-auth-input", placeholder: "IMAP username" %>
+                    <%= form.password_field :provider_password, class: "notae-auth-input", placeholder: "Leave blank to keep current password" %>
+                    <%= form.text_field :sent_mailbox, value: account.sent_mailbox_name, class: "notae-auth-input", placeholder: "Sent mailbox name" %>
+                    <label class="notae-options-checkbox"><%= form.check_box :imap_ssl, checked: account.imap_ssl? %><span>Use SSL/TLS</span></label>
+                    <label class="notae-options-checkbox"><%= form.check_box :enabled, checked: account.enabled? %><span>Enabled</span></label>
+                    <%= form.submit "Save", class: "notae-chip-button" %>
+                  <% end %>
+                <% end %>
+                <%= button_to "Sync",
+                              sync_epistularium_account_path(workspace_slug: @workspace.slug, id: account.id),
+                              method: :post,
+                              class: "notae-chip-button" %>
+                <%= button_to "Delete",
+                              epistularium_account_path(workspace_slug: @workspace.slug, id: account.id),
+                              method: :delete,
+                              class: "notae-chip-button" %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-page-subtle">No Epistula yet.</p>
+      <% end %>
+    </section>
+  </div>
+</section>

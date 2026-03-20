@@ -1,3 +1,5 @@
+require "uri"
+
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
 
@@ -158,6 +160,32 @@ class ApplicationController < ActionController::Base
     AI_AGENT_UPDATE_LIMIT
   end
 
+  def external_app_base_url
+    explicit_base_url = normalized_explicit_base_url(ENV["APP_BASE_URL"])
+    return explicit_base_url if explicit_base_url.present?
+
+    explicit_host = ENV["APP_HOST"].to_s.strip.presence
+    if explicit_host.present?
+      return base_url_from_host_config(
+        host_value: explicit_host,
+        port_value: ENV["APP_PORT"],
+        protocol_value: ENV["APP_PROTOCOL"]
+      )
+    end
+
+    mailer_url_options = Rails.application.config.action_mailer.default_url_options.to_h.symbolize_keys
+    configured_host = mailer_url_options[:host].to_s.strip.presence
+    if configured_host.present? && local_request_host? && !local_host?(configured_host)
+      return base_url_from_host_config(
+        host_value: configured_host,
+        port_value: mailer_url_options[:port],
+        protocol_value: mailer_url_options[:protocol]
+      )
+    end
+
+    request.base_url
+  end
+
   def recent_ai_agent_updates_for(workspace:, limit:, since: nil)
     updates = []
 
@@ -188,6 +216,65 @@ class ApplicationController < ActionController::Base
     end
 
     updates.sort_by { |entry| -entry.fetch(:updated_at).to_i }.first(limit)
+  end
+
+  def normalized_explicit_base_url(value)
+    raw_value = value.to_s.strip
+    return if raw_value.blank?
+
+    uri = URI.parse(raw_value)
+    return if uri.host.blank?
+
+    scheme = uri.scheme.to_s.presence || "https"
+    base_url = +"#{scheme}://#{uri.host}"
+    base_url << ":#{uri.port}" if include_port_in_base_url?(uri.port, scheme)
+    base_url
+  rescue URI::InvalidURIError
+    nil
+  end
+
+  def base_url_from_host_config(host_value:, port_value:, protocol_value:)
+    normalized_host = host_value.to_s.strip
+    return if normalized_host.blank?
+
+    explicit_base_url = normalized_explicit_base_url(normalized_host)
+    return explicit_base_url if explicit_base_url.present?
+
+    scheme = protocol_value.to_s.delete_suffix("://").presence || default_external_app_protocol(port_value)
+    base_url = +"#{scheme}://#{normalized_host}"
+    port_number = normalized_port_value(port_value)
+    base_url << ":#{port_number}" if include_port_in_base_url?(port_number, scheme)
+    base_url
+  end
+
+  def default_external_app_protocol(port_value)
+    port_number = normalized_port_value(port_value)
+    return "https" if port_number == 443
+    return "http" if port_number == 80
+    return "https" if request.ssl? || Rails.application.config.force_ssl || Rails.application.config.assume_ssl
+
+    request.protocol.to_s.delete_suffix("://").presence || "http"
+  end
+
+  def normalized_port_value(value)
+    value.to_i.positive? ? value.to_i : nil
+  end
+
+  def include_port_in_base_url?(port_value, scheme)
+    port_number = normalized_port_value(port_value)
+    return false if port_number.blank?
+    return false if scheme.to_s == "https" && port_number == 443
+    return false if scheme.to_s == "http" && port_number == 80
+
+    true
+  end
+
+  def local_request_host?
+    local_host?(request.host)
+  end
+
+  def local_host?(host_value)
+    %w[localhost 127.0.0.1 ::1].include?(host_value.to_s.downcase)
   end
 
   def ai_agent_update_for_workflow_run(workflow_run)

@@ -37,8 +37,9 @@ RSpec.describe "Page header features", type: :request do
     patch page_path(workspace_slug: workspace.slug, id: page.id),
           params: { page: { cover_action: "random" } }
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
-    expect(Page::COVER_PRESET_KEYS.size).to eq(12)
-    Page::COVER_PRESET_KEYS.each do |key|
+    expect(Page::COVER_PRESET_KEYS.size).to eq(60)
+    expect(Page::COVER_PRESET_GROUPS.map { |group| group[:label] }).to eq(%w[Original Vector Pastel Bold Gradient])
+    Page.asset_cover_preset_keys.each do |key|
       expect(Rails.root.join("app/assets/images/page_covers/#{key}.svg")).to exist
     end
     expect(Page::COVER_PRESET_KEYS).to include(page.reload.cover_preset_key)
@@ -46,8 +47,14 @@ RSpec.describe "Page header features", type: :request do
     expect(response.body).to include("notae-cover-picker-grid")
     expect(response.body).to include("notae-cover-picker-quick-actions")
     expect(response.body).to include("notae-cover-picker-upload-form")
+    expect(response.body).to include("data-controller=\"cover-carousel\"")
+    expect(response.body).to include("Original")
+    expect(response.body).to include("Vector")
+    expect(response.body).to include("Pastel")
+    expect(response.body).to include("Bold")
+    expect(response.body).to include("Gradient")
 
-    chosen_preset = Page::COVER_PRESET_KEYS.first
+    chosen_preset = "gradient-cosmos"
     patch page_path(workspace_slug: workspace.slug, id: page.id),
           params: { page: { cover_action: "preset", cover_preset_key: chosen_preset } }
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_14_124000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_19_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -363,6 +363,68 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_124000) do
     t.index ["workspace_id", "archived_at"], name: "index_db_rows_on_workspace_id_and_archived_at"
     t.index ["workspace_id"], name: "index_db_rows_on_workspace_id"
     t.check_constraint "\"position\" > 0", name: "check_db_rows_position_positive"
+  end
+
+  create_table "epistularium_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "access_token"
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.boolean "enabled", default: true, null: false
+    t.string "label", null: false
+    t.text "last_error"
+    t.datetime "last_synced_at"
+    t.text "oauth_client_id"
+    t.text "oauth_client_secret"
+    t.uuid "owner_id", null: false
+    t.string "owner_type", null: false
+    t.string "provider", null: false
+    t.text "provider_password"
+    t.text "provider_username"
+    t.text "refresh_token"
+    t.string "remote_account_id"
+    t.jsonb "scopes_json", default: [], null: false
+    t.jsonb "settings_json", default: {}, null: false
+    t.string "status", default: "connected", null: false
+    t.text "sync_cursor"
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["owner_type", "owner_id"], name: "index_epistularium_accounts_on_owner"
+    t.index ["workspace_id", "enabled"], name: "index_epistularium_accounts_on_workspace_and_enabled"
+    t.index ["workspace_id", "owner_type", "owner_id", "provider", "label"], name: "index_epistularium_accounts_uniqueness", unique: true
+  end
+
+  create_table "epistularium_messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.jsonb "attachment_metadata_json", default: [], null: false
+    t.jsonb "bcc_recipients_json", default: [], null: false
+    t.text "body_html"
+    t.text "body_text"
+    t.jsonb "cc_recipients_json", default: [], null: false
+    t.datetime "created_at", null: false
+    t.uuid "epistularium_account_id", null: false
+    t.string "from_email"
+    t.string "from_name"
+    t.jsonb "headers_json", default: {}, null: false
+    t.string "internet_message_id"
+    t.datetime "last_synced_at"
+    t.string "mailbox", default: "inbox", null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "provider_message_id", null: false
+    t.string "provider_thread_id"
+    t.datetime "received_at"
+    t.jsonb "reply_to_recipients_json", default: [], null: false
+    t.datetime "sent_at"
+    t.text "snippet"
+    t.string "source_checksum"
+    t.string "subject", default: "", null: false
+    t.string "thread_key"
+    t.jsonb "to_recipients_json", default: [], null: false
+    t.boolean "unread", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["epistularium_account_id", "provider_message_id"], name: "index_epistularium_messages_on_account_and_provider_id", unique: true
+    t.index ["internet_message_id"], name: "index_epistularium_messages_on_internet_message_id"
+    t.index ["workspace_id", "mailbox", "received_at"], name: "index_epistularium_messages_on_workspace_mailbox_received_at"
+    t.index ["workspace_id", "thread_key"], name: "index_epistularium_messages_on_workspace_and_thread_key"
   end
 
   create_table "favorites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -758,6 +820,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_124000) do
     t.uuid "db_row_id"
     t.jsonb "embedding", default: [], null: false
     t.string "embedding_model"
+    t.uuid "epistularium_message_id"
     t.uuid "kalendarium_event_id"
     t.uuid "meeting_session_id"
     t.jsonb "metadata_json", default: {}, null: false
@@ -774,6 +837,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_124000) do
     t.index ["content_hash"], name: "index_search_chunks_on_content_hash"
     t.index ["database_id"], name: "index_search_chunks_on_database_id"
     t.index ["db_row_id"], name: "index_search_chunks_on_db_row_id"
+    t.index ["epistularium_message_id"], name: "index_search_chunks_on_epistularium_message_id"
     t.index ["kalendarium_event_id"], name: "index_search_chunks_on_kalendarium_event_id"
     t.index ["meeting_session_id"], name: "index_search_chunks_on_meeting_session_id"
     t.index ["page_id"], name: "index_search_chunks_on_page_id"
@@ -964,6 +1028,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_124000) do
   add_foreign_key "db_rows", "databases"
   add_foreign_key "db_rows", "pages", column: "linked_page_id", on_delete: :nullify
   add_foreign_key "db_rows", "workspaces"
+  add_foreign_key "epistularium_accounts", "users", column: "created_by_id"
+  add_foreign_key "epistularium_accounts", "workspaces"
+  add_foreign_key "epistularium_messages", "epistularium_accounts"
+  add_foreign_key "epistularium_messages", "workspaces"
   add_foreign_key "favorites", "users"
   add_foreign_key "favorites", "workspaces"
   add_foreign_key "invitations", "users", column: "accepted_by_id"
@@ -1025,6 +1093,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_14_124000) do
   add_foreign_key "pages", "workspaces"
   add_foreign_key "search_chunks", "databases"
   add_foreign_key "search_chunks", "db_rows"
+  add_foreign_key "search_chunks", "epistularium_messages"
   add_foreign_key "search_chunks", "kalendarium_events"
   add_foreign_key "search_chunks", "meeting_sessions"
   add_foreign_key "search_chunks", "pages"

@@ -1,0 +1,130 @@
+- generic [ref=e168]:
+  - complementary [ref=e169]:
+    - generic [ref=e170]:
+      - generic [ref=e171]:
+        - generic [ref=e172]:
+          - generic [ref=e173]: 🏠
+          - generic [ref=e174]: Hash Debug
+        - generic [ref=e175]:
+          - button "＋" [ref=e177]
+          - button "Minimize sidebar" [ref=e178] [cursor=pointer]: ◂
+      - generic [ref=e179]:
+        - navigation [ref=e180]:
+          - link "Home" [ref=e181] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f
+            - generic [ref=e182]:
+              - img [ref=e184]
+              - generic [ref=e187]: Home
+          - link "Search" [ref=e188] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f/search
+            - generic [ref=e189]:
+              - img [ref=e191]
+              - generic [ref=e194]: Search
+          - link "Notifications" [ref=e195] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f/notifications
+            - generic [ref=e196]:
+              - img [ref=e198]
+              - generic [ref=e201]: Notifications
+          - link "Library" [ref=e202] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f/library
+            - generic [ref=e203]:
+              - img [ref=e205]
+              - generic [ref=e209]: Library
+          - link "Kalendārium" [ref=e210] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f/kalendarium
+            - generic [ref=e211]:
+              - img [ref=e213]
+              - generic [ref=e216]: Kalendārium
+          - link "Epistularium" [ref=e217] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f/epistularium
+            - generic [ref=e218]:
+              - img [ref=e220]
+              - generic [ref=e223]: Epistularium
+          - link "Meetings" [ref=e224] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f/meetings
+            - generic [ref=e225]:
+              - img [ref=e227]
+              - generic [ref=e230]: Meetings
+          - link "AI Conversation History" [ref=e231] [cursor=pointer]:
+            - /url: /w/hash-debug-d3e1de6f/ai-conversation-history
+            - generic [ref=e232]:
+              - img [ref=e234]
+              - generic [ref=e237]: AI Conversation History
+        - generic [ref=e238]:
+          - generic [ref=e239]:
+            - button "Workspaces" [expanded] [ref=e240] [cursor=pointer]:
+              - generic [ref=e241]: ▾
+              - generic [ref=e242]: Workspaces
+            - button "Create new Workspace" [ref=e243] [cursor=pointer]: "[+]"
+          - list [ref=e245]:
+            - listitem [ref=e246]:
+              - link "🏠 Hash Debug" [ref=e247] [cursor=pointer]:
+                - /url: /w/hash-debug-d3e1de6f
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - button "Notarum" [expanded] [ref=e250] [cursor=pointer]:
+              - generic [ref=e251]: ▾
+              - generic [ref=e252]: Notarum
+            - button "Create new Nota" [ref=e254] [cursor=pointer]: "[+]"
+          - paragraph [ref=e256]: No Notarum yet.
+        - generic [ref=e257]:
+          - generic [ref=e258]:
+            - button "Grids" [expanded] [ref=e259] [cursor=pointer]:
+              - generic [ref=e260]: ▾
+              - generic [ref=e261]: Grids
+            - button "Create new Grid" [ref=e263] [cursor=pointer]: "[+]"
+          - paragraph [ref=e265]: No grids yet.
+        - generic [ref=e266]:
+          - generic [ref=e267]:
+            - button "Meetings" [expanded] [ref=e268] [cursor=pointer]:
+              - generic [ref=e269]: ▾
+              - generic [ref=e270]: Meetings
+            - button "Create new Meeting" [ref=e272] [cursor=pointer]: "[+]"
+          - paragraph [ref=e274]: No meetings yet.
+        - generic [ref=e275]:
+          - button "Favorites" [expanded] [ref=e277] [cursor=pointer]:
+            - generic [ref=e278]: ▾
+            - generic [ref=e279]: Favorites
+          - paragraph [ref=e281]: No favorites yet.
+      - generic [ref=e282]:
+        - link "Settings" [ref=e283] [cursor=pointer]:
+          - /url: /w/hash-debug-d3e1de6f/settings/preferences
+          - generic [ref=e284]:
+            - img [ref=e286]
+            - generic [ref=e289]: Settings
+        - link "Trash" [ref=e290] [cursor=pointer]:
+          - /url: /w/hash-debug-d3e1de6f/trash
+          - generic [ref=e291]:
+            - img [ref=e293]
+            - generic [ref=e296]: Trash
+        - button "Sign out" [ref=e298] [cursor=pointer]:
+          - generic [ref=e299]:
+            - img [ref=e301]
+            - generic [ref=e304]: Sign out
+  - generic [ref=e305]:
+    - banner [ref=e306]:
+      - generic [ref=e308]:
+        - generic [ref=e309]: ✉️
+        - generic [ref=e310]: Epistularium
+        - generic [ref=e311]: Private
+      - link "Manage Epistula" [ref=e313] [cursor=pointer]:
+        - /url: /w/hash-debug-d3e1de6f/settings/epistularium
+    - main [ref=e314]:
+      - generic [ref=e315]:
+        - generic [ref=e317]:
+          - paragraph [ref=e318]: Read-only email feed for AI grounding
+          - heading "Epistularium" [level=1] [ref=e319]
+        - generic [ref=e320]:
+          - complementary [ref=e321]:
+            - heading "Epistula" [level=2] [ref=e323]
+            - paragraph [ref=e324]: No Epistula connected yet.
+            - link "Open settings" [ref=e325] [cursor=pointer]:
+              - /url: /w/hash-debug-d3e1de6f/settings/epistularium
+          - generic [ref=e326]:
+            - heading "Messages" [level=2] [ref=e328]
+            - paragraph [ref=e329]: Select an Epistulum to view messages.
+          - generic [ref=e330]:
+            - heading "Message preview" [level=2] [ref=e332]
+            - paragraph [ref=e333]: Select a message to read it here and trigger AI draft suggestions.
+  - complementary [ref=e336]:
+    - button "Reopen AI assistant rail" [ref=e337] [cursor=pointer]

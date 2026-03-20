@@ -52,22 +52,42 @@ RSpec.describe Search::WorkspaceIngestionService do
       transcript_text: "[00:00] Errol: Alex will share the revised plan.",
       summary_markdown: "### Summary\n- Alex will share the revised plan."
     )
+    account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+    message = EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "email-1",
+      subject: "Launch email",
+      from_name: "Alex",
+      from_email: "alex@example.com",
+      body_text: "Alex emailed the revised launch plan."
+    )
 
     allow(Openai::EmbeddingsClient).to receive(:embed_many_with_usage).and_return(
       {
-        embeddings: Array.new(4) { [ 0.1, 0.2, 0.3 ] },
+        embeddings: Array.new(5) { [ 0.1, 0.2, 0.3 ] },
         usage: { prompt_tokens: 28, completion_tokens: 0, total_tokens: 28 }
       }
     )
 
     result = described_class.new(workspace: workspace, requested_by: user).call
 
-    expect(result.source_count).to eq(4)
-    expect(result.indexed_source_count).to eq(4)
+    expect(result.source_count).to eq(5)
+    expect(result.indexed_source_count).to eq(5)
     expect(result.coverage_percentage).to eq(100.0)
-    expect(result.embedded_chunk_count).to be >= 4
+    expect(result.embedded_chunk_count).to be >= 5
     expect(result.missing_embedding_count).to eq(0)
     expect(SearchChunk.for_source(SearchChunk::SOURCE_MEETING_SESSION, session.id)).to exist
+    expect(SearchChunk.for_source(SearchChunk::SOURCE_EPISTULARIUM_MESSAGE, message.id)).to exist
     expect(AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_SEMANTIC_BACKFILL)).to exist
   end
 end

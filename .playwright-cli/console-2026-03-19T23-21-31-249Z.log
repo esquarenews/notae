@@ -1,0 +1,8 @@
+[      85ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[     130ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[   16467ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[   16609ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[   58324ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[   58369ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[  188854ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[  188982ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25

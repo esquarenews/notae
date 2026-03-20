@@ -47,6 +47,12 @@
                     data: notae_shell_link_data do %>
           <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
+        <%= link_to workspace_epistularium_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_epistularium_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+                    title: "Epistularium",
+                    data: notae_shell_link_data do %>
+          <%= notae_icon_svg(:epistularium, css_class: "notae-sidebar-nav-icon") %>
+        <% end %>
         <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),
                     class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "Meetings",
@@ -206,6 +212,14 @@
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Kalendārium</span>
+          </span>
+        <% end %>
+        <%= link_to workspace_epistularium_path(workspace_slug: nav_workspace.slug),
+                    class: notae_sidebar_link_classes(workspace_epistularium_path(workspace_slug: nav_workspace.slug)),
+                    data: notae_shell_link_data do %>
+          <span class="notae-sidebar-link-content">
+            <%= notae_icon_svg(:epistularium, css_class: "notae-sidebar-nav-icon") %>
+            <span class="notae-sidebar-link-label">Epistularium</span>
           </span>
         <% end %>
         <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),

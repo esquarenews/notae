@@ -1,0 +1,85 @@
+<% selected_cover_key = selected_cover_key.to_s.presence %>
+<% panel_classes = [ "notae-cover-picker-panel" ] %>
+<% panel_classes << "is-embedded" if local_assigns[:embedded] %>
+<% initial_group_index = page_cover_preset_group_index(selected_cover_key) %>
+<% initial_group = page_cover_picker_groups.fetch(initial_group_index) %>
+
+<div class="<%= panel_classes.join(" ") %>"
+     data-controller="cover-carousel"
+     data-cover-carousel-initial-index-value="<%= initial_group_index %>">
+  <div class="notae-cover-picker-toolbar">
+    <button type="button"
+            class="notae-cover-picker-nav"
+            data-action="cover-carousel#previous"
+            aria-label="Previous cover set">
+      ‹
+    </button>
+    <div class="notae-cover-picker-toolbar-copy">
+      <strong data-cover-carousel-target="label"><%= initial_group.fetch(:label) %></strong>
+      <span><%= initial_group.fetch(:presets).size %> options</span>
+    </div>
+    <button type="button"
+            class="notae-cover-picker-nav"
+            data-action="cover-carousel#next"
+            aria-label="Next cover set">
+      ›
+    </button>
+  </div>
+
+  <div class="notae-cover-picker-screens">
+    <% page_cover_picker_groups.each_with_index do |group, group_index| %>
+      <section class="notae-cover-picker-screen<%= " is-active" if group_index == initial_group_index %>"
+               data-cover-carousel-target="screen"
+               data-cover-carousel-label="<%= group.fetch(:label) %>"
+               <%= "hidden" unless group_index == initial_group_index %>>
+        <div class="notae-cover-picker-grid">
+          <% group.fetch(:presets).each do |preset| %>
+            <%= button_to update_url,
+                          method: :patch,
+                          params: { param_key.to_sym => { cover_action: "preset", cover_preset_key: preset.fetch(:key) } },
+                          class: [ "notae-cover-picker-tile-button", ("is-active" if selected_cover_key == preset.fetch(:key)) ].compact.join(" "),
+                          title: preset.fetch(:label),
+                          aria: { label: "Use #{preset.fetch(:label)} cover" } do %>
+              <span class="notae-cover-picker-tile"
+                    style="<%= page_cover_preset_style(preset.fetch(:key)) %>"></span>
+            <% end %>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+  </div>
+
+  <div class="notae-cover-picker-pagination">
+    <% page_cover_picker_groups.each_with_index do |group, group_index| %>
+      <button type="button"
+              class="notae-cover-picker-dot<%= " is-active" if group_index == initial_group_index %>"
+              data-cover-carousel-target="dot"
+              data-action="cover-carousel#select"
+              data-cover-carousel-index-param="<%= group_index %>"
+              aria-label="Show <%= group.fetch(:label) %> covers"
+              aria-current="<%= group_index == initial_group_index %>">
+      </button>
+    <% end %>
+  </div>
+
+  <div class="notae-cover-picker-quick-actions">
+    <%= button_to "Random",
+                  update_url,
+                  method: :patch,
+                  params: { param_key.to_sym => { cover_action: "random" } },
+                  class: "notae-cover-picker-action" %>
+    <% if local_assigns.fetch(:allow_remove, true) %>
+      <%= button_to local_assigns.fetch(:remove_label, "Remove"),
+                    update_url,
+                    method: :patch,
+                    params: { param_key.to_sym => { cover_action: "clear" } },
+                    class: "notae-cover-picker-action is-danger" %>
+    <% end %>
+  </div>
+
+  <%= form_with url: update_url, method: :patch, class: "notae-cover-picker-upload-form" do %>
+      <%= hidden_field_tag "#{param_key}[cover_action]", "upload" %>
+      <%= file_field_tag "#{param_key}[cover_image]", accept: "image/*", class: "notae-cover-picker-upload-input" %>
+      <%= submit_tag "Upload", class: "notae-cover-picker-action" %>
+  <% end %>
+</div>

@@ -161,11 +161,15 @@ class Block < ApplicationRecord
   end
 
   def media_block?
-    %w[image file].include?(block_type.to_s)
+    %w[image video file].include?(block_type.to_s)
   end
 
   def asset_image?
     asset.attached? && asset.content_type.to_s.start_with?("image/")
+  end
+
+  def asset_video?
+    asset.attached? && asset.content_type.to_s.start_with?("video/")
   end
 
   def extract_embed_host

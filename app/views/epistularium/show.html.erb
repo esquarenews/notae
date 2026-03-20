@@ -1,0 +1,179 @@
+<% content_for :title, "Epistularium" %>
+<% content_for :content_class, "notae-content-page" %>
+<% content_for :topbar_page_icon, "✉️" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Manage Epistula", workspace_epistularium_settings_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-epistularium-shell">
+  <header class="notae-utility-page-head">
+    <div>
+      <p class="notae-page-subtle">Read-only email feed for AI grounding</p>
+      <h1 class="notae-utility-title">Epistularium</h1>
+    </div>
+  </header>
+
+  <div class="notae-epistularium-grid">
+    <aside class="notae-auth-card notae-epistularium-pane notae-epistularium-pane-accounts">
+      <div class="notae-home-card-head">
+        <h2>Epistula</h2>
+      </div>
+      <% if @accounts.any? %>
+        <ul class="notae-epistularium-account-list">
+          <% @accounts.each do |account| %>
+            <% counts = @message_counts_by_account.fetch(account.id, {}) %>
+            <% active_account = (@selected_account == account) %>
+            <li class="<%= [ "notae-epistularium-account-item", ("is-active" if active_account) ].compact.join(" ") %>"
+                style="<%= epistularium_account_indicator_style(account) %>">
+              <div class="notae-epistularium-account-heading">
+                <span class="notae-epistularium-account-indicator" aria-hidden="true"></span>
+                <div class="notae-epistularium-account-copy">
+                  <div class="notae-epistularium-account-name"><%= account.label %></div>
+                  <div class="notae-page-subtle"><%= account.provider.to_s.humanize %> · <%= account.shared_account? ? "Workspace shared" : "Personal" %></div>
+                </div>
+              </div>
+              <div class="notae-epistularium-folder-links">
+                <%= link_to workspace_epistularium_path(workspace_slug: @workspace.slug, account_id: account.id, mailbox: "inbox"),
+                            class: [ "notae-chip-button", ("is-active" if active_account && @selected_mailbox == "inbox") ].compact.join(" "),
+                            aria: { current: ("page" if active_account && @selected_mailbox == "inbox") } do %>
+                  Inbox (<%= counts.fetch("inbox", 0) %>)
+                <% end %>
+                <%= link_to workspace_epistularium_path(workspace_slug: @workspace.slug, account_id: account.id, mailbox: "sent"),
+                            class: [ "notae-chip-button", ("is-active" if active_account && @selected_mailbox == "sent") ].compact.join(" "),
+                            aria: { current: ("page" if active_account && @selected_mailbox == "sent") } do %>
+                  Sent (<%= counts.fetch("sent", 0) %>)
+                <% end %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-page-subtle">No Epistula connected yet.</p>
+        <%= link_to "Open settings", workspace_epistularium_settings_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+      <% end %>
+    </aside>
+
+    <section class="<%= [ "notae-auth-card", "notae-epistularium-pane", "notae-epistularium-pane-list", ("has-account-accent" if @selected_account.present?) ].compact.join(" ") %>"
+             <% if @selected_account.present? %>style="<%= epistularium_account_indicator_style(@selected_account) %>"<% end %>>
+      <div class="notae-home-card-head">
+        <h2><%= @selected_account.present? ? "#{@selected_account.label} · #{@selected_mailbox.titleize}" : "Messages" %></h2>
+      </div>
+      <% if @messages.any? %>
+        <ul class="notae-epistularium-message-list">
+          <% @messages.each do |message| %>
+            <li>
+              <%= link_to workspace_epistularium_path(
+                            workspace_slug: @workspace.slug,
+                            account_id: message.epistularium_account_id,
+                            mailbox: message.mailbox,
+                            message_id: message.id
+                          ),
+                          class: [ "notae-epistularium-message-link", ("is-active" if @selected_message == message) ].compact.join(" ") do %>
+                <div class="notae-epistularium-message-head">
+                  <strong class="notae-epistularium-message-from"><%= message.from_display %></strong>
+                  <span class="notae-page-subtle notae-epistularium-message-time"><%= l(message.primary_timestamp, format: :short) if message.primary_timestamp.present? %></span>
+                </div>
+                <div class="notae-epistularium-message-subject"><%= message.display_subject %></div>
+                <div class="notae-page-subtle notae-epistularium-message-snippet"><%= message.snippet.to_s.truncate(220) %></div>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% elsif @selected_account.present? %>
+        <p class="notae-page-subtle">No messages synced for this mailbox yet.</p>
+      <% else %>
+        <p class="notae-page-subtle">Select an Epistulum to view messages.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-auth-card notae-epistularium-pane notae-epistularium-pane-detail">
+      <% if @selected_message.present? %>
+        <% rendered_body_html =
+             if @selected_message.body_html.present?
+               Epistularium::Providers::BaseAdapter.sanitize_email_html(@selected_message.body_html)
+             elsif Epistularium::Providers::BaseAdapter.html_like_content?(@selected_message.body_text)
+               Epistularium::Providers::BaseAdapter.sanitize_email_html(@selected_message.body_text)
+             end %>
+        <div class="notae-home-card-head">
+          <h2><%= @selected_message.display_subject %></h2>
+        </div>
+        <div class="notae-epistularium-message-meta">
+          <div class="notae-epistularium-message-meta-row">
+            <span class="notae-epistularium-message-meta-label">From</span>
+            <span class="notae-epistularium-message-meta-value"><%= @selected_message.from_display %></span>
+          </div>
+          <div class="notae-epistularium-message-meta-row">
+            <span class="notae-epistularium-message-meta-label">To</span>
+            <span class="notae-epistularium-message-meta-value"><%= Array(@selected_message.to_recipients_json).map { |recipient| [ recipient["name"], recipient["email"] ].compact.join(" ").strip }.reject(&:blank?).join(", ").presence || "None" %></span>
+          </div>
+          <% if @selected_message.cc_recipients_json.any? %>
+            <div class="notae-epistularium-message-meta-row">
+              <span class="notae-epistularium-message-meta-label">CC</span>
+              <span class="notae-epistularium-message-meta-value"><%= Array(@selected_message.cc_recipients_json).map { |recipient| [ recipient["name"], recipient["email"] ].compact.join(" ").strip }.reject(&:blank?).join(", ") %></span>
+            </div>
+          <% end %>
+          <div class="notae-epistularium-message-meta-row">
+            <span class="notae-epistularium-message-meta-label">Mailbox</span>
+            <span class="notae-epistularium-message-meta-value"><%= @selected_message.mailbox.titleize %></span>
+          </div>
+          <% if @selected_message.primary_timestamp.present? %>
+            <div class="notae-epistularium-message-meta-row">
+              <span class="notae-epistularium-message-meta-label">Received</span>
+              <span class="notae-epistularium-message-meta-value"><%= l(@selected_message.primary_timestamp, format: :long) %></span>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="notae-epistularium-message-body">
+          <% if rendered_body_html.present? %>
+            <%= rendered_body_html.html_safe %>
+          <% else %>
+            <%= simple_format(h(@selected_message.body_text.to_s)) %>
+          <% end %>
+        </div>
+
+        <% if @thread_messages.many? %>
+          <div class="notae-epistularium-thread-context">
+            <h3>Related thread context</h3>
+            <ul class="notae-workspace-home-list">
+              <% @thread_messages.each do |message| %>
+                <li class="notae-workspace-home-list-item">
+                  <%= link_to message.display_subject,
+                              workspace_epistularium_path(workspace_slug: @workspace.slug, account_id: message.epistularium_account_id, mailbox: message.mailbox, message_id: message.id) %>
+                  <div class="notae-page-subtle"><%= message.from_display %> · <%= l(message.primary_timestamp, format: :short) if message.primary_timestamp.present? %></div>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <div class="notae-epistularium-ai-panel">
+          <h3>AI draft suggestions</h3>
+          <p class="notae-page-subtle">Suggestions remain draft-only and require review.</p>
+          <div class="notae-epistularium-ai-actions">
+            <%= button_to "Suggest reply draft",
+                          suggest_workspace_epistularium_message_path(workspace_slug: @workspace.slug, id: @selected_message.id),
+                          method: :post,
+                          params: { suggestion_type: "reply" },
+                          class: "notae-chip-button" %>
+            <%= button_to "Suggest task draft",
+                          suggest_workspace_epistularium_message_path(workspace_slug: @workspace.slug, id: @selected_message.id),
+                          method: :post,
+                          params: { suggestion_type: "task_ticket" },
+                          class: "notae-chip-button" %>
+            <%= button_to "Suggest calendar hold",
+                          suggest_workspace_epistularium_message_path(workspace_slug: @workspace.slug, id: @selected_message.id),
+                          method: :post,
+                          params: { suggestion_type: "calendar_hold" },
+                          class: "notae-chip-button" %>
+          </div>
+        </div>
+      <% else %>
+        <div class="notae-home-card-head">
+          <h2>Message preview</h2>
+        </div>
+        <p class="notae-page-subtle">Select a message to read it here and trigger AI draft suggestions.</p>
+      <% end %>
+    </section>
+  </div>
+</section>

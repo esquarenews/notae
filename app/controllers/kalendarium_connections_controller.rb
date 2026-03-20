@@ -425,7 +425,7 @@ class KalendariumConnectionsController < ApplicationController
   end
 
   def google_callback_redirect_uri
-    "#{request.base_url}#{kalendarium_google_callback_path}"
+    "#{external_app_base_url}#{kalendarium_google_callback_path}"
   end
 
   def redirect_for_google_callback_failure!(message)

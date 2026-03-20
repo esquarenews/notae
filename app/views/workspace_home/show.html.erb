@@ -130,9 +130,9 @@
             <div class="notae-workspace-page-card-cover">
               <% if page.cover_image.attached? %>
                 <%= image_tag page.cover_image, class: "notae-workspace-page-card-cover-image" %>
-              <% elsif (cover_asset = page_cover_asset_path(page.cover_preset_key)).present? %>
+              <% elsif (cover_style = page_cover_preset_style(page.cover_preset_key)).present? %>
                 <div class="notae-workspace-page-card-cover-preset"
-                     style="background-image: url('<%= asset_path(cover_asset) %>');"></div>
+                     style="<%= cover_style %>"></div>
               <% else %>
                 <div class="notae-workspace-page-card-cover-fallback"></div>
               <% end %>

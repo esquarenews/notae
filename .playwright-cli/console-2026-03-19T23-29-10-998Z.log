@@ -1,0 +1,2 @@
+[     366ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[     453ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25

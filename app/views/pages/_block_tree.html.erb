@@ -66,12 +66,11 @@
      data-block-list-parent-id-value="<%= parent_id %>">
   <% blocks.each_with_index do |block, index| %>
     <% is_embed_block = block.block_type == "embed" %>
-    <% is_media_block = %w[image file].include?(block.block_type) %>
+    <% is_media_block = %w[image video file].include?(block.block_type) %>
     <% block_color = block.color.to_s %>
     <% active_color = block_color.presence || "default" %>
     <% block_route_params = { workspace_slug: workspace.slug, page_id: page.id, id: block.id }.merge(embedded_page_params) %>
     <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
-    <% attach_url = attach_page_block_path(block_route_params) %>
     <article id="block_<%= block.id %>"
              class="notae-doc-block is-type-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-columns" if block.block_type.start_with?("columns_") %>"
              data-block-list-target="item"
@@ -177,6 +176,22 @@
                   <span class="notae-menu-item-icon">*</span>
                   <span class="notae-menu-item-label">Ask AI</span>
                 </button>
+                <%= button_to command_page_block_path(block_route_params),
+                              method: :post,
+                              params: { block_command: { command: "insert_media", target: "image" } },
+                              form_class: "notae-block-menu-inline-form",
+                              class: "notae-block-menu-item" do %>
+                  <span class="notae-menu-item-icon">Im</span>
+                  <span class="notae-menu-item-label">Embed image</span>
+                <% end %>
+                <%= button_to command_page_block_path(block_route_params),
+                              method: :post,
+                              params: { block_command: { command: "insert_media", target: "video" } },
+                              form_class: "notae-block-menu-inline-form",
+                              class: "notae-block-menu-item" do %>
+                  <span class="notae-menu-item-icon">Vd</span>
+                  <span class="notae-menu-item-label">Embed video</span>
+                <% end %>
               </div>
             </section>
             </div>
@@ -200,37 +215,13 @@
           <% end %>
         </div>
       <% elsif is_media_block %>
-        <div class="notae-doc-media">
-          <div data-controller="block-upload" data-block-upload-url-value="<%= attach_url %>">
-            <div data-block-upload-target="dropzone"
-                 data-action="dragover->block-upload#dragover dragleave->block-upload#dragleave drop->block-upload#drop click->block-upload#openPicker"
-                 class="notae-doc-dropzone">
-              Drag and drop <%= block.block_type %>
-            </div>
-            <%= tag.input type: "file",
-                          class: "hidden",
-                          data: { block_upload_target: "input", action: "change->block-upload#upload" },
-                          accept: (block.block_type == "image" ? "image/*" : nil) %>
-          </div>
-
-          <% if block.asset.attached? %>
-            <% if block.asset.content_type.to_s.start_with?("image/") %>
-              <%= image_tag url_for(block.asset), class: "notae-doc-image" %>
-            <% else %>
-              <p class="notae-doc-muted"><%= block.asset.filename.to_s %></p>
-            <% end %>
-            <div class="notae-doc-inline-actions">
-              <%= link_to "Download",
-                          download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
-                          class: "notae-chip-button" %>
-              <% if block.asset.content_type.to_s.start_with?("image/") %>
-                <%= link_to "Open",
-                            download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, disposition: "inline"),
-                            class: "notae-chip-button" %>
-              <% end %>
-            </div>
-          <% end %>
-        </div>
+        <%= render partial: "pages/block_media",
+                   locals: {
+                     workspace: workspace,
+                     page: page,
+                     block: block,
+                     embedded_page_params: embedded_page_params
+                   } %>
       <% else %>
         <div data-controller="block-editor"
              data-block-editor-url-value="<%= page_block_path(block_route_params) %>"

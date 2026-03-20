@@ -15,7 +15,15 @@ module Search
     def call
       return [] if query.blank?
 
-      merge_and_rank_results(page_results + block_results + db_row_results + kalendarium_event_results + meeting_session_results + semantic_chunk_results)
+      merge_and_rank_results(
+        page_results +
+        block_results +
+        db_row_results +
+        kalendarium_event_results +
+        meeting_session_results +
+        epistularium_message_results +
+        semantic_chunk_results
+      )
     end
 
     private
@@ -115,6 +123,25 @@ module Search
       end
     end
 
+    def epistularium_message_results
+      return [] unless ActiveRecord::Base.connection.data_source_exists?("epistularium_messages")
+
+      Pundit.policy_scope!(user, EpistulariumMessage)
+            .for_workspace(workspace)
+            .search_full_text(query)
+            .includes(:epistularium_account)
+            .limit(15)
+            .map do |message|
+        Result.new(
+          kind: "Email",
+          title: message.display_subject,
+          excerpt: highlighted_excerpt([ message.from_display, message.snippet, message.body_text ].compact.join(" · ")),
+          url: Rails.application.routes.url_helpers.workspace_epistularium_message_path(workspace_slug: workspace.slug, id: message.id),
+          score: 18
+        )
+      end
+    end
+
     def semantic_chunk_results
       return [] unless user.openai_api_key_configured?
       return [] unless semantic_ai_allowed?
@@ -162,6 +189,10 @@ module Search
       row_ids = Pundit.policy_scope!(user, DbRow).for_workspace(workspace).active.select(:id)
       event_ids = Pundit.policy_scope!(user, KalendariumEvent).for_workspace(workspace).select(:id)
       meeting_ids = Pundit.policy_scope!(user, MeetingSession).for_workspace(workspace).select(:id)
+      message_ids =
+        if ActiveRecord::Base.connection.data_source_exists?("epistularium_messages")
+          Pundit.policy_scope!(user, EpistulariumMessage).for_workspace(workspace).select(:id)
+        end
       workspace_scope = SearchChunk.for_workspace(workspace)
 
       SearchChunk.accessible_scope_from(
@@ -169,7 +200,8 @@ module Search
         page_ids: page_ids,
         row_ids: row_ids,
         event_ids: event_ids,
-        meeting_ids: meeting_ids
+        meeting_ids: meeting_ids,
+        message_ids: message_ids
       )
     end
 
@@ -244,6 +276,15 @@ module Search
           title: session.title,
           excerpt: highlighted_excerpt(chunk.text),
           url: Rails.application.routes.url_helpers.workspace_meetings_path(workspace_slug: workspace.slug, anchor: "meeting_session_#{session.id}"),
+          score: 30 + (similarity * 12)
+        )
+      elsif SearchChunk.reference_column_available?(:epistularium_message_id) && chunk.epistularium_message.present?
+        message = chunk.epistularium_message
+        Result.new(
+          kind: "Email",
+          title: message.display_subject,
+          excerpt: highlighted_excerpt(chunk.text),
+          url: Rails.application.routes.url_helpers.workspace_epistularium_message_path(workspace_slug: workspace.slug, id: message.id),
           score: 30 + (similarity * 12)
         )
       end

@@ -196,6 +196,51 @@ RSpec.describe Search::AssistantQueryService do
     expect(response.sources.first[:title]).to eq("Imported launch brief")
   end
 
+  it "uses epistularium messages as live AI context when email chunks are missing" do
+    user = User.create!(email: "assistant-email-fallback@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Assistant Email Fallback", slug: "assistant-email-fallback")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+    EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "email-1",
+      subject: "Vendor renewal",
+      from_name: "Sam",
+      from_email: "sam@example.com",
+      body_text: "The heliotrope vendor renewal is due next Tuesday."
+    )
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:prompt]).to include("heliotrope")
+      expect(args[:prompt]).to include("Vendor renewal")
+      {
+        text: "Yes, the heliotrope vendor renewal is due next Tuesday [1].",
+        usage: { prompt_tokens: 90, completion_tokens: 18, total_tokens: 108 }
+      }
+    end
+
+    response = described_class.new(
+      user: user,
+      workspace: workspace,
+      prompt: "What is due for heliotrope in this workspace?",
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+    ).call
+
+    expect(response).to be_present
+    expect(response.answer).to include("heliotrope")
+    expect(response.sources.first[:title]).to eq("Vendor renewal")
+  end
+
   it "keeps workspace AI queries working when meeting chunk columns are unavailable" do
     user = User.create!(email: "assistant-schema-fallback@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Assistant Schema Fallback", slug: "assistant-schema-fallback")

@@ -233,6 +233,50 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to eq("file content")
   end
 
+  it "returns rendered media html after image upload so the nota can update in place" do
+    owner = User.create!(email: "blocks-image-upload-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Image blocks", slug: "image-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Images")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "image")
+    sign_in owner
+
+    Tempfile.create([ "block-upload", ".png" ]) do |file|
+      file.write("fake-png-data")
+      file.rewind
+      uploaded_file = Rack::Test::UploadedFile.new(file.path, "image/png")
+
+      patch attach_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+            params: { block: { file: uploaded_file } },
+            headers: { "ACCEPT" => "application/json" }
+    end
+
+    expect(response).to have_http_status(:ok)
+    payload = JSON.parse(response.body)
+    expect(payload["html"]).to include("notae-doc-image")
+    expect(payload["html"]).not_to include("notae-doc-dropzone")
+    expect(payload["html"]).to include('target="_blank"')
+    expect(payload["html"]).to include('rel="noopener noreferrer"')
+    expect(payload["page_updated_at"]).to be_present
+    expect(block.reload.asset).to be_attached
+  end
+
+  it "renders valid upload controller bindings for unattached media blocks" do
+    owner = User.create!(email: "blocks-upload-bindings-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Upload bindings", slug: "upload-bindings")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Upload bindings page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "image")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('data-controller="block-upload"')
+    expect(response.body).to include(%(data-block-upload-url-value="/w/#{workspace.slug}/pages/#{page.id}/blocks/#{block.id}/attach"))
+    expect(response.body).not_to include("&quot;block-upload&quot;")
+  end
+
   it "blocks cross-workspace file upload and download access" do
     owner = User.create!(email: "blocks-file-access-owner@example.com", password: "password123")
     intruder = User.create!(email: "blocks-file-access-intruder@example.com", password: "password123")
@@ -282,6 +326,57 @@ RSpec.describe "Blocks", type: :request do
 
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
     expect(block.reload.embed_url).to be_nil
+  end
+
+  it "renders media insertion actions in the block menu and previews uploaded video blocks" do
+    owner = User.create!(email: "blocks-media-menu-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Media menu", slug: "media-menu")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Media menu page")
+    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    video_block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "video")
+    Tempfile.create([ "block-video-preview", ".mp4" ]) do |file|
+      file.write("fake video payload")
+      file.rewind
+      video_block.asset.attach(io: file, filename: "clip.mp4", content_type: "video/mp4")
+    end
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Embed image")
+    expect(response.body).to include("Embed video")
+    expect(response.body).to include("notae-doc-video")
+    expect(response.body).not_to include("Drag and drop video")
+    expect(response.body).not_to include("accept=\"video/*\"")
+  end
+
+  it "creates image and video blocks from the block menu without overwriting the current text block" do
+    owner = User.create!(email: "blocks-media-insert-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Media insert", slug: "media-insert")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Media insert page")
+    first = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    second = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "heading_1")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: first.id),
+         params: { block_command: { command: "insert_media", target: "image" } }
+
+    image_block = page.blocks.active.find_by(block_type: "image")
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "block_#{image_block.id}"))
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: image_block.id),
+         params: { block_command: { command: "insert_media", target: "video" } }
+
+    video_block = page.blocks.active.find_by(block_type: "video")
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "block_#{video_block.id}"))
+
+    ordered_blocks = page.blocks.active.roots.ordered.to_a
+    expect(ordered_blocks.map(&:id)).to eq([ first.id, image_block.id, video_block.id, second.id ])
+    expect(first.reload.block_type).to eq("paragraph")
+    expect(second.reload.block_type).to eq("heading_1")
   end
 
   it "supports all turn-into menu command targets including page creation and synced blocks" do

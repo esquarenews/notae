@@ -176,4 +176,33 @@ RSpec.describe Search::WorkspaceSearchService do
     expect(results.map(&:kind)).to include("Meeting session")
     expect(results.map(&:title)).to include("Weekly sync")
   end
+
+  it "returns epistularium emails from lexical search" do
+    user = User.create!(email: "semantic-email-search@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Semantic Email Search", slug: "semantic-email-search")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+    EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "email-1",
+      subject: "Procurement renewal",
+      from_email: "sam@example.com",
+      body_text: "The heliotrope procurement renewal is due next week."
+    )
+
+    results = described_class.new(user: user, workspace: workspace, query: "heliotrope renewal").call
+
+    expect(results.map(&:kind)).to include("Email")
+    expect(results.map(&:title)).to include("Procurement renewal")
+  end
 end
