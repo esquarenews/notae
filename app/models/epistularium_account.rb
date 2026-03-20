@@ -4,6 +4,7 @@ class EpistulariumAccount < ApplicationRecord
   PROVIDERS = %w[gmail imap amazon_workmail].freeze
   STATUSES = %w[connected sync_error disconnected].freeze
   OWNER_TYPES = %w[User Workspace].freeze
+  DEFAULT_SYNC_ACTIVITY_TIMEOUT = 20.minutes
 
   encrypts :access_token
   encrypts :refresh_token
@@ -79,6 +80,54 @@ class EpistulariumAccount < ApplicationRecord
 
   def sent_mailbox
     settings_json.to_h["sent_mailbox"].to_s.strip.presence
+  end
+
+  def sync_started_at
+    parsed_settings_time("sync_started_at")
+  end
+
+  def sync_enqueued_at
+    parsed_settings_time("sync_enqueued_at")
+  end
+
+  def sync_active?(stale_after: DEFAULT_SYNC_ACTIVITY_TIMEOUT)
+    started_at = sync_started_at
+    started_at.present? && started_at > stale_after.ago
+  end
+
+  def stale_sync?(stale_after: DEFAULT_SYNC_ACTIVITY_TIMEOUT)
+    started_at = sync_started_at
+    started_at.present? && started_at <= stale_after.ago
+  end
+
+  def sync_recently_enqueued?(within:)
+    return false unless within.to_i.positive?
+
+    enqueued_at = sync_enqueued_at
+    enqueued_at.present? && enqueued_at > within.ago
+  end
+
+  def mark_sync_started!(at: Time.current)
+    update_sync_setting!("sync_started_at", normalize_sync_timestamp(at))
+  end
+
+  def clear_sync_started!
+    clear_sync_setting!("sync_started_at")
+  end
+
+  def mark_sync_enqueued!(at: Time.current)
+    update_sync_setting!("sync_enqueued_at", normalize_sync_timestamp(at))
+  end
+
+  def clear_sync_enqueued!
+    clear_sync_setting!("sync_enqueued_at")
+  end
+
+  def clear_stale_sync_state!(stale_after: DEFAULT_SYNC_ACTIVITY_TIMEOUT)
+    return false unless stale_sync?(stale_after: stale_after)
+
+    clear_sync_started!
+    true
   end
 
   private
@@ -161,5 +210,43 @@ class EpistulariumAccount < ApplicationRecord
     else
       "IMAP host looks like an SMTP server. Use the incoming IMAP endpoint on port 993."
     end
+  end
+
+  def parsed_settings_time(key)
+    value = settings_json.to_h[key].to_s.strip
+    return nil if value.blank?
+
+    Time.iso8601(value)
+  rescue ArgumentError
+    nil
+  end
+
+  def normalize_sync_timestamp(value)
+    timestamp =
+      case value
+      when String
+        Time.iso8601(value)
+      else
+        value.respond_to?(:iso8601) ? value : nil
+      end
+    timestamp&.utc&.iso8601
+  rescue ArgumentError
+    nil
+  end
+
+  def update_sync_setting!(key, value)
+    updated_settings = settings_json.to_h.deep_dup
+    if value.present?
+      updated_settings[key] = value
+    else
+      updated_settings.delete(key)
+    end
+
+    update_columns(settings_json: updated_settings, updated_at: Time.current)
+    self.settings_json = updated_settings
+  end
+
+  def clear_sync_setting!(key)
+    update_sync_setting!(key, nil)
   end
 end

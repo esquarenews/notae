@@ -5,7 +5,15 @@
      case block.block_type
      when "image" then "image/*"
      when "video" then "video/*"
+     when "file" then "image/*,video/*,audio/*"
      end %>
+<% dropzone_label =
+     if block.block_type == "file"
+       "media"
+     else
+       block.block_type
+     end %>
+<% openable_media = block.asset.attached? && block.asset.content_type.to_s.start_with?("image/", "video/", "audio/") %>
 
 <% if block.asset.attached? %>
   <div class="notae-doc-media">
@@ -16,7 +24,7 @@
     <div data-block-upload-target="dropzone"
          data-action="dragover->block-upload#dragover dragleave->block-upload#dragleave drop->block-upload#drop click->block-upload#openPicker"
          class="notae-doc-dropzone">
-      Drag and drop <%= block.block_type %>
+      Drag and drop <%= dropzone_label %>
     </div>
     <%= tag.input type: "file",
                   class: "hidden",
@@ -29,6 +37,8 @@
       <%= image_tag url_for(block.asset), class: "notae-doc-image" %>
     <% elsif block.asset.content_type.to_s.start_with?("video/") %>
       <%= video_tag url_for(block.asset), controls: true, preload: "metadata", class: "notae-doc-video" %>
+    <% elsif block.asset.content_type.to_s.start_with?("audio/") %>
+      <%= audio_tag url_for(block.asset), controls: true, preload: "metadata", class: "notae-doc-audio" %>
     <% else %>
       <p class="notae-doc-muted"><%= block.asset.filename.to_s %></p>
     <% end %>
@@ -36,7 +46,7 @@
       <%= link_to "Download",
                   download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
                   class: "notae-chip-button" %>
-      <% if block.asset.content_type.to_s.start_with?("image/") || block.asset.content_type.to_s.start_with?("video/") %>
+      <% if openable_media %>
         <%= link_to "Open",
                     download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, disposition: "inline"),
                     class: "notae-chip-button",

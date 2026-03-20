@@ -79,6 +79,11 @@ class Block < ApplicationRecord
     metadata["notae_synced_source_id"].presence
   end
 
+  def layout_columns_count
+    count = metadata["notae_columns_count"].to_i
+    count.positive? ? count : nil
+  end
+
   def synced_copy?
     synced_source_block_id.present? && synced_source_block_id.to_s != id.to_s
   end

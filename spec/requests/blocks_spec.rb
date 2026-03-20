@@ -328,31 +328,39 @@ RSpec.describe "Blocks", type: :request do
     expect(block.reload.embed_url).to be_nil
   end
 
-  it "renders media insertion actions in the block menu and previews uploaded video blocks" do
+  it "renders a single media insertion action and previews uploaded media blocks" do
     owner = User.create!(email: "blocks-media-menu-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Media menu", slug: "media-menu")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Media menu page")
     Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
     video_block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "video")
+    audio_block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "file")
     Tempfile.create([ "block-video-preview", ".mp4" ]) do |file|
       file.write("fake video payload")
       file.rewind
       video_block.asset.attach(io: file, filename: "clip.mp4", content_type: "video/mp4")
+    end
+    Tempfile.create([ "block-audio-preview", ".mp3" ]) do |file|
+      file.write("fake audio payload")
+      file.rewind
+      audio_block.asset.attach(io: file, filename: "clip.mp3", content_type: "audio/mpeg")
     end
     sign_in owner
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Embed image")
-    expect(response.body).to include("Embed video")
+    expect(response.body).to include("Add media")
+    expect(response.body).not_to include("Embed image")
+    expect(response.body).not_to include("Embed video")
     expect(response.body).to include("notae-doc-video")
-    expect(response.body).not_to include("Drag and drop video")
-    expect(response.body).not_to include("accept=\"video/*\"")
+    expect(response.body).to include("notae-doc-audio")
+    expect(response.body).not_to include("Drag and drop media")
+    expect(response.body).not_to include("accept=\"image/*,video/*,audio/*\"")
   end
 
-  it "creates image and video blocks from the block menu without overwriting the current text block" do
+  it "creates a media block from the block menu without overwriting the current text block" do
     owner = User.create!(email: "blocks-media-insert-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Media insert", slug: "media-insert")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -362,21 +370,20 @@ RSpec.describe "Blocks", type: :request do
     sign_in owner
 
     post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: first.id),
-         params: { block_command: { command: "insert_media", target: "image" } }
+         params: { block_command: { command: "insert_media", target: "media" } }
 
-    image_block = page.blocks.active.find_by(block_type: "image")
-    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "block_#{image_block.id}"))
-
-    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: image_block.id),
-         params: { block_command: { command: "insert_media", target: "video" } }
-
-    video_block = page.blocks.active.find_by(block_type: "video")
-    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "block_#{video_block.id}"))
+    media_block = page.blocks.active.find_by(block_type: "file")
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "block_#{media_block.id}"))
 
     ordered_blocks = page.blocks.active.roots.ordered.to_a
-    expect(ordered_blocks.map(&:id)).to eq([ first.id, image_block.id, video_block.id, second.id ])
+    expect(ordered_blocks.map(&:id)).to eq([ first.id, media_block.id, second.id ])
     expect(first.reload.block_type).to eq("paragraph")
     expect(second.reload.block_type).to eq("heading_1")
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response.body).to include("Drag and drop media")
+    expect(response.body).to include("accept=\"image/*,video/*,audio/*\"")
   end
 
   it "supports all turn-into menu command targets including page creation and synced blocks" do
@@ -461,6 +468,40 @@ RSpec.describe "Blocks", type: :request do
     post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
          params: { block_command: { command: "turn_into", target: "bulleted_list" } }
     expect(block.reload.block_type).to eq("paragraph")
+  end
+
+  it "preserves media blocks when applying a column layout turn-into option" do
+    owner = User.create!(email: "blocks-media-columns-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Media columns", slug: "media-columns")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Media columns page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "image")
+    sign_in owner
+
+    Tempfile.create([ "block-image-columns", ".png" ]) do |file|
+      file.write("fake image payload")
+      file.rewind
+      block.asset.attach(io: file, filename: "layout.png", content_type: "image/png")
+    end
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "columns_3" } }
+
+    expect(response).to have_http_status(:redirect)
+    expect(block.reload.block_type).to eq("image")
+    expect(block.layout_columns_count).to eq(3)
+    expect(block.asset).to be_attached
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response.body).to include("notae-doc-image")
+    expect(response.body).to include("is-layout-columns-3")
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "columns_3" } }
+
+    expect(block.reload.layout_columns_count).to be_nil
+    expect(block.asset).to be_attached
   end
 
   it "supports color, duplicate, move, delete, and suggest edits commands" do

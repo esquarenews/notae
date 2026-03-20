@@ -89,4 +89,33 @@ RSpec.describe EpistulariumAccount, type: :model do
     expect(account).not_to be_valid
     expect(account.errors.full_messages.join).to include("full email address")
   end
+
+  it "tracks persistent sync state in settings_json for cross-process recovery" do
+    user, workspace = build_workspace_stack(suffix: "sync-state")
+    account = described_class.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+
+    account.mark_sync_enqueued!(at: 5.minutes.ago)
+    account.mark_sync_started!(at: 10.minutes.ago)
+    account.reload
+
+    expect(account.sync_recently_enqueued?(within: 10.minutes)).to eq(true)
+    expect(account.sync_active?(stale_after: 20.minutes)).to eq(true)
+
+    account.mark_sync_started!(at: 25.minutes.ago)
+
+    expect(account.reload.stale_sync?(stale_after: 20.minutes)).to eq(true)
+    expect(account.clear_stale_sync_state!(stale_after: 20.minutes)).to eq(true)
+
+    expect(account.reload.sync_started_at).to be_nil
+    expect(account.sync_enqueued_at).to be_present
+  end
 end

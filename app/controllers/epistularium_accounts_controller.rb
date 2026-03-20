@@ -193,10 +193,13 @@ class EpistulariumAccountsController < ApplicationController
 
   def start_sync!(account)
     mode = preferred_sync_mode_for(account)
-    enqueued = Epistularium::SyncEnqueueService.new(account: account, mode: mode).call
+    result = Epistularium::SyncEnqueueService.new(account: account, mode: mode, throttle: 0).call
     notice =
-      if enqueued
+      case result
+      when Epistularium::SyncEnqueueService::ENQUEUE_RESULTS[:enqueued]
         mode.present? ? "Recent mail sync queued. Full backfill will continue in the background." : "Sync queued."
+      when Epistularium::SyncEnqueueService::ENQUEUE_RESULTS[:already_running]
+        "Sync is already in progress."
       else
         "Sync already queued."
       end

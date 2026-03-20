@@ -67,4 +67,34 @@ RSpec.describe Epistularium::DueSyncScheduler do
       described_class.new(accounts: [ account ]).call
     end.not_to have_enqueued_job(Epistularium::SyncConnectionJob)
   end
+
+  it "does not enqueue a duplicate sync while the account is actively syncing" do
+    account = build_account(suffix: "active", last_synced_at: 11.minutes.ago)
+    account.mark_sync_started!(at: 2.minutes.ago)
+
+    expect do
+      described_class.new(accounts: [ account ]).call
+    end.not_to have_enqueued_job(Epistularium::SyncConnectionJob)
+  end
+
+  it "recovers stale sync state and queues the overdue sync again" do
+    account = build_account(suffix: "stale-lock", last_synced_at: 11.minutes.ago)
+    EpistulariumMessage.create!(
+      workspace: account.workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-stale-lock",
+      mailbox: "inbox",
+      subject: "Existing message",
+      from_name: "Alex",
+      from_email: "alex@example.com",
+      body_text: "Existing body"
+    )
+    account.mark_sync_started!(at: 25.minutes.ago)
+
+    expect do
+      described_class.new(accounts: [ account ]).call
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
+
+    expect(account.reload.sync_started_at).to be_nil
+  end
 end

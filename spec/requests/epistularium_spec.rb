@@ -332,6 +332,38 @@ RSpec.describe "Epistularium", type: :request do
     end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
   end
 
+  it "recovers stale sync state when the user manually clicks Sync" do
+    user, workspace, account, _message = build_stack(suffix: "manual-stale-sync")
+    account.update!(last_synced_at: 2.hours.ago, status: "sync_error")
+    account.mark_sync_started!(at: 30.minutes.ago)
+    clear_enqueued_jobs
+    sign_in user
+
+    expect do
+      post sync_epistularium_account_path(workspace_slug: workspace.slug, id: account.id)
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
+
+    expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
+    follow_redirect!
+    expect(response.body).to include("Sync queued")
+    expect(account.reload.sync_started_at).to be_nil
+  end
+
+  it "shows when a fresh sync is already running instead of queueing duplicates" do
+    user, workspace, account, _message = build_stack(suffix: "manual-active-sync")
+    account.mark_sync_started!(at: 2.minutes.ago)
+    clear_enqueued_jobs
+    sign_in user
+
+    expect do
+      post sync_epistularium_account_path(workspace_slug: workspace.slug, id: account.id)
+    end.not_to have_enqueued_job(Epistularium::SyncConnectionJob)
+
+    expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
+    follow_redirect!
+    expect(response.body).to include("Sync is already in progress.")
+  end
+
   it "honors the requested account and message when multiple Epistula are present" do
     user, workspace, account, _message = build_stack(suffix: "selection")
     other_account = EpistulariumAccount.create!(

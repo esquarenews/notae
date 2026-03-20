@@ -8097,6 +8097,22 @@ body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror { color: #fca5
   gap: 0.46rem;
 }
 
+.notae-doc-block.is-layout-columns-2 .notae-doc-media {
+  width: min(100%, calc((100% - 1rem) / 2));
+}
+
+.notae-doc-block.is-layout-columns-3 .notae-doc-media {
+  width: min(100%, calc((100% - 2rem) / 3));
+}
+
+.notae-doc-block.is-layout-columns-4 .notae-doc-media {
+  width: min(100%, calc((100% - 3rem) / 4));
+}
+
+.notae-doc-block.is-layout-columns-5 .notae-doc-media {
+  width: min(100%, calc((100% - 4rem) / 5));
+}
+
 .notae-doc-inline-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -8143,6 +8159,10 @@ body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror { color: #fca5
   background: #000;
 }
 
+.notae-doc-audio {
+  width: 100%;
+}
+
 .notae-doc-inline-actions {
   display: flex;
   align-items: center;
@@ -8164,7 +8184,8 @@ body.notae-theme-dark .notae-doc-embed {
 body.notae-theme-dark .notae-doc-dropzone,
 body.notae-theme-dark .notae-doc-embed-frame,
 body.notae-theme-dark .notae-doc-image,
-body.notae-theme-dark .notae-doc-video {
+body.notae-theme-dark .notae-doc-video,
+body.notae-theme-dark .notae-doc-audio {
   border-color: var(--notae-border);
 }
 
@@ -8187,7 +8208,8 @@ body.notae-theme-dark .notae-doc-muted {
   body.notae-theme-system .notae-doc-dropzone,
   body.notae-theme-system .notae-doc-embed-frame,
   body.notae-theme-system .notae-doc-image,
-  body.notae-theme-system .notae-doc-video {
+  body.notae-theme-system .notae-doc-video,
+  body.notae-theme-system .notae-doc-audio {
     border-color: var(--notae-border);
   }
 

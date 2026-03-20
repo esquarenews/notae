@@ -75,6 +75,9 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     expect do
       described_class.perform_now(account.id, mode: "bootstrap")
     end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
+
+    queued_runs = enqueued_jobs.select { |job| job[:job] == described_class && job[:args].first == account.id }
+    expect(queued_runs.map { |job| job[:at].present? }).to include(true)
   end
 
   it "bootstraps Gmail with a small incremental sync before queueing full backfill" do
@@ -119,5 +122,44 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     expect do
       described_class.perform_now(account.id, mode: "full_backfill")
     end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
+  end
+
+  it "queues a recurring follow-up sync 10 minutes after a successful run" do
+    account = build_account(suffix: "recurring")
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      max_messages_per_mailbox: 200,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    described_class.perform_now(account.id)
+
+    recurring_job = enqueued_jobs.find do |job|
+      job[:job] == described_class &&
+        job[:args] == [ account.id ] &&
+        job[:at].present?
+    end
+
+    expect(recurring_job).to be_present
+    expect(recurring_job[:at]).to be_within(5.seconds).of(10.minutes.from_now.to_f)
+  end
+
+  it "clears stale sync state before claiming a new run" do
+    account = build_account(suffix: "stale-state")
+    account.mark_sync_started!(at: 30.minutes.ago)
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      max_messages_per_mailbox: 200,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    described_class.perform_now(account.id)
+
+    expect(account.reload.sync_started_at).to be_nil
+    expect(sync_service).to have_received(:call)
   end
 end

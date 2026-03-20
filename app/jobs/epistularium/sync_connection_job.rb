@@ -3,18 +3,22 @@ module Epistularium
     queue_as :default
 
     AUTH_FAILURE_AUTO_DISABLE_MESSAGE = "Auto-disabled after authentication failure. Update credentials and re-enable account.".freeze
-    LOCK_TTL = 10.minutes
+    AUTO_SYNC_INTERVAL = 10.minutes
+    STALE_SYNC_AFTER = 20.minutes
     BOOTSTRAP_MESSAGE_LIMIT = 50
     FULL_BACKFILL_MESSAGE_LIMIT = 200
     FOLLOW_UP_DELAY = 2.seconds
 
     def perform(account_id, mode: nil)
+      claimed = false
       account = EpistulariumAccount.find_by(id: account_id)
       return if account.blank?
-      return unless acquire_sync_lock(account.id)
+      claimed = claim_sync!(account)
+      return unless claimed
 
       result = Epistularium::ConnectionSyncService.new(account: account, **sync_options_for(account: account, mode: mode)).call
       enqueue_follow_up_sync(account: account, mode: mode, result: result)
+      enqueue_recurring_sync(account)
     rescue StandardError => error
       raise unless permanent_auth_failure?(error)
 
@@ -25,7 +29,7 @@ module Epistularium
       )
       Rails.logger.warn("Epistularium sync auto-disabled account=#{account.id} provider=#{account.provider}: #{error.class}: #{error.message}")
     ensure
-      release_sync_lock(account_id)
+      release_sync_state(account_id) if claimed
     end
 
     private
@@ -49,10 +53,33 @@ module Epistularium
 
     def enqueue_follow_up_sync(account:, mode:, result:)
       if mode.to_s == "bootstrap"
-        self.class.set(wait: FOLLOW_UP_DELAY).perform_later(account.id, mode: "full_backfill")
+        Epistularium::SyncEnqueueService.new(
+          account: account,
+          mode: "full_backfill",
+          wait: FOLLOW_UP_DELAY,
+          throttle: 0,
+          allow_while_syncing: true
+        ).call
       elsif %w[imap amazon_workmail].include?(account.provider) && result.is_a?(Hash) && result[:backfill_remaining]
-        self.class.set(wait: FOLLOW_UP_DELAY).perform_later(account.id, mode: "full_backfill")
+        Epistularium::SyncEnqueueService.new(
+          account: account,
+          mode: "full_backfill",
+          wait: FOLLOW_UP_DELAY,
+          throttle: 0,
+          allow_while_syncing: true
+        ).call
       end
+    end
+
+    def enqueue_recurring_sync(account)
+      return unless account.enabled?
+
+      Epistularium::SyncEnqueueService.new(
+        account: account,
+        wait: AUTO_SYNC_INTERVAL,
+        throttle: AUTO_SYNC_INTERVAL,
+        allow_while_syncing: true
+      ).call
     end
 
     def batched_imap_backfill_required?(account)
@@ -72,23 +99,26 @@ module Epistularium
         message.include?("access denied")
     end
 
-    def acquire_sync_lock(account_id)
-      Rails.cache.write(sync_lock_key(account_id), true, unless_exist: true, expires_in: LOCK_TTL)
-    rescue NotImplementedError
-      return false if Rails.cache.read(sync_lock_key(account_id)).present?
+    def claim_sync!(account)
+      claimed = false
 
-      Rails.cache.write(sync_lock_key(account_id), true, expires_in: LOCK_TTL)
-      true
+      account.with_lock do
+        account.reload
+        account.clear_stale_sync_state!(stale_after: STALE_SYNC_AFTER)
+        next if account.sync_active?(stale_after: STALE_SYNC_AFTER)
+
+        account.mark_sync_started!
+        claimed = true
+      end
+
+      claimed
     end
 
-    def release_sync_lock(account_id)
-      Rails.cache.delete(sync_lock_key(account_id))
-    rescue StandardError
-      nil
-    end
+    def release_sync_state(account_id)
+      account = EpistulariumAccount.find_by(id: account_id)
+      return if account.blank?
 
-    def sync_lock_key(account_id)
-      "epistularium:sync_connection:#{account_id}"
+      account.clear_sync_started!
     end
 
     def bootstrap_sync_options_for(account)

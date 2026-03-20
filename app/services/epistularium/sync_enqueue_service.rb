@@ -1,6 +1,11 @@
 module Epistularium
   class SyncEnqueueService
     DEFAULT_THROTTLE = 1.minute
+    ENQUEUE_RESULTS = {
+      enqueued: :enqueued,
+      already_running: :already_running,
+      already_queued: :already_queued
+    }.freeze
 
     def self.preferred_mode_for(account)
       return nil if account.blank?
@@ -11,18 +16,34 @@ module Epistularium
       nil
     end
 
-    def initialize(account:, mode: nil, throttle: DEFAULT_THROTTLE)
+    def initialize(account:, mode: nil, throttle: DEFAULT_THROTTLE, wait: nil, allow_while_syncing: false)
       @account = account
       @mode = mode.presence
       @throttle = throttle
+      @wait = wait
+      @allow_while_syncing = allow_while_syncing
     end
 
     def call
-      return false if throttled? && recently_enqueued?
+      result = nil
 
-      mark_enqueued! if throttled?
-      enqueue_job!
-      true
+      account.with_lock do
+        account.reload
+        account.clear_stale_sync_state!
+
+        result =
+          if !allow_while_syncing && account.sync_active?
+            ENQUEUE_RESULTS[:already_running]
+          elsif throttled? && recently_enqueued?
+            ENQUEUE_RESULTS[:already_queued]
+          else
+            mark_enqueued!
+            ENQUEUE_RESULTS[:enqueued]
+          end
+      end
+
+      enqueue_job! if result == ENQUEUE_RESULTS[:enqueued]
+      result
     rescue StandardError
       clear_mark!
       raise
@@ -30,13 +51,15 @@ module Epistularium
 
     private
 
-    attr_reader :account, :mode, :throttle
+    attr_reader :account, :mode, :throttle, :wait, :allow_while_syncing
 
     def enqueue_job!
+      job = wait.present? ? Epistularium::SyncConnectionJob.set(wait: wait) : Epistularium::SyncConnectionJob
+
       if mode.present?
-        Epistularium::SyncConnectionJob.perform_later(account.id, mode: mode)
+        job.perform_later(account.id, mode: mode)
       else
-        Epistularium::SyncConnectionJob.perform_later(account.id)
+        job.perform_later(account.id)
       end
     end
 
@@ -45,25 +68,15 @@ module Epistularium
     end
 
     def recently_enqueued?
-      Rails.cache.read(cache_key).present?
-    rescue StandardError
-      false
+      account.sync_recently_enqueued?(within: throttle)
     end
 
     def mark_enqueued!
-      Rails.cache.write(cache_key, true, expires_in: throttle)
-    rescue StandardError
-      nil
+      account.mark_sync_enqueued!
     end
 
     def clear_mark!
-      Rails.cache.delete(cache_key)
-    rescue StandardError
-      nil
-    end
-
-    def cache_key
-      "epistularium:sync-enqueue:#{account.id}"
+      account.clear_sync_enqueued!
     end
   end
 end

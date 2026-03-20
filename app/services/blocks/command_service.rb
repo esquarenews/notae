@@ -99,6 +99,12 @@ module Blocks
       else
         mapped_type = TURN_INTO_BLOCK_TYPE_MAP[target]
         raise ArgumentError, "Unsupported turn-into target." if mapped_type.blank?
+
+        if %w[image video file].include?(block.block_type) && mapped_type.start_with?("columns_")
+          update_media_layout!(mapped_type)
+          return
+        end
+
         mapped_type = "paragraph" if mapped_type == block.block_type
 
         payload = build_content_payload_for(mapped_type)
@@ -165,8 +171,7 @@ module Blocks
     def insert_media!
       new_block_type =
         case target
-        when "image" then "image"
-        when "video" then "video"
+        when "image", "video", "file", "media" then "file"
         else
           raise ArgumentError, "Unsupported media target."
         end
@@ -186,7 +191,22 @@ module Blocks
       )
 
       @focus_anchor = "block_#{inserted_block.id}"
-      @notice = "#{new_block_type.titleize} block added."
+      @notice = "Media block added."
+    end
+
+    def update_media_layout!(mapped_type)
+      payload = deep_dup_json(block.content_json)
+      selected_count = mapped_type.split("_").last.to_i
+
+      if block.layout_columns_count == selected_count
+        payload.delete("notae_columns_count")
+      else
+        payload["notae_columns_count"] = selected_count
+      end
+
+      block.update!(content_json: payload)
+      @notice = "Block updated."
+      @synced_source_block = synced_root_for(block)
     end
 
     def suggest_edits!
