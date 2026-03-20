@@ -69,6 +69,9 @@
                 <% if account.last_error.present? %>
                   <p class="notae-page-subtle"><%= account.last_error %></p>
                 <% end %>
+                <% if account.sync_queue_stalled?(stale_after: 2.minutes) %>
+                  <p class="notae-page-subtle">Queued sync looks stalled. Check the background worker and the 10-minute Epistularium sync timer.</p>
+                <% end %>
                 <% if account.provider == "gmail" %>
                   <%= link_to "Re-authorize Google",
                               google_authorize_epistularium_accounts_path(workspace_slug: @workspace.slug, account_id: account.id, label: account.label),

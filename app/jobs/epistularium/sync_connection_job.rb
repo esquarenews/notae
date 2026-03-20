@@ -40,6 +40,8 @@ module Epistularium
         bootstrap_sync_options_for(account)
       when "full_backfill"
         full_backfill_sync_options_for(account)
+      when "incremental"
+        incremental_sync_options_for(account)
       else
         return {
           full_backfill: true,
@@ -108,6 +110,7 @@ module Epistularium
         next if account.sync_active?(stale_after: STALE_SYNC_AFTER)
 
         account.mark_sync_started!
+        account.clear_sync_enqueued!
         claimed = true
       end
 
@@ -149,6 +152,16 @@ module Epistularium
           max_messages_per_mailbox: FULL_BACKFILL_MESSAGE_LIMIT,
           update_cursor: true
         }
+      end
+    end
+
+    def incremental_sync_options_for(account)
+      {
+        full_backfill: false,
+        max_messages_per_mailbox: BOOTSTRAP_MESSAGE_LIMIT,
+        update_cursor: true
+      }.tap do |options|
+        options[:update_cursor] = true if account.provider == "gmail"
       end
     end
   end

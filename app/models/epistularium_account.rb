@@ -107,6 +107,11 @@ class EpistulariumAccount < ApplicationRecord
     enqueued_at.present? && enqueued_at > within.ago
   end
 
+  def sync_queue_stalled?(stale_after:)
+    enqueued_at = sync_enqueued_at
+    enqueued_at.present? && enqueued_at <= stale_after.ago && !sync_active?
+  end
+
   def mark_sync_started!(at: Time.current)
     update_sync_setting!("sync_started_at", normalize_sync_timestamp(at))
   end

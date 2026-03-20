@@ -74,4 +74,55 @@ RSpec.describe EpistulariumMessage, type: :model do
       message.destroy!
     end.to change { SearchChunk.where(source_type: SearchChunk::SOURCE_EPISTULARIUM_MESSAGE, source_id: message.id).count }.from(1).to(0)
   end
+
+  it "orders inbox and sent mailboxes by their natural timestamps" do
+    _user, workspace, account = build_stack(suffix: "mailbox-order")
+
+    older_inbox = described_class.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-inbox-older",
+      mailbox: "inbox",
+      subject: "Older inbox",
+      from_email: "alex@example.com",
+      received_at: 2.days.ago,
+      created_at: 2.days.ago
+    )
+    newer_inbox = described_class.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-inbox-newer",
+      mailbox: "inbox",
+      subject: "Newer inbox",
+      from_email: "alex@example.com",
+      received_at: 1.day.ago,
+      created_at: 1.day.ago
+    )
+    older_sent = described_class.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-sent-older",
+      mailbox: "sent",
+      subject: "Older sent",
+      from_email: "alex@example.com",
+      sent_at: 3.days.ago,
+      created_at: 3.days.ago
+    )
+    newer_sent = described_class.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-sent-newer",
+      mailbox: "sent",
+      subject: "Newer sent",
+      from_email: "alex@example.com",
+      sent_at: 12.hours.ago,
+      created_at: 12.hours.ago
+    )
+
+    inbox_ids = described_class.for_workspace(workspace).for_account(account).for_mailbox("inbox").recent_first_for_mailbox("inbox").pluck(:id)
+    sent_ids = described_class.for_workspace(workspace).for_account(account).for_mailbox("sent").recent_first_for_mailbox("sent").pluck(:id)
+
+    expect(inbox_ids.first(2)).to eq([ newer_inbox.id, older_inbox.id ])
+    expect(sent_ids.first(2)).to eq([ newer_sent.id, older_sent.id ])
+  end
 end

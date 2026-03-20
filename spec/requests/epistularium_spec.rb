@@ -225,6 +225,17 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).to include("data-google-oauth-launch=\"true\"")
   end
 
+  it "shows when a queued account sync looks stalled in settings" do
+    user, workspace, account, = build_stack(suffix: "settings-stalled")
+    account.mark_sync_enqueued!(at: 3.minutes.ago)
+    sign_in user
+
+    get workspace_epistularium_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Queued sync looks stalled")
+  end
+
   it "redirects directly to Google OAuth with a signed state payload for Gmail" do
     user, workspace, = build_stack(suffix: "google-oauth-authorize")
     sign_in user
@@ -332,6 +343,32 @@ RSpec.describe "Epistularium", type: :request do
     end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
   end
 
+  it "does not run inline recovery sync work while Epistularium is rendering" do
+    user = User.create!(email: "epistularium-request-recover-open@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Epistularium Recover Open", slug: "epistularium-recover-open")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "gmail",
+      label: "Gmail inbox",
+      access_token: "gmail-token"
+    )
+    account.mark_sync_enqueued!(at: 3.minutes.ago)
+    sign_in user
+    allow(Epistularium::SyncConnectionJob).to receive(:perform_now)
+
+    get workspace_epistularium_path(
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(Epistularium::SyncConnectionJob).not_to have_received(:perform_now)
+  end
+
   it "recovers stale sync state when the user manually clicks Sync" do
     user, workspace, account, _message = build_stack(suffix: "manual-stale-sync")
     account.update!(last_synced_at: 2.hours.ago, status: "sync_error")
@@ -362,6 +399,22 @@ RSpec.describe "Epistularium", type: :request do
     expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
     follow_redirect!
     expect(response.body).to include("Sync is already in progress.")
+  end
+
+  it "runs an inline recovery sync when the queued mailbox has stalled" do
+    user, workspace, account, _message = build_stack(suffix: "manual-recovery")
+    account.update!(last_synced_at: 2.hours.ago, status: "connected")
+    account.mark_sync_enqueued!(at: 3.minutes.ago)
+    clear_enqueued_jobs
+    sign_in user
+    allow(Epistularium::SyncConnectionJob).to receive(:perform_now)
+
+    post sync_epistularium_account_path(workspace_slug: workspace.slug, id: account.id)
+
+    expect(Epistularium::SyncConnectionJob).to have_received(:perform_now).with(account.id, mode: "incremental")
+    expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
+    follow_redirect!
+    expect(response.body).to include("Recent mail refreshed.")
   end
 
   it "honors the requested account and message when multiple Epistula are present" do

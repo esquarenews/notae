@@ -6,9 +6,9 @@ class EpistulariumController < ApplicationController
     authorize @workspace, :show?
 
     @accounts = policy_scope(EpistulariumAccount).for_workspace(@workspace).includes(:owner).order(updated_at: :desc, created_at: :desc)
-    queue_due_syncs(@accounts)
     @selected_account = resolve_selected_account
     @selected_mailbox = params[:mailbox].to_s == "sent" ? "sent" : "inbox"
+    queue_due_syncs(@accounts)
     @messages = resolve_messages
     @selected_message = resolve_selected_message
     @thread_messages = resolve_thread_messages
@@ -39,7 +39,7 @@ class EpistulariumController < ApplicationController
       .for_workspace(@workspace)
       .for_account(@selected_account)
       .for_mailbox(@selected_mailbox)
-      .recent_first
+      .recent_first_for_mailbox(@selected_mailbox)
       .limit(120)
   end
 

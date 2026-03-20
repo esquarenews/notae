@@ -38,8 +38,14 @@ class EpistulariumMessage < ApplicationRecord
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
   scope :for_account, ->(account) { where(epistularium_account_id: account.id) }
   scope :for_mailbox, ->(mailbox) { where(mailbox: mailbox.to_s == "sent" ? "sent" : "inbox") }
+  scope :recent_inbox_first, -> { order(received_at: :desc, created_at: :desc) }
+  scope :recent_sent_first, -> { order(sent_at: :desc, created_at: :desc) }
   scope :recent_first, -> do
     order(Arel.sql("COALESCE(epistularium_messages.received_at, epistularium_messages.sent_at, epistularium_messages.created_at) DESC"))
+  end
+
+  def self.recent_first_for_mailbox(mailbox)
+    mailbox.to_s == "sent" ? recent_sent_first : recent_inbox_first
   end
 
   before_validation :normalize_message_fields

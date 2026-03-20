@@ -1,0 +1,23 @@
+[Unit]
+Description=Notae Sidekiq Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{APP_USER}}
+Group={{APP_GROUP}}
+WorkingDirectory={{APP_ROOT}}
+Environment=RAILS_ENV=production
+Environment=ACTIVE_JOB_QUEUE_ADAPTER=sidekiq
+EnvironmentFile={{APP_ROOT}}/.env.production
+ExecStart={{APP_ROOT}}/bin/sidekiq
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths={{APP_ROOT}}/tmp {{APP_ROOT}}/log {{APP_ROOT}}/storage
+
+[Install]
+WantedBy=multi-user.target

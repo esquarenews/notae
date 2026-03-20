@@ -109,6 +109,21 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     expect(sync_service).to have_received(:call)
   end
 
+  it "runs a bounded incremental sync for stalled-queue recovery" do
+    account = build_account(suffix: "incremental")
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: false,
+      max_messages_per_mailbox: 50,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    described_class.perform_now(account.id, mode: "incremental")
+
+    expect(sync_service).to have_received(:call)
+  end
+
   it "re-enqueues bounded full backfill work when more IMAP history remains" do
     account = build_account(suffix: "follow-up")
     sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: true })
@@ -144,6 +159,30 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     expect(recurring_job).to be_present
     expect(recurring_job[:at]).to be_within(5.seconds).of(10.minutes.from_now.to_f)
+  end
+
+  it "queues the next recurring sync after consuming the queued marker for the current run" do
+    account = build_account(suffix: "recurring-from-enqueue")
+    original_enqueued_at = 30.seconds.ago
+    account.mark_sync_enqueued!(at: original_enqueued_at)
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      max_messages_per_mailbox: 200,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    described_class.perform_now(account.id)
+
+    recurring_job = enqueued_jobs.find do |job|
+      job[:job] == described_class &&
+        job[:args] == [ account.id ] &&
+        job[:at].present?
+    end
+
+    expect(recurring_job).to be_present
+    expect(account.reload.sync_enqueued_at).to be > original_enqueued_at
   end
 
   it "clears stale sync state before claiming a new run" do
