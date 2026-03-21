@@ -241,4 +241,67 @@ RSpec.describe "Workspace home", type: :request do
     expect(update_cards.count).to eq(2)
     expect(update_titles).to include("Quarterly review email", "Roadmap follow-up")
   end
+
+  it "renders AI rail entries in timeline order across conversations and agent updates" do
+    user = User.create!(email: "home-ai-rail-timeline@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Home AI Rail Timeline", slug: "home-ai-rail-timeline")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    older_conversation = AiConversation.create!(
+      user: user,
+      workspace: workspace,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUCCESS,
+      prompt: "Older question",
+      answer: "Older answer",
+      sources: []
+    )
+    older_conversation.update_column(:created_at, 30.minutes.ago)
+
+    agent_action = AgentAction.create!(
+      workspace: workspace,
+      user: user,
+      proposed_by: "ai_assistant",
+      target_system: "gmail",
+      draft_type: "email_draft",
+      title: "Middle update",
+      payload_json: {
+        "to" => [ "team@example.com" ],
+        "cc" => [],
+        "subject" => "Middle subject",
+        "body" => "Middle body"
+      },
+      status: AgentAction::STATUS_PENDING,
+      approval_required: true,
+      dry_run: true
+    )
+    agent_action.update_column(:updated_at, 20.minutes.ago)
+
+    newer_conversation = AiConversation.create!(
+      user: user,
+      workspace: workspace,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUCCESS,
+      prompt: "Newer question",
+      answer: "Newer answer",
+      sources: []
+    )
+    newer_conversation.update_column(:created_at, 10.minutes.ago)
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML.parse(response.body)
+    timeline_entries = document.css(".notae-ai-thread .notae-ai-thread-entry")
+
+    expect(timeline_entries.count).to eq(3)
+    expect(timeline_entries[0].text).to include("Older question")
+    expect(timeline_entries[0].text).to include("Older answer")
+    expect(timeline_entries[1].text).to include("Middle update")
+    expect(timeline_entries[1].text).to include("Update available from Agent")
+    expect(timeline_entries[2].text).to include("Newer question")
+    expect(timeline_entries[2].text).to include("Newer answer")
+  end
 end

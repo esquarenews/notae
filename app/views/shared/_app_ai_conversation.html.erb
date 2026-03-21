@@ -1,0 +1,66 @@
+<% safe_sources = ai_safe_sources(conversation.sources) %>
+<% draft_action_sources = safe_sources.select { |source| source[:kind].to_s == "Draft action" } %>
+<% evidence_sources = safe_sources.reject { |source| source[:kind].to_s == "Draft action" } %>
+
+<div class="notae-ai-thread-entry"
+     data-ai-timeline-at="<%= conversation.created_at&.iso8601 %>">
+  <article class="notae-ai-message is-user is-compact">
+    <p class="notae-ai-message-body"><%= conversation.prompt %></p>
+  </article>
+  <article class="notae-ai-message is-assistant">
+    <p class="notae-ai-message-label">
+      Notae AI · <%= conversation.scope.to_s.humanize %>
+      <% if conversation.workspace.present? %>
+        · <%= conversation.workspace.name %>
+      <% end %>
+      <% if Rails.env.development? %>
+        <% if conversation.respond_to?(:model) && conversation.model.present? %>
+          <span class="notae-ai-model-indicator">Model: <%= conversation.model %></span>
+        <% end %>
+        <% if conversation.live_web? %>
+          <span class="notae-ai-model-indicator">Live web</span>
+        <% end %>
+      <% end %>
+    </p>
+    <p class="notae-ai-result-text"><%= conversation.answer %></p>
+    <% if draft_action_sources.any? %>
+      <div class="notae-ai-compose-actions">
+        <% draft_action_sources.each do |source| %>
+          <%= link_to source[:title],
+                      source[:url],
+                      class: "notae-chip-button",
+                      data: { turbo_frame: "_top" } %>
+        <% end %>
+      </div>
+    <% end %>
+    <% if evidence_sources.any? %>
+      <details class="notae-ai-sources-panel">
+        <summary class="notae-chip-button notae-ai-sources-toggle">
+          <span class="notae-ai-sources-when-closed">Sources</span>
+          <span class="notae-ai-sources-when-open">Hide</span>
+        </summary>
+        <ul class="notae-ai-assistant-sources">
+          <% evidence_sources.each do |source| %>
+            <% external_source = ai_external_source_url?(source[:url]) %>
+            <li>
+              <% source_label = source[:index].present? ? "[#{source[:index]}] #{source[:title]}" : source[:title] %>
+              <%= link_to source_label,
+                          source[:url],
+                          class: "notae-utility-link",
+                          data: { turbo_frame: "_top" },
+                          target: external_source ? "_blank" : nil,
+                          rel: external_source ? "noopener noreferrer nofollow" : nil %>
+              <% if source[:workspace_name].present? %>
+                <span class="notae-ai-copy"><%= source[:workspace_name] %></span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </details>
+    <% end %>
+    <p class="notae-ai-message-meta"><%= time_ago_in_words(conversation.created_at) %> ago</p>
+    <div class="notae-ai-compose-actions">
+      <button type="button" class="notae-chip-button" data-action="click->ai-rail#copyResult">Copy result</button>
+    </div>
+  </article>
+</div>

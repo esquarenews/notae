@@ -329,6 +329,36 @@ module ApplicationHelper
     nil
   end
 
+  def ai_rail_timeline_entries(conversations:, updates:)
+    sequence = 0
+
+    entries = Array(conversations).map do |conversation|
+      entry = {
+        kind: :conversation,
+        timestamp: conversation.created_at,
+        sequence: sequence,
+        conversation: conversation
+      }
+      sequence += 1
+      entry
+    end
+
+    entries.concat(
+      Array(updates).map do |update|
+        entry = {
+          kind: :update,
+          timestamp: ai_agent_update_time(update),
+          sequence: sequence,
+          update: update
+        }
+        sequence += 1
+        entry
+      end
+    )
+
+    entries.sort_by { |entry| [ entry[:timestamp] || Time.at(0), entry[:sequence] ] }
+  end
+
   def ai_external_source_url?(url)
     ai_safe_source_url(url).to_s.match?(%r{\Ahttps?://}i)
   end

@@ -627,9 +627,10 @@ export default class extends Controller {
 
       const existing = this.findAgentUpdateElement(updateId)
       if (existing) {
-        existing.replaceWith(element)
+        existing.remove()
+        this.insertTimelineElement(element)
       } else {
-        this.threadTarget.appendChild(element)
+        this.insertTimelineElement(element)
         this.agentUpdateIds.add(updateId)
       }
       mutationCount += 1
@@ -640,6 +641,28 @@ export default class extends Controller {
 
   findAgentUpdateElement(updateId) {
     return this.agentUpdateElements().find((element) => element.dataset.aiAgentUpdateId === updateId) || null
+  }
+
+  insertTimelineElement(element) {
+    if (!this.hasThreadTarget) return
+
+    const newTimestamp = element.dataset.aiTimelineAt || ""
+    const insertionPoint = this.timelineEntryElements().find((entry) => {
+      const existingTimestamp = entry.dataset.aiTimelineAt || ""
+      return existingTimestamp && newTimestamp && existingTimestamp > newTimestamp
+    })
+
+    if (insertionPoint) {
+      this.threadTarget.insertBefore(element, insertionPoint)
+    } else {
+      this.threadTarget.appendChild(element)
+    }
+  }
+
+  timelineEntryElements() {
+    if (!this.hasThreadTarget) return []
+
+    return Array.from(this.threadTarget.querySelectorAll(".notae-ai-thread-entry"))
   }
 
   notifyLayoutChange() {

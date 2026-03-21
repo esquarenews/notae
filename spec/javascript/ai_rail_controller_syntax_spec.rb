@@ -34,4 +34,12 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include('this.preference("notae-ai-rail-collapsed", true)')
     expect(source).to match(/window\.setTimeout\(\(\) => \{\s*this\.dismissCurrentAgentToast\(\)/m)
   end
+
+  it "keeps ordered timeline insertion for polled agent updates" do
+    source = Rails.root.join("app/javascript/controllers/ai_rail_controller.js").read
+
+    expect(source).to include("insertTimelineElement(element)")
+    expect(source).to include('querySelectorAll(".notae-ai-thread-entry")')
+    expect(source).to include("existingTimestamp > newTimestamp")
+  end
 end
