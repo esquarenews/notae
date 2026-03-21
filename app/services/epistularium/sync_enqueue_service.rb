@@ -12,6 +12,7 @@ module Epistularium
       return nil unless %w[gmail imap amazon_workmail].include?(account.provider)
       return "bootstrap" if account.last_synced_at.blank?
       return "bootstrap" unless account.epistularium_messages.exists?
+      return "full_backfill" if account.full_backfill_pending?
 
       nil
     end

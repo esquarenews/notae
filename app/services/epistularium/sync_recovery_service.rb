@@ -30,7 +30,14 @@ module Epistularium
     end
 
     def recovery_mode
-      mode || Epistularium::SyncEnqueueService.preferred_mode_for(account) || "incremental"
+      mode || default_recovery_mode
+    end
+
+    def default_recovery_mode
+      return "bootstrap" if account.last_synced_at.blank?
+      return "bootstrap" unless account.epistularium_messages.exists?
+
+      "incremental"
     end
   end
 end

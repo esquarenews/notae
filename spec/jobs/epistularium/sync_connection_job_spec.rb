@@ -153,7 +153,6 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     recurring_job = enqueued_jobs.find do |job|
       job[:job] == described_class &&
-        job[:args] == [ account.id ] &&
         job[:at].present?
     end
 
@@ -177,12 +176,46 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     recurring_job = enqueued_jobs.find do |job|
       job[:job] == described_class &&
-        job[:args] == [ account.id ] &&
+        job[:args].first == account.id &&
         job[:at].present?
     end
 
     expect(recurring_job).to be_present
     expect(account.reload.sync_enqueued_at).to be > original_enqueued_at
+  end
+
+  it "queues recurring full backfill polling when mailbox history is still incomplete" do
+    account = build_account(suffix: "recurring-incomplete-backfill", provider: "gmail")
+    sync_service = instance_double(Epistularium::ConnectionSyncService)
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: false,
+      max_messages_per_mailbox: 50,
+      update_cursor: true
+    ).and_return(sync_service)
+    allow(sync_service).to receive(:call) do
+      EpistulariumMessage.create!(
+        workspace: account.workspace,
+        epistularium_account: account,
+        provider_message_id: "msg-recurring-incomplete-backfill",
+        mailbox: "inbox",
+        subject: "Recent message",
+        from_email: "alex@example.com",
+        body_text: "Recent body"
+      )
+      account.update!(last_synced_at: Time.current)
+      true
+    end
+
+    described_class.perform_now(account.id, mode: "bootstrap")
+
+    expect(enqueued_jobs).to include(
+      a_hash_including(
+        job: described_class,
+        at: kind_of(Numeric),
+        args: [ account.id, a_hash_including("mode" => "full_backfill") ]
+      )
+    )
   end
 
   it "clears stale sync state before claiming a new run" do

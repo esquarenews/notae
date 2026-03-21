@@ -118,4 +118,36 @@ RSpec.describe EpistulariumAccount, type: :model do
     expect(account.reload.sync_started_at).to be_nil
     expect(account.sync_enqueued_at).to be_present
   end
+
+  it "treats Gmail and IMAP accounts as pending full backfill until completion is recorded" do
+    user, workspace = build_workspace_stack(suffix: "backfill-pending")
+    gmail_account = described_class.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "gmail",
+      label: "Gmail",
+      access_token: "gmail-token",
+      settings_json: {}
+    )
+    imap_account = described_class.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "IMAP",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+
+    expect(gmail_account.full_backfill_pending?).to eq(true)
+    expect(imap_account.full_backfill_pending?).to eq(true)
+
+    gmail_account.update!(settings_json: { "full_backfill_completed_at" => Time.current.iso8601 })
+    imap_account.update!(settings_json: { "imap_host" => "imap.example.com", "full_backfill_completed_at" => Time.current.iso8601 })
+
+    expect(gmail_account.reload.full_backfill_pending?).to eq(false)
+    expect(imap_account.reload.full_backfill_pending?).to eq(false)
+  end
 end

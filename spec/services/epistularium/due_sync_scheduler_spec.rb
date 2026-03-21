@@ -44,6 +44,7 @@ RSpec.describe Epistularium::DueSyncScheduler do
 
   it "queues normal due syncs for stale accounts that have already synced" do
     account = build_account(suffix: "stale", last_synced_at: 11.minutes.ago)
+    account.update!(settings_json: account.settings_json.to_h.merge("full_backfill_completed_at" => Time.current.iso8601))
     EpistulariumMessage.create!(
       workspace: account.workspace,
       epistularium_account: account,
@@ -58,6 +59,24 @@ RSpec.describe Epistularium::DueSyncScheduler do
     expect do
       described_class.new(accounts: [ account ]).call
     end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
+  end
+
+  it "queues full backfill for stale accounts whose history is still incomplete" do
+    account = build_account(suffix: "stale-backfill", provider: "gmail", last_synced_at: 11.minutes.ago)
+    EpistulariumMessage.create!(
+      workspace: account.workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-stale-backfill",
+      mailbox: "inbox",
+      subject: "Existing message",
+      from_name: "Alex",
+      from_email: "alex@example.com",
+      body_text: "Existing body"
+    )
+
+    expect do
+      described_class.new(accounts: [ account ]).call
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "full_backfill")
   end
 
   it "skips recently synced accounts" do
@@ -93,7 +112,7 @@ RSpec.describe Epistularium::DueSyncScheduler do
 
     expect do
       described_class.new(accounts: [ account ]).call
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "full_backfill")
 
     expect(account.reload.sync_started_at).to be_nil
   end

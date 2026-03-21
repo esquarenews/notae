@@ -78,6 +78,7 @@ module Epistularium
 
       Epistularium::SyncEnqueueService.new(
         account: account,
+        mode: Epistularium::SyncEnqueueService.preferred_mode_for(account),
         wait: AUTO_SYNC_INTERVAL,
         throttle: AUTO_SYNC_INTERVAL,
         allow_while_syncing: true

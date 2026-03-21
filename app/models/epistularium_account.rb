@@ -82,6 +82,12 @@ class EpistulariumAccount < ApplicationRecord
     settings_json.to_h["sent_mailbox"].to_s.strip.presence
   end
 
+  def full_backfill_pending?
+    return false unless %w[gmail imap amazon_workmail].include?(provider)
+
+    settings_json.to_h["full_backfill_completed_at"].blank?
+  end
+
   def sync_started_at
     parsed_settings_time("sync_started_at")
   end

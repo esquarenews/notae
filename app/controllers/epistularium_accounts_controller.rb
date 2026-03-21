@@ -193,7 +193,7 @@ class EpistulariumAccountsController < ApplicationController
 
   def start_sync!(account)
     mode = preferred_sync_mode_for(account)
-    if Epistularium::SyncRecoveryService.new(account: account, mode: mode).call
+    if Epistularium::SyncRecoveryService.new(account: account).call
       notice = mode.present? ? "Recent mail refreshed. Full backfill will continue in the background." : "Recent mail refreshed."
       return redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: notice
     end

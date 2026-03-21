@@ -340,7 +340,7 @@ RSpec.describe "Epistularium", type: :request do
         mailbox: "inbox",
         message_id: message.id
       )
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "full_backfill")
   end
 
   it "does not run inline recovery sync work while Epistularium is rendering" do
@@ -378,11 +378,11 @@ RSpec.describe "Epistularium", type: :request do
 
     expect do
       post sync_epistularium_account_path(workspace_slug: workspace.slug, id: account.id)
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id)
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "full_backfill")
 
     expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
     follow_redirect!
-    expect(response.body).to include("Sync queued")
+    expect(response.body).to include("Recent mail sync queued. Full backfill will continue in the background.")
     expect(account.reload.sync_started_at).to be_nil
   end
 
