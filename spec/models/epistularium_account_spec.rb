@@ -150,4 +150,35 @@ RSpec.describe EpistulariumAccount, type: :model do
     expect(gmail_account.reload.full_backfill_pending?).to eq(false)
     expect(imap_account.reload.full_backfill_pending?).to eq(false)
   end
+
+  it "surfaces the freshest mailbox activity when imported messages are newer than the account sync timestamp" do
+    user, workspace = build_workspace_stack(suffix: "visible-sync")
+    account = described_class.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" },
+      last_synced_at: 7.hours.ago
+    )
+    message = EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-visible-sync",
+      mailbox: "inbox",
+      subject: "Visible sync",
+      from_email: "sender@example.com",
+      body_text: "Mailbox activity should win."
+    )
+    message.update!(last_synced_at: 30.minutes.ago)
+
+    expect(account.last_visible_sync_at).to be_within(1.second).of(30.minutes.ago)
+
+    account.update!(last_synced_at: 5.minutes.ago)
+
+    expect(account.last_visible_sync_at).to be_within(1.second).of(5.minutes.ago)
+  end
 end

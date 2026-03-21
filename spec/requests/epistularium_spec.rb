@@ -2,6 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Epistularium", type: :request do
   include ActiveJob::TestHelper
+  include ActiveSupport::Testing::TimeHelpers
 
   before do
     clear_enqueued_jobs
@@ -256,6 +257,21 @@ RSpec.describe "Epistularium", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Queued sync looks stalled")
+  end
+
+  it "shows the freshest mailbox activity time in settings when imported mail is newer than the account sync timestamp" do
+    travel_to(Time.zone.parse("2026-03-22 12:00:00")) do
+      user, workspace, account, message = build_stack(suffix: "settings-visible-sync")
+      account.update!(last_synced_at: 7.hours.ago, status: "connected")
+      message.update!(last_synced_at: 30.minutes.ago)
+      sign_in user
+
+      get workspace_epistularium_settings_path(workspace_slug: workspace.slug)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Last sync 30 minutes ago")
+      expect(response.body).not_to include("about 7 hours ago")
+    end
   end
 
   it "redirects directly to Google OAuth with a signed state payload for Gmail" do

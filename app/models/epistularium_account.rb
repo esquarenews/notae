@@ -141,6 +141,13 @@ class EpistulariumAccount < ApplicationRecord
     true
   end
 
+  def last_visible_sync_at(preloaded_latest_message_sync_at: nil)
+    [
+      last_synced_at,
+      normalize_display_time(preloaded_latest_message_sync_at || latest_message_sync_at)
+    ].compact.max
+  end
+
   private
 
   def provider_credentials_present
@@ -229,6 +236,19 @@ class EpistulariumAccount < ApplicationRecord
 
     Time.iso8601(value)
   rescue ArgumentError
+    nil
+  end
+
+  def latest_message_sync_at
+    epistularium_messages.maximum(Arel.sql("COALESCE(epistularium_messages.last_synced_at, epistularium_messages.created_at)"))
+  end
+
+  def normalize_display_time(value)
+    return value if value.is_a?(Time) || value.is_a?(ActiveSupport::TimeWithZone)
+    return nil if value.blank?
+
+    Time.zone.parse(value.to_s)
+  rescue ArgumentError, TypeError
     nil
   end
 
