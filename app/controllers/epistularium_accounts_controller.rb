@@ -73,11 +73,16 @@ class EpistulariumAccountsController < ApplicationController
       redirect_uri: google_callback_redirect_uri
     )
     account = upsert_google_account_from_oauth!(oauth_payload: oauth_payload, token_data: token_data)
-    Epistularium::SyncEnqueueService.new(
-      account: account,
-      mode: Epistularium::SyncEnqueueService.preferred_mode_for(account)
-    ).call
-    redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Google account connected. Initial backfill queued."
+    if run_initial_bootstrap_inline?(account)
+      Epistularium::SyncConnectionJob.perform_now(account.id, mode: "bootstrap")
+      redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Google account connected. Recent mail refreshed. Full backfill will continue in the background."
+    else
+      Epistularium::SyncEnqueueService.new(
+        account: account,
+        mode: Epistularium::SyncEnqueueService.preferred_mode_for(account)
+      ).call
+      redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Google account connected. Initial backfill queued."
+    end
   rescue ActiveSupport::MessageVerifier::InvalidSignature
     redirect_for_google_callback_failure!("Google authorization state is invalid or expired. Please try again.")
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound, Epistularium::GoogleOauthService::Error => error
@@ -193,6 +198,11 @@ class EpistulariumAccountsController < ApplicationController
 
   def start_sync!(account)
     mode = preferred_sync_mode_for(account)
+    if run_initial_bootstrap_inline?(account)
+      Epistularium::SyncConnectionJob.perform_now(account.id, mode: "bootstrap")
+      return redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Recent mail refreshed. Full backfill will continue in the background."
+    end
+
     if Epistularium::SyncRecoveryService.new(account: account).call
       notice = mode.present? ? "Recent mail refreshed. Full backfill will continue in the background." : "Recent mail refreshed."
       return redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: notice
@@ -215,6 +225,10 @@ class EpistulariumAccountsController < ApplicationController
 
   def preferred_sync_mode_for(account)
     Epistularium::SyncEnqueueService.preferred_mode_for(account)
+  end
+
+  def run_initial_bootstrap_inline?(account)
+    preferred_sync_mode_for(account) == "bootstrap" && !account.sync_active?
   end
 
   def build_google_oauth_state_payload

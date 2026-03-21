@@ -815,6 +815,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Map")
     expect(response.body).not_to include("Open linked page")
     expect(response.body).to include("notae-page-header-cover-panel")
+    expect(response.body).to include("notae-cover-picker-panel is-embedded")
     expect(response.body).to include("data-controller=\"cover-carousel\"")
     expect(response.body).to include("Move up")
     expect(response.body).to include("Move down")

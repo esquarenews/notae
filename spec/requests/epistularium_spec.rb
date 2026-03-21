@@ -288,7 +288,7 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.headers["Location"]).to include("accounts.google.com/o/oauth2")
   end
 
-  it "queues a bootstrap Gmail sync after OAuth callback so recent mail appears quickly" do
+  it "runs a bootstrap Gmail sync inline after OAuth callback so recent mail appears quickly" do
     user, workspace, = build_stack(suffix: "google-oauth-callback")
     sign_in user
     state = Rails.application.message_verifier("epistularium_google_oauth_state").generate(
@@ -310,15 +310,15 @@ RSpec.describe "Epistularium", type: :request do
     allow(Epistularium::GoogleOauthService).to receive(:new).and_return(oauth_service)
     allow(Epistularium::GoogleOauthService).to receive(:resolved_client_id).and_return("oauth-client-id")
     allow(Epistularium::GoogleOauthService).to receive(:resolved_client_secret).and_return("oauth-client-secret")
+    allow(Epistularium::SyncConnectionJob).to receive(:perform_now)
 
-    expect do
-      get epistularium_google_callback_path, params: {
-        state: state,
-        code: "google-auth-code"
-      }
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(kind_of(String), mode: "bootstrap")
+    get epistularium_google_callback_path, params: {
+      state: state,
+      code: "google-auth-code"
+    }
 
     account = EpistulariumAccount.order(:created_at).last
+    expect(Epistularium::SyncConnectionJob).to have_received(:perform_now).with(account.id, mode: "bootstrap")
     expect(account.provider).to eq("gmail")
     expect(account.owner).to eq(workspace)
     expect(account.label).to eq("Workspace Gmail")
@@ -464,11 +464,12 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).not_to include("Original inbox body")
   end
 
-  it "queues an initial sync when an IMAP Epistulum is created from settings" do
+  it "runs an initial bootstrap sync inline when an IMAP Epistulum is created from settings" do
     user = User.create!(email: "epistularium-settings@example.com", password: "password123")
     workspace = Workspace.create!(name: "Epistularium Settings", slug: "epistularium-settings")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     allow(Epistularium::ConnectionSyncService).to receive(:new)
+    allow(Epistularium::SyncConnectionJob).to receive(:perform_now)
 
     sign_in user
 
@@ -490,12 +491,8 @@ RSpec.describe "Epistularium", type: :request do
     end.to change(EpistulariumAccount, :count).by(1)
 
     expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
-    expect(enqueued_jobs.map { |job| job[:job] }).to include(Epistularium::SyncConnectionJob)
     created_account = EpistulariumAccount.order(:created_at).last
-    queued_job = enqueued_jobs.find { |job| job[:job] == Epistularium::SyncConnectionJob && job[:args].include?(created_account.id) }
-    expect(queued_job).to be_present
-    expect(queued_job[:args].last).to include("mode" => "bootstrap")
-    created_account = EpistulariumAccount.order(:created_at).last
+    expect(Epistularium::SyncConnectionJob).to have_received(:perform_now).with(created_account.id, mode: "bootstrap")
     expect(Epistularium::ConnectionSyncService).not_to have_received(:new)
   end
 

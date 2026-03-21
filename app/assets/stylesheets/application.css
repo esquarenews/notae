@@ -6931,7 +6931,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   padding: 0.4rem;
   display: grid;
   gap: 0.35rem;
-  z-index: 95;
+  z-index: 620;
 }
 
 .notae-cover-picker-panel.is-embedded {
@@ -7163,7 +7163,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-page-header-action[open] {
-  z-index: 135;
+  z-index: 600;
 }
 
 .notae-page-header-action > summary {
@@ -7199,7 +7199,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   padding: 0.52rem;
   display: grid;
   gap: 0.44rem;
-  z-index: 150;
+  z-index: 610;
 }
 
 .notae-page-header-panel-form {
