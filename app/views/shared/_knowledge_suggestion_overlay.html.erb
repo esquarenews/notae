@@ -2,6 +2,7 @@
   <section class="notae-knowledge-overlay"
            data-controller="knowledge-suggestion-overlay"
            data-knowledge-suggestion-overlay-delay-value="18000"
+           data-knowledge-suggestion-overlay-suggestion-id-value="<%= @active_knowledge_suggestion.id %>"
            data-action="mouseenter->knowledge-suggestion-overlay#pause mouseleave->knowledge-suggestion-overlay#resume focusin->knowledge-suggestion-overlay#pause focusout->knowledge-suggestion-overlay#resume">
     <button type="button" class="notae-knowledge-overlay-toggle is-hidden" data-knowledge-suggestion-overlay-target="toggle" data-action="click->knowledge-suggestion-overlay#expand">
       <%= notae_icon_svg(:suggestion) %>

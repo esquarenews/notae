@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Workspace home", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+
   it "shows only the 3 most recently updated pages and databases" do
     user = User.create!(email: "home-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Home test", slug: "home-test")
@@ -77,7 +79,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Library")
   end
 
-  it "renders the daily brief on the home page and the proactive overlay in shell layout" do
+  it "renders the daily brief on the home page and routes proactive suggestions through the ai rail and home page card" do
     user = User.create!(email: "home-knowledge-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Knowledge home", slug: "knowledge-home")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -119,12 +121,36 @@ RSpec.describe "Workspace home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Daily workspace brief")
     expect(response.body).to include("Review the critical blockers before noon. [1]")
-    expect(response.body).to include("notae-knowledge-overlay")
+    expect(response.body).to include("AI suggestion")
+    expect(response.body).to include("knowledge-suggestion-")
+    expect(response.body).to include("Update available from Agent")
+    expect(response.body).to include("Open full window")
     expect(response.body).to include("Escalate the approval gap this afternoon. [1]")
     expect(response.body).to include("Choose tasks grid")
     expect(response.body).to include("Create Nota")
     expect(response.body).to include("Create Grid")
     expect(response.body).to include("Dismiss")
+    expect(response.body).not_to include("notae-knowledge-overlay")
+  end
+
+  it "throttles proactive suggestion generation across quick page switches" do
+    user = User.create!(email: "home-knowledge-throttle@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge throttle", slug: "knowledge-throttle")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    allow(Search::PersistKnowledgeSuggestionService).to receive(:ensure_proactive!).and_return(nil)
+
+    sign_in user
+
+    travel_to(Time.utc(2026, 3, 21, 10, 0, 0)) do
+      get workspace_path(workspace.slug)
+      expect(response).to have_http_status(:ok)
+
+      get workspace_library_path(workspace_slug: workspace.slug)
+      expect(response).to have_http_status(:ok)
+    end
+
+    expect(Search::PersistKnowledgeSuggestionService).to have_received(:ensure_proactive!).once.with(user: user, workspace: workspace)
   end
 
   it "renders pending agent draft actions on the workspace home page" do

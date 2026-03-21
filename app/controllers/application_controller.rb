@@ -7,6 +7,8 @@ class ApplicationController < ActionController::Base
   AI_AGENT_UPDATE_LIMIT = 8
   AI_AGENT_TRIGGER_SOURCES = %w[ai_assistant automation_agent].freeze
   AI_AGENT_PROPOSED_BY = %w[ai_assistant automation_agent].freeze
+  AI_SUGGESTION_KINDS = [ KnowledgeSuggestion::KIND_PROACTIVE ].freeze
+  PROACTIVE_KNOWLEDGE_SUGGESTION_CHECK_INTERVAL = 10.minutes
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -127,13 +129,12 @@ class ApplicationController < ActionController::Base
     @active_knowledge_suggestion = with_optional_schema_fallback(default: nil, feature: "knowledge suggestions") do
       current_active_suggestion_for(@ai_rail_workspace)
     end
-    @active_knowledge_task_databases = with_optional_schema_fallback(default: [], feature: "knowledge suggestion task targets") do
-      knowledge_task_databases_for(@ai_rail_workspace)
-    end
 
     return if @active_knowledge_suggestion.present?
     return unless should_generate_proactive_knowledge_suggestion?
+    return if proactive_knowledge_suggestion_recently_checked?(@ai_rail_workspace)
 
+    mark_proactive_knowledge_suggestion_checked!(@ai_rail_workspace)
     @active_knowledge_suggestion = with_optional_schema_fallback(default: nil, feature: "proactive knowledge suggestion") do
       Search::PersistKnowledgeSuggestionService.ensure_proactive!(user: current_user, workspace: @ai_rail_workspace)
     end
@@ -212,6 +213,20 @@ class ApplicationController < ActionController::Base
           .order(updated_at: :desc)
           .limit(limit)
           .map { |agent_action| ai_agent_update_for_agent_action(agent_action) }
+      )
+    end
+
+    if data_source_available?("knowledge_suggestions")
+      suggestion_scope = policy_scope(KnowledgeSuggestion)
+                         .for_workspace(workspace)
+                         .active
+                         .where(kind: AI_SUGGESTION_KINDS)
+      suggestion_scope = suggestion_scope.where("updated_at > ?", since) if since.present?
+      updates.concat(
+        suggestion_scope
+          .recent_first
+          .limit(limit)
+          .map { |suggestion| ai_agent_update_for_knowledge_suggestion(suggestion) }
       )
     end
 
@@ -323,6 +338,27 @@ class ApplicationController < ActionController::Base
     }
   end
 
+  def ai_agent_update_for_knowledge_suggestion(suggestion)
+    task_titles = Array(suggestion.task_suggestions_json).filter_map { |item| item["title"].to_s.strip.presence }.first(3)
+    preview_lines = [
+      "Suggestion: #{suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? 'Daily workspace brief' : 'Suggested next step'}",
+      ("Summary: #{suggestion.summary}" if suggestion.summary.present?),
+      *task_titles.map { |title| "Task: #{title}" }
+    ].compact
+    updated_at = suggestion.updated_at || suggestion.generated_at || suggestion.created_at || Time.current
+
+    {
+      id: "knowledge_suggestion:#{suggestion.id}",
+      title: suggestion.title,
+      preview: preview_lines.join("\n"),
+      url: workspace_path(suggestion.workspace.slug, anchor: "knowledge-suggestion-#{suggestion.id}"),
+      action_label: "Open full window",
+      kind_label: "Suggestion",
+      updated_at: updated_at,
+      updated_at_iso8601: updated_at.iso8601
+    }
+  end
+
   def current_active_suggestion_for(workspace)
     policy_scope(KnowledgeSuggestion)
       .for_workspace(workspace)
@@ -348,6 +384,34 @@ class ApplicationController < ActionController::Base
     current_hour = Time.zone.now.hour
     return false unless current_hour >= 9 && current_hour < 18
     true
+  end
+
+  def proactive_knowledge_suggestion_recently_checked?(workspace)
+    checked_at = proactive_knowledge_suggestion_checked_at(workspace)
+    checked_at.present? && checked_at > PROACTIVE_KNOWLEDGE_SUGGESTION_CHECK_INTERVAL.ago
+  end
+
+  def proactive_knowledge_suggestion_checked_at(workspace)
+    return nil if workspace.blank?
+
+    value = proactive_knowledge_suggestion_check_store[workspace.id.to_s].to_s.strip
+    return nil if value.blank?
+
+    Time.iso8601(value)
+  rescue ArgumentError
+    nil
+  end
+
+  def mark_proactive_knowledge_suggestion_checked!(workspace, at: Time.current)
+    return if workspace.blank?
+
+    store = proactive_knowledge_suggestion_check_store
+    store[workspace.id.to_s] = at.iso8601
+    session[:notae_proactive_knowledge_suggestion_checks] = store
+  end
+
+  def proactive_knowledge_suggestion_check_store
+    session.fetch(:notae_proactive_knowledge_suggestion_checks, {}).to_h.stringify_keys
   end
 
   def build_ai_usage_panel(user:, workspace:)

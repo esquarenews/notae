@@ -481,6 +481,22 @@ RSpec.describe "AI Assistant", type: :request do
     )
     fresh_workflow_run.update_column(:updated_at, 5.minutes.ago)
 
+    proactive_suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Escalate approval gap",
+      summary: "The approval gap still needs attention. [1]",
+      task_suggestions_json: [
+        { "title" => "Follow up with approver", "owner" => "Errol", "rationale" => "The approval is blocking rollout. [1]" }
+      ],
+      sources_json: [ { "index" => 1, "title" => "Launch note", "url" => "/w/#{workspace.slug}/pages/test" } ],
+      generated_at: 4.minutes.ago,
+      expires_at: 6.hours.from_now
+    )
+    proactive_suggestion.update_column(:updated_at, 4.minutes.ago)
+
     sign_in user
     get workspace_ai_assistant_updates_path(workspace_slug: workspace.slug),
         params: { since: 30.minutes.ago.iso8601 },
@@ -489,13 +505,16 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response).to have_http_status(:ok)
 
     payload = JSON.parse(response.body)
-    expect(payload.dig("data", "count")).to eq(1)
-    expect(payload.dig("data", "latest_at")).to eq(fresh_workflow_run.reload.updated_at.iso8601)
+    expect(payload.dig("data", "count")).to eq(2)
+    expect(payload.dig("data", "latest_at")).to eq(proactive_suggestion.reload.updated_at.iso8601)
 
     html = payload.dig("data", "html")
     expect(html).to include("Update available from Agent")
     expect(html).to include("Roadmap follow-up task")
     expect(html).to include("Workflow: Create task")
+    expect(html).to include("Escalate approval gap")
+    expect(html).to include("Suggestion: Suggested next step")
+    expect(html).to include(workspace_path(workspace.slug, anchor: "knowledge-suggestion-#{proactive_suggestion.id}"))
     expect(html).to include("Open full window")
     expect(html).to include(workflow_run_path(workspace_slug: workspace.slug, id: fresh_workflow_run.id))
     expect(html).not_to include("Stale email draft")

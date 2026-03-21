@@ -22,6 +22,7 @@ class WorkspaceHomeController < ApplicationController
     @recent_databases = policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).limit(3).to_a
     @knowledge_task_databases = knowledge_task_databases_for(@workspace)
     @daily_knowledge_suggestion = resolve_daily_knowledge_suggestion
+    @active_proactive_knowledge_suggestion = resolve_active_proactive_knowledge_suggestion
     @pending_agent_actions = resolve_pending_agent_actions
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_memberships = @memberships.any? { |membership| policy(membership).update? }
@@ -90,6 +91,12 @@ class WorkspaceHomeController < ApplicationController
         .limit(4)
         .to_a
     end
+  end
+
+  def resolve_active_proactive_knowledge_suggestion
+    return unless data_source_available?("knowledge_suggestions")
+
+    current_active_suggestion_for(@workspace)
   end
 
   def redirect_to_last_visited_page
