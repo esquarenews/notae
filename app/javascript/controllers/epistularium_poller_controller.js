@@ -1,0 +1,101 @@
+import { Controller } from "@hotwired/stimulus"
+
+const DEFAULT_POLL_INTERVAL_MS = 15000
+
+export default class extends Controller {
+  static targets = ["sections"]
+  static values = {
+    endpoint: String,
+    cursor: String,
+    interval: { type: Number, default: DEFAULT_POLL_INTERVAL_MS }
+  }
+
+  connect() {
+    this.inFlight = false
+    this.currentCursor = this.cursorValue || ""
+    this.intervalId = window.setInterval(() => this.poll(), this.intervalValue)
+  }
+
+  disconnect() {
+    if (this.intervalId) window.clearInterval(this.intervalId)
+  }
+
+  poll() {
+    if (document.hidden) return
+    if (!this.hasSectionsTarget || this.inFlight) return
+
+    this.fetchAndReplace()
+  }
+
+  async fetchAndReplace() {
+    const endpoint = this.endpointValue || window.location.href
+    this.inFlight = true
+
+    try {
+      const response = await window.fetch(endpoint, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      })
+      if (!response.ok) return
+
+      const payload = await response.json()
+      const nextCursor = String(payload.cursor || "")
+      if (nextCursor && nextCursor === this.currentCursor) return
+      if (typeof payload.html !== "string") return
+
+      const scrollPositions = this.capturePaneScrollPositions()
+      const previousSelectedMessageId = this.selectedMessageId()
+
+      this.sectionsTarget.innerHTML = payload.html
+      this.currentCursor = nextCursor
+
+      this.restorePaneScrollPositions(scrollPositions, previousSelectedMessageId)
+    } catch (_error) {
+      // Ignore transient polling failures; next poll will retry.
+    } finally {
+      this.inFlight = false
+    }
+  }
+
+  capturePaneScrollPositions() {
+    const positions = {}
+
+    this.paneElements().forEach((pane) => {
+      const key = pane.dataset.epistulariumPaneKey
+      if (!key) return
+
+      positions[key] = pane.scrollTop
+    })
+
+    return positions
+  }
+
+  restorePaneScrollPositions(positions, previousSelectedMessageId) {
+    const currentSelectedMessageId = this.selectedMessageId()
+
+    this.paneElements().forEach((pane) => {
+      const key = pane.dataset.epistulariumPaneKey
+      if (!key) return
+      if (!Object.prototype.hasOwnProperty.call(positions, key)) return
+      if (key === "detail" && previousSelectedMessageId !== currentSelectedMessageId) return
+
+      pane.scrollTop = positions[key]
+    })
+  }
+
+  paneElements() {
+    if (!this.hasSectionsTarget) return []
+
+    return Array.from(this.sectionsTarget.querySelectorAll("[data-epistularium-pane-key]"))
+  }
+
+  selectedMessageId() {
+    if (!this.hasSectionsTarget) return ""
+
+    return this.sectionsTarget.querySelector(".notae-epistularium-grid")?.dataset.epistulariumSelectedMessageId || ""
+  }
+}

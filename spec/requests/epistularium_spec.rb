@@ -57,6 +57,28 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).to include("AI draft suggestions")
     expect(response.body).to include("Manage Epistula")
     expect(response.body).to include("Suggest reply draft")
+    expect(response.body).to include("data-controller=\"epistularium-poller\"")
+  end
+
+  it "returns refreshed mailbox html and a polling cursor for in-place updates" do
+    user, workspace, account, message = build_stack(suffix: "json-refresh")
+    sign_in user
+
+    get workspace_epistularium_path(
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox",
+      message_id: message.id
+    ), headers: { "ACCEPT" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+
+    payload = JSON.parse(response.body)
+    expect(payload["cursor"]).to be_present
+    expect(payload["active"]).to eq(true)
+    expect(payload["html"]).to include("Launch note json-refresh")
+    expect(payload["html"]).to include("data-epistularium-pane-key=\"list\"")
+    expect(payload["html"]).to include("data-epistularium-selected-message-id")
   end
 
   it "renders a persistent visual indicator for the active email account" do
@@ -340,7 +362,7 @@ RSpec.describe "Epistularium", type: :request do
         mailbox: "inbox",
         message_id: message.id
       )
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "full_backfill")
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "incremental")
   end
 
   it "does not run inline recovery sync work while Epistularium is rendering" do

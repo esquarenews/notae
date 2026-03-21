@@ -1,3 +1,5 @@
+require "digest"
+
 class EpistulariumController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
@@ -13,6 +15,18 @@ class EpistulariumController < ApplicationController
     @selected_message = resolve_selected_message
     @thread_messages = resolve_thread_messages
     @message_counts_by_account = resolve_message_counts
+    @epistularium_poll_cursor = build_poll_cursor
+
+    respond_to do |format|
+      format.html
+      format.json do
+        render json: {
+          html: render_to_string(partial: "epistularium/grid", formats: [ :html ]),
+          cursor: @epistularium_poll_cursor,
+          active: @accounts.any?
+        }
+      end
+    end
   end
 
   private
@@ -90,5 +104,25 @@ class EpistulariumController < ApplicationController
         "sent" => counts.fetch([ account.id, "sent" ], 0)
       }
     end
+  end
+
+  def build_poll_cursor
+    parts = []
+
+    parts.concat(@accounts.map { |account| [ account.id, account.updated_at&.utc&.iso8601, account.status, account.last_synced_at&.utc&.iso8601 ].join(":") })
+    parts.concat(
+      @message_counts_by_account
+        .sort_by { |account_id, _counts| account_id.to_i }
+        .flat_map do |account_id, counts|
+          [ "account:#{account_id}:inbox:#{counts.fetch('inbox', 0)}", "account:#{account_id}:sent:#{counts.fetch('sent', 0)}" ]
+        end
+    )
+    parts.concat(@messages.map { |message| [ message.id, message.updated_at&.utc&.iso8601, message.primary_timestamp&.utc&.iso8601 ].join(":") })
+    parts.concat(@thread_messages.map { |message| [ "thread", message.id, message.updated_at&.utc&.iso8601 ].join(":") })
+    parts << "selected-account:#{@selected_account&.id}"
+    parts << "selected-mailbox:#{@selected_mailbox}"
+    parts << "selected-message:#{@selected_message&.id}"
+
+    Digest::SHA256.hexdigest(parts.join("|"))
   end
 end
