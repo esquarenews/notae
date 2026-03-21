@@ -139,6 +139,31 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
   end
 
+  it "resumes full backfill after a freshness-first incremental run while history is still incomplete" do
+    account = build_account(suffix: "incremental-backfill-follow-up", provider: "gmail")
+    EpistulariumMessage.create!(
+      workspace: account.workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-incremental-backfill-follow-up",
+      mailbox: "inbox",
+      subject: "Existing message",
+      from_email: "alex@example.com",
+      body_text: "Existing body"
+    )
+    account.update!(last_synced_at: 11.minutes.ago)
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: true)
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: false,
+      max_messages_per_mailbox: 50,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    expect do
+      described_class.perform_now(account.id, mode: "incremental")
+    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
+  end
+
   it "queues a recurring follow-up sync 10 minutes after a successful run" do
     account = build_account(suffix: "recurring")
     sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
@@ -157,6 +182,38 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     end
 
     expect(recurring_job).to be_present
+    expect(recurring_job[:at]).to be_within(5.seconds).of(10.minutes.from_now.to_f)
+  end
+
+  it "schedules recurring incremental polling after a full-backfill run when the mailbox history is still incomplete" do
+    account = build_account(suffix: "recurring-freshness-priority", provider: "gmail")
+    EpistulariumMessage.create!(
+      workspace: account.workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-recurring-freshness-priority",
+      mailbox: "inbox",
+      subject: "Existing message",
+      from_email: "alex@example.com",
+      body_text: "Existing body"
+    )
+    account.update!(last_synced_at: 11.minutes.ago)
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: true)
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    described_class.perform_now(account.id, mode: "full_backfill")
+
+    recurring_job = enqueued_jobs.find do |job|
+      job[:job] == described_class &&
+        job[:args].first == account.id &&
+        job[:at].present?
+    end
+
+    expect(recurring_job).to be_present
+    expect(recurring_job[:args].second.stringify_keys["mode"]).to eq("incremental")
     expect(recurring_job[:at]).to be_within(5.seconds).of(10.minutes.from_now.to_f)
   end
 

@@ -14,7 +14,7 @@ module Epistularium
 
         Epistularium::SyncEnqueueService.new(
           account: account,
-          mode: Epistularium::SyncEnqueueService.preferred_mode_for(account),
+          mode: Epistularium::SyncEnqueueService.preferred_mode_for(account, prioritize_fresh: true),
           throttle: ENQUEUE_THROTTLE
         ).call
       rescue StandardError => error

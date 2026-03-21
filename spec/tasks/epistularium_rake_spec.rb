@@ -51,4 +51,35 @@ RSpec.describe "epistularium:sync_due" do
 
     expect(enqueued_account_ids).to contain_exactly(enabled_account.id)
   end
+
+  it "prioritizes incremental refresh for stale accounts whose full history is still backfilling" do
+    user = User.create!(email: "epistularium-rake-stale@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Epistularium Rake Stale", slug: "epistularium-rake-stale")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "gmail",
+      label: "Gmail inbox",
+      access_token: "gmail-token",
+      enabled: true,
+      last_synced_at: 11.minutes.ago,
+      settings_json: {}
+    )
+    EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-rake-stale",
+      mailbox: "inbox",
+      subject: "Existing message",
+      from_email: "alex@example.com",
+      body_text: "Existing body"
+    )
+
+    expect do
+      Rake::Task["epistularium:sync_due"].invoke
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "incremental")
+  end
 end

@@ -62,6 +62,14 @@ module Epistularium
           throttle: 0,
           allow_while_syncing: true
         ).call
+      elsif mode.to_s == "incremental" && account.full_backfill_pending?
+        Epistularium::SyncEnqueueService.new(
+          account: account,
+          mode: "full_backfill",
+          wait: FOLLOW_UP_DELAY,
+          throttle: 0,
+          allow_while_syncing: true
+        ).call
       elsif %w[imap amazon_workmail].include?(account.provider) && result.is_a?(Hash) && result[:backfill_remaining]
         Epistularium::SyncEnqueueService.new(
           account: account,
@@ -78,7 +86,7 @@ module Epistularium
 
       Epistularium::SyncEnqueueService.new(
         account: account,
-        mode: Epistularium::SyncEnqueueService.preferred_mode_for(account),
+        mode: Epistularium::SyncEnqueueService.preferred_mode_for(account, prioritize_fresh: true),
         wait: AUTO_SYNC_INTERVAL,
         throttle: AUTO_SYNC_INTERVAL,
         allow_while_syncing: true

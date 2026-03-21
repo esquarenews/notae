@@ -7,11 +7,12 @@ module Epistularium
       already_queued: :already_queued
     }.freeze
 
-    def self.preferred_mode_for(account)
+    def self.preferred_mode_for(account, prioritize_fresh: false)
       return nil if account.blank?
       return nil unless %w[gmail imap amazon_workmail].include?(account.provider)
       return "bootstrap" if account.last_synced_at.blank?
       return "bootstrap" unless account.epistularium_messages.exists?
+      return "incremental" if prioritize_fresh && account.full_backfill_pending?
       return "full_backfill" if account.full_backfill_pending?
 
       nil
