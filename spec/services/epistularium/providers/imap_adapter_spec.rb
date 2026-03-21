@@ -79,6 +79,58 @@ RSpec.describe Epistularium::Providers::ImapAdapter do
     expect(sent.unread).to eq(false)
   end
 
+  it "imports nested multipart IMAP messages without raising the multipart decode error" do
+    _user, _workspace, account = build_stack(suffix: "nested-multipart")
+    imap = instance_double(Net::IMAP)
+    allow(Net::IMAP).to receive(:new).and_return(imap)
+    allow(imap).to receive(:login)
+    allow(imap).to receive(:logout)
+    allow(imap).to receive(:disconnect)
+    allow(imap).to receive(:list).and_return([ instance_double(Net::IMAP::MailboxList) ])
+    allow(imap).to receive(:select)
+    allow(imap).to receive(:uid_search).and_return([ 101 ], [])
+    allow(imap).to receive(:uid_fetch).and_return(
+      [
+        Struct.new(:attr).new(
+          {
+            "RFC822" => <<~MAIL,
+              From: Alex <alex@example.com>
+              To: Team <team@example.com>
+              Subject: Nested multipart
+              Date: Tue, 18 Mar 2026 16:00:00 +1100
+              Message-ID: <imap-nested@example.com>
+              MIME-Version: 1.0
+              Content-Type: multipart/mixed; boundary="mix"
+
+              --mix
+              Content-Type: multipart/alternative; boundary="alt"
+
+              --alt
+              Content-Type: text/plain; charset=UTF-8
+
+              Plain body from nested multipart.
+              --alt
+              Content-Type: text/html; charset=UTF-8
+
+              <p><strong>HTML body</strong> from nested multipart.</p>
+              --alt--
+              --mix--
+            MAIL
+            "FLAGS" => [],
+            "INTERNALDATE" => Time.utc(2026, 3, 18, 5, 0, 0)
+          }
+        )
+      ],
+      []
+    )
+
+    expect { described_class.new(account: account).sync! }.not_to raise_error
+
+    message = account.epistularium_messages.find_by!(provider_message_id: "inbox:101")
+    expect(message.body_text).to include("Plain body from nested multipart.")
+    expect(message.body_html).to include("<strong>HTML body</strong> from nested multipart.")
+  end
+
   it "strips stylesheet markup from imported HTML emails while preserving readable body content" do
     _user, _workspace, account = build_stack(suffix: "html-clean")
     imap = instance_double(Net::IMAP)

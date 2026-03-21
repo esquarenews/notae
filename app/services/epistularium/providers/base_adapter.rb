@@ -274,6 +274,8 @@ module Epistularium
 
         all_parts = mail.multipart? ? mail.all_parts : [ mail ]
         all_parts.each do |part|
+          next if part.multipart?
+
           content_type = part.mime_type.to_s.downcase
           next if content_type.blank?
 
@@ -308,8 +310,16 @@ module Epistularium
 
       def decoded_part_body(part)
         part.decoded.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+      rescue NoMethodError => error
+        raise unless multipart_decode_error?(error)
+
+        ""
       rescue Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError
         part.decoded.to_s.force_encoding("UTF-8").scrub
+      end
+
+      def multipart_decode_error?(error)
+        error.message.to_s.include?("cannot be decoded as _entire_ message")
       end
 
       def strip_html(raw_html)
