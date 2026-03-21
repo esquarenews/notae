@@ -107,5 +107,4 @@ class DbCellsController < ApplicationController
 
     row.save! if row.changed?
   end
-
 end

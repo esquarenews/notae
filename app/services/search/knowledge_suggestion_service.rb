@@ -147,7 +147,7 @@ module Search
         normalize_related_note(item, max_index, used_indices)
       end.first(8)
 
-      used_indices = [1] if used_indices.empty?
+      used_indices = [ 1 ] if used_indices.empty?
       summary = "#{summary.presence || 'Knowledge summary unavailable.'} [1]" if summary.to_s.exclude?("[")
 
       {
