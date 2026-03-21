@@ -2,10 +2,12 @@ module AgentActions
   class ApprovalService
     class Error < StandardError; end
 
-    def initialize(agent_action:, actor:, comment: nil)
+    def initialize(agent_action:, actor:, comment: nil, destination_database_id: nil, destination_calendar_id: nil)
       @agent_action = agent_action
       @actor = actor
       @comment = comment.to_s.strip.presence
+      @destination_database_id = destination_database_id.to_s.strip.presence
+      @destination_calendar_id = destination_calendar_id.to_s.strip.presence
     end
 
     def call
@@ -14,10 +16,14 @@ module AgentActions
       decision = policy_decision
       raise Error, decision.reasons.join(", ") unless decision.allowed
 
-      adapter = AgentActions::AdapterRegistry.fetch(agent_action.target_system)
-      result = adapter.dry_run(agent_action)
-
       agent_action.transaction do
+        result = AgentActions::ExecutionService.new(
+          agent_action: agent_action,
+          actor: actor,
+          destination_database_id: destination_database_id,
+          destination_calendar_id: destination_calendar_id
+        ).call
+
         agent_action.update!(
           status: AgentAction::STATUS_APPROVED,
           approved_by: actor,
@@ -25,22 +31,25 @@ module AgentActions
           rejected_by: nil,
           rejected_at: nil,
           executed_at: Time.current,
-          result_json: result.to_h,
+          dry_run: ActiveModel::Type::Boolean.new.cast(result["dry_run"]),
+          result_json: result,
           policy_evaluation_json: decision.to_h
         )
         agent_action.log_event!(event_type: "policy_evaluated", actor: actor, details: decision.to_h)
         agent_action.log_event!(event_type: "approved", actor: actor, comment: comment, details: { "status" => agent_action.status })
-        agent_action.log_event!(event_type: "tool_used", actor: actor, details: result.to_h)
+        agent_action.log_event!(event_type: "tool_used", actor: actor, details: result)
         NotificationService.new(agent_action: agent_action, actor: actor).notify_approved!(comment: comment)
         agent_action
       end
+    rescue AgentActions::ExecutionService::Error => e
+      raise Error, e.message
     rescue ActiveRecord::RecordInvalid => e
       raise Error, e.record.errors.full_messages.to_sentence
     end
 
     private
 
-    attr_reader :agent_action, :actor, :comment
+    attr_reader :agent_action, :actor, :comment, :destination_database_id, :destination_calendar_id
 
     def policy_decision
       AgentActions::PolicyEngine.new(

@@ -37,9 +37,34 @@
       <% if policy(@agent_action).approve? || policy(@agent_action).request_changes? || policy(@agent_action).reject? %>
         <div class="notae-workspace-home-stack">
           <% if policy(@agent_action).approve? %>
-            <%= form_with url: approve_agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), method: :post, class: "notae-workspace-home-stack" do |form| %>
-              <%= form.text_area :decision_comment, placeholder: "Approval note or revision guidance", class: "notae-auth-input", rows: 3 %>
-              <%= form.submit "Approve draft", class: "notae-chip-button" %>
+            <% approval_blocked = (@agent_action.draft_type == "task_ticket" && @approval_target_databases.empty?) || (@agent_action.draft_type == "calendar_hold" && @approval_target_calendars.empty?) %>
+            <%= form_with url: approve_agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), method: :post, class: "notae-workspace-home-stack" do %>
+              <% if @agent_action.draft_type == "task_ticket" %>
+                <label class="notae-page-subtle" for="destination_database_id">Save to task list</label>
+                <%= select_tag :destination_database_id,
+                               options_from_collection_for_select(@approval_target_databases, :id, :name, params[:destination_database_id]),
+                               prompt: "Choose task list",
+                               class: "notae-auth-input" %>
+                <% if @approval_target_databases.empty? %>
+                  <p class="notae-page-subtle">No visible task lists are available in this workspace yet.</p>
+                <% end %>
+              <% elsif @agent_action.draft_type == "calendar_hold" %>
+                <label class="notae-page-subtle" for="destination_calendar_id">Save to calendar</label>
+                <%= select_tag :destination_calendar_id,
+                               options_from_collection_for_select(@approval_target_calendars, :id, :name, params[:destination_calendar_id]),
+                               prompt: "Choose calendar",
+                               class: "notae-auth-input" %>
+                <% if @approval_target_calendars.empty? %>
+                  <p class="notae-page-subtle">No writable calendars are available in this workspace yet.</p>
+                <% end %>
+              <% end %>
+
+              <% unless @agent_action.draft_type.in?(%w[email_draft github_comment_draft]) %>
+                <p class="notae-page-subtle">Approving this draft creates a real Notae record in the selected destination.</p>
+              <% end %>
+
+              <%= text_area_tag :decision_comment, params[:decision_comment], placeholder: "Approval note or revision guidance", class: "notae-auth-input", rows: 3 %>
+              <%= submit_tag "Approve draft", class: "notae-chip-button", disabled: approval_blocked %>
             <% end %>
           <% end %>
 
@@ -62,7 +87,7 @@
 
     <section class="notae-auth-card notae-home-card">
       <div class="notae-home-card-head">
-        <h2>Policy & dry-run</h2>
+        <h2>Policy & execution</h2>
       </div>
       <p class="notae-page-subtle">Policy evaluation</p>
       <div class="notae-workspace-home-json"><%= @agent_action.policy_evaluation_json.to_json %></div>
@@ -73,10 +98,16 @@
       <% end %>
 
       <% if @agent_action.result_json.present? %>
-        <p class="notae-page-subtle">Dry-run result</p>
+        <p class="notae-page-subtle"><%= @agent_action.result_json["dry_run"] ? "Dry-run result" : "Execution result" %></p>
+        <% if @agent_action.result_json["summary"].present? %>
+          <p><%= @agent_action.result_json["summary"] %></p>
+        <% end %>
+        <% if @agent_action.result_json["url"].present? %>
+          <p><%= link_to "Open created item", @agent_action.result_json["url"], class: "notae-chip-button notae-chip-button-subtle" %></p>
+        <% end %>
         <div class="notae-workspace-home-json"><%= @agent_action.result_json.to_json %></div>
       <% else %>
-        <p class="notae-page-subtle">No dry-run result yet.</p>
+        <p class="notae-page-subtle">No execution result yet.</p>
       <% end %>
     </section>
   </div>

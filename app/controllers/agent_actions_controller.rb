@@ -2,6 +2,7 @@ class AgentActionsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_agent_action, only: %i[show update approve reject request_changes]
+  before_action :load_approval_targets, only: %i[show]
 
   def index
     authorize AgentAction.new(workspace: @workspace)
@@ -74,12 +75,15 @@ class AgentActionsController < ApplicationController
     AgentActions::ApprovalService.new(
       agent_action: @agent_action,
       actor: current_user,
-      comment: params[:decision_comment]
+      comment: approval_params[:decision_comment],
+      destination_database_id: approval_params[:destination_database_id],
+      destination_calendar_id: approval_params[:destination_calendar_id]
     ).call
 
-    redirect_to agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), notice: "Draft approved in dry-run mode."
+    redirect_to agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), notice: approval_notice_for(@agent_action.reload)
   rescue AgentActions::ApprovalService::Error => error
     @review_history = @agent_action.review_history
+    load_approval_targets
     flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
@@ -207,5 +211,31 @@ class AgentActionsController < ApplicationController
 
   def approver_membership?
     Membership.find_by(user_id: current_user.id, workspace_id: @workspace.id)&.admin_or_owner?
+  end
+
+  def approval_params
+    params.permit(:decision_comment, :destination_database_id, :destination_calendar_id)
+  end
+
+  def load_approval_targets
+    @approval_target_databases =
+      if @agent_action&.draft_type == "task_ticket"
+        policy_scope(Database).for_workspace(@workspace).active.order(:name)
+      else
+        Database.none
+      end
+
+    @approval_target_calendars =
+      if @agent_action&.draft_type == "calendar_hold"
+        policy_scope(KalendariumCalendar).for_workspace(@workspace).enabled.user_writable.order(:name)
+      else
+        KalendariumCalendar.none
+      end
+  end
+
+  def approval_notice_for(agent_action)
+    return "Draft approved in dry-run mode." if agent_action.dry_run?
+
+    agent_action.result_json["summary"].presence || "Draft approved and saved to Notae."
   end
 end

@@ -73,7 +73,16 @@ RSpec.describe "Agent actions", type: :request do
     expect(agent_action.review_history.find_by!(event_type: "draft_updated").comment).to eq("Tone down the certainty.")
   end
 
-  it "approves a draft in dry-run mode and shows it as read-only afterwards" do
+  it "approves a calendar draft into a selected calendar and shows the execution result afterwards" do
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Team Calendar",
+      color_hex: "#2563EB",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local",
+      enabled: true
+    )
     agent_action = AgentActions::DraftCreator.new(
       workspace: workspace,
       actor: member,
@@ -95,19 +104,88 @@ RSpec.describe "Agent actions", type: :request do
     sign_in owner
 
     post approve_agent_action_path(workspace_slug: workspace.slug, id: agent_action.id), params: {
-      decision_comment: "Approved as a dry-run preview."
+      destination_calendar_id: calendar.id,
+      decision_comment: "Approved and scheduled."
     }
 
     expect(response).to redirect_to(agent_action_path(workspace_slug: workspace.slug, id: agent_action.id))
     expect(agent_action.reload.status).to eq(AgentAction::STATUS_APPROVED)
-    expect(agent_action.result_json.fetch("dry_run")).to eq(true)
-    expect(agent_action.review_history.find_by!(event_type: "approved").comment).to eq("Approved as a dry-run preview.")
+    expect(agent_action.dry_run).to be(false)
+    expect(agent_action.result_json.fetch("dry_run")).to eq(false)
+    expect(agent_action.result_json.fetch("summary")).to eq("Created event in Team Calendar.")
+    created_event = KalendariumEvent.find(agent_action.result_json.fetch("target_id"))
+    expect(created_event.kalendarium_calendar).to eq(calendar)
+    expect(agent_action.review_history.find_by!(event_type: "approved").comment).to eq("Approved and scheduled.")
 
     get agent_action_path(workspace_slug: workspace.slug, id: agent_action.id)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("This draft is now read-only.")
-    expect(response.body).to include("No calendar event was created.")
+    expect(response.body).to include("Execution result")
+    expect(response.body).to include("Created event in Team Calendar.")
+    expect(response.body).to include("Open created item")
+  end
+
+  it "asks approvers to choose a destination task list or calendar before approval" do
+    database = Database.create!(workspace: workspace, name: "Task Inbox", created_by: owner)
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Ops Calendar",
+      color_hex: "#059669",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local",
+      enabled: true
+    )
+    task_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: member,
+      attributes: {
+        title: "Draft CRM ticket",
+        proposed_by: "manual",
+        target_system: "crm",
+        draft_type: "task_ticket",
+        payload_json: {
+          "project" => "Inbox",
+          "title" => "Follow up contract",
+          "body" => "Call the customer tomorrow."
+        }
+      }
+    ).call
+    calendar_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: member,
+      attributes: {
+        title: "Hold discovery call",
+        proposed_by: "manual",
+        target_system: "calendar",
+        draft_type: "calendar_hold",
+        payload_json: {
+          "title" => "Discovery call",
+          "starts_at" => "2026-03-20T10:00",
+          "ends_at" => "2026-03-20T10:30",
+          "attendees" => [],
+          "body" => "Discuss the open questions."
+        }
+      }
+    ).call
+
+    sign_in owner
+
+    get agent_action_path(workspace_slug: workspace.slug, id: task_action.id)
+    expect(response.body).to include("Save to task list")
+    expect(response.body).to include(database.name)
+
+    get agent_action_path(workspace_slug: workspace.slug, id: calendar_action.id)
+    expect(response.body).to include("Save to calendar")
+    expect(response.body).to include(calendar.name)
+
+    post approve_agent_action_path(workspace_slug: workspace.slug, id: calendar_action.id), params: {
+      decision_comment: "Missing destination should fail."
+    }
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.body).to include("Select a calendar before approving.")
   end
 
   it "rejects a draft and records the decision comment" do
