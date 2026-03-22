@@ -1,22 +1,29 @@
 {
   "name": "Notae",
+  "short_name": "Notae",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "description": "Notae workspace shell for notes, grids, calendar, mail, and meetings.",
+  "theme_color": "<%= notae_pwa_light_theme_color %>",
+  "background_color": "<%= notae_pwa_background_color %>",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
       "type": "image/png",
       "sizes": "512x512"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon-maskable-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
     }
-  ],
-  "start_url": "/",
-  "display": "standalone",
-  "scope": "/",
-  "description": "Notae.",
-  "theme_color": "red",
-  "background_color": "red"
+  ]
 }

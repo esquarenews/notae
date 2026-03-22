@@ -27,6 +27,7 @@ class ApplicationController < ActionController::Base
   before_action :ensure_realtime_channel_loaded
   around_action :use_user_time_zone
   after_action :verify_pundit_authorization, unless: :devise_controller?
+  after_action :store_last_workspace_slug!, if: :should_store_last_workspace_slug?
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
   rescue_from ActionController::InvalidAuthenticityToken, with: :handle_invalid_authenticity_token
@@ -42,8 +43,20 @@ class ApplicationController < ActionController::Base
     request.get? && request.format.html? && params[:embedded].to_s != "1"
   end
 
+  def should_store_last_workspace_slug?
+    user_signed_in? &&
+      request.get? &&
+      params[:workspace_slug].present?
+  end
+
   def handle_not_authorized
     redirect_back fallback_location: root_path, alert: "You are not authorized to perform this action."
+  end
+
+  def store_last_workspace_slug!
+    return unless response.successful?
+
+    session["notae_last_workspace_slug"] = params[:workspace_slug].to_s
   end
 
   def handle_invalid_authenticity_token

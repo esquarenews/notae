@@ -523,7 +523,10 @@
         <span class="notae-sidebar-link-label">Trash</span>
       </span>
     <% end %>
-    <%= button_to destroy_user_session_path, method: :delete, class: "notae-sidebar-link notae-sidebar-signout" do %>
+    <%= button_to destroy_user_session_path,
+                  method: :delete,
+                  class: "notae-sidebar-link notae-sidebar-signout",
+                  form: { data: { pwa_clear_private_cache: "true" } } do %>
       <span class="notae-sidebar-link-content">
         <%= notae_icon_svg(:sign_out, css_class: "notae-sidebar-nav-icon") %>
         <span class="notae-sidebar-link-label">Sign out</span>

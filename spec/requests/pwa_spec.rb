@@ -1,0 +1,107 @@
+require "rails_helper"
+require "json"
+require "open3"
+require "tempfile"
+
+RSpec.describe "PWA", type: :request do
+  def create_workspace_for(user:, slug:, name:)
+    workspace = Workspace.create!(name: name, slug: slug)
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    workspace
+  end
+
+  it "includes the manifest link and theme metadata in the application layout" do
+    get root_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("rel=\"manifest\"")
+    expect(response.body).to include(pwa_manifest_path)
+    expect(response.body).to include("apple-mobile-web-app-title")
+    expect(response.body).to include("theme-color")
+  end
+
+  it "serves a production-ready web manifest" do
+    get pwa_manifest_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("application/manifest+json")
+
+    manifest = JSON.parse(response.body)
+    icons = manifest.fetch("icons")
+
+    expect(manifest).to include(
+      "id" => "/app",
+      "start_url" => "/app",
+      "scope" => "/",
+      "display" => "standalone",
+      "short_name" => "Notae"
+    )
+    expect(icons).to include(a_hash_including("src" => "/icon-192.png", "sizes" => "192x192"))
+    expect(icons).to include(a_hash_including("src" => "/icon-512.png", "sizes" => "512x512"))
+    expect(icons).to include(a_hash_including("src" => "/icon-maskable-512.png", "purpose" => "maskable"))
+  end
+
+  it "serves a parseable service worker with the offline fallback and private cache clearing hooks" do
+    get pwa_service_worker_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("application/javascript")
+    expect(response.headers["Service-Worker-Allowed"]).to eq("/")
+    expect(response.body).to include("OFFLINE_FALLBACK_URL")
+    expect(response.body).to include("CLEAR_PRIVATE_CACHES")
+    expect(response.body).to include("/app")
+
+    Tempfile.create([ "notae-pwa-service-worker", ".js" ]) do |file|
+      file.write(response.body)
+      file.flush
+
+      stdout, status = Open3.capture2e("node", "--check", file.path)
+      expect(status.success?).to be(true), <<~MESSAGE
+        Expected #{pwa_service_worker_path} to parse cleanly with node --check.
+        Output:
+        #{stdout}
+      MESSAGE
+    end
+  rescue Errno::ENOENT
+    skip "node is not available in this environment"
+  end
+
+  it "redirects signed-out app launches to sign in" do
+    get pwa_launch_path
+
+    expect(response).to redirect_to(new_user_session_path)
+  end
+
+  it "launches signed-in users into the remembered workspace home" do
+    user = User.create!(email: "pwa-launch-remembered@example.com", password: "password123")
+    primary_workspace = create_workspace_for(user: user, slug: "pwa-primary", name: "PWA Primary")
+    remembered_workspace = create_workspace_for(user: user, slug: "pwa-remembered", name: "PWA Remembered")
+    sign_in user
+
+    get workspace_path(remembered_workspace.slug)
+    get pwa_launch_path
+
+    expect(response).to redirect_to(workspace_path(remembered_workspace.slug))
+    expect(primary_workspace.slug).not_to eq(remembered_workspace.slug)
+  end
+
+  it "falls back to the first accessible workspace home when no remembered workspace exists" do
+    user = User.create!(email: "pwa-launch-first@example.com", password: "password123")
+    first_workspace = create_workspace_for(user: user, slug: "pwa-first", name: "PWA First")
+    create_workspace_for(user: user, slug: "pwa-second", name: "PWA Second")
+    sign_in user
+
+    get pwa_launch_path
+
+    expect(response).to redirect_to(workspace_path(first_workspace.slug))
+  end
+
+  it "redirects to new workspace when the signed-in user has no accessible workspaces" do
+    user = User.create!(email: "pwa-launch-empty@example.com", password: "password123")
+    sign_in user
+
+    get pwa_launch_path
+
+    expect(response).to redirect_to(new_workspace_path)
+  end
+end

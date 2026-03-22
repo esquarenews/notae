@@ -1,0 +1,15 @@
+<% content_for :title, "Offline" %>
+
+<section class="notae-pwa-offline-page">
+  <div class="notae-auth-card notae-pwa-offline-card">
+    <p class="notae-page-subtle">Offline mode</p>
+    <h1>Notae is offline right now</h1>
+    <p class="notae-doc-muted">
+      Recently opened screens can still load from cache, but new edits, sync actions, and live updates need a network connection.
+    </p>
+    <div class="notae-pwa-offline-actions">
+      <%= link_to "Try again", pwa_launch_path, class: "notae-chip-button" %>
+      <%= link_to "Open home", root_path, class: "notae-chip-button notae-chip-button-subtle" %>
+    </div>
+  </div>
+</section>

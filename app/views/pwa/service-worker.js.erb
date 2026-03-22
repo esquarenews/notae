@@ -1,0 +1,201 @@
+<%
+  importmap_urls = JSON.parse(Rails.application.importmap.to_json(resolver: self)).fetch("imports", {}).values
+  same_origin_importmap_urls = importmap_urls.grep(/\A\//)
+  precache_urls = (
+    same_origin_importmap_urls +
+    [
+      asset_path("application.css"),
+      "/icon-192.png",
+      "/icon-512.png",
+      "/icon-maskable-512.png",
+      pwa_manifest_path,
+      pwa_offline_path
+    ]
+  ).uniq
+%>
+const CACHE_VERSION = "pwa-v1"
+const SHELL_CACHE = `notae-shell-${CACHE_VERSION}`
+const DOCUMENT_CACHE = `notae-documents-${CACHE_VERSION}`
+const ASSET_CACHE = `notae-assets-${CACHE_VERSION}`
+const FONT_CACHE = `notae-fonts-${CACHE_VERSION}`
+const PRIVATE_CACHE_PREFIXES = ["notae-documents-"]
+const ACTIVE_CACHES = [SHELL_CACHE, DOCUMENT_CACHE, ASSET_CACHE, FONT_CACHE]
+const OFFLINE_FALLBACK_URL = "<%= pwa_offline_path %>"
+const PRECACHE_URLS = <%= raw(precache_urls.to_json) %>
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE)
+      await cache.addAll(PRECACHE_URLS)
+      await self.skipWaiting()
+    })()
+  )
+})
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const cacheNames = await caches.keys()
+      await Promise.all(
+        cacheNames.map((cacheName) => {
+          if (ACTIVE_CACHES.includes(cacheName)) return Promise.resolve(false)
+          if (!cacheName.startsWith("notae-")) return Promise.resolve(false)
+
+          return caches.delete(cacheName)
+        })
+      )
+      await self.clients.claim()
+    })()
+  )
+})
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "CLEAR_PRIVATE_CACHES") return
+
+  event.waitUntil(clearPrivateCaches())
+})
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event
+  if (request.method !== "GET") return
+  if (request.cache === "only-if-cached" && request.mode !== "same-origin") return
+
+  const url = new URL(request.url)
+
+  if (isTopLevelDocumentRequest(request, url)) {
+    event.respondWith(staleWhileRevalidateDocument(request))
+    return
+  }
+
+  if (isSameOriginAsset(url)) {
+    event.respondWith(staleWhileRevalidate(request, ASSET_CACHE))
+    return
+  }
+
+  if (isImageRequest(request, url)) {
+    event.respondWith(cacheFirst(request, ASSET_CACHE))
+    return
+  }
+
+  if (isFontRequest(url)) {
+    event.respondWith(staleWhileRevalidate(request, FONT_CACHE))
+  }
+})
+
+function isTopLevelDocumentRequest(request, url) {
+  if (request.mode !== "navigate") return false
+  if (url.origin !== self.location.origin) return false
+
+  const path = url.pathname
+  if (path === "/app" || path === OFFLINE_FALLBACK_URL) return true
+  if (!path.startsWith("/w/")) return false
+
+  return /^\/w\/[^/]+(?:\/(?:search|library|kalendarium|epistularium|meetings|settings(?:\/[^/]+)?))?$/.test(path)
+}
+
+function isSameOriginAsset(url) {
+  return url.origin === self.location.origin && (url.pathname.startsWith("/assets/") || url.pathname === "/icon-192.png" || url.pathname === "/icon-512.png" || url.pathname === "/icon-maskable-512.png" || url.pathname === "/icon.svg")
+}
+
+function isImageRequest(request, url) {
+  if (request.destination === "image") return true
+
+  return url.origin === self.location.origin && /\.(?:png|svg|jpg|jpeg|gif|webp|avif)$/i.test(url.pathname)
+}
+
+function isFontRequest(url) {
+  return (
+    url.origin === "https://fonts.googleapis.com" ||
+    url.origin === "https://fonts.gstatic.com" ||
+    /\.(?:woff2?|ttf|otf)$/i.test(url.pathname)
+  )
+}
+
+async function staleWhileRevalidateDocument(request) {
+  const cache = await caches.open(DOCUMENT_CACHE)
+  const cached = await cache.match(request)
+  const networkRequest = fetch(request)
+    .then(async (response) => {
+      if (cacheableDocumentResponse(request, response)) {
+        await cache.put(request, response.clone())
+      }
+
+      return response
+    })
+
+  if (cached) {
+    networkRequest.catch(() => {})
+    return cached
+  }
+
+  try {
+    return await networkRequest
+  } catch (_error) {
+    return offlineFallbackResponse()
+  }
+}
+
+function cacheableDocumentResponse(request, response) {
+  if (!response || !response.ok) return false
+
+  const contentType = response.headers.get("content-type") || ""
+  if (!contentType.includes("text/html")) return false
+
+  const finalUrl = new URL(response.url || request.url)
+  if (finalUrl.origin !== self.location.origin) return false
+  if (finalUrl.pathname.startsWith("/users/sign_in")) return false
+
+  return true
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName)
+  const cached = await cache.match(request)
+  const networkRequest = fetch(request)
+    .then(async (response) => {
+      if (response && response.ok) {
+        await cache.put(request, response.clone())
+      }
+
+      return response
+    })
+
+  if (cached) {
+    networkRequest.catch(() => {})
+    return cached
+  }
+
+  return networkRequest
+}
+
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName)
+  const cached = await cache.match(request)
+  if (cached) return cached
+
+  const response = await fetch(request)
+  if (response && response.ok) {
+    await cache.put(request, response.clone())
+  }
+
+  return response
+}
+
+async function offlineFallbackResponse() {
+  const cache = await caches.open(SHELL_CACHE)
+  const cached = await cache.match(OFFLINE_FALLBACK_URL)
+  return cached || Response.error()
+}
+
+async function clearPrivateCaches() {
+  const cacheNames = await caches.keys()
+
+  await Promise.all(
+    cacheNames.map((cacheName) => {
+      if (!PRIVATE_CACHE_PREFIXES.some((prefix) => cacheName.startsWith(prefix))) return Promise.resolve(false)
+
+      return caches.delete(cacheName)
+    })
+  )
+}

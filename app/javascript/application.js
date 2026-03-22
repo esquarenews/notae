@@ -2,6 +2,27 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 
+let pwaRegistrationPromise
+
+function securePwaContext() {
+  if (window.isSecureContext) return true
+
+  return ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)
+}
+
+function registerPwaServiceWorker() {
+  if (pwaRegistrationPromise) return pwaRegistrationPromise
+  if (!("serviceWorker" in navigator)) return Promise.resolve(null)
+  if (!securePwaContext()) return Promise.resolve(null)
+
+  pwaRegistrationPromise = navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => null)
+  return pwaRegistrationPromise
+}
+
+document.addEventListener("turbo:load", () => {
+  registerPwaServiceWorker()
+})
+
 document.addEventListener("turbo:frame-missing", async (event) => {
   const frame = event.target
   if (!(frame instanceof HTMLElement)) return

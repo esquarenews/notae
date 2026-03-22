@@ -1,0 +1,31 @@
+<section class="notae-pwa-shell"
+         data-controller="pwa"
+         data-pwa-authenticated-value="<%= authenticated ? "true" : "false" %>">
+  <div class="notae-pwa-offline-banner" data-pwa-target="offlineBanner" hidden>
+    <strong>Offline mode</strong>
+    <span>Cached screens remain available. Changes, sync, and live updates need a connection.</span>
+  </div>
+
+  <div class="notae-pwa-install-card" data-pwa-target="installPrompt" hidden>
+    <div class="notae-pwa-install-copy">
+      <strong>Install Notae</strong>
+      <span>Add Notae to your home screen for a cleaner, app-like experience.</span>
+    </div>
+    <div class="notae-pwa-install-actions">
+      <button type="button" class="notae-chip-button" data-action="pwa#install">Install</button>
+      <button type="button" class="notae-chip-button notae-chip-button-subtle" data-action="pwa#dismissInstall">Not now</button>
+    </div>
+  </div>
+
+  <div class="notae-pwa-install-card notae-pwa-install-card-ios" data-pwa-target="iosPrompt" hidden>
+    <div class="notae-pwa-install-copy">
+      <strong>Add Notae to Home Screen</strong>
+      <span>On iPhone or iPad, tap Share, then choose Add to Home Screen.</span>
+    </div>
+    <div class="notae-pwa-install-actions">
+      <button type="button" class="notae-chip-button notae-chip-button-subtle" data-action="pwa#dismissIosPrompt">Dismiss</button>
+    </div>
+  </div>
+
+  <div class="notae-pwa-network-toast" data-pwa-target="networkToast" hidden></div>
+</section>

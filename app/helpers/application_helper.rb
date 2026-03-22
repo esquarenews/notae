@@ -13,6 +13,9 @@ module ApplicationHelper
     #dc2626
     #1d4ed8
   ].freeze
+  NOTAE_PWA_LIGHT_THEME_COLOR = "#fcfcfb".freeze
+  NOTAE_PWA_DARK_THEME_COLOR = "#171a1d".freeze
+  NOTAE_PWA_BACKGROUND_COLOR = "#f5f5f4".freeze
 
   def ui_workspaces
     return [] unless user_signed_in?
@@ -155,6 +158,18 @@ module ApplicationHelper
       action: action,
       turbo_prefetch: false
     }
+  end
+
+  def notae_pwa_light_theme_color
+    NOTAE_PWA_LIGHT_THEME_COLOR
+  end
+
+  def notae_pwa_dark_theme_color
+    NOTAE_PWA_DARK_THEME_COLOR
+  end
+
+  def notae_pwa_background_color
+    NOTAE_PWA_BACKGROUND_COLOR
   end
 
   def notae_icon_svg(name, css_class: nil)

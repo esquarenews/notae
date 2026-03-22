@@ -24,4 +24,13 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include("window.Turbo.renderStreamMessage")
     expect(source).to include("await visit(response)")
   end
+
+  it "registers the service worker only in supported secure contexts" do
+    source = Rails.root.join("app/javascript/application.js").read
+
+    expect(source).to include("navigator.serviceWorker.register(\"/service-worker.js\"")
+    expect(source).to include("window.isSecureContext")
+    expect(source).to include("[\"localhost\", \"127.0.0.1\", \"[::1]\"]")
+    expect(source).to include("document.addEventListener(\"turbo:load\"")
+  end
 end
