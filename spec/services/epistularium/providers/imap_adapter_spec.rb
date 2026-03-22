@@ -442,6 +442,54 @@ RSpec.describe Epistularium::Providers::ImapAdapter do
     expect(account.epistularium_messages.pluck(:provider_message_id)).to contain_exactly("inbox:102", "inbox:103", "sent:202", "sent:203")
   end
 
+  it "limits IMAP full-backfill searches to the last 12 months and defaults batches to 50 messages per mailbox" do
+    _user, _workspace, account = build_stack(suffix: "backfill-window")
+    imap = instance_double(Net::IMAP)
+    allow(Net::IMAP).to receive(:new).and_return(imap)
+    allow(imap).to receive(:login)
+    allow(imap).to receive(:logout)
+    allow(imap).to receive(:disconnect)
+    allow(imap).to receive(:list).and_return([ instance_double(Net::IMAP::MailboxList) ])
+    allow(imap).to receive(:select)
+
+    cutoff = Epistularium::SyncConfig.backfill_cutoff_date.strftime("%d-%b-%Y")
+    allow(imap).to receive(:uid_search).with([ "SINCE", cutoff ]).and_return((1..60).to_a, (101..160).to_a)
+    allow(imap).to receive(:uid_fetch) do |uid, _fields|
+      mailbox = uid < 100 ? "Inbox" : "Sent"
+      from_line = uid < 100 ? "From: Alex <alex@example.com>\nTo: Team <team@example.com>" : "From: Me <me@example.com>\nTo: Alex <alex@example.com>"
+      seen_flags = uid < 100 ? [] : [ "\\Seen" ]
+      [
+        Struct.new(:attr).new(
+          {
+            "RFC822" => <<~MAIL,
+              #{from_line}
+              Subject: #{mailbox} batch item #{uid}
+              Date: Tue, 18 Mar 2026 18:00:00 +1100
+              Message-ID: <imap-backfill-window-#{uid}@example.com>
+              MIME-Version: 1.0
+              Content-Type: text/plain; charset=UTF-8
+
+              #{mailbox} batch #{uid}.
+            MAIL
+            "FLAGS" => seen_flags,
+            "INTERNALDATE" => Time.utc(2026, 3, 18, 7, 0, 0)
+          }
+        )
+      ]
+    end
+
+    result = described_class.new(account: account).sync!(
+      full_backfill: true,
+      update_cursor: true
+    )
+
+    expect(result).to include(backfill_remaining: true)
+    expect(account.reload.settings_json["imap_backfill_before_uid_inbox"]).to eq(11)
+    expect(account.settings_json["imap_backfill_before_uid_sent"]).to eq(111)
+    expect(account.epistularium_messages.where(mailbox: "inbox").count).to eq(50)
+    expect(account.epistularium_messages.where(mailbox: "sent").count).to eq(50)
+  end
+
   it "translates SMTP endpoint protocol failures into a clearer IMAP host error" do
     _user, _workspace, account = build_stack(suffix: "smtp-endpoint")
     account.update_columns(

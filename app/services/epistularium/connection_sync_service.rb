@@ -8,12 +8,21 @@ module Epistularium
     end
 
     def call
-      adapter.sync!(
+      result = adapter.sync!(
         full_backfill: @full_backfill,
         max_messages_per_mailbox: @max_messages_per_mailbox,
         update_cursor: @update_cursor
       )
-      account.update!(status: "connected", last_synced_at: Time.current, last_error: nil)
+      timestamp = Time.current
+      settings = account.settings_json.to_h.deep_dup
+      settings[sync_timestamp_key] = timestamp.iso8601
+      account.update!(
+        status: "connected",
+        last_synced_at: timestamp,
+        last_error: nil,
+        settings_json: settings
+      )
+      result
     rescue StandardError => error
       account.update!(status: "sync_error", last_error: error.message)
       raise
@@ -34,6 +43,16 @@ module Epistularium
       else
         Epistularium::Providers::BaseAdapter.new(account: account)
       end
+    end
+
+    def sync_timestamp_key
+      resolved_full_backfill? ? "last_backfill_sync_at" : "last_fresh_sync_at"
+    end
+
+    def resolved_full_backfill?
+      return @full_backfill unless @full_backfill.nil?
+
+      account.full_backfill_pending?
     end
   end
 end

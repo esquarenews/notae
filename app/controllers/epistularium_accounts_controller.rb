@@ -79,9 +79,9 @@ class EpistulariumAccountsController < ApplicationController
     else
       Epistularium::SyncEnqueueService.new(
         account: account,
-        mode: Epistularium::SyncEnqueueService.preferred_mode_for(account)
+        mode: Epistularium::SyncEnqueueService.fresh_mode_for(account)
       ).call
-      redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Google account connected. Initial backfill queued."
+      redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Google account connected. Recent mail sync queued. Full backfill will continue in the background."
     end
   rescue ActiveSupport::MessageVerifier::InvalidSignature
     redirect_for_google_callback_failure!("Google authorization state is invalid or expired. Please try again.")
@@ -200,11 +200,12 @@ class EpistulariumAccountsController < ApplicationController
     mode = preferred_sync_mode_for(account)
     if run_initial_bootstrap_inline?(account)
       Epistularium::SyncConnectionJob.perform_now(account.id, mode: "bootstrap")
-      return redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Recent mail refreshed. Full backfill will continue in the background."
+      notice = account.reload.full_backfill_pending? ? "Recent mail refreshed. Full backfill will continue in the background." : "Recent mail refreshed."
+      return redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: notice
     end
 
     if Epistularium::SyncRecoveryService.new(account: account).call
-      notice = mode.present? ? "Recent mail refreshed. Full backfill will continue in the background." : "Recent mail refreshed."
+      notice = account.reload.full_backfill_pending? ? "Recent mail refreshed. Full backfill will continue in the background." : "Recent mail refreshed."
       return redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: notice
     end
 
@@ -212,7 +213,7 @@ class EpistulariumAccountsController < ApplicationController
     notice =
       case result
       when Epistularium::SyncEnqueueService::ENQUEUE_RESULTS[:enqueued]
-        mode.present? ? "Recent mail sync queued. Full backfill will continue in the background." : "Sync queued."
+        account.full_backfill_pending? ? "Recent mail sync queued. Full backfill will continue in the background." : "Recent mail sync queued."
       when Epistularium::SyncEnqueueService::ENQUEUE_RESULTS[:already_running]
         "Sync is already in progress."
       else
@@ -224,7 +225,7 @@ class EpistulariumAccountsController < ApplicationController
   end
 
   def preferred_sync_mode_for(account)
-    Epistularium::SyncEnqueueService.preferred_mode_for(account)
+    Epistularium::SyncEnqueueService.fresh_mode_for(account)
   end
 
   def run_initial_bootstrap_inline?(account)

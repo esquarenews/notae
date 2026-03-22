@@ -119,6 +119,55 @@ RSpec.describe EpistulariumAccount, type: :model do
     expect(account.sync_enqueued_at).to be_present
   end
 
+  it "reads freshness and backfill timestamps from settings_json and evaluates due windows separately" do
+    user, workspace = build_workspace_stack(suffix: "sync-timestamps")
+    account = described_class.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "gmail",
+      label: "Gmail",
+      access_token: "gmail-token",
+      settings_json: {
+        "last_fresh_sync_at" => 11.minutes.ago.iso8601,
+        "last_backfill_sync_at" => 61.minutes.ago.iso8601
+      }
+    )
+
+    expect(account.last_fresh_sync_at).to be_within(1.second).of(11.minutes.ago)
+    expect(account.last_backfill_sync_at).to be_within(1.second).of(61.minutes.ago)
+    expect(account.fresh_sync_due?).to eq(true)
+    expect(account.backfill_sync_due?).to eq(true)
+
+    account.update!(
+      settings_json: account.settings_json.to_h.merge(
+        "last_fresh_sync_at" => 3.minutes.ago.iso8601,
+        "last_backfill_sync_at" => 20.minutes.ago.iso8601
+      )
+    )
+
+    expect(account.reload.fresh_sync_due?).to eq(false)
+    expect(account.backfill_sync_due?).to eq(false)
+  end
+
+  it "falls back to last_synced_at for legacy freshness checks until the dedicated marker is populated" do
+    user, workspace = build_workspace_stack(suffix: "legacy-freshness")
+    account = described_class.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      last_synced_at: 15.minutes.ago,
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+
+    expect(account.last_fresh_sync_at).to be_within(1.second).of(15.minutes.ago)
+    expect(account.fresh_sync_due?).to eq(true)
+  end
+
   it "treats Gmail and IMAP accounts as pending full backfill until completion is recorded" do
     user, workspace = build_workspace_stack(suffix: "backfill-pending")
     gmail_account = described_class.create!(

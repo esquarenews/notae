@@ -26,7 +26,7 @@ module Epistularium
     end
 
     def due_for_sync?
-      account.last_synced_at.blank? || account.last_synced_at <= Epistularium::DueSyncScheduler::STALE_AFTER.ago
+      account.fresh_sync_due?(interval: Epistularium::DueSyncScheduler::FRESH_STALE_AFTER)
     end
 
     def recovery_mode
@@ -34,7 +34,7 @@ module Epistularium
     end
 
     def default_recovery_mode
-      return "bootstrap" if account.last_synced_at.blank?
+      return "bootstrap" if account.last_fresh_sync_at.blank?
       return "bootstrap" unless account.epistularium_messages.exists?
 
       "incremental"

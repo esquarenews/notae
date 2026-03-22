@@ -5,7 +5,7 @@ module Epistularium
   module Providers
     class ImapAdapter < BaseAdapter
       DEFAULT_SENT_MAILBOX = "Sent".freeze
-      DEFAULT_FULL_BACKFILL_BATCH_SIZE = 200
+      DEFAULT_FULL_BACKFILL_BATCH_SIZE = Epistularium::SyncConfig::IMAP_FULL_BACKFILL_BATCH_SIZE
 
       def sync!(full_backfill: nil, max_messages_per_mailbox: nil, update_cursor: true)
         use_full_backfill = full_backfill.nil? ? full_backfill_required? : full_backfill
@@ -127,7 +127,7 @@ module Epistularium
       end
 
       def full_backfill_uids_for_mailbox(imap:, mailbox:, max_messages_per_mailbox:, settings:)
-        uids = Array(imap.uid_search([ "ALL" ])).map(&:to_i).sort
+        uids = Array(imap.uid_search(search_query(full_backfill: true))).map(&:to_i).sort
         before_uid = settings[backfill_before_uid_key(mailbox)].to_i
         eligible_uids = before_uid.positive? ? uids.take_while { |uid| uid < before_uid } : uids
         batch_limit = max_messages_per_mailbox.to_i.positive? ? max_messages_per_mailbox.to_i : DEFAULT_FULL_BACKFILL_BATCH_SIZE
@@ -144,7 +144,10 @@ module Epistularium
       end
 
       def search_query(full_backfill:)
-        return [ "ALL" ] if full_backfill
+        if full_backfill
+          return [ "SINCE", Epistularium::SyncConfig.backfill_cutoff_date.strftime("%d-%b-%Y") ]
+        end
+
         return [ "ALL" ] if parsed_sync_cursor.blank?
 
         [ "SINCE", (parsed_sync_cursor.to_date - 1.day).strftime("%d-%b-%Y") ]

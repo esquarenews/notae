@@ -7,15 +7,27 @@ module Epistularium
       already_queued: :already_queued
     }.freeze
 
-    def self.preferred_mode_for(account, prioritize_fresh: false)
-      return nil if account.blank?
-      return nil unless %w[gmail imap amazon_workmail].include?(account.provider)
-      return "bootstrap" if account.last_synced_at.blank?
+    def self.fresh_mode_for(account)
+      return nil unless syncable_provider?(account)
+      return "bootstrap" if account.last_fresh_sync_at.blank?
       return "bootstrap" unless account.epistularium_messages.exists?
-      return "incremental" if prioritize_fresh && account.full_backfill_pending?
-      return "full_backfill" if account.full_backfill_pending?
 
-      nil
+      "incremental"
+    end
+
+    def self.backfill_mode_for(account)
+      return nil unless syncable_provider?(account)
+      return nil unless account.full_backfill_pending?
+
+      "full_backfill"
+    end
+
+    def self.preferred_mode_for(account, prioritize_fresh: false)
+      fresh_mode = fresh_mode_for(account)
+      return fresh_mode if prioritize_fresh
+      return fresh_mode if fresh_mode == "bootstrap"
+
+      backfill_mode_for(account) || fresh_mode
     end
 
     def initialize(account:, mode: nil, throttle: DEFAULT_THROTTLE, wait: nil, allow_while_syncing: false)
@@ -56,7 +68,10 @@ module Epistularium
     attr_reader :account, :mode, :throttle, :wait, :allow_while_syncing
 
     def enqueue_job!
-      job = wait.present? ? Epistularium::SyncConnectionJob.set(wait: wait) : Epistularium::SyncConnectionJob
+      options = {}
+      options[:wait] = wait if wait.present?
+      options[:queue] = queue_name_for_mode if queue_name_for_mode.present?
+      job = options.any? ? Epistularium::SyncConnectionJob.set(options) : Epistularium::SyncConnectionJob
 
       if mode.present?
         job.perform_later(account.id, mode: mode)
@@ -79,6 +94,14 @@ module Epistularium
 
     def clear_mark!
       account.clear_sync_enqueued!
+    end
+
+    def queue_name_for_mode
+      mode.to_s == "full_backfill" ? Epistularium::SyncConfig::BACKFILL_QUEUE : nil
+    end
+
+    def self.syncable_provider?(account)
+      account.present? && %w[gmail imap amazon_workmail].include?(account.provider)
     end
   end
 end

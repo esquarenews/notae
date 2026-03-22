@@ -63,10 +63,15 @@
           <% @accounts.each do |account| %>
             <li>
               <div>
-                <% visible_sync_at = account.last_visible_sync_at(preloaded_latest_message_sync_at: @latest_message_sync_at_by_account[account.id]) %>
                 <strong><%= account.label %></strong>
                 <p><%= account.provider.to_s.humanize %> · <%= account.shared_account? ? "Workspace shared" : "Personal" %></p>
-                <p>Status: <%= account.status %> <% if visible_sync_at.present? %>· Last sync <%= time_ago_in_words(visible_sync_at) %> ago<% end %></p>
+                <p>Status: <%= account.status %></p>
+                <p>Last fresh mail check: <%= account.last_fresh_sync_at.present? ? "#{time_ago_in_words(account.last_fresh_sync_at)} ago" : "Not yet" %></p>
+                <p>Backfill status: <%= account.full_backfill_pending? ? "In progress" : "Complete" %></p>
+                <p>Backfill window: <%= Epistularium::SyncConfig::BACKFILL_WINDOW_LABEL %></p>
+                <% if account.last_backfill_sync_at.present? %>
+                  <p>Last backfill batch: <%= time_ago_in_words(account.last_backfill_sync_at) %> ago</p>
+                <% end %>
                 <% if account.last_error.present? %>
                   <p class="notae-page-subtle"><%= account.last_error %></p>
                 <% end %>

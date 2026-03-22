@@ -243,33 +243,46 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).to include("notae-sidebar-link-label\">Epistularium")
     expect(response.body).to include("For Amazon WorkMail, use the incoming IMAP host")
     expect(response.body).to include("username must be the full mailbox email address")
+    expect(response.body).to include("Last fresh mail check")
+    expect(response.body).to include("Backfill status")
+    expect(response.body).to include("Backfill window: Last 12 months")
     expect(response.body).to include("data-controller=\"google-oauth-launch\"")
     expect(response.body).to include("submit-&gt;google-oauth-launch#submit")
     expect(response.body).to include("data-google-oauth-launch=\"true\"")
   end
 
-  it "shows when a queued account sync looks stalled in settings" do
+  it "auto-recovers a stalled queued sync when settings is opened" do
     user, workspace, account, = build_stack(suffix: "settings-stalled")
     account.mark_sync_enqueued!(at: 3.minutes.ago)
     sign_in user
 
-    get workspace_epistularium_settings_path(workspace_slug: workspace.slug)
+    expect do
+      get workspace_epistularium_settings_path(workspace_slug: workspace.slug)
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "bootstrap")
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Queued sync looks stalled")
+    expect(account.reload.sync_enqueued_at).to be_present
   end
 
-  it "shows the freshest mailbox activity time in settings when imported mail is newer than the account sync timestamp" do
+  it "shows the last fresh-mail check in settings separately from generic sync timestamps" do
     travel_to(Time.zone.parse("2026-03-22 12:00:00")) do
       user, workspace, account, message = build_stack(suffix: "settings-visible-sync")
-      account.update!(last_synced_at: 7.hours.ago, status: "connected")
+      account.update!(
+        last_synced_at: 7.hours.ago,
+        status: "connected",
+        settings_json: account.settings_json.to_h.merge(
+          "last_fresh_sync_at" => 30.minutes.ago.iso8601,
+          "last_backfill_sync_at" => 2.hours.ago.iso8601
+        )
+      )
       message.update!(last_synced_at: 30.minutes.ago)
       sign_in user
 
       get workspace_epistularium_settings_path(workspace_slug: workspace.slug)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Last sync 30 minutes ago")
+      expect(response.body).to include("Last fresh mail check: 30 minutes ago")
+      expect(response.body).to include("Last backfill batch: about 2 hours ago")
       expect(response.body).not_to include("about 7 hours ago")
     end
   end
@@ -367,7 +380,11 @@ RSpec.describe "Epistularium", type: :request do
 
   it "queues due account refreshes when Epistularium is opened after the 10 minute sync window" do
     user, workspace, account, message = build_stack(suffix: "due-sync")
-    account.update!(last_synced_at: 11.minutes.ago, status: "connected")
+    account.update!(
+      last_synced_at: 11.minutes.ago,
+      status: "connected",
+      settings_json: account.settings_json.to_h.merge("last_fresh_sync_at" => 11.minutes.ago.iso8601)
+    )
     clear_enqueued_jobs
     sign_in user
 
@@ -409,14 +426,18 @@ RSpec.describe "Epistularium", type: :request do
 
   it "recovers stale sync state when the user manually clicks Sync" do
     user, workspace, account, _message = build_stack(suffix: "manual-stale-sync")
-    account.update!(last_synced_at: 2.hours.ago, status: "sync_error")
+    account.update!(
+      last_synced_at: 2.hours.ago,
+      status: "sync_error",
+      settings_json: account.settings_json.to_h.merge("last_fresh_sync_at" => 2.hours.ago.iso8601)
+    )
     account.mark_sync_started!(at: 30.minutes.ago)
     clear_enqueued_jobs
     sign_in user
 
     expect do
       post sync_epistularium_account_path(workspace_slug: workspace.slug, id: account.id)
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "full_backfill")
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "incremental")
 
     expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
     follow_redirect!
@@ -441,7 +462,11 @@ RSpec.describe "Epistularium", type: :request do
 
   it "runs an inline recovery sync when the queued mailbox has stalled" do
     user, workspace, account, _message = build_stack(suffix: "manual-recovery")
-    account.update!(last_synced_at: 2.hours.ago, status: "connected")
+    account.update!(
+      last_synced_at: 2.hours.ago,
+      status: "connected",
+      settings_json: account.settings_json.to_h.merge("last_fresh_sync_at" => 2.hours.ago.iso8601)
+    )
     account.mark_sync_enqueued!(at: 3.minutes.ago)
     clear_enqueued_jobs
     sign_in user

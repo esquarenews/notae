@@ -88,6 +88,14 @@ class EpistulariumAccount < ApplicationRecord
     settings_json.to_h["full_backfill_completed_at"].blank?
   end
 
+  def last_fresh_sync_at
+    parsed_settings_time("last_fresh_sync_at") || normalize_display_time(last_synced_at)
+  end
+
+  def last_backfill_sync_at
+    parsed_settings_time("last_backfill_sync_at")
+  end
+
   def sync_started_at
     parsed_settings_time("sync_started_at")
   end
@@ -116,6 +124,14 @@ class EpistulariumAccount < ApplicationRecord
   def sync_queue_stalled?(stale_after:)
     enqueued_at = sync_enqueued_at
     enqueued_at.present? && enqueued_at <= stale_after.ago && !sync_active?
+  end
+
+  def fresh_sync_due?(at: Time.current, interval: Epistularium::SyncConfig::FRESH_SYNC_INTERVAL)
+    last_fresh_sync_at.blank? || last_fresh_sync_at <= at - interval
+  end
+
+  def backfill_sync_due?(at: Time.current, interval: Epistularium::SyncConfig::BACKFILL_SYNC_INTERVAL)
+    full_backfill_pending? && (last_backfill_sync_at.blank? || last_backfill_sync_at <= at - interval)
   end
 
   def mark_sync_started!(at: Time.current)

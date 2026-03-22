@@ -7,7 +7,7 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     clear_enqueued_jobs
   end
 
-  def build_account(suffix:, provider: "imap")
+  def build_account(suffix:, provider: "imap", settings_json: {})
     user = User.create!(email: "epistularium-sync-job-#{suffix}@example.com", password: "password123")
     workspace = Workspace.create!(name: "Epistularium Sync Job #{suffix}", slug: "epistularium-sync-job-#{suffix}")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -19,7 +19,8 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
       provider: provider,
       label: "Inbox #{suffix}",
       enabled: true,
-      status: "connected"
+      status: "connected",
+      settings_json: settings_json
     }
 
     if provider == "gmail"
@@ -27,7 +28,7 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     else
       attributes[:provider_username] = "me@example.com"
       attributes[:provider_password] = "secret"
-      attributes[:settings_json] = { "imap_host" => "imap.example.com" }
+      attributes[:settings_json] = { "imap_host" => "imap.example.com" }.merge(settings_json)
     end
 
     EpistulariumAccount.create!(attributes)
@@ -36,7 +37,12 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
   it "auto-disables the account on permanent authentication failures" do
     account = build_account(suffix: "auth-failure")
     sync_service = instance_double(Epistularium::ConnectionSyncService)
-    allow(Epistularium::ConnectionSyncService).to receive(:new).with(account: account, full_backfill: true, max_messages_per_mailbox: 200, update_cursor: true).and_return(sync_service)
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      max_messages_per_mailbox: 50,
+      update_cursor: true
+    ).and_return(sync_service)
     allow(sync_service).to receive(:call).and_raise(RuntimeError, "IMAP authentication failed: Invalid credentials")
 
     expect do
@@ -52,7 +58,12 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
   it "re-raises transient failures so normal retries still apply" do
     account = build_account(suffix: "transient")
     sync_service = instance_double(Epistularium::ConnectionSyncService)
-    allow(Epistularium::ConnectionSyncService).to receive(:new).with(account: account, full_backfill: true, max_messages_per_mailbox: 200, update_cursor: true).and_return(sync_service)
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      max_messages_per_mailbox: 50,
+      update_cursor: true
+    ).and_return(sync_service)
     allow(sync_service).to receive(:call).and_raise(RuntimeError, "Net::ReadTimeout while contacting provider")
 
     expect do
@@ -62,7 +73,7 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     expect(account.reload.enabled).to be(true)
   end
 
-  it "queues a follow-up full backfill after the bootstrap sync for IMAP-backed accounts" do
+  it "queues the bootstrap backfill kickoff onto the low-priority backfill queue for IMAP accounts" do
     account = build_account(suffix: "bootstrap")
     sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
     allow(Epistularium::ConnectionSyncService).to receive(:new).with(
@@ -74,13 +85,12 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     expect do
       described_class.perform_now(account.id, mode: "bootstrap")
-    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
+    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill").on_queue("epistularium_backfill")
 
-    queued_runs = enqueued_jobs.select { |job| job[:job] == described_class && job[:args].first == account.id }
-    expect(queued_runs.map { |job| job[:at].present? }).to include(true)
+    expect(enqueued_jobs.count { |job| job[:job] == described_class }).to eq(1)
   end
 
-  it "bootstraps Gmail with a small incremental sync before queueing full backfill" do
+  it "bootstraps Gmail with a small incremental sync before queueing low-priority backfill" do
     account = build_account(suffix: "gmail-bootstrap", provider: "gmail")
     sync_service = instance_double(Epistularium::ConnectionSyncService, call: true)
     allow(Epistularium::ConnectionSyncService).to receive(:new).with(
@@ -92,7 +102,7 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     expect do
       described_class.perform_now(account.id, mode: "bootstrap")
-    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
+    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill").on_queue("epistularium_backfill")
   end
 
   it "runs Gmail full backfill without truncating mailbox history to the IMAP batch size" do
@@ -110,7 +120,7 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
   end
 
   it "runs a bounded incremental sync for stalled-queue recovery" do
-    account = build_account(suffix: "incremental")
+    account = build_account(suffix: "incremental", settings_json: { "last_fresh_sync_at" => 2.hours.ago.iso8601 })
     sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
     allow(Epistularium::ConnectionSyncService).to receive(:new).with(
       account: account,
@@ -124,23 +134,15 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     expect(sync_service).to have_received(:call)
   end
 
-  it "re-enqueues bounded full backfill work when more IMAP history remains" do
-    account = build_account(suffix: "follow-up")
-    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: true })
-    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
-      account: account,
-      full_backfill: true,
-      max_messages_per_mailbox: 200,
-      update_cursor: true
-    ).and_return(sync_service)
-
-    expect do
-      described_class.perform_now(account.id, mode: "full_backfill")
-    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
-  end
-
-  it "resumes full backfill after a freshness-first incremental run while history is still incomplete" do
-    account = build_account(suffix: "incremental-backfill-follow-up", provider: "gmail")
+  it "kicks off backfill after a fresh incremental run only when the backfill window is due" do
+    account = build_account(
+      suffix: "incremental-backfill-follow-up",
+      provider: "gmail",
+      settings_json: {
+        "last_fresh_sync_at" => 11.minutes.ago.iso8601,
+        "last_backfill_sync_at" => 61.minutes.ago.iso8601
+      }
+    )
     EpistulariumMessage.create!(
       workspace: account.workspace,
       epistularium_account: account,
@@ -150,7 +152,6 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
       from_email: "alex@example.com",
       body_text: "Existing body"
     )
-    account.update!(last_synced_at: 11.minutes.ago)
     sync_service = instance_double(Epistularium::ConnectionSyncService, call: true)
     allow(Epistularium::ConnectionSyncService).to receive(:new).with(
       account: account,
@@ -161,118 +162,54 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     expect do
       described_class.perform_now(account.id, mode: "incremental")
-    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill")
+    end.to have_enqueued_job(described_class).with(account.id, mode: "full_backfill").on_queue("epistularium_backfill")
   end
 
-  it "queues a recurring follow-up sync 10 minutes after a successful run" do
-    account = build_account(suffix: "recurring")
-    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
-    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
-      account: account,
-      full_backfill: true,
-      max_messages_per_mailbox: 200,
-      update_cursor: true
-    ).and_return(sync_service)
-
-    described_class.perform_now(account.id)
-
-    recurring_job = enqueued_jobs.find do |job|
-      job[:job] == described_class &&
-        job[:at].present?
-    end
-
-    expect(recurring_job).to be_present
-    expect(recurring_job[:at]).to be_within(5.seconds).of(10.minutes.from_now.to_f)
-  end
-
-  it "schedules recurring incremental polling after a full-backfill run when the mailbox history is still incomplete" do
-    account = build_account(suffix: "recurring-freshness-priority", provider: "gmail")
+  it "does not immediately queue another backfill after incremental when the hourly backfill window is not due" do
+    account = build_account(
+      suffix: "incremental-no-backfill-follow-up",
+      provider: "gmail",
+      settings_json: {
+        "last_fresh_sync_at" => 11.minutes.ago.iso8601,
+        "last_backfill_sync_at" => 20.minutes.ago.iso8601
+      }
+    )
     EpistulariumMessage.create!(
       workspace: account.workspace,
       epistularium_account: account,
-      provider_message_id: "msg-recurring-freshness-priority",
+      provider_message_id: "msg-incremental-no-backfill-follow-up",
       mailbox: "inbox",
       subject: "Existing message",
       from_email: "alex@example.com",
       body_text: "Existing body"
     )
-    account.update!(last_synced_at: 11.minutes.ago)
+    clear_enqueued_jobs
     sync_service = instance_double(Epistularium::ConnectionSyncService, call: true)
-    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
-      account: account,
-      full_backfill: true,
-      update_cursor: true
-    ).and_return(sync_service)
-
-    described_class.perform_now(account.id, mode: "full_backfill")
-
-    recurring_job = enqueued_jobs.find do |job|
-      job[:job] == described_class &&
-        job[:args].first == account.id &&
-        job[:at].present?
-    end
-
-    expect(recurring_job).to be_present
-    expect(recurring_job[:args].second.stringify_keys["mode"]).to eq("incremental")
-    expect(recurring_job[:at]).to be_within(5.seconds).of(10.minutes.from_now.to_f)
-  end
-
-  it "queues the next recurring sync after consuming the queued marker for the current run" do
-    account = build_account(suffix: "recurring-from-enqueue")
-    original_enqueued_at = 30.seconds.ago
-    account.mark_sync_enqueued!(at: original_enqueued_at)
-    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
-    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
-      account: account,
-      full_backfill: true,
-      max_messages_per_mailbox: 200,
-      update_cursor: true
-    ).and_return(sync_service)
-
-    described_class.perform_now(account.id)
-
-    recurring_job = enqueued_jobs.find do |job|
-      job[:job] == described_class &&
-        job[:args].first == account.id &&
-        job[:at].present?
-    end
-
-    expect(recurring_job).to be_present
-    expect(account.reload.sync_enqueued_at).to be > original_enqueued_at
-  end
-
-  it "queues recurring full backfill polling when mailbox history is still incomplete" do
-    account = build_account(suffix: "recurring-incomplete-backfill", provider: "gmail")
-    sync_service = instance_double(Epistularium::ConnectionSyncService)
     allow(Epistularium::ConnectionSyncService).to receive(:new).with(
       account: account,
       full_backfill: false,
       max_messages_per_mailbox: 50,
       update_cursor: true
     ).and_return(sync_service)
-    allow(sync_service).to receive(:call) do
-      EpistulariumMessage.create!(
-        workspace: account.workspace,
-        epistularium_account: account,
-        provider_message_id: "msg-recurring-incomplete-backfill",
-        mailbox: "inbox",
-        subject: "Recent message",
-        from_email: "alex@example.com",
-        body_text: "Recent body"
-      )
-      account.update!(last_synced_at: Time.current)
-      true
-    end
 
-    described_class.perform_now(account.id, mode: "bootstrap")
+    described_class.perform_now(account.id, mode: "incremental")
 
-    expect(enqueued_jobs).to include(
-      a_hash_including(
-        job: described_class,
-        at: kind_of(Numeric),
-        args: [ account.id, a_hash_including("mode" => "full_backfill") ]
-      )
-    )
+    expect(enqueued_jobs).to be_empty
+  end
+
+  it "does not immediately chain another full backfill batch when more IMAP history remains" do
+    account = build_account(suffix: "follow-up")
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: true })
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      max_messages_per_mailbox: 50,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    described_class.perform_now(account.id, mode: "full_backfill")
+
+    expect(enqueued_jobs).to be_empty
   end
 
   it "clears stale sync state before claiming a new run" do
@@ -282,7 +219,7 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     allow(Epistularium::ConnectionSyncService).to receive(:new).with(
       account: account,
       full_backfill: true,
-      max_messages_per_mailbox: 200,
+      max_messages_per_mailbox: 50,
       update_cursor: true
     ).and_return(sync_service)
 

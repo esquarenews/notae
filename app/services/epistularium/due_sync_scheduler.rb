@@ -1,7 +1,7 @@
 module Epistularium
   class DueSyncScheduler
-    STALE_AFTER = 10.minutes
-    ENQUEUE_THROTTLE = 5.minutes
+    FRESH_STALE_AFTER = Epistularium::SyncConfig::FRESH_SYNC_INTERVAL
+    ENQUEUE_STALE_AFTER = 2.minutes
 
     def initialize(accounts:)
       @accounts = Array(accounts)
@@ -9,14 +9,7 @@ module Epistularium
 
     def call
       accounts.each do |account|
-        next unless account.enabled?
-        next unless due_for_sync?(account)
-
-        Epistularium::SyncEnqueueService.new(
-          account: account,
-          mode: Epistularium::SyncEnqueueService.preferred_mode_for(account, prioritize_fresh: true),
-          throttle: ENQUEUE_THROTTLE
-        ).call
+        queue_due_sync_for(account)
       rescue StandardError => error
         Rails.logger.warn("Failed to queue Epistularium due sync for #{account.id}: #{error.class}: #{error.message}")
       end
@@ -26,8 +19,33 @@ module Epistularium
 
     attr_reader :accounts
 
-    def due_for_sync?(account)
-      account.last_synced_at.blank? || account.last_synced_at <= STALE_AFTER.ago
+    def queue_due_sync_for(account)
+      return unless account.enabled?
+
+      account.clear_stale_sync_state!
+      return if account.sync_active?
+
+      if account.sync_queue_stalled?(stale_after: ENQUEUE_STALE_AFTER)
+        account.clear_sync_enqueued!
+      elsif account.sync_enqueued_at.present?
+        return
+      end
+
+      if account.fresh_sync_due?(interval: FRESH_STALE_AFTER)
+        enqueue_mode(account, Epistularium::SyncEnqueueService.fresh_mode_for(account))
+      elsif account.backfill_sync_due?
+        enqueue_mode(account, Epistularium::SyncEnqueueService.backfill_mode_for(account))
+      end
+    end
+
+    def enqueue_mode(account, mode)
+      return if mode.blank?
+
+      Epistularium::SyncEnqueueService.new(
+        account: account,
+        mode: mode,
+        throttle: 0
+      ).call
     end
   end
 end

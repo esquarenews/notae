@@ -141,7 +141,7 @@ module Epistularium
       end
 
       def gmail_query(full_backfill:)
-        return nil if full_backfill
+        return "after:#{Epistularium::SyncConfig.backfill_cutoff_time.to_i}" if full_backfill
         return nil if parsed_sync_cursor.blank?
 
         "after:#{(parsed_sync_cursor - 5.minutes).to_i}"

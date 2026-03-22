@@ -3,11 +3,7 @@ module Epistularium
     queue_as :default
 
     AUTH_FAILURE_AUTO_DISABLE_MESSAGE = "Auto-disabled after authentication failure. Update credentials and re-enable account.".freeze
-    AUTO_SYNC_INTERVAL = 10.minutes
     STALE_SYNC_AFTER = 20.minutes
-    BOOTSTRAP_MESSAGE_LIMIT = 50
-    FULL_BACKFILL_MESSAGE_LIMIT = 200
-    FOLLOW_UP_DELAY = 2.seconds
 
     def perform(account_id, mode: nil)
       claimed = false
@@ -16,9 +12,8 @@ module Epistularium
       claimed = claim_sync!(account)
       return unless claimed
 
-      result = Epistularium::ConnectionSyncService.new(account: account, **sync_options_for(account: account, mode: mode)).call
-      enqueue_follow_up_sync(account: account, mode: mode, result: result)
-      enqueue_recurring_sync(account)
+      Epistularium::ConnectionSyncService.new(account: account, **sync_options_for(account: account, mode: mode)).call
+      enqueue_follow_up_sync(account: account, mode: mode)
     rescue StandardError => error
       raise unless permanent_auth_failure?(error)
 
@@ -45,7 +40,7 @@ module Epistularium
       else
         return {
           full_backfill: true,
-          max_messages_per_mailbox: FULL_BACKFILL_MESSAGE_LIMIT,
+          max_messages_per_mailbox: Epistularium::SyncConfig::IMAP_FULL_BACKFILL_BATCH_SIZE,
           update_cursor: true
         } if batched_imap_backfill_required?(account)
 
@@ -53,42 +48,22 @@ module Epistularium
       end
     end
 
-    def enqueue_follow_up_sync(account:, mode:, result:)
+    def enqueue_follow_up_sync(account:, mode:)
       if mode.to_s == "bootstrap"
-        Epistularium::SyncEnqueueService.new(
-          account: account,
-          mode: "full_backfill",
-          wait: FOLLOW_UP_DELAY,
-          throttle: 0,
-          allow_while_syncing: true
-        ).call
-      elsif mode.to_s == "incremental" && account.full_backfill_pending?
-        Epistularium::SyncEnqueueService.new(
-          account: account,
-          mode: "full_backfill",
-          wait: FOLLOW_UP_DELAY,
-          throttle: 0,
-          allow_while_syncing: true
-        ).call
-      elsif %w[imap amazon_workmail].include?(account.provider) && result.is_a?(Hash) && result[:backfill_remaining]
-        Epistularium::SyncEnqueueService.new(
-          account: account,
-          mode: "full_backfill",
-          wait: FOLLOW_UP_DELAY,
-          throttle: 0,
-          allow_while_syncing: true
-        ).call
+        enqueue_backfill_follow_up(account)
+      elsif fresh_mode?(mode) && account.backfill_sync_due?
+        enqueue_backfill_follow_up(account)
       end
     end
 
-    def enqueue_recurring_sync(account)
-      return unless account.enabled?
+    def enqueue_backfill_follow_up(account)
+      return unless account.full_backfill_pending?
 
       Epistularium::SyncEnqueueService.new(
         account: account,
-        mode: Epistularium::SyncEnqueueService.preferred_mode_for(account, prioritize_fresh: true),
-        wait: AUTO_SYNC_INTERVAL,
-        throttle: AUTO_SYNC_INTERVAL,
+        mode: "full_backfill",
+        wait: Epistularium::SyncConfig::FOLLOW_UP_DELAY,
+        throttle: 0,
         allow_while_syncing: true
       ).call
     end
@@ -137,13 +112,13 @@ module Epistularium
       if account.provider == "gmail"
         {
           full_backfill: false,
-          max_messages_per_mailbox: BOOTSTRAP_MESSAGE_LIMIT,
+          max_messages_per_mailbox: Epistularium::SyncConfig::BOOTSTRAP_MESSAGE_LIMIT,
           update_cursor: true
         }
       else
         {
           full_backfill: false,
-          max_messages_per_mailbox: BOOTSTRAP_MESSAGE_LIMIT,
+          max_messages_per_mailbox: Epistularium::SyncConfig::BOOTSTRAP_MESSAGE_LIMIT,
           update_cursor: false
         }
       end
@@ -158,7 +133,7 @@ module Epistularium
       else
         {
           full_backfill: true,
-          max_messages_per_mailbox: FULL_BACKFILL_MESSAGE_LIMIT,
+          max_messages_per_mailbox: Epistularium::SyncConfig::IMAP_FULL_BACKFILL_BATCH_SIZE,
           update_cursor: true
         }
       end
@@ -167,11 +142,15 @@ module Epistularium
     def incremental_sync_options_for(account)
       {
         full_backfill: false,
-        max_messages_per_mailbox: BOOTSTRAP_MESSAGE_LIMIT,
+        max_messages_per_mailbox: Epistularium::SyncConfig::BOOTSTRAP_MESSAGE_LIMIT,
         update_cursor: true
       }.tap do |options|
         options[:update_cursor] = true if account.provider == "gmail"
       end
+    end
+
+    def fresh_mode?(mode)
+      %w[bootstrap incremental].include?(mode.to_s)
     end
   end
 end

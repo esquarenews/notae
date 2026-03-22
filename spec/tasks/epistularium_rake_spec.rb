@@ -13,7 +13,7 @@ RSpec.describe "epistularium:sync_due" do
     Rake::Task["epistularium:sync_due"].reenable
   end
 
-  it "enqueues sync jobs for enabled Epistula only" do
+  it "enqueues only enabled Epistula and uses bootstrap for never-synced mailboxes" do
     user = User.create!(email: "epistularium-rake@example.com", password: "password123")
     workspace = Workspace.create!(name: "Epistularium Rake", slug: "epistularium-rake")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -43,7 +43,7 @@ RSpec.describe "epistularium:sync_due" do
 
     expect do
       Rake::Task["epistularium:sync_due"].invoke
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(enabled_account.id, mode: "bootstrap")
+    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(enabled_account.id, mode: "bootstrap").on_queue("default")
 
     enqueued_account_ids = enqueued_jobs
       .select { |job| job[:job] == Epistularium::SyncConnectionJob }
@@ -52,12 +52,12 @@ RSpec.describe "epistularium:sync_due" do
     expect(enqueued_account_ids).to contain_exactly(enabled_account.id)
   end
 
-  it "prioritizes incremental refresh for stale accounts whose full history is still backfilling" do
-    user = User.create!(email: "epistularium-rake-stale@example.com", password: "password123")
-    workspace = Workspace.create!(name: "Epistularium Rake Stale", slug: "epistularium-rake-stale")
+  it "prioritizes incremental refresh but still routes overdue backfill to the low-priority queue" do
+    user = User.create!(email: "epistularium-rake-priority@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Epistularium Rake Priority", slug: "epistularium-rake-priority")
     Membership.create!(workspace: workspace, user: user, role: :owner)
 
-    account = EpistulariumAccount.create!(
+    fresh_due_account = EpistulariumAccount.create!(
       workspace: workspace,
       owner: user,
       created_by: user,
@@ -65,21 +65,59 @@ RSpec.describe "epistularium:sync_due" do
       label: "Gmail inbox",
       access_token: "gmail-token",
       enabled: true,
-      last_synced_at: 11.minutes.ago,
-      settings_json: {}
+      settings_json: {
+        "last_fresh_sync_at" => 11.minutes.ago.iso8601,
+        "last_backfill_sync_at" => 20.minutes.ago.iso8601
+      }
     )
     EpistulariumMessage.create!(
       workspace: workspace,
-      epistularium_account: account,
-      provider_message_id: "msg-rake-stale",
+      epistularium_account: fresh_due_account,
+      provider_message_id: "msg-rake-fresh-due",
       mailbox: "inbox",
       subject: "Existing message",
       from_email: "alex@example.com",
       body_text: "Existing body"
     )
 
-    expect do
-      Rake::Task["epistularium:sync_due"].invoke
-    end.to have_enqueued_job(Epistularium::SyncConnectionJob).with(account.id, mode: "incremental")
+    backfill_due_account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "IMAP inbox",
+      provider_username: "imap@example.com",
+      provider_password: "secret",
+      enabled: true,
+      settings_json: {
+        "imap_host" => "imap.example.com",
+        "last_fresh_sync_at" => 3.minutes.ago.iso8601,
+        "last_backfill_sync_at" => 61.minutes.ago.iso8601
+      }
+    )
+    EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: backfill_due_account,
+      provider_message_id: "msg-rake-backfill-due",
+      mailbox: "inbox",
+      subject: "Existing message",
+      from_email: "alex@example.com",
+      body_text: "Existing body"
+    )
+
+    Rake::Task["epistularium:sync_due"].invoke
+
+    expect(enqueued_jobs).to include(
+      a_hash_including(
+        job: Epistularium::SyncConnectionJob,
+        queue: "default",
+        args: [ fresh_due_account.id, a_hash_including("mode" => "incremental") ]
+      ),
+      a_hash_including(
+        job: Epistularium::SyncConnectionJob,
+        queue: "epistularium_backfill",
+        args: [ backfill_due_account.id, a_hash_including("mode" => "full_backfill") ]
+      )
+    )
   end
 end

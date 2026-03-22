@@ -144,4 +144,25 @@ RSpec.describe Epistularium::Providers::GmailAdapter do
     expect(message.body_text).to include("Hello from Gmail HTML-like text/plain content.")
     expect(message.body_text).not_to include("<strong>")
   end
+
+  it "limits Gmail full backfill requests to the trailing 12 months" do
+    _user, _workspace, account = build_stack(suffix: "backfill-window")
+    adapter = described_class.new(account: account)
+    captured_queries = []
+
+    allow(adapter).to receive(:fetch_json) do |path:, params:, allow_refresh: true|
+      if path == "/gmail/v1/users/me/messages"
+        captured_queries << params[:q]
+        { "messages" => [] }
+      else
+        raise "unexpected message fetch"
+      end
+    end
+
+    adapter.sync!(full_backfill: true, update_cursor: true)
+
+    expected_query = "after:#{Epistularium::SyncConfig.backfill_cutoff_time.to_i}"
+    expect(captured_queries).to eq([ expected_query, expected_query ])
+    expect(account.reload.settings_json["full_backfill_completed_at"]).to be_present
+  end
 end
