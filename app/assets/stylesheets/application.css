@@ -8754,6 +8754,7 @@ body.notae-theme-dark .notae-doc-muted {
   transform: translateX(-100%);
   transition: transform 160ms ease;
   box-shadow: 2px 0 24px rgba(24, 24, 27, 0.16);
+  z-index: 90;
 }
 
 .notae-shell.is-mobile-viewport.sidebar-open .notae-sidebar {
@@ -8773,7 +8774,7 @@ body.notae-theme-dark .notae-doc-muted {
   border: 0;
   background: rgba(28, 25, 23, 0.28);
   transition: opacity 140ms ease;
-  z-index: 30;
+  z-index: 80;
 }
 
 .notae-shell.is-mobile-viewport.sidebar-open .notae-mobile-overlay {
