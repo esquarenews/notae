@@ -5,9 +5,9 @@
     same_origin_importmap_urls +
     [
       asset_path("application.css"),
-      "/icon-192.png",
-      "/icon-512.png",
-      "/icon-maskable-512.png",
+      "/icon-192-v2.png",
+      "/icon-512-v2.png",
+      "/icon-maskable-512-v2.png",
       pwa_manifest_path,
       pwa_offline_path
     ]
@@ -95,7 +95,7 @@ function isTopLevelDocumentRequest(request, url) {
 }
 
 function isSameOriginAsset(url) {
-  return url.origin === self.location.origin && (url.pathname.startsWith("/assets/") || url.pathname === "/icon-192.png" || url.pathname === "/icon-512.png" || url.pathname === "/icon-maskable-512.png" || url.pathname === "/icon.svg")
+  return url.origin === self.location.origin && (url.pathname.startsWith("/assets/") || url.pathname === "/icon-192-v2.png" || url.pathname === "/icon-512-v2.png" || url.pathname === "/icon-maskable-512-v2.png" || url.pathname === "/icon-v2.png" || url.pathname === "/icon.svg")
 }
 
 function isImageRequest(request, url) {

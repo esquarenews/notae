@@ -36,9 +36,9 @@ RSpec.describe "PWA", type: :request do
       "display" => "standalone",
       "short_name" => "Notae"
     )
-    expect(icons).to include(a_hash_including("src" => "/icon-192.png", "sizes" => "192x192"))
-    expect(icons).to include(a_hash_including("src" => "/icon-512.png", "sizes" => "512x512"))
-    expect(icons).to include(a_hash_including("src" => "/icon-maskable-512.png", "purpose" => "maskable"))
+    expect(icons).to include(a_hash_including("src" => "/icon-192-v2.png", "sizes" => "192x192"))
+    expect(icons).to include(a_hash_including("src" => "/icon-512-v2.png", "sizes" => "512x512"))
+    expect(icons).to include(a_hash_including("src" => "/icon-maskable-512-v2.png", "purpose" => "maskable"))
   end
 
   it "serves a parseable service worker with the offline fallback and private cache clearing hooks" do
