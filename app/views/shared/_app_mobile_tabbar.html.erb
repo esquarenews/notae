@@ -1,0 +1,45 @@
+<% mobile_workspace = ui_current_workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
+<% if mobile_workspace.present? %>
+  <nav class="notae-mobile-tabbar" aria-label="Primary mobile navigation">
+    <% mobile_nav_items = [
+         {
+           label: "Home",
+           path: workspace_path(mobile_workspace.slug),
+           icon: :home
+         },
+         {
+           label: "Search",
+           path: workspace_search_path(workspace_slug: mobile_workspace.slug),
+           icon: :search
+         },
+         {
+           label: "Calendar",
+           path: kalendarium_path(workspace_slug: mobile_workspace.slug),
+           icon: :kalendarium
+         },
+         {
+           label: "Mail",
+           path: workspace_epistularium_path(workspace_slug: mobile_workspace.slug),
+           icon: :epistularium
+         }
+       ] %>
+
+    <% mobile_nav_items.each do |item| %>
+      <% active_class = current_page?(item[:path]) ? " active" : "" %>
+      <%= link_to item[:path],
+                  class: "notae-mobile-tabbar-link#{active_class}",
+                  data: notae_shell_link_data do %>
+        <%= notae_icon_svg(item[:icon], css_class: "notae-mobile-tabbar-icon") %>
+        <span><%= item[:label] %></span>
+      <% end %>
+    <% end %>
+
+    <button type="button"
+            class="notae-mobile-tabbar-link notae-mobile-tabbar-link--menu"
+            data-action="shell#toggle"
+            aria-label="Open workspace navigation">
+      <%= notae_icon_svg(:workspace, css_class: "notae-mobile-tabbar-icon") %>
+      <span>Menu</span>
+    </button>
+  </nav>
+<% end %>

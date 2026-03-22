@@ -16,7 +16,13 @@
   <div data-controller="epistularium-poller"
        data-epistularium-poller-endpoint-value="<%= request.fullpath %>"
        data-epistularium-poller-cursor-value="<%= @epistularium_poll_cursor %>"
-       data-epistularium-poller-target="sections">
-    <%= render "grid" %>
+       >
+    <%= turbo_frame_tag "epistularium_grid",
+                        data: {
+                          epistularium_poller_target: "sections",
+                          action: "turbo:frame-load->epistularium-poller#syncEndpoint"
+                        } do %>
+      <%= render "grid" %>
+    <% end %>
   </div>
 </section>

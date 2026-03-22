@@ -165,6 +165,32 @@ RSpec.describe "Kalendarium", type: :request do
     end
   end
 
+  it "keeps the desktop week view columns fluid inside the calendar panel" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-kalendarium-week-header-days {\n  display: grid;\n  grid-template-columns: repeat(7, minmax(0, 1fr));")
+    expect(stylesheet).to include(".notae-kalendarium-week-columns {\n  display: grid;\n  grid-template-columns: repeat(7, minmax(0, 1fr));")
+    expect(stylesheet).to include(".notae-kalendarium-week-day-track {\n  border-right: 1px solid var(--notae-border, #d6d3d1);\n  min-width: 0;")
+    expect(stylesheet).to include(".notae-kalendarium-week-header-days strong {\n  font-size: 0.78rem;\n  color: var(--notae-text, #292524);\n  overflow: hidden;")
+  end
+
+  it "keeps the create rail outside the main calendar column on large screens" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-kalendarium {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);")
+    expect(stylesheet).to include(".notae-kalendarium-grid {\n  display: contents;\n}")
+    expect(stylesheet).to include(".notae-kalendarium-sidebar {\n  grid-column: 2;\n  grid-row: 1 / span 2;")
+  end
+
+  it "keeps the year-view toggle on its own filter row so projects stays aligned with the other calendar buttons" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("[data-kalendarium-focus-view-value=\"year\"] .notae-kalendarium-head-row {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}")
+    expect(stylesheet).to include("[data-kalendarium-focus-view-value=\"year\"] .notae-kalendarium-filter-controls {\n  flex: 1 0 100%;")
+    expect(stylesheet).to include(".notae-kalendarium-filter-controls .notae-kalendarium-year-toggle {\n  flex: 1 0 100%;")
+    expect(stylesheet).to include("justify-content: flex-end;")
+  end
+
   it "keeps month event cards and overflow labels inside each day cell" do
     user, workspace, calendar = build_stack(suffix: "month-cell-overflow-containment")
     sign_in user

@@ -59,6 +59,13 @@ RSpec.describe "Meetings", type: :request do
     expect(response.body).to include('input-&gt;meeting-capture#syncSessionTitle')
     expect(response.body).to include('data-meeting-sessions-poller-active-value="false"')
     expect(response.headers["Permissions-Policy"].to_s).to include("microphone=(self)")
+
+    document = Nokogiri::HTML(response.body)
+    start_button = document.at_css("[data-meeting-capture-target='startButton']")
+    stop_button = document.at_css("[data-meeting-capture-target='stopButton']")
+
+    expect(start_button["class"]).to include("notae-meetings-recorder-button-start")
+    expect(stop_button["class"]).to include("notae-meetings-recorder-button-stop")
   end
 
   it "shows a recording-in-progress indicator when a live session exists" do

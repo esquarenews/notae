@@ -59,6 +59,27 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).to include("Manage Epistula")
     expect(response.body).to include("Suggest reply draft")
     expect(response.body).to include("data-controller=\"epistularium-poller\"")
+
+    document = Nokogiri::HTML(response.body)
+    grid_frame = document.at_css("turbo-frame#epistularium_grid")
+    message_link = document.at_css(".notae-epistularium-message-link")
+    inbox_link = document.at_css(".notae-epistularium-folder-links .notae-chip-button")
+    detail_pane = document.at_css(".notae-epistularium-pane-detail")
+
+    expect(grid_frame).to be_present
+    expect(grid_frame["data-epistularium-poller-target"]).to eq("sections")
+    expect(grid_frame["data-action"]).to include("turbo:frame-load->epistularium-poller#syncEndpoint")
+    expect(message_link["data-turbo-frame"]).to eq("epistularium_grid")
+    expect(inbox_link["data-turbo-frame"]).to eq("epistularium_grid")
+    expect(detail_pane["data-epistularium-detail-transition"]).to eq("fade")
+    expect(document.at_css(".notae-epistularium-grid")["data-epistularium-current-path"]).to eq(
+      workspace_epistularium_path(
+        workspace_slug: workspace.slug,
+        account_id: account.id,
+        mailbox: "inbox",
+        message_id: message.id
+      )
+    )
   end
 
   it "returns refreshed mailbox html and a polling cursor for in-place updates" do

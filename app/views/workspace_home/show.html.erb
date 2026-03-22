@@ -2,31 +2,7 @@
 <% content_for :content_class, "notae-content-page notae-content-home" %>
 
 <section class="notae-workspace-home notae-workspace-home--landing">
-  <div class="notae-workspace-home-banner notae-workspace-home-banner--<%= @hero_banner_period %>">
-    <svg class="notae-workspace-home-banner-svg" viewBox="0 0 860 260" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="notaeWorkspaceHomeBannerGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="var(--notae-home-banner-primary)" stop-opacity="0.32" />
-          <stop offset="50%" stop-color="var(--notae-home-banner-secondary)" stop-opacity="0.24" />
-          <stop offset="100%" stop-color="var(--notae-home-banner-accent)" stop-opacity="0.12" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="860" height="260" fill="url(#notaeWorkspaceHomeBannerGlow)" />
-      <path d="M-30 120 C120 80, 220 150, 370 118 C530 82, 640 156, 890 112"
-            fill="none"
-            stroke="var(--notae-home-banner-secondary)"
-            stroke-width="2"
-            stroke-opacity="0.36" />
-      <path d="M-30 170 C110 220, 250 120, 430 178 C570 220, 740 128, 890 170"
-            fill="none"
-            stroke="var(--notae-home-banner-primary)"
-            stroke-width="1.6"
-            stroke-opacity="0.3" />
-      <circle cx="720" cy="56" r="54" fill="var(--notae-home-banner-accent)" fill-opacity="0.18" />
-      <circle cx="176" cy="38" r="28" fill="var(--notae-home-banner-secondary)" fill-opacity="0.12" />
-      <circle cx="500" cy="94" r="12" fill="var(--notae-home-banner-primary)" fill-opacity="0.22" />
-    </svg>
-
+  <div class="notae-workspace-home-hero-shell">
     <div class="notae-workspace-home-banner-inner">
       <header class="notae-workspace-home-hero">
         <p class="notae-page-subtle">Workspace home</p>

@@ -1,4 +1,11 @@
+<%
+  current_path_params = { workspace_slug: @workspace.slug }
+  current_path_params[:account_id] = @selected_account.id if @selected_account.present?
+  current_path_params[:mailbox] = @selected_mailbox if @selected_mailbox.present?
+  current_path_params[:message_id] = @selected_message.id if @selected_message.present?
+%>
 <div class="notae-epistularium-grid"
+     data-epistularium-current-path="<%= workspace_epistularium_path(current_path_params) %>"
      data-epistularium-selected-message-id="<%= @selected_message&.id %>">
   <aside class="notae-auth-card notae-epistularium-pane notae-epistularium-pane-accounts"
          data-epistularium-pane-key="accounts">
@@ -22,11 +29,13 @@
             <div class="notae-epistularium-folder-links">
               <%= link_to workspace_epistularium_path(workspace_slug: @workspace.slug, account_id: account.id, mailbox: "inbox"),
                           class: [ "notae-chip-button", ("is-active" if active_account && @selected_mailbox == "inbox") ].compact.join(" "),
+                          data: { turbo_frame: "epistularium_grid" },
                           aria: { current: ("page" if active_account && @selected_mailbox == "inbox") } do %>
                 Inbox (<%= counts.fetch("inbox", 0) %>)
               <% end %>
               <%= link_to workspace_epistularium_path(workspace_slug: @workspace.slug, account_id: account.id, mailbox: "sent"),
                           class: [ "notae-chip-button", ("is-active" if active_account && @selected_mailbox == "sent") ].compact.join(" "),
+                          data: { turbo_frame: "epistularium_grid" },
                           aria: { current: ("page" if active_account && @selected_mailbox == "sent") } do %>
                 Sent (<%= counts.fetch("sent", 0) %>)
               <% end %>
@@ -56,6 +65,7 @@
                           mailbox: message.mailbox,
                           message_id: message.id
                         ),
+                        data: { turbo_frame: "epistularium_grid" },
                         class: [ "notae-epistularium-message-link", ("is-active" if @selected_message == message) ].compact.join(" ") do %>
               <div class="notae-epistularium-message-head">
                 <strong class="notae-epistularium-message-from"><%= message.from_display %></strong>
@@ -75,6 +85,7 @@
   </section>
 
   <section class="notae-auth-card notae-epistularium-pane notae-epistularium-pane-detail"
+           data-epistularium-detail-transition="fade"
            data-epistularium-pane-key="detail">
     <% if @selected_message.present? %>
       <% rendered_body_html =
@@ -128,7 +139,8 @@
             <% @thread_messages.each do |message| %>
               <li class="notae-workspace-home-list-item">
                 <%= link_to message.display_subject,
-                            workspace_epistularium_path(workspace_slug: @workspace.slug, account_id: message.epistularium_account_id, mailbox: message.mailbox, message_id: message.id) %>
+                            workspace_epistularium_path(workspace_slug: @workspace.slug, account_id: message.epistularium_account_id, mailbox: message.mailbox, message_id: message.id),
+                            data: { turbo_frame: "epistularium_grid" } %>
                 <div class="notae-page-subtle"><%= message.from_display %> · <%= l(message.primary_timestamp, format: :short) if message.primary_timestamp.present? %></div>
               </li>
             <% end %>

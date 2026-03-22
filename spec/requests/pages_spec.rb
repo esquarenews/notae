@@ -200,6 +200,32 @@ RSpec.describe "Pages", type: :request do
     expect(doc.css(".notae-sidebar-link[href]")).to all(satisfy { |link| link["data-turbo-prefetch"] == "false" })
   end
 
+  it "renders the mobile tabbar with primary workspace navigation links" do
+    owner = User.create!(email: "page-mobile-tabbar-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Mobile nav", slug: "mobile-nav")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    doc = Nokogiri::HTML.parse(response.body)
+    mobile_tabbar = doc.at_css(".notae-mobile-tabbar")
+    expect(mobile_tabbar).to be_present
+
+    tabbar_links = mobile_tabbar.css(".notae-mobile-tabbar-link[href]")
+    expect(tabbar_links.map { |link| link.text.strip }).to include("Home", "Search", "Calendar", "Mail")
+    expect(tabbar_links.map { |link| link["href"] }).to include(
+      workspace_path(workspace.slug),
+      workspace_search_path(workspace_slug: workspace.slug),
+      kalendarium_path(workspace_slug: workspace.slug),
+      workspace_epistularium_path(workspace_slug: workspace.slug)
+    )
+    expect(tabbar_links).to all(satisfy { |link| link["data-turbo-prefetch"] == "false" })
+    expect(mobile_tabbar.at_css("button.notae-mobile-tabbar-link--menu")&.text.to_s).to include("Menu")
+  end
+
   it "lists only explicit meeting-note pages in the sidebar meetings section" do
     owner = User.create!(email: "page-sidebar-meeting-kind-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Sidebar meeting kind", slug: "sidebar-meeting-kind")

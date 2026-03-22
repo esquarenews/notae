@@ -65,6 +65,7 @@
         </div>
 
         <% unless embedded_shell %>
+          <%= render "shared/app_mobile_tabbar" %>
           <%= render "shared/app_ai_rail_panel" %>
 
           <div class="notae-modal is-hidden" data-global-shortcuts-target="quickSwitcher" data-action="click->global-shortcuts#closeAll">

@@ -53,6 +53,7 @@ export default class extends Controller {
       this.sectionsTarget.innerHTML = payload.html
       this.currentCursor = nextCursor
 
+      this.syncEndpoint()
       this.restorePaneScrollPositions(scrollPositions, previousSelectedMessageId)
     } catch (_error) {
       // Ignore transient polling failures; next poll will retry.
@@ -97,5 +98,18 @@ export default class extends Controller {
     if (!this.hasSectionsTarget) return ""
 
     return this.sectionsTarget.querySelector(".notae-epistularium-grid")?.dataset.epistulariumSelectedMessageId || ""
+  }
+
+  syncEndpoint() {
+    const nextEndpoint = this.currentPath()
+    if (!nextEndpoint) return
+
+    this.endpointValue = nextEndpoint
+  }
+
+  currentPath() {
+    if (!this.hasSectionsTarget) return ""
+
+    return this.sectionsTarget.querySelector(".notae-epistularium-grid")?.dataset.epistulariumCurrentPath || ""
   }
 }
