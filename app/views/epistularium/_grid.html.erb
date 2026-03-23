@@ -4,7 +4,7 @@
   current_path_params[:mailbox] = @selected_mailbox if @selected_mailbox.present?
   current_path_params[:message_id] = @selected_message.id if @selected_message.present?
 %>
-<div class="notae-epistularium-grid"
+<div class="<%= [ "notae-epistularium-grid", ("is-message-open" if @selected_message.present?) ].compact.join(" ") %>"
      data-epistularium-current-path="<%= workspace_epistularium_path(current_path_params) %>"
      data-epistularium-selected-message-id="<%= @selected_message&.id %>">
   <aside class="notae-auth-card notae-epistularium-pane notae-epistularium-pane-accounts"
@@ -88,6 +88,16 @@
            data-epistularium-detail-transition="fade"
            data-epistularium-pane-key="detail">
     <% if @selected_message.present? %>
+      <%= link_to workspace_epistularium_path(
+                    workspace_slug: @workspace.slug,
+                    account_id: @selected_message.epistularium_account_id,
+                    mailbox: @selected_message.mailbox
+                  ),
+                  class: "notae-epistularium-mobile-back",
+                  data: { turbo_frame: "epistularium_grid" } do %>
+        <span aria-hidden="true">←</span>
+        <span>Back to <%= @selected_message.mailbox.titleize %></span>
+      <% end %>
       <% rendered_body_html =
            if @selected_message.body_html.present?
              Epistularium::Providers::BaseAdapter.sanitize_email_html(@selected_message.body_html)

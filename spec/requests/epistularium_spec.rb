@@ -62,17 +62,28 @@ RSpec.describe "Epistularium", type: :request do
 
     document = Nokogiri::HTML(response.body)
     grid_frame = document.at_css("turbo-frame#epistularium_grid")
+    grid = document.at_css(".notae-epistularium-grid")
     message_link = document.at_css(".notae-epistularium-message-link")
     inbox_link = document.at_css(".notae-epistularium-folder-links .notae-chip-button")
     detail_pane = document.at_css(".notae-epistularium-pane-detail")
+    mobile_back_link = document.at_css(".notae-epistularium-mobile-back")
 
     expect(grid_frame).to be_present
     expect(grid_frame["data-epistularium-poller-target"]).to eq("sections")
     expect(grid_frame["data-action"]).to include("turbo:frame-load->epistularium-poller#syncEndpoint")
+    expect(grid["class"]).to include("is-message-open")
     expect(message_link["data-turbo-frame"]).to eq("epistularium_grid")
     expect(inbox_link["data-turbo-frame"]).to eq("epistularium_grid")
     expect(detail_pane["data-epistularium-detail-transition"]).to eq("fade")
-    expect(document.at_css(".notae-epistularium-grid")["data-epistularium-current-path"]).to eq(
+    expect(mobile_back_link["data-turbo-frame"]).to eq("epistularium_grid")
+    expect(mobile_back_link["href"]).to eq(
+      workspace_epistularium_path(
+        workspace_slug: workspace.slug,
+        account_id: account.id,
+        mailbox: "inbox"
+      )
+    )
+    expect(grid["data-epistularium-current-path"]).to eq(
       workspace_epistularium_path(
         workspace_slug: workspace.slug,
         account_id: account.id,
