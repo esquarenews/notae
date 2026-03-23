@@ -143,7 +143,10 @@
     <% if can_edit_database %>
       <div class="notae-db-header-tools">
         <details class="notae-page-header-action">
-          <summary><span class="notae-page-header-action-icon">◌</span> <%= @database.icon.present? ? "Change icon" : "Add icon" %></summary>
+          <summary aria-label="<%= @database.icon.present? ? "Change icon" : "Add icon" %>">
+            <span class="notae-page-header-action-icon">◌</span>
+            <span class="notae-page-header-action-label"><%= @database.icon.present? ? "Change icon" : "Add icon" %></span>
+          </summary>
           <div class="notae-page-header-panel">
             <%= form_with model: @database,
                           url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
@@ -175,7 +178,10 @@
         </details>
 
         <details class="notae-page-header-action">
-          <summary><span class="notae-page-header-action-icon">▭</span> <%= @database.cover? ? "Change cover" : "Add cover" %></summary>
+          <summary aria-label="<%= @database.cover? ? "Change cover" : "Add cover" %>">
+            <span class="notae-page-header-action-icon">▭</span>
+            <span class="notae-page-header-action-label"><%= @database.cover? ? "Change cover" : "Add cover" %></span>
+          </summary>
           <div class="notae-page-header-panel notae-page-header-cover-panel">
             <div class="notae-page-cover-panel-actions">
               <%= button_to "Move up",
@@ -200,7 +206,10 @@
         </details>
 
         <details class="notae-page-header-action">
-          <summary><span class="notae-page-header-action-icon">ℹ</span> <%= @database.description.present? ? "Edit description" : "Add description" %></summary>
+          <summary aria-label="<%= @database.description.present? ? "Edit description" : "Add description" %>">
+            <span class="notae-page-header-action-icon">ℹ</span>
+            <span class="notae-page-header-action-label"><%= @database.description.present? ? "Edit description" : "Add description" %></span>
+          </summary>
           <div class="notae-page-header-panel">
             <%= form_with model: @database,
                           url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),

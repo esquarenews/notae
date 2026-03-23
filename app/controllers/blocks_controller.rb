@@ -168,12 +168,21 @@ class BlocksController < ApplicationController
     if params[:block].key?(:content_json)
       raw_content = params[:block][:content_json]
       content_json = raw_content.respond_to?(:to_unsafe_h) ? raw_content.to_unsafe_h : raw_content
-      permitted[:content_json] = DateMentions::Formatter.replace_in_content_json(
+      formatted_content = DateMentions::Formatter.replace_in_content_json(
         content_json: content_json,
         preference: current_user.date_format_preference
       )
+      permitted[:content_json] = preserved_block_metadata.merge(formatted_content)
     end
     permitted
+  end
+
+  def preserved_block_metadata
+    return {} unless @block.content_json.is_a?(Hash)
+
+    @block.content_json.each_with_object({}) do |(key, value), metadata|
+      metadata[key] = value if key.to_s.start_with?("notae_")
+    end
   end
 
   def block_command_params

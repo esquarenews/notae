@@ -27,11 +27,11 @@ module Epistularium
             )
             backfill_remaining ||= mailbox_backfill_remaining
             Array(uids).each do |uid|
-              data = imap.uid_fetch(uid, [ "RFC822", "FLAGS", "INTERNALDATE" ])&.first
+              data = imap.uid_fetch(uid, [ "BODY.PEEK[]", "FLAGS", "INTERNALDATE" ])&.first
               next if data.blank?
 
               attributes = data.attr
-              raw_message = attributes["RFC822"].to_s
+              raw_message = attributes["BODY[]"].presence || attributes["RFC822"].to_s
               next if raw_message.blank?
 
               mail = Mail.read_from_string(raw_message)

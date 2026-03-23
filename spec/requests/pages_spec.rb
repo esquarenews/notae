@@ -108,6 +108,23 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Cmd/Ctrl + K")
   end
 
+  it "renders mobile-ready page header action labels for icon-only controls" do
+    owner = User.create!(email: "page-mobile-header-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Mobile page header", slug: "mobile-page-header")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Mobile page header")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('aria-label="Add icon"')
+    expect(response.body).to include('aria-label="Add cover"')
+    expect(response.body).to include('aria-label="Add comment"')
+    expect(response.body).to include('class="notae-page-header-action-label"')
+    expect(response.body).to include('class="notae-page-header-link-label"')
+  end
+
   it "ships dark-theme editor overrides so focused nota text stays readable" do
     owner = User.create!(
       email: "page-dark-editor-owner@example.com",

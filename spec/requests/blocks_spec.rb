@@ -31,6 +31,53 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["page_updated_at"]).to be_present
   end
 
+  it "preserves block color metadata when saving heading content" do
+    owner = User.create!(email: "blocks-heading-color-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Heading colors", slug: "heading-colors")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Heading color page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "heading_1",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "heading",
+            "attrs" => { "level" => 1 },
+            "content" => [ { "type" => "text", "text" => "Heading" } ]
+          }
+        ],
+        "notae_color" => "blue"
+      }
+    )
+    sign_in owner
+
+    patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+          params: {
+            block: {
+              block_type: "heading_1",
+              content_json: {
+                type: "doc",
+                content: [
+                  {
+                    type: "heading",
+                    attrs: { level: 1 },
+                    content: [ { type: "text", text: "Updated heading" } ]
+                  }
+                ]
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(block.reload.content_json["notae_color"]).to eq("blue")
+    expect(block.content_json.dig("content", 0, "content", 0, "text")).to eq("Updated heading")
+  end
+
   it "formats @date mentions using the user date preference" do
     owner = User.create!(
       email: "blocks-date-mention-owner@example.com",

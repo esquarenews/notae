@@ -122,7 +122,10 @@
         <div class="notae-page-header-tools">
           <% if @can_update_page %>
             <details class="notae-page-header-action">
-              <summary><span class="notae-page-header-action-icon">◌</span> <%= @page.icon.present? ? "Change icon" : "Add icon" %></summary>
+              <summary aria-label="<%= @page.icon.present? ? "Change icon" : "Add icon" %>">
+                <span class="notae-page-header-action-icon">◌</span>
+                <span class="notae-page-header-action-label"><%= @page.icon.present? ? "Change icon" : "Add icon" %></span>
+              </summary>
               <div class="notae-page-header-panel">
                 <%= form_with model: @page,
                               url: page_path(page_route_params),
@@ -158,7 +161,10 @@
             </details>
 
             <details class="notae-page-header-action">
-              <summary><span class="notae-page-header-action-icon">▭</span> <%= has_cover ? "Change cover" : "Add cover" %></summary>
+              <summary aria-label="<%= has_cover ? "Change cover" : "Add cover" %>">
+                <span class="notae-page-header-action-icon">▭</span>
+                <span class="notae-page-header-action-label"><%= has_cover ? "Change cover" : "Add cover" %></span>
+              </summary>
               <div class="notae-page-header-panel notae-page-header-cover-panel">
                 <div class="notae-page-cover-panel-actions">
                   <%= button_to "Move up",
@@ -184,8 +190,12 @@
           <% end %>
 
           <% if @can_comment_on_page %>
-            <button type="button" class="notae-page-header-link" data-action="click->shell#openCommentsMenu">
-              <span class="notae-page-header-action-icon">💬</span> Add comment
+            <button type="button"
+                    class="notae-page-header-link"
+                    data-action="click->shell#openCommentsMenu"
+                    aria-label="Add comment">
+              <span class="notae-page-header-action-icon">💬</span>
+              <span class="notae-page-header-link-label">Add comment</span>
             </button>
           <% end %>
         </div>

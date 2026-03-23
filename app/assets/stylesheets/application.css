@@ -7203,6 +7203,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   line-height: 1;
 }
 
+.notae-page-header-action-label,
+.notae-page-header-link-label {
+  display: inline;
+}
+
 .notae-page-header-panel {
   position: absolute;
   top: calc(100% + 0.3rem);
@@ -8907,7 +8912,44 @@ body.notae-theme-dark .notae-doc-muted {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.notae-shell.is-mobile-viewport .notae-page-header-main,
+.notae-shell.is-mobile-viewport .notae-db-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon tools"
+    "title title";
+  align-items: start;
+}
+
+.notae-shell.is-mobile-viewport .notae-page-header-main > .notae-page-icon-display,
+.notae-shell.is-mobile-viewport .notae-db-header > .notae-page-icon-display {
+  grid-area: icon;
+  align-self: start;
+}
+
+.notae-shell.is-mobile-viewport .notae-page-header-tools,
+.notae-shell.is-mobile-viewport .notae-db-header-tools {
+  grid-area: tools;
+  justify-self: end;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0;
+}
+
+.notae-shell.is-mobile-viewport .notae-page-header-main > .notae-page-title-form,
+.notae-shell.is-mobile-viewport .notae-db-header > .notae-page-title-form {
+  grid-area: title;
+  width: 100%;
+}
+
+.notae-shell.is-mobile-viewport .notae-page-header-action-label,
+.notae-shell.is-mobile-viewport .notae-page-header-link-label {
+  display: none;
 }
 
 .notae-shell.is-mobile-viewport .notae-options-panel {
@@ -13737,6 +13779,21 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
   .notae-shell.is-mobile-viewport .notae-chip-button {
     min-height: 2.65rem;
     font-size: 0.8rem;
+  }
+
+  .notae-shell.is-mobile-viewport .notae-page-header-action > summary,
+  .notae-shell.is-mobile-viewport .notae-page-header-link {
+    width: 2.65rem;
+    min-width: 2.65rem;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    border-radius: 999px;
+  }
+
+  .notae-shell.is-mobile-viewport .notae-page-header-action-icon {
+    margin: 0;
+    font-size: 0.94rem;
   }
 
   .notae-shell.is-mobile-viewport .notae-ai-floating-toggle {

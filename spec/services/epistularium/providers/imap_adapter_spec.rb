@@ -68,6 +68,8 @@ RSpec.describe Epistularium::Providers::ImapAdapter do
 
     described_class.new(account: account).sync!
 
+    expect(imap).to have_received(:uid_fetch).with(101, [ "BODY.PEEK[]", "FLAGS", "INTERNALDATE" ])
+    expect(imap).to have_received(:uid_fetch).with(202, [ "BODY.PEEK[]", "FLAGS", "INTERNALDATE" ])
     expect(account.epistularium_messages.count).to eq(2)
     inbox = account.epistularium_messages.find_by(provider_message_id: "inbox:101")
     expect(inbox.mailbox).to eq("inbox")
