@@ -42,4 +42,13 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include('querySelectorAll(".notae-ai-thread-entry")')
     expect(source).to include("existingTimestamp > newTimestamp")
   end
+
+  it "reopens the rail on the newest unseen agent update instead of a random thread position" do
+    source = Rails.root.join("app/javascript/controllers/ai_rail_controller.js").read
+
+    expect(source).to include("latestUnseenAgentUpdateElement()")
+    expect(source).to include("queueAgentUpdateFocus(targetUpdateId)")
+    expect(source).to include("scrollAgentUpdateIntoView(updateId)")
+    expect(source).to include('scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" })')
+  end
 end

@@ -34,12 +34,13 @@
       <% end %>
     <% end %>
 
-    <button type="button"
-            class="notae-mobile-tabbar-link notae-mobile-tabbar-link--menu"
-            data-action="shell#toggle"
-            aria-label="Open workspace navigation">
-      <%= notae_icon_svg(:workspace, css_class: "notae-mobile-tabbar-icon") %>
-      <span>Menu</span>
-    </button>
+    <% library_path = workspace_library_path(workspace_slug: mobile_workspace.slug) %>
+    <% library_active_class = current_page?(library_path) ? " active" : "" %>
+    <%= link_to library_path,
+                class: "notae-mobile-tabbar-link#{library_active_class}",
+                data: notae_shell_link_data do %>
+      <%= notae_icon_svg(:library, css_class: "notae-mobile-tabbar-icon") %>
+      <span>Library</span>
+    <% end %>
   </nav>
 <% end %>

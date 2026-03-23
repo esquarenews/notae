@@ -2,6 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 
 const AGENT_UPDATE_POLL_INTERVAL_MS = 15000
 const AGENT_UPDATE_TOAST_DURATION_MS = 10000
+const AGENT_UPDATE_FOCUS_CLASS = "is-recently-focused"
+const AGENT_UPDATE_FOCUS_DURATION_MS = 2200
 
 export default class extends Controller {
   static targets = [
@@ -36,6 +38,7 @@ export default class extends Controller {
     this.agentUpdateIds = new Set()
     this.agentToastTimer = null
     this.agentUpdatePollTimer = null
+    this.agentUpdateFocusTimer = null
 
     if (typeof this.railViewportQuery.addEventListener === "function") {
       this.railViewportQuery.addEventListener("change", this.onRailViewportChange)
@@ -76,6 +79,7 @@ export default class extends Controller {
     document.removeEventListener("visibilitychange", this.visibilityChangeHandler)
 
     if (this.agentToastTimer) window.clearTimeout(this.agentToastTimer)
+    if (this.agentUpdateFocusTimer) window.clearTimeout(this.agentUpdateFocusTimer)
     if (this.agentUpdatePollTimer) window.clearInterval(this.agentUpdatePollTimer)
     if (this.shellElement) this.shellElement.classList.remove("is-ai-compact-viewport")
   }
@@ -199,6 +203,7 @@ export default class extends Controller {
 
   openAgentToast(event) {
     event.preventDefault()
+    const targetUpdateId = this.latestUnseenAgentUpdateElement()?.dataset.aiAgentUpdateId || ""
 
     if (this.compactViewport()) {
       this.setOverlayOpen(true)
@@ -209,7 +214,7 @@ export default class extends Controller {
     this.markAgentUpdatesSeen()
     this.clearDismissedAgentUpdateCursor()
     this.hideAgentToast()
-    if (this.hasPromptInputTarget) this.promptInputTarget.focus()
+    this.queueAgentUpdateFocus(targetUpdateId)
   }
 
   dismissAgentToast(event) {
@@ -499,6 +504,26 @@ export default class extends Controller {
     return latest
   }
 
+  latestUnseenAgentUpdateElement() {
+    const lastSeen = this.lastSeenAgentUpdateCursor()
+    let newestElement = null
+
+    this.agentUpdateElements().forEach((element) => {
+      const updatedAt = element.dataset.aiAgentUpdateUpdatedAt || ""
+      if (!updatedAt || updatedAt <= lastSeen) return
+
+      if (!newestElement) {
+        newestElement = element
+        return
+      }
+
+      const newestUpdatedAt = newestElement.dataset.aiAgentUpdateUpdatedAt || ""
+      if (updatedAt >= newestUpdatedAt) newestElement = element
+    })
+
+    return newestElement
+  }
+
   unseenAgentUpdateCount() {
     const lastSeen = this.lastSeenAgentUpdateCursor()
 
@@ -663,6 +688,36 @@ export default class extends Controller {
     if (!this.hasThreadTarget) return []
 
     return Array.from(this.threadTarget.querySelectorAll(".notae-ai-thread-entry"))
+  }
+
+  queueAgentUpdateFocus(updateId) {
+    if (!updateId) return
+
+    window.requestAnimationFrame(() => {
+      this.scrollAgentUpdateIntoView(updateId)
+      window.requestAnimationFrame(() => this.scrollAgentUpdateIntoView(updateId))
+    })
+  }
+
+  scrollAgentUpdateIntoView(updateId) {
+    if (!updateId) return
+
+    const target = this.findAgentUpdateElement(updateId)
+    if (!target) return
+
+    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" })
+    this.highlightAgentUpdate(target)
+  }
+
+  highlightAgentUpdate(element) {
+    this.agentUpdateElements().forEach((entry) => entry.classList.remove(AGENT_UPDATE_FOCUS_CLASS))
+    element.classList.add(AGENT_UPDATE_FOCUS_CLASS)
+
+    if (this.agentUpdateFocusTimer) window.clearTimeout(this.agentUpdateFocusTimer)
+    this.agentUpdateFocusTimer = window.setTimeout(() => {
+      element.classList.remove(AGENT_UPDATE_FOCUS_CLASS)
+      this.agentUpdateFocusTimer = null
+    }, AGENT_UPDATE_FOCUS_DURATION_MS)
   }
 
   notifyLayoutChange() {

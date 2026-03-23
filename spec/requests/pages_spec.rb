@@ -232,15 +232,15 @@ RSpec.describe "Pages", type: :request do
     expect(mobile_tabbar).to be_present
 
     tabbar_links = mobile_tabbar.css(".notae-mobile-tabbar-link[href]")
-    expect(tabbar_links.map { |link| link.text.strip }).to include("Home", "Search", "Calendar", "Mail")
+    expect(tabbar_links.map { |link| link.text.strip }).to include("Home", "Search", "Calendar", "Mail", "Library")
     expect(tabbar_links.map { |link| link["href"] }).to include(
       workspace_path(workspace.slug),
       workspace_search_path(workspace_slug: workspace.slug),
       kalendarium_path(workspace_slug: workspace.slug),
-      workspace_epistularium_path(workspace_slug: workspace.slug)
+      workspace_epistularium_path(workspace_slug: workspace.slug),
+      workspace_library_path(workspace_slug: workspace.slug)
     )
     expect(tabbar_links).to all(satisfy { |link| link["data-turbo-prefetch"] == "false" })
-    expect(mobile_tabbar.at_css("button.notae-mobile-tabbar-link--menu")&.text.to_s).to include("Menu")
   end
 
   it "lists only explicit meeting-note pages in the sidebar meetings section" do

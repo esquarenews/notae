@@ -1751,6 +1751,11 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   background: linear-gradient(145deg, rgba(247, 254, 255, 0.96), rgba(239, 246, 255, 0.92));
 }
 
+.notae-ai-thread-entry.is-recently-focused .notae-ai-message.is-agent-update {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.42);
+}
+
 .notae-ai-message.is-compact {
   padding-top: 0.32rem;
   padding-bottom: 0.32rem;
@@ -8841,32 +8846,33 @@ body.notae-theme-dark .notae-doc-muted {
 }
 
 .notae-shell.is-mobile-viewport .notae-topbar {
-  min-height: 2.45rem;
+  min-height: 4.35rem;
   height: auto;
-  padding: 0 0.62rem;
-  padding-top: 0.36rem;
-  padding-bottom: 0.36rem;
-  gap: 0.38rem;
-  align-items: flex-start;
+  padding: 0.72rem 0.8rem;
+  gap: 0.65rem;
+  align-items: center;
 }
 
 .notae-shell.is-mobile-viewport .notae-topbar-leading {
   flex: 1 1 auto;
   min-width: 0;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.72rem;
 }
 
 .notae-shell.is-mobile-viewport .notae-topbar-title {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  column-gap: 0.34rem;
-  row-gap: 0.1rem;
+  align-items: center;
+  column-gap: 0.5rem;
+  row-gap: 0.14rem;
   max-width: 100%;
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
-  line-height: 1.2;
+  line-height: 1.12;
 }
 
 .notae-shell.is-mobile-viewport .notae-topbar-title > span:nth-child(2) {
@@ -8884,13 +8890,14 @@ body.notae-theme-dark .notae-doc-muted {
 
 .notae-shell.is-mobile-viewport .notae-topbar-actions {
   min-width: 0;
-  gap: 0.22rem;
-  align-self: flex-start;
+  gap: 0.42rem;
+  align-self: center;
+  justify-content: flex-end;
 }
 
 .notae-shell.is-mobile-viewport .notae-topbar-actions .notae-actions-trigger {
   gap: 0;
-  padding-inline: 0.38rem;
+  padding-inline: 0.56rem;
 }
 
 .notae-shell.is-mobile-viewport .notae-topbar-actions .notae-actions-trigger-label {
@@ -13738,7 +13745,7 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
 
   .notae-mobile-tabbar-link {
     min-height: 3.2rem;
-    padding: 0.32rem 0.2rem;
+    padding: 0.38rem 0.2rem 0.34rem;
     border: 1px solid transparent;
     border-radius: 1rem;
     background: transparent;
@@ -13746,8 +13753,8 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
     text-decoration: none;
     display: grid;
     place-items: center;
-    gap: 0.16rem;
-    font-size: 0.66rem;
+    gap: 0.18rem;
+    font-size: 0.67rem;
     font-weight: 700;
     letter-spacing: 0.01em;
   }
@@ -13764,8 +13771,8 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
   }
 
   .notae-mobile-tabbar-icon {
-    width: 1.12rem;
-    height: 1.12rem;
+    width: 1.18rem;
+    height: 1.18rem;
     color: currentColor;
   }
 
@@ -13778,16 +13785,19 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
   }
 
   .notae-shell.is-mobile-viewport .notae-topbar {
-    margin: 0.62rem 0.72rem 0;
-    padding: 0.72rem 0.8rem;
-    gap: 0.44rem;
-    border-radius: 1.08rem;
+    margin: 0.72rem 0.72rem 0;
+    padding: 0.9rem 0.92rem;
+    gap: 0.7rem;
+    border-radius: 1.14rem;
   }
 
   .notae-shell.is-mobile-viewport .notae-mobile-toggle {
-    width: 2.4rem;
-    height: 2.4rem;
-    border-radius: 0.95rem;
+    width: 2.9rem;
+    height: 2.9rem;
+    min-width: 2.9rem;
+    border-radius: 1rem;
+    font-size: 1.08rem;
+    font-weight: 700;
   }
 
   .notae-shell.is-mobile-viewport .notae-topbar-title {
@@ -13841,7 +13851,12 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
 
   .notae-shell.is-mobile-viewport .notae-page-header-tools,
   .notae-shell.is-mobile-viewport .notae-db-header-tools {
-    padding-top: 0.05rem;
+    padding-top: 0.16rem;
+  }
+
+  .notae-shell.is-mobile-viewport .notae-page-title-form .notae-doc-muted,
+  .notae-shell.is-mobile-viewport #database_row_count {
+    display: none;
   }
 
   .notae-shell.is-mobile-viewport .notae-ai-floating-toggle {
