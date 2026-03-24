@@ -86,6 +86,33 @@ export default class extends Controller {
     })
   }
 
+  quickCreate(event) {
+    if (this.interactiveTarget(event.target)) return
+
+    const track = event.currentTarget
+    if (!(track instanceof HTMLElement)) return
+
+    const dateString = track.dataset.dayDate
+    if (!dateString) return
+
+    const rect = track.getBoundingClientRect()
+    const rawY = event.clientY - rect.top
+    const slotHeight = this.hasSlotHeightValue ? this.slotHeightValue : 28
+    const usableY = Math.max(rawY - this.allDayOffsetForScroll(), 0)
+    const slotIndex = Math.max(Math.floor(usableY / slotHeight), 0)
+    const startMinutes = Math.min(slotIndex * 30, (24 * 60) - 30)
+    const endMinutes = startMinutes + 60
+
+    this.element.dispatchEvent(new CustomEvent("kalendarium:quick-create", {
+      bubbles: true,
+      detail: {
+        date: dateString,
+        startLocal: this.localTimestampFor(dateString, startMinutes),
+        endLocal: this.localTimestampFor(dateString, endMinutes)
+      }
+    }))
+  }
+
   positionNowLabel(label, line) {
     label.classList.remove("is-left")
     label.style.left = ""
@@ -170,5 +197,26 @@ export default class extends Controller {
     })
 
     return this._zonedFormatter
+  }
+
+  interactiveTarget(target) {
+    if (!(target instanceof Element)) return false
+
+    return target.closest("a, button, input, textarea, select, label, summary, details, dialog, form, .notae-kalendarium-event-card") !== null
+  }
+
+  localTimestampFor(dateString, minutesIntoDay) {
+    const [year, month, day] = dateString.split("-").map((part) => Number.parseInt(part, 10))
+    if (!year || !month || !day) return ""
+
+    const baseDate = new Date(year, month - 1, day, 0, 0, 0, 0)
+    baseDate.setMinutes(minutesIntoDay)
+
+    const formattedYear = String(baseDate.getFullYear())
+    const formattedMonth = String(baseDate.getMonth() + 1).padStart(2, "0")
+    const formattedDay = String(baseDate.getDate()).padStart(2, "0")
+    const formattedHour = String(baseDate.getHours()).padStart(2, "0")
+    const formattedMinute = String(baseDate.getMinutes()).padStart(2, "0")
+    return `${formattedYear}-${formattedMonth}-${formattedDay}T${formattedHour}:${formattedMinute}`
   }
 }

@@ -33,6 +33,21 @@ RSpec.describe "Webpush OpenSSL compatibility" do
     expect(request.build_vapid_header).to include("vapid t=")
   end
 
+  it "encrypts a push payload without mutating EC keys" do
+    client_key = OpenSSL::PKey::EC.generate("prime256v1")
+    p256dh = Webpush.encode64(client_key.public_key.to_bn.to_s(2))
+    auth = Webpush.encode64(Random.bytes(16))
+
+    encrypted = nil
+
+    expect {
+      encrypted = Webpush::Encryption.encrypt("hello from notae", p256dh, auth)
+    }.not_to raise_error
+
+    expect(encrypted).to be_a(String)
+    expect(encrypted.bytesize).to be > 0
+  end
+
   def described_class_from_keys(public_key, private_key)
     Webpush::VapidKey.from_keys(public_key, private_key)
   end

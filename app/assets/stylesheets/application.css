@@ -11987,7 +11987,7 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   }
 
   .notae-kalendarium {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 268px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
     gap: 0.8rem;
   }
 

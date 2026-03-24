@@ -55,9 +55,13 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.headers["X-Notae-Perf-Action"]).to eq("KalendariumController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     document = Nokogiri::HTML.parse(response.body)
+    kalendarium_shell = document.at_css(".notae-kalendarium")
+    expect(kalendarium_shell).to be_present
+    expect(kalendarium_shell["data-action"]).to include("kalendarium:quick-create->kalendarium-focus#prepareNewEvent")
     sticky_sidebar = document.at_css("aside.notae-kalendarium-sidebar.is-pinned")
     expect(sticky_sidebar).to be_present
     expect(sticky_sidebar.at_css(".notae-kalendarium-sidebar-accordion-summary")&.text.to_s.strip).to eq("Create event")
+    expect(sticky_sidebar.at_css("[data-kalendarium-focus-target='createAccordion']")).to be_present
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
   end
@@ -132,6 +136,13 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("Event details")
     expect(response.body).to include("notae-kalendarium-event-delete-button")
     expect(response.body).to include("notae-kalendarium-event-delete-form")
+    document = Nokogiri::HTML.parse(response.body)
+    day_track = document.at_css(".notae-kalendarium-day-track")
+    expect(day_track).to be_present
+    expect(day_track["data-action"]).to include("dblclick->kalendarium-timeline#quickCreate")
+    expect(day_track["data-day-date"]).to eq("2026-03-01")
+    expect(document.at_css("[data-kalendarium-focus-target='createStartInput']")).to be_present
+    expect(document.at_css("[data-kalendarium-focus-target='createEndInput']")).to be_present
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)
@@ -148,6 +159,10 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-day-focus-link is-selected")
     expect(response.body).to include("notae-kalendarium-week-day-track is-selected")
     expect(response.body).to include("date=2026-03-01&amp;view=day")
+    document = Nokogiri::HTML.parse(response.body)
+    week_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-03-01']")
+    expect(week_track).to be_present
+    expect(week_track["data-action"]).to include("dblclick->kalendarium-timeline#quickCreate")
 
     travel_to Time.zone.parse("2026-03-15 09:30:00") do
       get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01")
@@ -190,7 +205,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(stylesheet).to include(".notae-kalendarium-sidebar {\n  grid-column: 2;\n  grid-row: 1 / span 2;")
     expect(stylesheet).to include("@media (min-width: 1501px)")
     expect(stylesheet).to include(".notae-content.notae-content-kalendarium {\n    padding-inline: clamp(0.45rem, 0.9vw, 0.8rem);")
-    expect(stylesheet).to include(".notae-kalendarium {\n    grid-template-columns: minmax(0, 1fr) minmax(240px, 268px);")
+    expect(stylesheet).to include(".notae-kalendarium {\n    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);")
   end
 
   it "keeps the year-view toggle on its own filter row so projects stays aligned with the other calendar buttons" do

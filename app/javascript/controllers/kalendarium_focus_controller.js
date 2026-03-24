@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["viewLink", "dateInput", "dateLabel", "dayLink", "weekTrack", "monthCell"]
+  static targets = ["viewLink", "dateInput", "dateLabel", "dayLink", "weekTrack", "monthCell", "createAccordion", "createTitleInput", "createStartInput", "createEndInput", "createAllDayInput"]
   static values = {
     selectedDate: String,
     view: String
@@ -23,6 +23,42 @@ export default class extends Controller {
     this.selectedDateValue = nextDate
     this.applySelectedDate(nextDate)
     this.replaceCurrentUrlDate(nextDate)
+  }
+
+  prepareNewEvent(event) {
+    const detail = event.detail || {}
+    const dateString = detail.date
+    if (!dateString) return
+
+    this.selectedDateValue = dateString
+    this.applySelectedDate(dateString)
+
+    if (this.hasCreateAccordionTarget) {
+      this.createAccordionTarget.open = true
+      this.createAccordionTarget.scrollIntoView({ block: "nearest" })
+    }
+
+    if (this.hasCreateAllDayInputTarget && this.createAllDayInputTarget.checked) {
+      this.createAllDayInputTarget.checked = false
+      this.dispatchChange(this.createAllDayInputTarget)
+    }
+
+    if (this.hasCreateStartInputTarget && detail.startLocal) {
+      this.createStartInputTarget.value = detail.startLocal
+      this.dispatchChange(this.createStartInputTarget)
+    }
+
+    if (this.hasCreateEndInputTarget && detail.endLocal) {
+      this.createEndInputTarget.value = detail.endLocal
+      this.dispatchChange(this.createEndInputTarget)
+    }
+
+    if (this.hasCreateTitleInputTarget) {
+      window.requestAnimationFrame(() => {
+        this.createTitleInputTarget.focus()
+        this.createTitleInputTarget.select()
+      })
+    }
   }
 
   applySelectedDate(dateString) {
@@ -97,6 +133,10 @@ export default class extends Controller {
 
     current.searchParams.set("date", dateString)
     window.history.replaceState({}, "", `${current.pathname}${current.search}${current.hash}`)
+  }
+
+  dispatchChange(element) {
+    element.dispatchEvent(new Event("change", { bubbles: true }))
   }
 
   parseIsoDate(dateString) {

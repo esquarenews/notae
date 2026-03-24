@@ -10,6 +10,7 @@
 
 <section class="notae-kalendarium"
          data-controller="kalendarium-focus"
+         data-action="kalendarium:quick-create->kalendarium-focus#prepareNewEvent"
          data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
          data-kalendarium-focus-view-value="<%= @view %>">
   <header class="notae-kalendarium-head notae-auth-card">
@@ -199,7 +200,7 @@
 
   <section class="notae-kalendarium-grid">
     <aside class="notae-kalendarium-sidebar notae-auth-card is-pinned">
-      <details class="notae-kalendarium-sidebar-accordion">
+      <details class="notae-kalendarium-sidebar-accordion" data-kalendarium-focus-target="createAccordion">
         <summary class="notae-kalendarium-sidebar-accordion-summary">Create event</summary>
         <div class="notae-kalendarium-sidebar-accordion-body">
           <div class="notae-kalendarium-sidebar-accordion-body-inner">
@@ -212,7 +213,11 @@
                           } do |form| %>
               <%= hidden_field_tag :view, @view %>
               <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
-              <%= form.text_field :title, placeholder: "Event title", required: true, class: "notae-auth-input" %>
+              <%= form.text_field :title,
+                                  placeholder: "Event title",
+                                  required: true,
+                                  class: "notae-auth-input",
+                                  data: { kalendarium_focus_target: "createTitleInput" } %>
               <%= form.select :kalendarium_calendar_id,
                               options_from_collection_for_select(@visible_calendars, :id, :name),
                               {},
@@ -225,6 +230,7 @@
                                             value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"),
                                             class: "notae-auth-input",
                                             data: {
+                                              kalendarium_focus_target: "createStartInput",
                                               kalendarium_event_form_target: "startInput",
                                               action: "change->kalendarium-event-form#startChanged"
                                             } %>
@@ -233,12 +239,14 @@
                                             min: Time.current.in_time_zone(current_user.time_zone).strftime("%Y-%m-%dT%H:%M"),
                                             class: "notae-auth-input",
                                             data: {
+                                              kalendarium_focus_target: "createEndInput",
                                               kalendarium_event_form_target: "endInput",
                                               action: "change->kalendarium-event-form#endChanged"
                                             } %>
               <label class="notae-options-checkbox">
                 <%= form.check_box :all_day,
                                    data: {
+                                     kalendarium_focus_target: "createAllDayInput",
                                      kalendarium_event_form_target: "allDayInput",
                                      action: "change->kalendarium-event-form#toggleAllDay"
                                    } %>
@@ -318,6 +326,8 @@
                 <% end %>
               </div>
               <div class="notae-kalendarium-day-track"
+                   data-day-date="<%= @selected_date.strftime("%Y-%m-%d") %>"
+                   data-action="dblclick->kalendarium-timeline#quickCreate"
                    style="--kal-slot-height: <%= slot_height %>px; --kal-slots-per-day: <%= slots_per_day %>; --kal-all-day-offset: <%= @day_all_day_offset %>px;">
                 <% if @day_all_day_offset.positive? %>
                   <div class="notae-kalendarium-all-day-strip">
@@ -420,6 +430,7 @@
                   <div class="<%= ["notae-kalendarium-week-day-track", ("is-selected" if day == @selected_date)].compact.join(" ") %>"
                        data-kalendarium-focus-target="weekTrack"
                        data-day-date="<%= day.strftime("%Y-%m-%d") %>"
+                       data-action="dblclick->kalendarium-timeline#quickCreate"
                        style="--kal-slot-height: <%= slot_height %>px; --kal-slots-per-day: <%= slots_per_day %>; --kal-all-day-offset: <%= @week_all_day_offset %>px;">
                     <header class="notae-kalendarium-week-day-label">
                       <%= link_to kalendarium_path(workspace_slug: @workspace.slug,
