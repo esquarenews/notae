@@ -18,7 +18,7 @@ module DatabaseTablePresentation
   }.freeze
 
   included do
-    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for
+    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for
   end
 
   private
@@ -37,6 +37,16 @@ module DatabaseTablePresentation
 
   def select_input_classes_for(property, value)
     classes = [ "notae-db-cell-input" ]
+    return classes.join(" ") unless task_status_property?(property)
+
+    normalized_value = normalize_task_status_value(value)
+    classes << "notae-db-cell-select-status"
+    classes << TASK_STATUS_CLASS_MAP[normalized_value] if TASK_STATUS_CLASS_MAP.key?(normalized_value)
+    classes.join(" ")
+  end
+
+  def task_status_badge_classes_for(property, value, base_class: "notae-db-status-badge")
+    classes = [ base_class ]
     return classes.join(" ") unless task_status_property?(property)
 
     normalized_value = normalize_task_status_value(value)

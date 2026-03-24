@@ -495,6 +495,13 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("overdue")
     expect(response.body).to include("hold")
     expect(response.body).to include("done")
+
+    document = Nokogiri::HTML.parse(response.body)
+    started_column = document.at_css(".notae-db-board-column-title.is-status-started")
+    done_column = document.at_css(".notae-db-board-column-title.is-status-done")
+
+    expect(started_column&.text.to_s).to include("started")
+    expect(done_column&.text.to_s).to include("done")
   end
 
   it "renders non-grouped property values inside board cards" do

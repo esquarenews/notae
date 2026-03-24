@@ -12027,6 +12027,16 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   color: var(--notae-text-strong, rgba(41, 37, 36, 0.92));
 }
 
+.notae-db-status-badge,
+.notae-db-board-column-title.notae-db-cell-select-status,
+.notae-db-board-card-detail-value.notae-db-cell-select-status {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  border-radius: 999px;
+  padding: 0.2rem 0.58rem;
+}
+
 .notae-db-board-column-count {
   min-width: 1.75rem;
   padding: 0.15rem 0.45rem;
@@ -12149,6 +12159,17 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   text-align: right;
   color: var(--notae-text-default, rgba(41, 37, 36, 0.84));
   font-size: 0.76rem;
+}
+
+.notae-db-board-column-title.notae-db-cell-select-status {
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+.notae-db-board-card-detail-value.notae-db-cell-select-status {
+  text-align: left;
+  font-size: 0.72rem;
+  line-height: 1.1;
 }
 
 .notae-db-board-card-edit-form {
