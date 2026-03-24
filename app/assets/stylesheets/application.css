@@ -11504,6 +11504,21 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 .notae-kalendarium-event-modal-delete {
   display: flex;
   justify-content: flex-end;
+  padding-top: 0.45rem;
+}
+
+.notae-kalendarium-event-delete-button {
+  width: 100%;
+  justify-content: center;
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.notae-kalendarium-event-delete-button:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
 }
 
 .notae-kalendarium-timezone-grid {
