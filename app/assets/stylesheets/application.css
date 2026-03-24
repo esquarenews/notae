@@ -11507,18 +11507,26 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   padding-top: 0.45rem;
 }
 
+.notae-kalendarium-event-delete-form {
+  width: 100%;
+}
+
+button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button,
 .notae-kalendarium-event-delete-button {
   width: 100%;
   justify-content: center;
   background: #dc2626;
   border-color: #dc2626;
   color: #fff;
+  box-shadow: 0 16px 34px rgba(220, 38, 38, 0.22);
 }
 
+button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button:hover,
 .notae-kalendarium-event-delete-button:hover {
   background: #b91c1c;
   border-color: #b91c1c;
   color: #fff;
+  box-shadow: 0 16px 34px rgba(185, 28, 28, 0.24);
 }
 
 .notae-kalendarium-timezone-grid {

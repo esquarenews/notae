@@ -131,6 +131,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("kalendarium-event-modal#openView")
     expect(response.body).to include("Event details")
     expect(response.body).to include("notae-kalendarium-event-delete-button")
+    expect(response.body).to include("notae-kalendarium-event-delete-form")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)
@@ -177,6 +178,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(stylesheet).to include(".notae-kalendarium-week-day-track {\n  border-right: 1px solid var(--notae-border, #d6d3d1);\n  min-width: 0;")
     expect(stylesheet).to include(".notae-kalendarium-week-header-days strong {\n  font-size: 0.78rem;\n  color: var(--notae-text, #292524);\n  overflow: hidden;")
     expect(stylesheet).to include(".notae-kalendarium-event-delete-button {\n  width: 100%;")
+    expect(stylesheet).to include(".notae-kalendarium-event-delete-form {\n  width: 100%;")
     expect(stylesheet).to include("background: #dc2626;")
   end
 

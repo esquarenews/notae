@@ -232,7 +232,10 @@
                         kalendarium_event_path(workspace_slug: workspace.slug, id: event.id, view: view, date: date),
                         method: :delete,
                         class: "notae-chip-button notae-chip-danger notae-kalendarium-event-delete-button",
-                        form: { data: { turbo_confirm: "Delete this event?" } } %>
+                        form: {
+                          class: "notae-kalendarium-event-delete-form",
+                          data: { turbo_confirm: "Delete this event?" }
+                        } %>
         </div>
       </section>
     </div>
