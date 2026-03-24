@@ -21,16 +21,28 @@
          role="button"
          tabindex="0"
          aria-label="View event details for <%= event.title %>">
-  <header>
-    <strong><%= event.title %></strong>
-    <div class="notae-kalendarium-event-header-actions">
-      <span><%= all_day_badge ? "All day" : "#{starts_local.strftime("%H:%M")} - #{ends_local.strftime("%H:%M")}" %></span>
-      <button type="button"
-              class="notae-inline-icon-button notae-kalendarium-event-edit-button"
-              aria-label="Edit event"
-              data-action="kalendarium-event-modal#openEdit">✎</button>
-    </div>
-  </header>
+  <% if compact %>
+    <header class="notae-kalendarium-event-header-compact">
+      <strong><%= event.title %></strong>
+    </header>
+    <p class="notae-kalendarium-event-time-line"><%= all_day_badge ? "All day" : "#{starts_local.strftime("%H:%M")} - #{ends_local.strftime("%H:%M")}" %></p>
+    <% if meeting_join_url.present? %>
+      <div class="notae-kalendarium-event-links is-compact">
+        <%= link_to "Join meeting", meeting_join_url, class: "notae-utility-link", target: "_blank", rel: "noopener noreferrer" %>
+      </div>
+    <% end %>
+  <% else %>
+    <header>
+      <strong><%= event.title %></strong>
+      <div class="notae-kalendarium-event-header-actions">
+        <span><%= all_day_badge ? "All day" : "#{starts_local.strftime("%H:%M")} - #{ends_local.strftime("%H:%M")}" %></span>
+        <button type="button"
+                class="notae-inline-icon-button notae-kalendarium-event-edit-button"
+                aria-label="Edit event"
+                data-action="kalendarium-event-modal#openEdit">✎</button>
+      </div>
+    </header>
+  <% end %>
 
   <% if !compact && event.location.present? %>
     <p><%= event.location %></p>

@@ -222,6 +222,40 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("+1 more")
   end
 
+  it "renders month view event cards with only title, time, and join link" do
+    user, workspace, calendar = build_stack(suffix: "month-compact-card")
+    sign_in user
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Design review",
+      description: "Long description snippet that should not appear in the month view card.",
+      starts_at_utc: Time.zone.parse("2026-03-02 09:15:00"),
+      ends_at_utc: Time.zone.parse("2026-03-02 10:00:00"),
+      metadata_json: {
+        "meeting_join_url" => "https://meet.google.com/abc-defg-hij"
+      }
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    month_card = document.at_css(".notae-kalendarium-month-cell .notae-kalendarium-event-card")
+    visible_paragraphs = month_card.css("> p").map { |node| node.text.strip }
+    visible_links = month_card.css("> .notae-kalendarium-event-links a").map { |node| node.text.strip }
+
+    expect(month_card).to be_present
+    expect(month_card.at_css(".notae-kalendarium-event-header-compact")).to be_present
+    expect(month_card.at_css(".notae-kalendarium-event-time-line")&.text.to_s).to include("09:15 - 10:00")
+    expect(month_card.text).to include("Design review")
+    expect(visible_paragraphs).to eq([ "09:15 - 10:00" ])
+    expect(visible_links).to eq([ "Join meeting" ])
+  end
+
   it "shows optional daily event labels in year view when toggled on" do
     user, workspace, calendar = build_stack(suffix: "year-daily-event-labels")
     sign_in user

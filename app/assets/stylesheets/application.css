@@ -11077,13 +11077,45 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 }
 
 .notae-kalendarium-event-card.is-compact {
-  padding: 0.24rem 0.36rem;
-  gap: 0.1rem;
+  padding: 0.34rem 0.4rem;
+  gap: 0.14rem;
 }
 
 .notae-kalendarium-event-card.is-compact header {
-  align-items: center;
+  align-items: flex-start;
   font-size: 0.72rem;
+}
+
+.notae-kalendarium-event-header-compact {
+  display: block;
+}
+
+.notae-kalendarium-event-header-compact strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notae-kalendarium-event-time-line {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--notae-text-muted, #44403c);
+}
+
+.notae-kalendarium-event-card.is-compact .notae-kalendarium-event-links {
+  display: block;
+}
+
+.notae-kalendarium-event-card.is-compact .notae-kalendarium-event-links .notae-utility-link {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 
 .notae-kalendarium-event-card.is-all-day .notae-kalendarium-event-edit-button {
