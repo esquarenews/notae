@@ -53,4 +53,30 @@ RSpec.describe AgentAction, type: :model do
     expect(agent_action).to be_valid
     expect(agent_action).to be_editable
   end
+
+  it "validates Nota drafts against the native Notae target and required content" do
+    workspace = Workspace.create!(name: "Agent Action Nota", slug: "agent-action-nota")
+    user = User.create!(email: "agent-action-nota@example.com", password: "password123")
+
+    agent_action = described_class.new(
+      workspace: workspace,
+      user: user,
+      title: "Create summary note",
+      proposed_by: "manual",
+      target_system: "github",
+      draft_type: "nota_draft",
+      status: described_class::STATUS_PENDING,
+      approval_required: true,
+      dry_run: true,
+      payload_json: {
+        "title" => "",
+        "body" => ""
+      }
+    )
+
+    expect(agent_action).not_to be_valid
+    expect(agent_action.errors[:target_system]).to include("is not supported for nota draft")
+    expect(agent_action.errors[:payload_json]).to include("must include a Nota title")
+    expect(agent_action.errors[:payload_json]).to include("must include Nota content")
+  end
 end

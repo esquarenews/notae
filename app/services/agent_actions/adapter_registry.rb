@@ -11,6 +11,7 @@ module AgentActions
         when "slack" then AgentActions::Adapters::SlackAdapter.new
         when "calendar" then AgentActions::Adapters::CalendarAdapter.new
         when "crm" then AgentActions::Adapters::CrmAdapter.new
+        when "notae" then AgentActions::Adapters::NotaeAdapter.new
         else
           raise Error, "Unsupported adapter target: #{target_system}"
         end

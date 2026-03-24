@@ -188,6 +188,40 @@ RSpec.describe "Agent actions", type: :request do
     expect(response.body).to include("Select a calendar before approving.")
   end
 
+  it "approves a Nota draft into a real Nota without asking for a destination" do
+    agent_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: member,
+      attributes: {
+        title: "Draft summary note",
+        proposed_by: "manual",
+        target_system: "notae",
+        draft_type: "nota_draft",
+        payload_json: {
+          "title" => "Summary note",
+          "body" => "Capture the meeting summary and next actions."
+        }
+      }
+    ).call
+
+    sign_in owner
+
+    get agent_action_path(workspace_slug: workspace.slug, id: agent_action.id)
+    expect(response.body).to include("Approving this draft creates a new Nota in this workspace.")
+    expect(response.body).not_to include("Save to task list")
+    expect(response.body).not_to include("Save to calendar")
+
+    post approve_agent_action_path(workspace_slug: workspace.slug, id: agent_action.id), params: {
+      decision_comment: "Looks good."
+    }
+
+    expect(response).to redirect_to(agent_action_path(workspace_slug: workspace.slug, id: agent_action.id))
+    agent_action.reload
+    created_page = Page.find(agent_action.result_json.fetch("target_id"))
+    expect(agent_action.status).to eq(AgentAction::STATUS_APPROVED)
+    expect(created_page.title).to eq("Summary note")
+  end
+
   it "rejects a draft and records the decision comment" do
     agent_action = AgentActions::DraftCreator.new(
       workspace: workspace,

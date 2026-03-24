@@ -60,7 +60,9 @@
               <% end %>
 
               <% unless @agent_action.draft_type.in?(%w[email_draft github_comment_draft]) %>
-                <p class="notae-page-subtle">Approving this draft creates a real Notae record in the selected destination.</p>
+                <p class="notae-page-subtle">
+                  <%= @agent_action.draft_type == "nota_draft" ? "Approving this draft creates a new Nota in this workspace." : "Approving this draft creates a real Notae record in the selected destination." %>
+                </p>
               <% end %>
 
               <%= text_area_tag :decision_comment, params[:decision_comment], placeholder: "Approval note or revision guidance", class: "notae-auth-input", rows: 3 %>

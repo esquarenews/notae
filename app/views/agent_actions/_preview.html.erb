@@ -23,6 +23,10 @@
       <p class="notae-page-subtle">Notes</p>
       <div class="notae-workspace-home-json"><%= payload["body"] %></div>
     <% end %>
+  <% when "nota_draft" %>
+    <div><strong>Title:</strong> <%= payload["title"].presence || "Untitled Nota" %></div>
+    <p class="notae-page-subtle">Content</p>
+    <div class="notae-workspace-home-json"><%= payload["body"].to_s %></div>
   <% else %>
     <div><strong>Project / Queue:</strong> <%= payload["project"].presence || "Not set" %></div>
     <div><strong>Title:</strong> <%= payload["title"].presence || "Untitled ticket" %></div>

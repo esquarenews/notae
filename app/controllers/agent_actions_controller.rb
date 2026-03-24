@@ -175,6 +175,11 @@ class AgentActionsController < ApplicationController
         "attendees" => split_multiline_values(params_hash[:attendees_line]),
         "body" => params_hash[:body].to_s
       }
+    when "nota_draft"
+      {
+        "title" => params_hash[:title].to_s.strip,
+        "body" => params_hash[:body].to_s
+      }
     else
       {
         "project" => params_hash[:project].to_s.strip,

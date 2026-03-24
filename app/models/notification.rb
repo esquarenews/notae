@@ -29,11 +29,26 @@ class Notification < ApplicationRecord
   scope :unread, -> { where(read_at: nil) }
   scope :recent_first, -> { order(created_at: :desc) }
 
+  after_commit :enqueue_web_push_delivery, on: :create
+
   def mark_as_read!
     update!(read_at: Time.current)
   end
 
   def agent_action_notification?
     notification_type.to_s.start_with?("agent_action_")
+  end
+
+  private
+
+  def enqueue_web_push_delivery
+    return unless WebPush::Configuration.configured?
+    return unless recipient.web_push_subscriptions.exists?
+
+    WebPush::DeliverNotificationJob.perform_later(id)
+  rescue StandardError => error
+    raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+
+    Rails.logger.warn("Web push queue unavailable for notification=#{id}: #{error.class}: #{error.message}")
   end
 end

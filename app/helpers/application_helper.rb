@@ -172,6 +172,10 @@ module ApplicationHelper
     NOTAE_PWA_BACKGROUND_COLOR
   end
 
+  def notae_web_push_public_key
+    WebPush::Configuration.public_key.to_s
+  end
+
   def notae_icon_svg(name, css_class: nil)
     svg_class = [ "notae-icon-svg", css_class ].compact.join(" ")
     markup =

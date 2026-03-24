@@ -16,7 +16,7 @@ RSpec.describe "PwaController JavaScript syntax" do
     skip "node is not available in this environment"
   end
 
-  it "manages install prompts, offline state, and private cache clearing" do
+  it "manages install prompts, offline state, push subscriptions, and private cache clearing" do
     source = Rails.root.join("app/javascript/controllers/pwa_controller.js").read
 
     expect(source).to include("beforeinstallprompt")
@@ -24,5 +24,8 @@ RSpec.describe "PwaController JavaScript syntax" do
     expect(source).to include("CLEAR_PRIVATE_CACHES")
     expect(source).to include("notae-pwa-is-offline")
     expect(source).to include("matchMedia(\"(display-mode: standalone)\")")
+    expect(source).to include("Notification.requestPermission")
+    expect(source).to include("pushManager.subscribe")
+    expect(source).to include("/pwa/push-subscription")
   end
 end

@@ -138,7 +138,7 @@ class AiAssistantController < ApplicationController
     when :missing_prompt
       "Enter a prompt to ask Notae AI."
     when :unsupported_draft_request
-      "Notae AI can draft emails, GitHub comments, task tickets, and calendar holds."
+      "Notae AI can draft emails, GitHub comments, task tickets, calendar holds, and Notae notes."
     when :draft_generation_failed, :draft_validation_failed
       "Notae AI could not turn that into a valid draft. Add recipients, references, or timing and retry."
     else

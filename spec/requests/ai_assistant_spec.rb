@@ -225,6 +225,59 @@ RSpec.describe "AI Assistant", type: :request do
     expect(conversation.sources.map { |source| source["kind"] }).to include("Draft action")
   end
 
+  it "creates native Nota drafts from AI prompts that ask for a note" do
+    user = User.create!(email: "ai-assistant-nota-draft@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "AI Assistant Nota Draft", slug: "ai-assistant-nota-draft")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Meeting brief")
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "The team agreed to prepare a decision brief and capture next steps in a dedicated note.",
+      token_count: 15,
+      content_hash: "assistant-nota-draft-hash",
+      embedding: [ 0.2, 0.5 ],
+      embedding_model: SearchChunk::EMBEDDING_MODEL
+    )
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:prompt]).to include("Requested draft type: nota_draft")
+      {
+        text: {
+          title: "Decision brief draft",
+          summary: "Created a Nota draft for review.",
+          payload: {
+            title: "Decision brief",
+            body: "Summarize the decision, rationale, and next steps."
+          },
+          used_source_indices: [ 1 ]
+        }.to_json,
+        usage: { prompt_tokens: 70, completion_tokens: 40, total_tokens: 110 }
+      }
+    end
+
+    sign_in user
+    expect {
+      post workspace_ai_assistant_path(workspace_slug: workspace.slug),
+           params: {
+             ai_assistant: {
+               prompt: "Create a Nota with a decision brief from this page.",
+               scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+             }
+           },
+           headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    }.to change(AgentAction, :count).by(1)
+
+    agent_action = AgentAction.order(:created_at).last
+    expect(agent_action.draft_type).to eq("nota_draft")
+    expect(agent_action.target_system).to eq("notae")
+    expect(agent_action.payload_json.fetch("title")).to eq("Decision brief")
+    expect(response.body).to include("Created a Nota draft for review.")
+  end
+
   it "falls back to general-knowledge answers when workspace context is not required" do
     user = User.create!(email: "ai-assistant-general-knowledge@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "AI Assistant General Knowledge", slug: "ai-assistant-general-knowledge")

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_21_103000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_24_113000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -942,6 +942,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_21_103000) do
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
+  create_table "web_push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "auth", null: false
+    t.datetime "created_at", null: false
+    t.text "endpoint", null: false
+    t.datetime "expiration_time"
+    t.datetime "last_delivered_at"
+    t.datetime "last_error_at"
+    t.text "last_error_message"
+    t.text "p256dh", null: false
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.uuid "user_id", null: false
+    t.index ["endpoint"], name: "index_web_push_subscriptions_on_endpoint", unique: true
+    t.index ["user_id", "created_at"], name: "index_web_push_subscriptions_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_web_push_subscriptions_on_user_id"
+  end
+
   create_table "workflow_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.integer "attempts_count", default: 0, null: false
     t.datetime "cancelled_at"
@@ -1106,6 +1123,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_21_103000) do
   add_foreign_key "share_links", "pages"
   add_foreign_key "share_links", "users", column: "created_by_id"
   add_foreign_key "share_links", "workspaces"
+  add_foreign_key "web_push_subscriptions", "users"
   add_foreign_key "workflow_runs", "users"
   add_foreign_key "workflow_runs", "workspaces"
 end

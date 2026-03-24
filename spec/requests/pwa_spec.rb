@@ -41,7 +41,7 @@ RSpec.describe "PWA", type: :request do
     expect(icons).to include(a_hash_including("src" => "/icon-maskable-512-v2.png", "purpose" => "maskable"))
   end
 
-  it "serves a parseable service worker with the offline fallback and private cache clearing hooks" do
+  it "serves a parseable service worker with the offline fallback, private cache clearing, and push hooks" do
     get pwa_service_worker_path
 
     expect(response).to have_http_status(:ok)
@@ -50,6 +50,8 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("OFFLINE_FALLBACK_URL")
     expect(response.body).to include("CLEAR_PRIVATE_CACHES")
     expect(response.body).to include("/app")
+    expect(response.body).to include("self.addEventListener(\"push\"")
+    expect(response.body).to include("self.addEventListener(\"notificationclick\"")
 
     Tempfile.create([ "notae-pwa-service-worker", ".js" ]) do |file|
       file.write(response.body)

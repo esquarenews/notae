@@ -17,6 +17,8 @@ module AgentActions
 
     def call
       case agent_action.draft_type
+      when "nota_draft"
+        create_nota!
       when "task_ticket"
         create_task!
       when "calendar_hold"
@@ -71,6 +73,53 @@ module AgentActions
           "type" => "task_list",
           "id" => database.id,
           "name" => database.name
+        }
+      }
+    end
+
+    def create_nota!
+      ensure_internal_action_allowed!("create_nota")
+
+      title = payload["title"].to_s.strip
+      body = payload["body"].to_s
+      raise Error, "Nota title is required." if title.blank?
+      raise Error, "Nota content is required." if body.strip.blank?
+
+      page = workspace.pages.create!(
+        title: title,
+        created_by: actor,
+        page_kind: "nota"
+      )
+      page.blocks.create!(
+        workspace: workspace,
+        created_by: actor,
+        block_type: "paragraph",
+        position: Block::POSITION_GAP,
+        content_json: {
+          "type" => "doc",
+          "content" => [
+            {
+              "type" => "paragraph",
+              "content" => [ { "type" => "text", "text" => body } ]
+            }
+          ]
+        }
+      )
+
+      {
+        "dry_run" => false,
+        "target_system" => agent_action.target_system,
+        "target_type" => "Page",
+        "target_id" => page.id,
+        "url" => Rails.application.routes.url_helpers.page_path(
+          workspace_slug: workspace.slug,
+          id: page.id
+        ),
+        "summary" => "Created Nota in #{workspace.name}.",
+        "destination" => {
+          "type" => "workspace",
+          "id" => workspace.id,
+          "name" => workspace.name
         }
       }
     end

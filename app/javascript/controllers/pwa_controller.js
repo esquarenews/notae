@@ -2,13 +2,15 @@ import { Controller } from "@hotwired/stimulus"
 
 const INSTALL_DISMISS_KEY = "notae-pwa-install-dismissed-at"
 const IOS_DISMISS_KEY = "notae-pwa-ios-dismissed-at"
+const PUSH_DISMISS_KEY = "notae-pwa-push-dismissed-at"
 const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 const NETWORK_TOAST_MS = 2600
 
 export default class extends Controller {
-  static targets = ["installPrompt", "iosPrompt", "offlineBanner", "networkToast"]
+  static targets = ["installPrompt", "iosPrompt", "offlineBanner", "networkToast", "pushPrompt"]
   static values = {
-    authenticated: Boolean
+    authenticated: Boolean,
+    webPushPublicKey: String
   }
 
   connect() {
@@ -33,6 +35,7 @@ export default class extends Controller {
     if (!this.authenticatedValue) this.clearPrivateCaches()
 
     this.refreshNetworkState()
+    this.syncPushSubscription().catch(() => {})
   }
 
   disconnect() {
@@ -72,6 +75,19 @@ export default class extends Controller {
     this.syncInstallPrompts()
   }
 
+  enablePush(event) {
+    event.preventDefault()
+    this.subscribeToPushNotifications().catch(() => {
+      this.showNetworkToast("Push notifications could not be enabled yet.")
+    })
+  }
+
+  dismissPush(event) {
+    event.preventDefault()
+    this.rememberDismissal(PUSH_DISMISS_KEY)
+    this.syncPushPrompt()
+  }
+
   refreshNetworkState() {
     const offline = !window.navigator.onLine
 
@@ -80,6 +96,8 @@ export default class extends Controller {
     this.toggleTargetVisibility("offlineBanner", !offline)
     this.syncOnlineOnlyControls(offline)
     this.syncInstallPrompts()
+    this.syncPushPrompt()
+    if (!offline) this.syncPushSubscription().catch(() => {})
   }
 
   handleBeforeInstallPrompt(event) {
@@ -99,6 +117,7 @@ export default class extends Controller {
     if (!(form instanceof HTMLFormElement)) return
 
     if (form.dataset.pwaClearPrivateCache === "true") {
+      this.detachPushSubscription({ keepBrowserSubscription: true }).catch(() => {})
       this.clearPrivateCaches()
     }
 
@@ -125,6 +144,10 @@ export default class extends Controller {
 
     this.toggleTargetVisibility("installPrompt", !showAndroidPrompt)
     this.toggleTargetVisibility("iosPrompt", !showIosPrompt)
+  }
+
+  syncPushPrompt() {
+    this.toggleTargetVisibility("pushPrompt", !this.shouldShowPushPrompt())
   }
 
   syncOnlineOnlyControls(offline) {
@@ -186,6 +209,19 @@ export default class extends Controller {
     return true
   }
 
+  shouldShowPushPrompt() {
+    if (!this.hasPushPromptTarget) return false
+    if (!this.authenticatedValue) return false
+    if (!window.navigator.onLine) return false
+    if (!this.pushSupported()) return false
+    if (this.pushPermissionState() !== "default") return false
+    if (this.dismissedRecently(PUSH_DISMISS_KEY)) return false
+    if (this.iosDevice() && !this.standaloneMode()) return false
+    if (!this.mobileViewport() && !this.standaloneMode()) return false
+
+    return true
+  }
+
   standaloneMode() {
     return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true
   }
@@ -213,6 +249,22 @@ export default class extends Controller {
     window.localStorage.setItem(storageKey, String(Date.now()))
   }
 
+  pushSupported() {
+    return (
+      this.webPushPublicKeyValue.length > 0 &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window &&
+      (window.isSecureContext || ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname))
+    )
+  }
+
+  pushPermissionState() {
+    if (!("Notification" in window)) return "denied"
+
+    return window.Notification.permission
+  }
+
   toggleTargetVisibility(targetName, hidden) {
     const hasTargetProperty = `has${targetName.charAt(0).toUpperCase()}${targetName.slice(1)}Target`
     if (!this[hasTargetProperty]) return
@@ -237,6 +289,129 @@ export default class extends Controller {
 
     window.clearTimeout(this.networkToastTimeout)
     this.networkToastTimeout = null
+  }
+
+  async subscribeToPushNotifications() {
+    if (!this.pushSupported()) {
+      this.showNetworkToast("Push notifications are not available on this device yet.")
+      return
+    }
+
+    const registration = await navigator.serviceWorker.ready.catch(() => null)
+    if (!registration) {
+      this.showNetworkToast("Push notifications need the Notae app shell to finish loading.")
+      return
+    }
+
+    let permission = this.pushPermissionState()
+    if (permission === "default") {
+      permission = await window.Notification.requestPermission()
+    }
+
+    if (permission !== "granted") {
+      if (permission !== "default") this.rememberDismissal(PUSH_DISMISS_KEY)
+      this.syncPushPrompt()
+      this.showNetworkToast("Push notifications were not enabled.")
+      return
+    }
+
+    let subscription = await registration.pushManager.getSubscription()
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.urlBase64ToUint8Array(this.webPushPublicKeyValue)
+      })
+    }
+
+    await this.persistPushSubscription(subscription)
+    window.localStorage.removeItem(PUSH_DISMISS_KEY)
+    this.syncPushPrompt()
+    this.showNetworkToast("Push notifications enabled.")
+  }
+
+  async syncPushSubscription() {
+    try {
+      if (!this.authenticatedValue) return
+      if (!this.pushSupported()) return
+      if (this.pushPermissionState() !== "granted") return
+
+      const registration = await navigator.serviceWorker.ready.catch(() => null)
+      if (!registration) return
+
+      const subscription = await registration.pushManager.getSubscription()
+      if (!subscription) return
+
+      await this.persistPushSubscription(subscription)
+      this.syncPushPrompt()
+    } catch (_error) {
+      // Ignore best-effort sync failures and keep the app usable.
+    }
+  }
+
+  async persistPushSubscription(subscription) {
+    const payload = subscription.toJSON()
+    const response = await fetch("/pwa/push-subscription", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-Token": this.csrfToken()
+      },
+      body: JSON.stringify({
+        subscription: {
+          endpoint: subscription.endpoint,
+          expiration_time: payload.expirationTime,
+          keys: payload.keys || {}
+        }
+      })
+    })
+
+    if (!response.ok) throw new Error("push_subscription_sync_failed")
+  }
+
+  async detachPushSubscription({ keepBrowserSubscription = false } = {}) {
+    if (!this.authenticatedValue) return
+    if (!this.pushSupported()) return
+
+    const registration = await navigator.serviceWorker.ready.catch(() => null)
+    if (!registration) return
+
+    const subscription = await registration.pushManager.getSubscription()
+    if (!subscription) return
+
+    await fetch("/pwa/push-subscription", {
+      method: "DELETE",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-Token": this.csrfToken()
+      },
+      body: JSON.stringify({ endpoint: subscription.endpoint })
+    }).catch(() => {})
+
+    if (!keepBrowserSubscription) {
+      await subscription.unsubscribe().catch(() => {})
+    }
+  }
+
+  csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || ""
+  }
+
+  urlBase64ToUint8Array(value) {
+    const padding = "=".repeat((4 - (value.length % 4)) % 4)
+    const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/")
+    const decoded = window.atob(base64)
+    const output = new Uint8Array(decoded.length)
+
+    for (let index = 0; index < decoded.length; index += 1) {
+      output[index] = decoded.charCodeAt(index)
+    }
+
+    return output
   }
 
   async clearPrivateCaches() {

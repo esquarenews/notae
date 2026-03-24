@@ -204,7 +204,8 @@ module Search
         /\b(draft|write|compose|prepare|create)\b.*\b(email|e-mail|mail|reply)\b/,
         /\b(draft|write|compose|prepare|create)\b.*\b(github|pull request|pull-request|pr|issue)\b.*\b(comment|reply|response)\b/,
         /\b(draft|create|prepare)\b.*\b(ticket|task|todo|to-do|action item|handoff)\b/,
-        /\b(draft|create|prepare|schedule|book|reserve)\b.*\b(calendar|meeting|invite|hold|time slot|timeslot)\b/
+        /\b(draft|create|prepare|schedule|book|reserve)\b.*\b(calendar|meeting|invite|hold|time slot|timeslot)\b/,
+        /\b(draft|create|prepare|write|save)\b.*\b(nota|note|page|brief)\b/
       ]
 
       patterns.any? { |pattern| normalized.match?(pattern) }
@@ -1168,6 +1169,10 @@ module Search
          normalized.match?(/\b(draft|create|prepare|schedule|book|reserve|hold)\b/)
         return { draft_type: "calendar_hold", target_system: "calendar" }
       end
+      if normalized.match?(/\b(nota|note|page|brief)\b/) &&
+         normalized.match?(/\b(draft|create|prepare|write|save)\b/)
+        return { draft_type: "nota_draft", target_system: "notae" }
+      end
       return nil unless normalized.match?(/\b(ticket|task|todo|to-do|action item|handoff)\b/)
 
       {
@@ -1205,6 +1210,7 @@ module Search
         - github_comment_draft payload: repository (string), target_reference (string), body (string)
         - task_ticket payload: project (string), title (string), body (string), assignee (string optional), due_at (string optional)
         - calendar_hold payload: title (string), starts_at (ISO-like datetime string), ends_at (ISO-like datetime string), attendees (array), body (string optional)
+        - nota_draft payload: title (string), body (string)
 
         Rules:
         - Use workspace context when it helps.
@@ -1257,6 +1263,11 @@ module Search
           "attendees" => normalize_string_array(normalized_payload["attendees"]),
           "body" => normalized_payload["body"].to_s
         }
+      when "nota_draft"
+        {
+          "title" => normalized_payload["title"].presence || parsed_title.to_s.strip,
+          "body" => normalized_payload["body"].to_s
+        }
       else
         {
           "project" => normalized_payload["project"].to_s.strip,
@@ -1297,6 +1308,8 @@ module Search
         "Created a GitHub comment draft for review: #{agent_action.title}."
       when "calendar_hold"
         "Created a calendar hold draft for review: #{agent_action.title}."
+      when "nota_draft"
+        "Created a Nota draft for review: #{agent_action.title}."
       else
         "Created a task draft for review: #{agent_action.title}."
       end

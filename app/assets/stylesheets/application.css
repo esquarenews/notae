@@ -13843,6 +13843,7 @@ input[type="submit"].notae-chip-button,
 
 .notae-pwa-offline-banner,
 .notae-pwa-install-card,
+.notae-pwa-push-card,
 .notae-pwa-network-toast {
   position: fixed;
   left: 50%;
@@ -13875,6 +13876,14 @@ input[type="submit"].notae-chip-button,
 }
 
 .notae-pwa-install-card {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6.4rem);
+  display: grid;
+  gap: 0.72rem;
+  padding: 0.88rem 0.95rem;
+  border-radius: 1.15rem;
+}
+
+.notae-pwa-push-card {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 6.4rem);
   display: grid;
   gap: 0.72rem;
@@ -14067,6 +14076,10 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
   }
 
   .notae-pwa-install-card {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 6.85rem);
+  }
+
+  .notae-pwa-push-card {
     bottom: calc(env(safe-area-inset-bottom, 0px) + 6.85rem);
   }
 

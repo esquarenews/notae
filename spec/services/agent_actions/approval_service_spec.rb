@@ -174,6 +174,42 @@ RSpec.describe AgentActions::ApprovalService do
     expect(created_row.db_cells.joins(:db_property).find_by(db_properties: { name: "Status" }).value_text).to eq("not started")
   end
 
+  it "creates a real Nota when an approved Notae draft is reviewed" do
+    workspace = Workspace.create!(name: "Approval Nota", slug: "approval-nota")
+    author = User.create!(email: "approval-nota-author@example.com", password: "password123")
+    approver = User.create!(email: "approval-nota-approver@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: author, role: :member)
+    Membership.create!(workspace: workspace, user: approver, role: :owner)
+
+    agent_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: author,
+      attributes: {
+        title: "Create project brief",
+        proposed_by: "manual",
+        target_system: "notae",
+        draft_type: "nota_draft",
+        payload_json: {
+          "title" => "Project brief",
+          "body" => "Capture the scope, timing, and next actions."
+        }
+      }
+    ).call
+
+    described_class.new(agent_action: agent_action, actor: approver).call
+
+    agent_action.reload
+    created_page = Page.find(agent_action.result_json.fetch("target_id"))
+
+    expect(agent_action.status).to eq(AgentAction::STATUS_APPROVED)
+    expect(agent_action.dry_run).to be(false)
+    expect(agent_action.result_json.fetch("target_type")).to eq("Page")
+    expect(agent_action.result_json.fetch("summary")).to eq("Created Nota in Approval Nota.")
+    expect(created_page.title).to eq("Project brief")
+    expect(created_page.page_kind).to eq("nota")
+    expect(created_page.blocks.first.content_json.dig("content", 0, "content", 0, "text")).to eq("Capture the scope, timing, and next actions.")
+  end
+
   it "requires a destination before approving task or calendar drafts" do
     workspace = Workspace.create!(name: "Approval Destinations", slug: "approval-destinations")
     author = User.create!(email: "approval-destinations-author@example.com", password: "password123")

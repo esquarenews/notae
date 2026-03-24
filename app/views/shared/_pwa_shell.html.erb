@@ -1,6 +1,7 @@
 <section class="notae-pwa-shell"
          data-controller="pwa"
-         data-pwa-authenticated-value="<%= authenticated ? "true" : "false" %>">
+         data-pwa-authenticated-value="<%= authenticated ? "true" : "false" %>"
+         data-pwa-web-push-public-key-value="<%= notae_web_push_public_key %>">
   <div class="notae-pwa-offline-banner" data-pwa-target="offlineBanner" hidden>
     <strong>Offline mode</strong>
     <span>Cached screens remain available. Changes, sync, and live updates need a connection.</span>
@@ -24,6 +25,17 @@
     </div>
     <div class="notae-pwa-install-actions">
       <button type="button" class="notae-chip-button notae-chip-button-subtle" data-action="pwa#dismissIosPrompt">Dismiss</button>
+    </div>
+  </div>
+
+  <div class="notae-pwa-push-card" data-pwa-target="pushPrompt" hidden>
+    <div class="notae-pwa-install-copy">
+      <strong>Enable push notifications</strong>
+      <span>Get important Notae alerts on this device, including mentions, approvals, reminders, and workflow failures.</span>
+    </div>
+    <div class="notae-pwa-install-actions">
+      <button type="button" class="notae-chip-button" data-action="pwa#enablePush">Enable</button>
+      <button type="button" class="notae-chip-button notae-chip-button-subtle" data-action="pwa#dismissPush">Not now</button>
     </div>
   </div>
 

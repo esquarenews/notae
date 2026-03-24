@@ -13,7 +13,7 @@
     ]
   ).uniq
 %>
-const CACHE_VERSION = "pwa-v1"
+const CACHE_VERSION = "pwa-v2"
 const SHELL_CACHE = `notae-shell-${CACHE_VERSION}`
 const DOCUMENT_CACHE = `notae-documents-${CACHE_VERSION}`
 const ASSET_CACHE = `notae-assets-${CACHE_VERSION}`
@@ -54,6 +54,17 @@ self.addEventListener("message", (event) => {
   if (event.data?.type !== "CLEAR_PRIVATE_CACHES") return
 
   event.waitUntil(clearPrivateCaches())
+})
+
+self.addEventListener("push", (event) => {
+  event.waitUntil(showPushNotification(event))
+})
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close()
+
+  const url = event.notification.data?.url || "/app"
+  event.waitUntil(openNotificationDestination(url))
 })
 
 self.addEventListener("fetch", (event) => {
@@ -198,4 +209,51 @@ async function clearPrivateCaches() {
       return caches.delete(cacheName)
     })
   )
+}
+
+async function showPushNotification(event) {
+  const payload = parsePushPayload(event.data)
+  const title = payload.title || "Notae"
+
+  await self.registration.showNotification(title, {
+    body: payload.body || "",
+    icon: payload.icon || "/icon-192-v2.png",
+    badge: payload.badge || "/icon-192-v2.png",
+    tag: payload.tag || "notae-notification",
+    renotify: false,
+    data: {
+      url: payload.url || "/app",
+      notificationId: payload.notification_id || null
+    }
+  })
+}
+
+function parsePushPayload(data) {
+  if (!data) return {}
+
+  try {
+    return data.json()
+  } catch (_error) {
+    return { body: data.text() }
+  }
+}
+
+async function openNotificationDestination(rawUrl) {
+  const destinationUrl = new URL(rawUrl, self.location.origin).toString()
+  const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+
+  for (const client of clientsList) {
+    if (!("focus" in client)) continue
+
+    if ("navigate" in client) {
+      await client.navigate(destinationUrl)
+    }
+
+    await client.focus()
+    return
+  }
+
+  if (self.clients.openWindow) {
+    await self.clients.openWindow(destinationUrl)
+  }
 }

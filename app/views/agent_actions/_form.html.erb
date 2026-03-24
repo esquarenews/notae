@@ -53,6 +53,11 @@
     <%= form.text_area :attendees_line, value: agent_action_payload_lines(agent_action, :attendees), class: "notae-auth-input", rows: 2, placeholder: "Attendees, one per line" %>
   </div>
 
+  <div data-agent-action-form-target="section" data-draft-types="nota_draft" class="notae-workspace-home-stack">
+    <p class="notae-page-subtle">Nota fields</p>
+    <p class="notae-page-subtle">Approving this draft creates a new Nota in the current workspace.</p>
+  </div>
+
   <p class="notae-page-subtle">Draft body</p>
   <%= form.text_area :body, value: agent_action_payload_value(agent_action, :body), class: "notae-auth-input", rows: 8, placeholder: "Draft content or notes" %>
 
