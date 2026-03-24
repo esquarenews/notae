@@ -10,7 +10,7 @@ class EpistulariumController < ApplicationController
     @accounts = policy_scope(EpistulariumAccount).for_workspace(@workspace).includes(:owner).order(updated_at: :desc, created_at: :desc)
     @selected_account = resolve_selected_account
     @selected_mailbox = params[:mailbox].to_s == "sent" ? "sent" : "inbox"
-    queue_due_syncs(@accounts)
+    queue_due_syncs(@accounts) if queue_due_syncs_for_request?
     @messages = resolve_messages
     @selected_message = resolve_selected_message
     @thread_messages = resolve_thread_messages
@@ -37,6 +37,10 @@ class EpistulariumController < ApplicationController
 
   def queue_due_syncs(accounts)
     Epistularium::DueSyncScheduler.new(accounts: accounts).call
+  end
+
+  def queue_due_syncs_for_request?
+    request.format.html?
   end
 
   def resolve_selected_account

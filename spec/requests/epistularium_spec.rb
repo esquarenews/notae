@@ -116,6 +116,22 @@ RSpec.describe "Epistularium", type: :request do
     expect(payload["html"]).to include("data-epistularium-selected-message-id")
   end
 
+  it "does not enqueue due sync scheduling work during json polling refreshes" do
+    user, workspace, account, message = build_stack(suffix: "json-no-schedule")
+    sign_in user
+
+    expect(Epistularium::DueSyncScheduler).not_to receive(:new)
+
+    get workspace_epistularium_path(
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox",
+      message_id: message.id
+    ), headers: { "ACCEPT" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+  end
+
   it "renders a persistent visual indicator for the active email account" do
     user, workspace, account, message = build_stack(suffix: "active-account")
     account.update!(label: "eSquareNews")

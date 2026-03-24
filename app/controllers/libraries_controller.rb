@@ -22,7 +22,7 @@ class LibrariesController < ApplicationController
   def show
     authorize @workspace, :show?
 
-    @workspace_options = policy_scope(Workspace).order(updated_at: :desc).to_a
+    @workspace_options = policy_scope(Workspace).select(:id, :name, :slug, :updated_at).order(updated_at: :desc).to_a
     @workspace_filter_options = [ [ "All workspaces", "all" ] ] +
       @workspace_options.map { |workspace| [ workspace.name, workspace.slug ] }
 
@@ -46,10 +46,11 @@ class LibrariesController < ApplicationController
     last_visited_ids = session.fetch("notae_last_page_visits", {}).values.map(&:to_s)
 
     @library_rows = []
-    @library_rows.concat(page_rows(selected_workspace_ids, owner_email_lookup, favorite_lookup, last_visited_ids))
-    @library_rows.concat(database_rows(selected_workspace_ids, owner_email_lookup, favorite_lookup))
+    @library_rows.concat(page_rows(filtered_page_scope(selected_workspace_ids), owner_email_lookup, favorite_lookup, last_visited_ids))
+    @library_rows.concat(database_rows(filtered_database_scope(selected_workspace_ids), owner_email_lookup, favorite_lookup))
 
-    apply_filters!
+    apply_property_filter!
+    apply_search_filter!
     apply_sort!
     apply_pagination!
   end
@@ -133,11 +134,8 @@ class LibrariesController < ApplicationController
     lookup
   end
 
-  def page_rows(workspace_ids, owner_email_lookup, favorite_lookup, last_visited_ids)
-    policy_scope(Page)
-      .where(workspace_id: workspace_ids)
-      .active
-      .includes(:workspace, :created_by)
+  def page_rows(scope, owner_email_lookup, favorite_lookup, last_visited_ids)
+    scope
       .to_a
       .map do |page|
         meeting = page.page_kind == "meeting_note"
@@ -159,11 +157,8 @@ class LibrariesController < ApplicationController
       end
   end
 
-  def database_rows(workspace_ids, owner_email_lookup, favorite_lookup)
-    policy_scope(Database)
-      .where(workspace_id: workspace_ids)
-      .active
-      .includes(:workspace, :created_by)
+  def database_rows(scope, owner_email_lookup, favorite_lookup)
+    scope
       .to_a
       .map do |database|
         creator_email = owner_email_lookup[database.workspace_id] || "—"
@@ -184,39 +179,120 @@ class LibrariesController < ApplicationController
       end
   end
 
-  def apply_filters!
-    apply_tab_filter!
-    apply_source_filter!
-    apply_visibility_filter!
-    apply_property_filter!
-    apply_search_filter!
-    apply_favorites_only_filter!
+  def filtered_page_scope(workspace_ids)
+    scope = policy_scope(Page)
+              .where(workspace_id: workspace_ids)
+              .active
+              .select(:id, :title, :icon, :created_by_id, :created_at, :updated_at, :workspace_id, :page_kind, :permission_mode)
+              .includes(:workspace, :created_by)
+
+    scope = apply_page_source_filter(scope)
+    scope = apply_page_tab_filter(scope, workspace_ids)
+    scope = apply_page_visibility_filter(scope)
+    apply_page_favorites_filter(scope, workspace_ids)
   end
 
-  def apply_tab_filter!
-    case @tab
-    when "recents"
-      recent_cutoff = 1.week.ago
-      @library_rows.select! { |row| row[:last_edited_time].present? && row[:last_edited_time] >= recent_cutoff }
-    when "favorites"
-      @library_rows.select! { |row| row[:favorited] }
-    when "shared"
-      @library_rows.select! { |row| row[:visibility] == "shared" }
-    when "private"
-      @library_rows.select! { |row| row[:visibility] == "private" }
+  def filtered_database_scope(workspace_ids)
+    scope = policy_scope(Database)
+              .where(workspace_id: workspace_ids)
+              .active
+              .select(:id, :name, :icon, :created_by_id, :created_at, :updated_at, :workspace_id, :permission_mode)
+              .includes(:workspace, :created_by)
+
+    scope = apply_database_source_filter(scope)
+    scope = apply_database_tab_filter(scope, workspace_ids)
+    scope = apply_database_visibility_filter(scope)
+    apply_database_favorites_filter(scope, workspace_ids)
+  end
+
+  def apply_page_source_filter(scope)
+    case @source_filter
+    when "database"
+      scope.none
+    when "meeting"
+      scope.where(page_kind: "meeting_note")
+    when "page"
+      scope.where.not(page_kind: "meeting_note")
+    else
+      scope
     end
   end
 
-  def apply_source_filter!
-    return if @source_filter == "all"
+  def apply_database_source_filter(scope)
+    return scope if %w[all database].include?(@source_filter)
 
-    @library_rows.select! { |row| row[:kind] == @source_filter }
+    scope.none
   end
 
-  def apply_visibility_filter!
-    return if @visibility_filter == "all"
+  def apply_page_tab_filter(scope, workspace_ids)
+    case @tab
+    when "recents"
+      scope.where("pages.updated_at >= ?", 1.week.ago)
+    when "favorites"
+      scope.where(id: favorite_ids_relation("Page", workspace_ids))
+    when "shared"
+      scope.where.not(permission_mode: Page.permission_modes.fetch("private_page"))
+    when "private"
+      scope.where(permission_mode: Page.permission_modes.fetch("private_page"))
+    else
+      scope
+    end
+  end
 
-    @library_rows.select! { |row| row[:visibility] == @visibility_filter }
+  def apply_database_tab_filter(scope, workspace_ids)
+    case @tab
+    when "recents"
+      scope.where("databases.updated_at >= ?", 1.week.ago)
+    when "favorites"
+      scope.where(id: favorite_ids_relation("Database", workspace_ids))
+    when "shared"
+      scope.where.not(permission_mode: Database.permission_modes.fetch("private_database"))
+    when "private"
+      scope.where(permission_mode: Database.permission_modes.fetch("private_database"))
+    else
+      scope
+    end
+  end
+
+  def apply_page_visibility_filter(scope)
+    case @visibility_filter
+    when "shared"
+      scope.where.not(permission_mode: Page.permission_modes.fetch("private_page"))
+    when "private"
+      scope.where(permission_mode: Page.permission_modes.fetch("private_page"))
+    else
+      scope
+    end
+  end
+
+  def apply_database_visibility_filter(scope)
+    case @visibility_filter
+    when "shared"
+      scope.where.not(permission_mode: Database.permission_modes.fetch("private_database"))
+    when "private"
+      scope.where(permission_mode: Database.permission_modes.fetch("private_database"))
+    else
+      scope
+    end
+  end
+
+  def apply_page_favorites_filter(scope, workspace_ids)
+    return scope unless @favorites_only
+
+    scope.where(id: favorite_ids_relation("Page", workspace_ids))
+  end
+
+  def apply_database_favorites_filter(scope, workspace_ids)
+    return scope unless @favorites_only
+
+    scope.where(id: favorite_ids_relation("Database", workspace_ids))
+  end
+
+  def favorite_ids_relation(favoritable_type, workspace_ids)
+    policy_scope(Favorite)
+      .for_user(current_user)
+      .where(workspace_id: workspace_ids, favoritable_type: favoritable_type)
+      .select(:favoritable_id)
   end
 
   def apply_property_filter!
@@ -244,12 +320,6 @@ class LibrariesController < ApplicationController
       ].join(" ").downcase
       haystack.include?(query)
     end
-  end
-
-  def apply_favorites_only_filter!
-    return unless @favorites_only
-
-    @library_rows.select! { |row| row[:favorited] }
   end
 
   def apply_sort!

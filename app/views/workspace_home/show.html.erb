@@ -117,7 +117,10 @@
           <%= link_to page_path(workspace_slug: @workspace.slug, id: page.id), class: "notae-workspace-page-card" do %>
             <div class="notae-workspace-page-card-cover">
               <% if page.cover_image.attached? %>
-                <%= image_tag page.cover_image, class: "notae-workspace-page-card-cover-image" %>
+                <%= image_tag page.cover_image,
+                              class: "notae-workspace-page-card-cover-image",
+                              loading: "lazy",
+                              decoding: "async" %>
               <% elsif (cover_style = page_cover_preset_style(page.cover_preset_key)).present? %>
                 <div class="notae-workspace-page-card-cover-preset"
                      style="<%= cover_style %>"></div>

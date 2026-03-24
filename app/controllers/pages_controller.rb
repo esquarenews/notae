@@ -8,7 +8,13 @@ class PagesController < ApplicationController
     authorize @page
     remember_last_page_visit!
 
-    @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
+    @can_manage_permissions = policy(@page).permissions?
+    @memberships =
+      if @can_manage_permissions
+        policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
+      else
+        []
+      end
     @pages = policy_scope(Page).for_workspace(@workspace).active.order(:created_at).to_a
     @move_target_pages = @pages.reject { |candidate| candidate.id == @page.id }
 
@@ -19,9 +25,8 @@ class PagesController < ApplicationController
     end
     @blocks_by_parent = @active_blocks.group_by(&:parent_block_id)
     @archived_blocks = policy_scope(Block).for_page(@page).archived.ordered.to_a
-    @can_manage_permissions = policy(@page).permissions?
     @can_archive_page = policy(@page).archive?
-    @shared_user_ids = @page.page_shares.pluck(:user_id)
+    @shared_user_ids = @can_manage_permissions ? @page.page_shares.pluck(:user_id) : []
     @backlinks = policy_scope(PageLink).for_target(@page).includes(:source_page).order(created_at: :desc)
     @page_exports = policy_scope(PageExport).for_page(@page).recent_first.limit(10).to_a
     @page_templates = policy_scope(PageTemplate).for_workspace(@workspace).recent_first.limit(20).to_a

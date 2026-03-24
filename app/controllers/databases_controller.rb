@@ -15,7 +15,13 @@ class DatabasesController < ApplicationController
     authorize @database
     ensure_default_view!
 
-    @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
+    can_manage_permissions = policy(@database).permissions?
+    @memberships =
+      if can_manage_permissions
+        policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
+      else
+        []
+      end
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
     @archived_rows = policy_scope(DbRow).for_database(@database).where.not(archived_at: nil).ordered.to_a
@@ -57,7 +63,7 @@ class DatabasesController < ApplicationController
       else
         []
       end
-    @shared_user_ids = @database.database_shares.pluck(:user_id)
+    @shared_user_ids = can_manage_permissions ? @database.database_shares.pluck(:user_id) : []
     database_comment_probe = Comment.new(commentable: @database, workspace: @workspace, author: current_user, body: "draft")
     @can_comment_on_database = policy(database_comment_probe).create?
     @new_database_comment = Comment.new

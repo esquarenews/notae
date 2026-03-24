@@ -348,6 +348,8 @@ RSpec.describe "Blocks", type: :request do
     expect(response).to have_http_status(:ok)
     payload = JSON.parse(response.body)
     expect(payload["html"]).to include("notae-doc-image")
+    expect(payload["html"]).to include('loading="lazy"')
+    expect(payload["html"]).to include('decoding="async"')
     expect(payload["html"]).not_to include("notae-doc-dropzone")
     expect(payload["html"]).to include('target="_blank"')
     expect(payload["html"]).to include('rel="noopener noreferrer"')

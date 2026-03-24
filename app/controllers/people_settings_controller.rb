@@ -35,8 +35,7 @@ class PeopleSettingsController < ApplicationController
 
   def load_collections
     memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
-    @guest_memberships = memberships.select(&:guest?)
-    @member_memberships = memberships.reject(&:guest?)
+    @guest_memberships, @member_memberships = memberships.partition(&:guest?)
     @tab = TABS.include?(params[:tab].to_s) ? params[:tab].to_s : "guests"
     @can_invite = policy(Invitation.new(workspace: @workspace, invited_by: current_user)).create?
     @invitation = Invitation.new

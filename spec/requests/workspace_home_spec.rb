@@ -67,6 +67,30 @@ RSpec.describe "Workspace home", type: :request do
     expect(hero_subtle_lines).to eq([ "Workspace home" ])
   end
 
+  it "lazy loads recent page cover images on the workspace home page" do
+    user = User.create!(email: "home-cover-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Home cover", slug: "home-cover")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Covered page")
+
+    Tempfile.create([ "workspace-home-cover", ".png" ]) do |file|
+      file.write("fake-png-data")
+      file.rewind
+      page.cover_image.attach(io: file, filename: "cover.png", content_type: "image/png")
+    end
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    cover_image = document.at_css(".notae-workspace-page-card-cover-image")
+    expect(cover_image).to be_present
+    expect(cover_image["loading"]).to eq("lazy")
+    expect(cover_image["decoding"]).to eq("async")
+  end
+
   it "renders the workspace library page for members" do
     user = User.create!(email: "library-member@example.com", password: "password123")
     workspace = Workspace.create!(name: "Library test", slug: "library-test")
