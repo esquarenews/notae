@@ -18,6 +18,8 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include(pwa_manifest_path)
     expect(response.body).to include("apple-mobile-web-app-title")
     expect(response.body).to include("theme-color")
+    expect(response.body).to include("data-controller=\"pwa\"")
+    expect(response.body).to include("data-pwa-web-push-public-key-value=")
   end
 
   it "serves a production-ready web manifest" do

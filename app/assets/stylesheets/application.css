@@ -5562,6 +5562,13 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   margin: 0;
 }
 
+.notae-pref-control-form--push {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.58rem;
+  align-items: center;
+}
+
 .notae-connection-form {
   display: grid;
   gap: 0.48rem;

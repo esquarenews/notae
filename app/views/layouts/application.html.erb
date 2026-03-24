@@ -31,7 +31,9 @@
   </head>
 
   <body class="notae-theme <%= notae_theme_body_class %>"
-        data-controller="<%= "link-preferences" if user_signed_in? %>"
+        data-controller="<%= [("pwa"), ("link-preferences" if user_signed_in?)].compact.join(" ") %>"
+        data-pwa-authenticated-value="<%= user_signed_in? ? "true" : "false" %>"
+        data-pwa-web-push-public-key-value="<%= notae_web_push_public_key %>"
         data-link-preferences-open-links-in-new-window-value="<%= user_signed_in? ? current_user.open_links_in_desktop_app? : false %>">
     <% if user_signed_in? %>
       <% embedded_shell = params[:embedded].to_s == "1" %>

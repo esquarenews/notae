@@ -7,7 +7,15 @@ const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 const NETWORK_TOAST_MS = 2600
 
 export default class extends Controller {
-  static targets = ["installPrompt", "iosPrompt", "offlineBanner", "networkToast", "pushPrompt"]
+  static targets = [
+    "installPrompt",
+    "iosPrompt",
+    "offlineBanner",
+    "networkToast",
+    "pushPrompt",
+    "pushSettingsButton",
+    "pushSettingsStatus"
+  ]
   static values = {
     authenticated: Boolean,
     webPushPublicKey: String
@@ -35,7 +43,7 @@ export default class extends Controller {
     if (!this.authenticatedValue) this.clearPrivateCaches()
 
     this.refreshNetworkState()
-    this.syncPushSubscription().catch(() => {})
+    this.syncPushSubscription().catch(() => {}).finally(() => this.refreshPushUi())
   }
 
   disconnect() {
@@ -79,6 +87,7 @@ export default class extends Controller {
     event.preventDefault()
     this.subscribeToPushNotifications().catch(() => {
       this.showNetworkToast("Push notifications could not be enabled yet.")
+      this.refreshPushUi()
     })
   }
 
@@ -97,6 +106,7 @@ export default class extends Controller {
     this.syncOnlineOnlyControls(offline)
     this.syncInstallPrompts()
     this.syncPushPrompt()
+    this.refreshPushUi()
     if (!offline) this.syncPushSubscription().catch(() => {})
   }
 
@@ -148,6 +158,23 @@ export default class extends Controller {
 
   syncPushPrompt() {
     this.toggleTargetVisibility("pushPrompt", !this.shouldShowPushPrompt())
+  }
+
+  refreshPushUi() {
+    if (!this.hasPushSettingsButtonTarget && !this.hasPushSettingsStatusTarget) return
+
+    const state = this.pushSettingsState()
+
+    this.pushSettingsStatusTargets.forEach((element) => {
+      element.textContent = state.message
+    })
+
+    this.pushSettingsButtonTargets.forEach((button) => {
+      button.hidden = state.hidden
+      button.disabled = state.disabled
+      button.textContent = state.label
+      button.classList.toggle("notae-chip-button-subtle", state.subtle)
+    })
   }
 
   syncOnlineOnlyControls(offline) {
@@ -222,6 +249,90 @@ export default class extends Controller {
     return true
   }
 
+  pushSettingsState() {
+    if (!this.authenticatedValue) {
+      return {
+        hidden: true,
+        disabled: true,
+        subtle: true,
+        label: "Enable notifications",
+        message: "Sign in to manage push notifications on this device."
+      }
+    }
+
+    if (!this.webPushPublicKeyValue.length) {
+      return {
+        hidden: false,
+        disabled: true,
+        subtle: true,
+        label: "Unavailable",
+        message: "Push notifications are not configured on this server yet."
+      }
+    }
+
+    if (this.iosDevice() && !this.standaloneMode()) {
+      return {
+        hidden: false,
+        disabled: true,
+        subtle: true,
+        label: "Open Home Screen app",
+        message: "On iPhone, open Notae from the Home Screen app to enable notifications."
+      }
+    }
+
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      return {
+        hidden: false,
+        disabled: true,
+        subtle: true,
+        label: "Unsupported",
+        message: "Push notifications are not available on this device/browser yet."
+      }
+    }
+
+    if (!window.navigator.onLine) {
+      return {
+        hidden: false,
+        disabled: true,
+        subtle: true,
+        label: "Reconnect to enable",
+        message: "Reconnect to enable push notifications on this device."
+      }
+    }
+
+    const permission = this.pushPermissionState()
+
+    if (permission === "granted") {
+      return {
+        hidden: false,
+        disabled: false,
+        subtle: true,
+        label: "Refresh device subscription",
+        message: "Push notifications are enabled on this device."
+      }
+    }
+
+    if (permission === "denied") {
+      return {
+        hidden: false,
+        disabled: true,
+        subtle: true,
+        label: "Notifications blocked",
+        message: this.iosDevice()
+          ? "Notifications are blocked for Notae on this iPhone. Re-enable them in iPhone notification/site settings, or clear website data and add the app again."
+          : "Notifications are blocked for this browser. Re-enable them in browser site settings."
+      }
+    }
+
+    return {
+      hidden: false,
+      disabled: false,
+      subtle: false,
+      label: "Enable notifications",
+      message: "Enable push notifications for reminders, mentions, approvals, and workflow failures on this device."
+    }
+  }
+
   standaloneMode() {
     return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true
   }
@@ -294,12 +405,14 @@ export default class extends Controller {
   async subscribeToPushNotifications() {
     if (!this.pushSupported()) {
       this.showNetworkToast("Push notifications are not available on this device yet.")
+      this.refreshPushUi()
       return
     }
 
     const registration = await navigator.serviceWorker.ready.catch(() => null)
     if (!registration) {
       this.showNetworkToast("Push notifications need the Notae app shell to finish loading.")
+      this.refreshPushUi()
       return
     }
 
@@ -312,6 +425,7 @@ export default class extends Controller {
       if (permission !== "default") this.rememberDismissal(PUSH_DISMISS_KEY)
       this.syncPushPrompt()
       this.showNetworkToast("Push notifications were not enabled.")
+      this.refreshPushUi()
       return
     }
 
@@ -327,6 +441,7 @@ export default class extends Controller {
     window.localStorage.removeItem(PUSH_DISMISS_KEY)
     this.syncPushPrompt()
     this.showNetworkToast("Push notifications enabled.")
+    this.refreshPushUi()
   }
 
   async syncPushSubscription() {
@@ -343,6 +458,7 @@ export default class extends Controller {
 
       await this.persistPushSubscription(subscription)
       this.syncPushPrompt()
+      this.refreshPushUi()
     } catch (_error) {
       // Ignore best-effort sync failures and keep the app usable.
     }

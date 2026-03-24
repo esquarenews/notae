@@ -27,5 +27,9 @@ RSpec.describe "PwaController JavaScript syntax" do
     expect(source).to include("Notification.requestPermission")
     expect(source).to include("pushManager.subscribe")
     expect(source).to include("/pwa/push-subscription")
+    expect(source).to include("pushSettingsButton")
+    expect(source).to include("pushSettingsStatus")
+    expect(source).to include("Refresh device subscription")
+    expect(source).to include("Home Screen app")
   end
 end
