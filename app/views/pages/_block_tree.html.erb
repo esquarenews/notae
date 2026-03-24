@@ -268,15 +268,6 @@
                      embedded_page_params: embedded_page_params
                    } %>
 
-        <% unless reader_mode %>
-          <%= form_with model: Block.new,
-                        url: page_blocks_path(page_blocks_route_params),
-                        class: "notae-doc-add-form is-child" do |form| %>
-            <%= form.hidden_field :parent_block_id, value: block.id %>
-            <%= form.hidden_field :block_type, value: "paragraph" %>
-            <%= form.submit "+", class: "notae-doc-add-button" %>
-          <% end %>
-        <% end %>
       </div>
     </article>
   <% end %>

@@ -59,6 +59,8 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).to include("Manage Epistula")
     expect(response.body).to include("Suggest reply draft")
     expect(response.body).to include("data-controller=\"epistularium-poller\"")
+    expect(response.body).to include("<h1 class=\"notae-tool-page-title\">Epistularium</h1>")
+    expect(response.body).to include("notae-topbar-page-icon-glyph")
 
     document = Nokogiri::HTML(response.body)
     grid_frame = document.at_css("turbo-frame#epistularium_grid")

@@ -22,6 +22,8 @@ RSpec.describe "Library page", type: :request do
 
     get workspace_library_path(workspace_slug: workspace.slug)
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("<h1 class=\"notae-tool-page-title\">Library</h1>")
+    expect(response.body).to include("notae-topbar-page-icon-glyph")
     expect(response.body).to include("Workspaces")
     expect(response.body).to include("notae-sidebar-list is-indented")
     expect(main_content_classes(response.body)).to include("notae-content-wide")

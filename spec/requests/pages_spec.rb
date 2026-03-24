@@ -365,6 +365,8 @@ RSpec.describe "Pages", type: :request do
     workspace = Workspace.create!(name: "Document layout", slug: "document-layout")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "New page")
+    parent_block = page.blocks.create!(workspace: workspace, created_by: owner, block_type: "paragraph")
+    page.blocks.create!(workspace: workspace, created_by: owner, parent_block: parent_block, block_type: "todo_list")
     sign_in owner
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
@@ -383,6 +385,8 @@ RSpec.describe "Pages", type: :request do
     title_field = html.at_css("textarea.notae-page-title-input[name='page[title]']")
     expect(title_field).to be_present
     expect(title_field["rows"]).to eq("1")
+    expect(html.css("form.notae-doc-add-form").size).to eq(1)
+    expect(html.at_css("form.notae-doc-add-form.is-child")).to be_nil
   end
 
   it "renders embedded page previews without full page chrome and keeps block actions embedded" do

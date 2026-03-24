@@ -48,6 +48,9 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("aria-label=\"Refresh calendars\"")
     expect(response.body).to include("notae-kalendarium-week-header-days")
     expect(response.body).to include("name=\"kalendarium_event[all_day]\"")
+    expect(response.body).to include("notae-content-kalendarium")
+    expect(response.body).to include("notae-tool-page-title")
+    expect(response.body).to include("notae-topbar-page-icon-glyph")
     expect(response.body).not_to include(">10m</span>")
     expect(response.headers["X-Notae-Perf-Action"]).to eq("KalendariumController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
@@ -180,6 +183,9 @@ RSpec.describe "Kalendarium", type: :request do
     expect(stylesheet).to include(".notae-kalendarium {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);")
     expect(stylesheet).to include(".notae-kalendarium-grid {\n  display: contents;\n}")
     expect(stylesheet).to include(".notae-kalendarium-sidebar {\n  grid-column: 2;\n  grid-row: 1 / span 2;")
+    expect(stylesheet).to include("@media (min-width: 1501px)")
+    expect(stylesheet).to include(".notae-content.notae-content-kalendarium {\n    padding-inline: clamp(0.45rem, 0.9vw, 0.8rem);")
+    expect(stylesheet).to include(".notae-kalendarium {\n    grid-template-columns: minmax(0, 1fr) minmax(240px, 268px);")
   end
 
   it "keeps the year-view toggle on its own filter row so projects stays aligned with the other calendar buttons" do

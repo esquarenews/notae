@@ -50,6 +50,8 @@ RSpec.describe "AI conversation histories", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("AI Conversation History")
+    expect(response.body).to include("<h1 class=\"notae-tool-page-title\">AI Conversation History</h1>")
+    expect(response.body).to include("notae-topbar-page-icon-glyph")
     expect(response.body).to include(recent_conversation.prompt)
     expect(response.body).to include(cross_workspace_conversation.prompt)
     expect(response.body).to include("History Workspace")

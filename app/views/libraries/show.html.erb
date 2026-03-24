@@ -1,5 +1,7 @@
 <% content_for :title, "Library" %>
-<% content_for :topbar_page_icon, "📚" %>
+<% content_for :topbar_page_icon do %>
+  <%= notae_icon_svg(:library, css_class: "notae-topbar-page-icon-glyph") %>
+<% end %>
 <% content_for :topbar_privacy, "Workspace" %>
 <% content_for :content_class, "notae-content-wide" %>
 
@@ -12,7 +14,7 @@
 
 <section class="notae-library-shell">
   <header class="notae-library-header">
-    <h1>Library</h1>
+    <h1 class="notae-tool-page-title">Library</h1>
     <% if policy(Page.new(workspace: @workspace)).create? %>
       <%= form_with model: Page.new, url: pages_path(workspace_slug: @workspace.slug), class: "notae-library-new-page-form" do |form| %>
         <%= form.hidden_field :title, value: "New Nota" %>
