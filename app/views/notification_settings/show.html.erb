@@ -12,6 +12,30 @@
     <section class="notae-settings-section">
       <h2>In-app notifications</h2>
 
+      <div class="notae-pref-row notae-pref-row--stacked">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Push notifications on this device</p>
+          <p class="notae-pref-description" data-pwa-target="pushSettingsStatus">
+            Enable push notifications for reminders, mentions, approvals, and workflow failures on this device.
+          </p>
+        </div>
+        <div class="notae-pref-control-form notae-pref-control-form--push">
+          <button type="button"
+                  class="notae-pref-device-switch"
+                  role="switch"
+                  aria-checked="false"
+                  aria-label="Push notifications"
+                  data-pwa-target="pushSettingsToggle"
+                  data-action="pwa#togglePush">
+            <span class="notae-pref-device-switch-track"></span>
+          </button>
+          <span class="notae-pref-device-switch-state"
+                data-pwa-target="pushSettingsStateLabel">
+            Off
+          </span>
+        </div>
+      </div>
+
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
           <p class="notae-pref-label">Join video conferencing and start transcribing <span class="notae-pref-future">Future implementation</span></p>

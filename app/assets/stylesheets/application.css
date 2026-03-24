@@ -5569,6 +5569,71 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   align-items: center;
 }
 
+.notae-pref-device-switch {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.notae-pref-device-switch:disabled {
+  cursor: not-allowed;
+}
+
+.notae-pref-device-switch-track {
+  width: 2.7rem;
+  height: 1.52rem;
+  border-radius: 999px;
+  background: #d6d3d1;
+  position: relative;
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.notae-pref-device-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 0.17rem;
+  left: 0.17rem;
+  width: 1.18rem;
+  height: 1.18rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(41, 37, 36, 0.28);
+  transition: transform 120ms ease;
+}
+
+.notae-pref-device-switch.is-active .notae-pref-device-switch-track {
+  background: #3b82f6;
+}
+
+.notae-pref-device-switch.is-active .notae-pref-device-switch-track::after {
+  transform: translateX(1.18rem);
+}
+
+.notae-pref-device-switch.is-pending .notae-pref-device-switch-track,
+.notae-pref-device-switch:disabled .notae-pref-device-switch-track {
+  opacity: 0.62;
+}
+
+.notae-pref-device-switch-state {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--notae-text-muted);
+}
+
+.notae-pref-device-switch-state.is-active {
+  color: var(--notae-heading-ink);
+}
+
+.notae-pref-device-switch-state.is-pending {
+  color: var(--notae-text-strong);
+}
+
 .notae-connection-form {
   display: grid;
   gap: 0.48rem;

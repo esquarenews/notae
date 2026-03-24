@@ -13,7 +13,8 @@ export default class extends Controller {
     "offlineBanner",
     "networkToast",
     "pushPrompt",
-    "pushSettingsButton",
+    "pushSettingsToggle",
+    "pushSettingsStateLabel",
     "pushSettingsStatus"
   ]
   static values = {
@@ -23,7 +24,9 @@ export default class extends Controller {
 
   connect() {
     this.deferredPrompt = null
+    this.devicePushSubscribed = false
     this.networkToastTimeout = null
+    this.pushUiPending = false
     this.beforeInstallPromptHandler = (event) => this.handleBeforeInstallPrompt(event)
     this.appInstalledHandler = () => this.handleAppInstalled()
     this.onlineHandler = () => this.refreshNetworkState()
@@ -87,6 +90,28 @@ export default class extends Controller {
     event.preventDefault()
     this.subscribeToPushNotifications().catch(() => {
       this.showNetworkToast("Push notifications could not be enabled yet.")
+      this.refreshPushUi()
+    })
+  }
+
+  togglePush(event) {
+    event.preventDefault()
+    if (this.pushUiPending) return
+
+    const state = this.pushSettingsState()
+    if (state.disabled) {
+      this.showNetworkToast(state.message)
+      return
+    }
+
+    this.pushUiPending = true
+    this.refreshPushUi()
+
+    const operation = state.checked ? this.disablePushNotifications() : this.subscribeToPushNotifications()
+    operation.catch(() => {
+      this.showNetworkToast("Push notifications could not be updated yet.")
+    }).finally(() => {
+      this.pushUiPending = false
       this.refreshPushUi()
     })
   }
@@ -161,7 +186,7 @@ export default class extends Controller {
   }
 
   refreshPushUi() {
-    if (!this.hasPushSettingsButtonTarget && !this.hasPushSettingsStatusTarget) return
+    if (!this.hasPushSettingsToggleTarget && !this.hasPushSettingsStatusTarget && !this.hasPushSettingsStateLabelTarget) return
 
     const state = this.pushSettingsState()
 
@@ -169,11 +194,19 @@ export default class extends Controller {
       element.textContent = state.message
     })
 
-    this.pushSettingsButtonTargets.forEach((button) => {
-      button.hidden = state.hidden
-      button.disabled = state.disabled
-      button.textContent = state.label
-      button.classList.toggle("notae-chip-button-subtle", state.subtle)
+    this.pushSettingsToggleTargets.forEach((toggle) => {
+      toggle.hidden = state.hidden
+      toggle.disabled = state.disabled
+      toggle.setAttribute("aria-checked", state.checked ? "true" : "false")
+      toggle.setAttribute("aria-busy", state.pending ? "true" : "false")
+      toggle.classList.toggle("is-active", state.checked)
+      toggle.classList.toggle("is-pending", state.pending)
+    })
+
+    this.pushSettingsStateLabelTargets.forEach((label) => {
+      label.textContent = state.label
+      label.classList.toggle("is-active", state.checked)
+      label.classList.toggle("is-pending", state.pending)
     })
   }
 
@@ -254,8 +287,9 @@ export default class extends Controller {
       return {
         hidden: true,
         disabled: true,
-        subtle: true,
-        label: "Enable notifications",
+        checked: false,
+        pending: false,
+        label: "Off",
         message: "Sign in to manage push notifications on this device."
       }
     }
@@ -264,7 +298,8 @@ export default class extends Controller {
       return {
         hidden: false,
         disabled: true,
-        subtle: true,
+        checked: false,
+        pending: false,
         label: "Unavailable",
         message: "Push notifications are not configured on this server yet."
       }
@@ -274,8 +309,9 @@ export default class extends Controller {
       return {
         hidden: false,
         disabled: true,
-        subtle: true,
-        label: "Open Home Screen app",
+        checked: false,
+        pending: false,
+        label: "Off",
         message: "On iPhone, open Notae from the Home Screen app to enable notifications."
       }
     }
@@ -284,7 +320,8 @@ export default class extends Controller {
       return {
         hidden: false,
         disabled: true,
-        subtle: true,
+        checked: false,
+        pending: false,
         label: "Unsupported",
         message: "Push notifications are not available on this device/browser yet."
       }
@@ -294,21 +331,34 @@ export default class extends Controller {
       return {
         hidden: false,
         disabled: true,
-        subtle: true,
-        label: "Reconnect to enable",
+        checked: this.devicePushSubscribed,
+        pending: false,
+        label: this.devicePushSubscribed ? "On" : "Off",
         message: "Reconnect to enable push notifications on this device."
       }
     }
 
     const permission = this.pushPermissionState()
 
+    if (this.pushUiPending) {
+      return {
+        hidden: false,
+        disabled: true,
+        checked: this.devicePushSubscribed,
+        pending: true,
+        label: "Working…",
+        message: this.devicePushSubscribed ? "Updating this device subscription…" : "Enabling push notifications on this device…"
+      }
+    }
+
     if (permission === "granted") {
       return {
         hidden: false,
         disabled: false,
-        subtle: true,
-        label: "Refresh device subscription",
-        message: "Push notifications are enabled on this device."
+        checked: this.devicePushSubscribed,
+        pending: false,
+        label: this.devicePushSubscribed ? "On" : "Off",
+        message: this.devicePushSubscribed ? "Push notifications are enabled on this device." : "Notifications are allowed, but this device is not currently subscribed."
       }
     }
 
@@ -316,8 +366,9 @@ export default class extends Controller {
       return {
         hidden: false,
         disabled: true,
-        subtle: true,
-        label: "Notifications blocked",
+        checked: false,
+        pending: false,
+        label: "Blocked",
         message: this.iosDevice()
           ? "Notifications are blocked for Notae on this iPhone. Re-enable them in iPhone notification/site settings, or clear website data and add the app again."
           : "Notifications are blocked for this browser. Re-enable them in browser site settings."
@@ -327,8 +378,9 @@ export default class extends Controller {
     return {
       hidden: false,
       disabled: false,
-      subtle: false,
-      label: "Enable notifications",
+      checked: false,
+      pending: false,
+      label: "Off",
       message: "Enable push notifications for reminders, mentions, approvals, and workflow failures on this device."
     }
   }
@@ -425,6 +477,7 @@ export default class extends Controller {
       if (permission !== "default") this.rememberDismissal(PUSH_DISMISS_KEY)
       this.syncPushPrompt()
       this.showNetworkToast("Push notifications were not enabled.")
+      this.devicePushSubscribed = false
       this.refreshPushUi()
       return
     }
@@ -438,6 +491,7 @@ export default class extends Controller {
     }
 
     await this.persistPushSubscription(subscription)
+    this.devicePushSubscribed = true
     window.localStorage.removeItem(PUSH_DISMISS_KEY)
     this.syncPushPrompt()
     this.showNetworkToast("Push notifications enabled.")
@@ -454,14 +508,33 @@ export default class extends Controller {
       if (!registration) return
 
       const subscription = await registration.pushManager.getSubscription()
-      if (!subscription) return
+      if (!subscription) {
+        this.devicePushSubscribed = false
+        this.syncPushPrompt()
+        this.refreshPushUi()
+        return
+      }
 
       await this.persistPushSubscription(subscription)
+      this.devicePushSubscribed = true
       this.syncPushPrompt()
       this.refreshPushUi()
     } catch (_error) {
       // Ignore best-effort sync failures and keep the app usable.
     }
+  }
+
+  async disablePushNotifications() {
+    if (!this.pushSupported()) {
+      this.refreshPushUi()
+      return
+    }
+
+    await this.detachPushSubscription()
+    this.devicePushSubscribed = false
+    this.syncPushPrompt()
+    this.showNetworkToast("Push notifications turned off on this device.")
+    this.refreshPushUi()
   }
 
   async persistPushSubscription(subscription) {
@@ -511,6 +584,8 @@ export default class extends Controller {
     if (!keepBrowserSubscription) {
       await subscription.unsubscribe().catch(() => {})
     }
+
+    this.devicePushSubscribed = false
   }
 
   csrfToken() {
