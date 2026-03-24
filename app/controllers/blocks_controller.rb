@@ -130,6 +130,7 @@ class BlocksController < ApplicationController
       command: block_command_params[:command],
       target: block_command_params[:target],
       color: block_command_params[:color],
+      highlight: block_command_params[:highlight],
       target_page: target_page,
       note: block_command_params[:note]
     )
@@ -186,7 +187,7 @@ class BlocksController < ApplicationController
   end
 
   def block_command_params
-    params.require(:block_command).permit(:command, :target, :color, :target_page_id, :note)
+    params.require(:block_command).permit(:command, :target, :color, :highlight, :target_page_id, :note)
   end
 
   def broadcast_block_update(block)

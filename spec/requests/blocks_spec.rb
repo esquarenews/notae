@@ -78,6 +78,53 @@ RSpec.describe "Blocks", type: :request do
     expect(block.content_json.dig("content", 0, "content", 0, "text")).to eq("Updated heading")
   end
 
+  it "preserves block highlight metadata when saving heading content" do
+    owner = User.create!(email: "blocks-heading-highlight-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Heading highlights", slug: "heading-highlights")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Heading highlight page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "heading_2",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "heading",
+            "attrs" => { "level" => 2 },
+            "content" => [ { "type" => "text", "text" => "Highlighted heading" } ]
+          }
+        ],
+        "notae_highlight" => "mint"
+      }
+    )
+    sign_in owner
+
+    patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+          params: {
+            block: {
+              block_type: "heading_2",
+              content_json: {
+                type: "doc",
+                content: [
+                  {
+                    type: "heading",
+                    attrs: { level: 2 },
+                    content: [ { type: "text", text: "Updated highlighted heading" } ]
+                  }
+                ]
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(block.reload.content_json["notae_highlight"]).to eq("mint")
+    expect(block.content_json.dig("content", 0, "content", 0, "text")).to eq("Updated highlighted heading")
+  end
+
   it "formats @date mentions using the user date preference" do
     owner = User.create!(
       email: "blocks-date-mention-owner@example.com",
@@ -571,6 +618,18 @@ RSpec.describe "Blocks", type: :request do
          params: { block_command: { command: "color", color: "red" } }
     expect(response).to have_http_status(:redirect)
     expect(block.reload.content_json["notae_color"]).to eq("default")
+
+    %w[default peach lemon mint sky lavender rose].each do |highlight|
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+           params: { block_command: { command: "highlight", highlight: highlight } }
+      expect(response).to have_http_status(:redirect)
+      expect(block.reload.content_json["notae_highlight"]).to eq(highlight)
+    end
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "highlight", highlight: "rose" } }
+    expect(response).to have_http_status(:redirect)
+    expect(block.reload.content_json["notae_highlight"]).to eq("default")
 
     expect do
       post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),

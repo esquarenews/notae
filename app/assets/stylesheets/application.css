@@ -7874,6 +7874,24 @@ body.notae-theme-dark .notae-menu-color-dot {
 .notae-menu-color-dot.is-pink { background: #db2777; }
 .notae-menu-color-dot.is-red { background: #dc2626; }
 
+.notae-menu-highlight-swatch {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.28rem;
+  border: 1px solid #d6d3d1;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.notae-menu-highlight-swatch.is-default { background: linear-gradient(135deg, #ffffff, #f5f5f4); }
+.notae-menu-highlight-swatch.is-peach { background: #fee2d5; }
+.notae-menu-highlight-swatch.is-lemon { background: #fef3c7; }
+.notae-menu-highlight-swatch.is-mint { background: #d1fae5; }
+.notae-menu-highlight-swatch.is-sky { background: #dbeafe; }
+.notae-menu-highlight-swatch.is-lavender { background: #ede9fe; }
+.notae-menu-highlight-swatch.is-rose { background: #fce7f3; }
+
 .notae-doc-editor {
   margin-left: 1.35rem;
   padding-right: 1.5rem;
@@ -8056,6 +8074,32 @@ body.notae-theme-dark .notae-doc-editor .ProseMirror {
 .notae-doc-editor.is-color-purple .ProseMirror { color: #7e22ce; }
 .notae-doc-editor.is-color-pink .ProseMirror { color: #be185d; }
 .notae-doc-editor.is-color-red .ProseMirror { color: #b91c1c; }
+.notae-doc-editor.is-color-gray .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-brown .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-orange .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-yellow .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-green .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-blue .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-purple .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-pink .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+.notae-doc-editor.is-color-red .ProseMirror :is(h1, h2, h3, h4, h5, h6) { color: inherit; }
+
+.notae-doc-editor.is-highlight-peach .ProseMirror,
+.notae-doc-editor.is-highlight-lemon .ProseMirror,
+.notae-doc-editor.is-highlight-mint .ProseMirror,
+.notae-doc-editor.is-highlight-sky .ProseMirror,
+.notae-doc-editor.is-highlight-lavender .ProseMirror,
+.notae-doc-editor.is-highlight-rose .ProseMirror {
+  border-radius: 0.6rem;
+  padding: 0.2rem 0.42rem;
+}
+
+.notae-doc-editor.is-highlight-peach .ProseMirror { background: #fff1eb; }
+.notae-doc-editor.is-highlight-lemon .ProseMirror { background: #fff9db; }
+.notae-doc-editor.is-highlight-mint .ProseMirror { background: #e8fbf2; }
+.notae-doc-editor.is-highlight-sky .ProseMirror { background: #edf6ff; }
+.notae-doc-editor.is-highlight-lavender .ProseMirror { background: #f3efff; }
+.notae-doc-editor.is-highlight-rose .ProseMirror { background: #fff0f7; }
 
 body.notae-theme-dark .notae-doc-block.is-focused .notae-doc-editor .ProseMirror {
   background: color-mix(in srgb, var(--notae-surface-raised) 88%, var(--notae-accent) 12%);
@@ -8086,6 +8130,22 @@ body.notae-theme-dark .notae-doc-editor.is-color-blue .ProseMirror { color: #93c
 body.notae-theme-dark .notae-doc-editor.is-color-purple .ProseMirror { color: #d8b4fe; }
 body.notae-theme-dark .notae-doc-editor.is-color-pink .ProseMirror { color: #f9a8d4; }
 body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror { color: #fca5a5; }
+body.notae-theme-dark .notae-doc-editor.is-color-gray .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-brown .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-orange .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-yellow .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-green .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-blue .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-purple .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-pink .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror :is(h1, h2, h3, h4, h5, h6) { color: inherit; }
+
+body.notae-theme-dark .notae-doc-editor.is-highlight-peach .ProseMirror { background: #4a2f2a; }
+body.notae-theme-dark .notae-doc-editor.is-highlight-lemon .ProseMirror { background: #4b4124; }
+body.notae-theme-dark .notae-doc-editor.is-highlight-mint .ProseMirror { background: #1f3a33; }
+body.notae-theme-dark .notae-doc-editor.is-highlight-sky .ProseMirror { background: #1f344b; }
+body.notae-theme-dark .notae-doc-editor.is-highlight-lavender .ProseMirror { background: #33294d; }
+body.notae-theme-dark .notae-doc-editor.is-highlight-rose .ProseMirror { background: #4a2538; }
 
 @media (prefers-color-scheme: dark) {
   body.notae-theme-system .notae-doc-editor,
@@ -8123,6 +8183,22 @@ body.notae-theme-dark .notae-doc-editor.is-color-red .ProseMirror { color: #fca5
   body.notae-theme-system .notae-doc-editor.is-color-purple .ProseMirror { color: #d8b4fe; }
   body.notae-theme-system .notae-doc-editor.is-color-pink .ProseMirror { color: #f9a8d4; }
   body.notae-theme-system .notae-doc-editor.is-color-red .ProseMirror { color: #fca5a5; }
+  body.notae-theme-system .notae-doc-editor.is-color-gray .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-brown .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-orange .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-yellow .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-green .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-blue .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-purple .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-pink .ProseMirror :is(h1, h2, h3, h4, h5, h6),
+  body.notae-theme-system .notae-doc-editor.is-color-red .ProseMirror :is(h1, h2, h3, h4, h5, h6) { color: inherit; }
+
+  body.notae-theme-system .notae-doc-editor.is-highlight-peach .ProseMirror { background: #4a2f2a; }
+  body.notae-theme-system .notae-doc-editor.is-highlight-lemon .ProseMirror { background: #4b4124; }
+  body.notae-theme-system .notae-doc-editor.is-highlight-mint .ProseMirror { background: #1f3a33; }
+  body.notae-theme-system .notae-doc-editor.is-highlight-sky .ProseMirror { background: #1f344b; }
+  body.notae-theme-system .notae-doc-editor.is-highlight-lavender .ProseMirror { background: #33294d; }
+  body.notae-theme-system .notae-doc-editor.is-highlight-rose .ProseMirror { background: #4a2538; }
 }
 
 .notae-doc-media,

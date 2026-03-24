@@ -47,6 +47,7 @@ RSpec.describe "Page header features", type: :request do
     expect(response.body).to include("notae-cover-picker-grid")
     expect(response.body).to include("notae-cover-picker-quick-actions")
     expect(response.body).to include("notae-cover-picker-upload-form")
+    expect(response.body).to include('enctype="multipart/form-data"')
     expect(response.body).to include("data-controller=\"cover-carousel\"")
     expect(response.body).to include("Original")
     expect(response.body).to include("Vector")

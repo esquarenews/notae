@@ -77,7 +77,7 @@
     <% end %>
   </div>
 
-  <%= form_with url: update_url, method: :patch, class: "notae-cover-picker-upload-form" do %>
+  <%= form_with url: update_url, method: :patch, class: "notae-cover-picker-upload-form", html: { multipart: true } do %>
       <%= hidden_field_tag "#{param_key}[cover_action]", "upload" %>
       <%= file_field_tag "#{param_key}[cover_image]", accept: "image/*", class: "notae-cover-picker-upload-input" %>
       <%= submit_tag "Upload", class: "notae-cover-picker-action" %>

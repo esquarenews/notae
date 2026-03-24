@@ -22,8 +22,9 @@ module Blocks
       "columns_5" => "columns_5"
     }.freeze
     COLOR_ALLOWLIST = %w[default gray brown orange yellow green blue purple pink red].freeze
+    HIGHLIGHT_ALLOWLIST = %w[default peach lemon mint sky lavender rose].freeze
 
-    def self.call(block:, page:, workspace:, actor:, command:, target:, color:, target_page:, note:)
+    def self.call(block:, page:, workspace:, actor:, command:, target:, color:, highlight:, target_page:, note:)
       new(
         block:,
         page:,
@@ -32,12 +33,13 @@ module Blocks
         command:,
         target:,
         color:,
+        highlight:,
         target_page:,
         note:
       ).call
     end
 
-    def initialize(block:, page:, workspace:, actor:, command:, target:, color:, target_page:, note:)
+    def initialize(block:, page:, workspace:, actor:, command:, target:, color:, highlight:, target_page:, note:)
       @block = block
       @page = page
       @workspace = workspace
@@ -45,6 +47,7 @@ module Blocks
       @command = command.to_s
       @target = target.to_s
       @color = color.to_s
+      @highlight = highlight.to_s
       @target_page = target_page
       @note = note.to_s
       @focus_anchor = "block_#{block.id}"
@@ -59,6 +62,8 @@ module Blocks
         turn_into!
       when "color"
         update_color!
+      when "highlight"
+        update_highlight!
       when "duplicate"
         duplicate!
       when "move_to"
@@ -85,7 +90,7 @@ module Blocks
 
     private
 
-    attr_reader :block, :page, :workspace, :actor, :command, :target, :color, :target_page, :note,
+    attr_reader :block, :page, :workspace, :actor, :command, :target, :color, :highlight, :target_page, :note,
                 :focus_anchor, :redirect_page_id, :notice, :synced_source_block
 
     def turn_into!
@@ -122,6 +127,17 @@ module Blocks
       payload["notae_color"] = selected
       block.update!(content_json: payload)
       @notice = "Color updated."
+      @synced_source_block = synced_root_for(block)
+    end
+
+    def update_highlight!
+      selected = HIGHLIGHT_ALLOWLIST.include?(highlight) ? highlight : "default"
+      current = block.highlight_color.presence || "default"
+      selected = "default" if selected == current
+      payload = deep_dup_json(block.content_json)
+      payload["notae_highlight"] = selected
+      block.update!(content_json: payload)
+      @notice = "Highlight updated."
       @synced_source_block = synced_root_for(block)
     end
 
@@ -274,7 +290,7 @@ module Blocks
     end
 
     def build_content_payload_for(mapped_type)
-      metadata = deep_dup_json(block.content_json).slice("notae_color")
+      metadata = deep_dup_json(block.content_json).slice("notae_color", "notae_highlight")
       text = extract_text(block.content_json)
 
       payload = {

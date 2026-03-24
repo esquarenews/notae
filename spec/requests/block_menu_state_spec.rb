@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Block menu state", type: :request do
-  it "renders active turn-into and color menu states for the current block" do
+  it "renders active turn-into, color, and highlight menu states for the current block" do
     owner = User.create!(email: "block-menu-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Menu state", slug: "menu-state")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -14,6 +14,7 @@ RSpec.describe "Block menu state", type: :request do
       content_json: {
         "type" => "doc",
         "notae_color" => "blue",
+        "notae_highlight" => "mint",
         "content" => [
           {
             "type" => "heading",
@@ -34,6 +35,9 @@ RSpec.describe "Block menu state", type: :request do
     )
     expect(response.body).to match(
       /notae-block-menu-item is-active[^>]*>\s*<span class="notae-menu-color-dot is-blue"><\/span>\s*<span class="notae-menu-item-label">Blue<\/span>/m
+    )
+    expect(response.body).to match(
+      /notae-block-menu-item is-active[^>]*>\s*<span class="notae-menu-highlight-swatch is-mint"><\/span>\s*<span class="notae-menu-item-label">Mint<\/span>/m
     )
   end
 
@@ -59,5 +63,15 @@ RSpec.describe "Block menu state", type: :request do
          params: { block_command: { command: "color", color: "green" } }
 
     expect(block.reload.color).to eq("default")
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "highlight", highlight: "sky" } }
+
+    expect(block.reload.highlight_color).to eq("sky")
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "highlight", highlight: "sky" } }
+
+    expect(block.reload.highlight_color).to eq("default")
   end
 end

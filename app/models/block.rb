@@ -75,6 +75,10 @@ class Block < ApplicationRecord
     metadata["notae_color"].presence
   end
 
+  def highlight_color
+    metadata["notae_highlight"].presence
+  end
+
   def synced_source_block_id
     metadata["notae_synced_source_id"].presence
   end
