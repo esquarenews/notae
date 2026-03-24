@@ -26,6 +26,7 @@ export default class extends Controller {
     window.addEventListener("keydown", this.onKeydown)
     window.addEventListener("click", this.onWindowClick)
     this.handleSidebarViewportChange()
+    this.finishHydration()
   }
 
   disconnect() {
@@ -46,6 +47,15 @@ export default class extends Controller {
     this.closeActionsMenu()
     this.closeOptionsMenu()
     this.element.classList.remove("is-mobile-viewport")
+    this.element.classList.remove("is-layout-hydrating")
+  }
+
+  finishHydration() {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        this.element.classList.remove("is-layout-hydrating")
+      })
+    })
   }
 
   toggle() {

@@ -709,6 +709,15 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   transition: grid-template-columns 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.notae-shell.is-layout-hydrating,
+.notae-shell.is-layout-hydrating .notae-sidebar,
+.notae-shell.is-layout-hydrating .notae-mobile-overlay,
+.notae-shell.is-layout-hydrating .notae-ai-rail,
+.notae-shell.is-layout-hydrating .notae-ai-rail-overlay {
+  transition: none !important;
+  animation: none !important;
+}
+
 .notae-shell.is-ai-rail-collapsed {
   grid-template-columns: 238px minmax(0, 1fr) 2.8rem;
 }
@@ -11920,7 +11929,8 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
     gap: 0.55rem;
   }
 
-  .notae-kalendarium-head-top h1 {
+  .notae-kalendarium-head-top h1,
+  .notae-tool-page-title {
     font-size: 1.38rem;
   }
 
@@ -13711,6 +13721,7 @@ input[type="submit"].notae-chip-button,
   border-radius: 1.35rem;
 }
 
+.notae-tool-page-title,
 .notae-kalendarium-head-top h1,
 .notae-meetings-hero h1 {
   font-size: clamp(2.2rem, 4vw, 3.4rem);

@@ -53,6 +53,8 @@ RSpec.describe "Meetings", type: :request do
     expect(response.body).to include("Delete recording")
     expect(response.body).to include("Action Proposals")
     expect(response.body).to include("notae-sidebar-link-label\">Meetings")
+    expect(response.body).to include("<h1 class=\"notae-tool-page-title\">Meetings</h1>")
+    expect(response.body).to include("notae-topbar-page-icon-glyph")
     expect(response.body).to include("If access is denied, use the lock/camera icon in the browser address bar to allow microphone, then retry.")
     expect(response.body).to include('form="in_person_meeting_form"')
     expect(response.body).to include('data-meeting-capture-target="sessionTitleInput"')

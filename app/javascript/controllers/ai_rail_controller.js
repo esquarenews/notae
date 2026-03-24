@@ -61,6 +61,7 @@ export default class extends Controller {
     this.captureExistingAgentUpdates()
     this.refreshAgentToastState()
     this.startAgentUpdatePolling()
+    this.finishHydration()
   }
 
   disconnect() {
@@ -81,7 +82,10 @@ export default class extends Controller {
     if (this.agentToastTimer) window.clearTimeout(this.agentToastTimer)
     if (this.agentUpdateFocusTimer) window.clearTimeout(this.agentUpdateFocusTimer)
     if (this.agentUpdatePollTimer) window.clearInterval(this.agentUpdatePollTimer)
-    if (this.shellElement) this.shellElement.classList.remove("is-ai-compact-viewport")
+    if (this.shellElement) {
+      this.shellElement.classList.remove("is-ai-compact-viewport")
+      this.shellElement.classList.remove("is-layout-hydrating")
+    }
   }
 
   async copyResult(event) {
@@ -451,6 +455,16 @@ export default class extends Controller {
     if (this.hasOverlayTarget) {
       this.overlayTarget.hidden = !expanded
     }
+  }
+
+  finishHydration() {
+    if (!this.shellElement) return
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        this.shellElement.classList.remove("is-layout-hydrating")
+      })
+    })
   }
 
   captureExistingAgentUpdates() {

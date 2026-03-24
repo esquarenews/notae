@@ -1,5 +1,7 @@
 <% content_for :title, "Meetings" %>
-<% content_for :topbar_page_icon, "🎙️" %>
+<% content_for :topbar_page_icon do %>
+  <%= notae_icon_svg(:meeting, css_class: "notae-topbar-page-icon-glyph") %>
+<% end %>
 <% content_for :topbar_privacy, @workspace.name %>
 <% content_for :content_class, "notae-content-page" %>
 
@@ -9,7 +11,7 @@
          data-meeting-sessions-poller-interval-value="10000"
          data-meeting-sessions-poller-endpoint-value="<%= workspace_meetings_status_path(workspace_slug: @workspace.slug) %>">
   <header class="notae-auth-card notae-meetings-hero">
-    <h1>Meetings</h1>
+    <h1 class="notae-tool-page-title">Meetings</h1>
     <p>Capture online or in-person meetings, then generate speaker-separated transcripts, summary notes, and follow-up proposals.</p>
   </header>
 
