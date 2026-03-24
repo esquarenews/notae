@@ -158,4 +158,94 @@ RSpec.describe Search::KnowledgeSuggestionService do
     expect(response.sources.first[:title]).to eq("New brief")
     expect(response.context_snapshot.first.fetch("source_title")).to eq("New brief")
   end
+
+  it "filters stale emails and rewrites the current user to second person" do
+    user = User.create!(email: "errol.schmidt@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge freshness", slug: "knowledge-freshness")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    account = EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "errol.schmidt@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+    stale_message = EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "old-msg-1",
+      subject: "Ancient follow-up",
+      from_name: "Alex",
+      from_email: "alex@example.com",
+      body_text: "Please send the invoice.",
+      received_at: 1.year.ago
+    )
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_EPISTULARIUM_MESSAGE,
+      source_id: stale_message.id,
+      epistularium_message: stale_message,
+      chunk_index: 0,
+      text: stale_message.search_source_text,
+      token_count: 12,
+      content_hash: "email-old-1",
+      source_content_hash: "email-old-source-1",
+      source_uri: "/w/#{workspace.slug}/epistularium/messages/#{stale_message.id}",
+      source_title: stale_message.display_subject,
+      metadata_json: {
+        "received_at" => stale_message.received_at.iso8601
+      }
+    )
+
+    page = Page.create!(workspace: workspace, created_by: user, title: "Launch blockers")
+    fresh_chunk = SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "Errol Schmidt needs to confirm the blocker timing today.",
+      token_count: 9,
+      content_hash: "fresh-page-1",
+      source_content_hash: "fresh-page-source-1",
+      source_uri: "/w/#{workspace.slug}/pages/#{page.id}",
+      source_title: page.title,
+      metadata_json: { "entities" => { "names" => [ "Errol Schmidt" ] } }
+    )
+    fresh_chunk.update_columns(updated_at: 10.minutes.ago)
+
+    expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+      expect(args[:prompt]).to include("Current user email: errol.schmidt@example.com")
+      expect(args[:prompt]).to include("refer to them as \"you\"")
+      expect(args[:prompt]).not_to include("Ancient follow-up")
+      {
+        text: {
+          summary: "Errol Schmidt should confirm the blocker timing today. [1]",
+          insights: [ "Errol Schmidt is the named owner of the current follow-up. [1]" ],
+          task_suggestions: [
+            {
+              title: "Confirm blocker timing",
+              owner: "Errol Schmidt",
+              rationale: "Errol Schmidt should confirm the blocker timing today. [1]",
+              citation_indices: [ 1 ]
+            }
+          ],
+          related_notes: []
+        }.to_json,
+        usage: { prompt_tokens: 40, completion_tokens: 20, total_tokens: 60 }
+      }
+    end
+
+    response = described_class.new(user: user, workspace: workspace).call
+
+    expect(response.summary).to include("You should confirm")
+    expect(response.insights.first).to include("You")
+    expect(response.task_suggestions.first.fetch("owner")).to eq("You")
+    expect(response.task_suggestions.first.fetch("rationale")).to include("You should confirm")
+    expect(response.sources.first[:title]).to eq(page.title)
+  end
 end

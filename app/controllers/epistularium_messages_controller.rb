@@ -23,14 +23,14 @@ class EpistulariumMessagesController < ApplicationController
       message: @message,
       suggestion_type: params[:suggestion_type]
     ).call
-    redirect_to agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), notice: "Draft suggestion created from email."
+    redirect_to agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), notice: "Draft suggestion created from email.", status: :see_other
   rescue Epistularium::DraftSuggestionService::Error => error
     redirect_to workspace_epistularium_path(
       workspace_slug: @workspace.slug,
       account_id: @message.epistularium_account_id,
       mailbox: @message.mailbox,
       message_id: @message.id
-    ), alert: error.message
+    ), alert: error.message, status: :see_other
   end
 
   private

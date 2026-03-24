@@ -18,8 +18,11 @@ module Search
 
     MODEL = "gpt-4.1-mini".freeze
     CONTEXT_LIMIT = 12
+    CONTEXT_FETCH_LIMIT = 200
     MODE_FULL = "full".freeze
     MODE_DELTA = "delta".freeze
+    EMAIL_ACTIONABLE_WINDOW = 30.days
+    RECENT_PRIORITY_WINDOW = 7.days
 
     attr_reader :unavailable_reason
 
@@ -86,13 +89,17 @@ module Search
     attr_reader :user, :workspace, :mode, :since, :previous_report
 
     def select_context_chunks
-      chunks = accessible_chunks_scope.order(updated_at: :desc).limit(80).to_a
+      chunks = accessible_chunks_scope.includes(SearchChunk.context_preload_associations)
+                                     .order(updated_at: :desc)
+                                     .limit(CONTEXT_FETCH_LIMIT)
+                                     .to_a
                                      .group_by { |chunk| [ chunk.source_type, chunk.source_id ] }
                                      .values
-                                     .map(&:first)
-      return chunks.first(CONTEXT_LIMIT) unless delta_mode?
+                                     .map { |group| group.max_by { |chunk| context_sort_timestamp(chunk) } }
+      ranked_chunks = prioritize_context_chunks(chunks)
+      return ranked_chunks.first(CONTEXT_LIMIT) unless delta_mode?
 
-      filter_delta_chunks(chunks).first(CONTEXT_LIMIT)
+      filter_delta_chunks(ranked_chunks).first(CONTEXT_LIMIT)
     end
 
     def accessible_chunks_scope
@@ -123,11 +130,6 @@ module Search
     end
 
     def full_prompt_for(context_chunks)
-      context_lines = context_chunks.map.with_index do |chunk, index|
-        entities = Array(chunk.metadata_json.to_h["entities"]&.values).flatten.uniq.first(8).join(", ")
-        "[#{index + 1}] Kind=#{chunk.source_type}; Title=#{chunk.source_title}; URI=#{chunk.source_uri}; Entities=#{entities}; Excerpt=#{chunk.text}"
-      end
-
       <<~PROMPT
         You are building a read-only knowledge brief for a workspace.
         Use only the provided context.
@@ -156,20 +158,21 @@ module Search
         - Do not invent owners or tasks.
         - Keep the response concise and actionable.
         - Prefer concrete next-step suggestions over generic advice.
+        - Prioritize the freshest evidence first, especially items from the last 7 days.
+        - Treat emails older than #{EMAIL_ACTIONABLE_WINDOW / 1.day} days as historical context unless newer evidence clearly re-opens the work.
+        - When the current user is the owner, assignee, or person being asked to act, refer to them as "you" rather than by name.
+        - Use explicit dates when recency matters.
 
         Workspace: #{workspace.name}
+        Today: #{current_time_label}
+        #{viewer_prompt_context}
 
         Context:
-        #{context_lines.join("\n")}
+        #{context_lines_for(context_chunks)}
       PROMPT
     end
 
     def delta_prompt_for(context_chunks)
-      context_lines = context_chunks.map.with_index do |chunk, index|
-        entities = Array(chunk.metadata_json.to_h["entities"]&.values).flatten.uniq.first(8).join(", ")
-        "[#{index + 1}] Kind=#{chunk.source_type}; Title=#{chunk.source_title}; URI=#{chunk.source_uri}; Entities=#{entities}; Excerpt=#{chunk.text}"
-      end
-
       <<~PROMPT
         You are building a read-only incremental knowledge brief for a workspace.
         Use only the changed context provided below.
@@ -199,14 +202,20 @@ module Search
         - Every summary, insight, suggestion rationale, and related note reason must be grounded in citations.
         - Do not invent owners or tasks.
         - Keep the response concise and actionable.
+        - Prioritize the freshest evidence first, especially items from the last 7 days.
+        - Treat emails older than #{EMAIL_ACTIONABLE_WINDOW / 1.day} days as historical context unless newer evidence clearly re-opens the work.
+        - When the current user is the owner, assignee, or person being asked to act, refer to them as "you" rather than by name.
+        - Use explicit dates when recency matters.
 
         Workspace: #{workspace.name}
+        Today: #{current_time_label}
+        #{viewer_prompt_context}
         Previous report generated at: #{previous_report_generated_at_label}
         Previous report:
         #{previous_report_digest}
 
         Changed context since #{recent_since_label}:
-        #{context_lines.join("\n")}
+        #{context_lines_for(context_chunks)}
       PROMPT
     end
 
@@ -221,8 +230,8 @@ module Search
 
     def normalize_payload(payload, max_index)
       used_indices = []
-      summary = normalize_cited_text(payload["summary"], max_index, used_indices)
-      insights = Array(payload["insights"]).filter_map { |item| normalize_cited_text(item, max_index, used_indices) }.first(6)
+      summary = normalize_current_user_references(normalize_cited_text(payload["summary"], max_index, used_indices))
+      insights = Array(payload["insights"]).filter_map { |item| normalize_current_user_references(normalize_cited_text(item, max_index, used_indices)) }.first(6)
       task_suggestions = Array(payload["task_suggestions"]).filter_map do |item|
         normalize_task_suggestion(item, max_index, used_indices)
       end.first(8)
@@ -248,11 +257,11 @@ module Search
       title = item["title"].to_s.strip
       return if title.blank?
 
-      rationale = normalize_cited_text(item["rationale"], max_index, used_indices)
+      rationale = normalize_current_user_references(normalize_cited_text(item["rationale"], max_index, used_indices))
       citation_indices = normalize_citation_indices(item["citation_indices"], max_index, used_indices)
       {
         "title" => title,
-        "owner" => item["owner"].to_s.strip,
+        "owner" => normalize_owner_label(item["owner"]),
         "rationale" => rationale,
         "citation_indices" => citation_indices
       }
@@ -264,7 +273,7 @@ module Search
       title = item["title"].to_s.strip
       return if title.blank?
 
-      reason = normalize_cited_text(item["reason"], max_index, used_indices)
+      reason = normalize_current_user_references(normalize_cited_text(item["reason"], max_index, used_indices))
       citation_indices = normalize_citation_indices(item["citation_indices"], max_index, used_indices)
       {
         "title" => title,
@@ -349,6 +358,134 @@ module Search
 
         previous_entry = snapshot_index[snapshot_key_for(source_type: chunk.source_type, source_id: chunk.source_id)]
         previous_entry.blank? || previous_entry["source_content_hash"].to_s != chunk.source_content_hash.to_s
+      end
+    end
+
+    def prioritize_context_chunks(chunks)
+      chunks.reject { |chunk| stale_email_chunk?(chunk) && !delta_mode? }
+            .sort_by { |chunk| [ context_priority(chunk), context_sort_timestamp(chunk), chunk.updated_at || Time.at(0) ] }
+            .reverse
+    end
+
+    def context_priority(chunk)
+      timestamp = context_sort_timestamp(chunk)
+      return 0 if timestamp.blank?
+      return 4 if chunk.source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE && timestamp >= RECENT_PRIORITY_WINDOW.ago
+      return 3 if timestamp >= RECENT_PRIORITY_WINDOW.ago
+      return 2 unless chunk.source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+
+      1
+    end
+
+    def stale_email_chunk?(chunk)
+      return false unless chunk.source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+
+      context_sort_timestamp(chunk) < EMAIL_ACTIONABLE_WINDOW.ago
+    end
+
+    def context_sort_timestamp(chunk)
+      case chunk.source_type
+      when SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
+        chunk.epistularium_message&.primary_timestamp || metadata_time(chunk, "received_at") || metadata_time(chunk, "sent_at") || chunk.updated_at || Time.at(0)
+      when SearchChunk::SOURCE_KALENDARIUM_EVENT
+        chunk.kalendarium_event&.starts_at_utc || metadata_time(chunk, "starts_at_utc") || chunk.updated_at || Time.at(0)
+      else
+        chunk.updated_at || Time.at(0)
+      end
+    end
+
+    def metadata_time(chunk, key)
+      value = chunk.metadata_json.to_h[key].to_s.strip
+      return nil if value.blank?
+
+      Time.iso8601(value)
+    rescue ArgumentError
+      nil
+    end
+
+    def context_lines_for(context_chunks)
+      context_chunks.map.with_index do |chunk, index|
+        entities = Array(chunk.metadata_json.to_h["entities"]&.values).flatten.uniq.first(8).join(", ")
+        timestamp = context_sort_timestamp(chunk)
+        "[#{index + 1}] Kind=#{chunk.source_type}; Title=#{chunk.source_title}; URI=#{chunk.source_uri}; Timestamp=#{timestamp&.iso8601 || 'unknown'}; Freshness=#{freshness_label_for(chunk, timestamp)}; Entities=#{entities}; Excerpt=#{chunk.text}"
+      end.join("\n")
+    end
+
+    def freshness_label_for(chunk, timestamp)
+      return "unknown" if timestamp.blank?
+      return "fresh" if timestamp >= RECENT_PRIORITY_WINDOW.ago
+      return "stale_email" if chunk.source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE && timestamp < EMAIL_ACTIONABLE_WINDOW.ago
+
+      "recent"
+    end
+
+    def current_time_label
+      Time.use_zone(user.time_zone.presence || Time.zone) { Time.current.iso8601 }
+    end
+
+    def viewer_prompt_context
+      aliases = viewer_identity_aliases
+      lines = [ "Current user email: #{user.email}" ]
+      lines << "Current user aliases: #{aliases.join(', ')}" if aliases.any?
+      lines.join("\n")
+    end
+
+    def viewer_identity_aliases
+      @viewer_identity_aliases ||= begin
+        aliases = []
+        aliases.concat(identity_aliases_for_email(user.email))
+        aliases.concat(identity_aliases_for_name(user.smtp_from_name))
+        aliases.uniq
+      end
+    end
+
+    def identity_aliases_for_email(email_value)
+      email = email_value.to_s.strip.downcase
+      return [] if email.blank? || !email.include?("@")
+
+      local = email.split("@").first
+      aliases = [ local, local.tr("._-", " ").squish ]
+      aliases.concat(local.split(/[._-]+/))
+      aliases.map(&:strip).reject(&:blank?).uniq
+    end
+
+    def identity_aliases_for_name(name_value)
+      name = name_value.to_s.strip
+      return [] if name.blank?
+
+      [ name, *name.split(/\s+/) ].map(&:strip).reject(&:blank?).uniq
+    end
+
+    def normalize_owner_label(value)
+      owner = value.to_s.strip
+      return "" if owner.blank?
+
+      owner_refers_to_current_user?(owner) ? "You" : owner
+    end
+
+    def normalize_current_user_references(text)
+      value = text.to_s
+      return value if value.blank?
+
+      normalized = viewer_identity_aliases.sort_by { |alias_value| -alias_value.length }.reduce(value) do |memo, alias_value|
+        escaped = Regexp.escape(alias_value)
+        memo.gsub(/\b#{escaped}'s\b/i, "your").gsub(/\b#{escaped}\b/i, "you")
+      end
+      normalized.sub(/\Ayou\b/, "You")
+    end
+
+    def owner_refers_to_current_user?(owner)
+      normalized_owner = owner.to_s.downcase.squish
+      return false if normalized_owner.blank?
+
+      viewer_identity_aliases.any? do |alias_value|
+        normalized_alias = alias_value.to_s.downcase.squish
+        next false if normalized_alias.blank?
+
+        normalized_owner == normalized_alias ||
+          normalized_owner.start_with?("#{normalized_alias} ") ||
+          normalized_owner.end_with?(" #{normalized_alias}") ||
+          normalized_alias.start_with?("#{normalized_owner} ")
       end
     end
 

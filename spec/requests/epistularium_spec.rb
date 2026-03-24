@@ -78,6 +78,9 @@ RSpec.describe "Epistularium", type: :request do
     expect(inbox_link["data-turbo-frame"]).to eq("epistularium_grid")
     expect(detail_pane["data-epistularium-detail-transition"]).to eq("fade")
     expect(mobile_back_link["data-turbo-frame"]).to eq("epistularium_grid")
+    suggestion_forms = document.css("form.button_to[action='#{suggest_workspace_epistularium_message_path(workspace_slug: workspace.slug, id: message.id)}']")
+    expect(suggestion_forms.length).to eq(3)
+    expect(suggestion_forms.map { |form| form["data-turbo-frame"] }.uniq).to eq([ "_top" ])
     expect(mobile_back_link["href"]).to eq(
       workspace_epistularium_path(
         workspace_slug: workspace.slug,
@@ -661,6 +664,7 @@ RSpec.describe "Epistularium", type: :request do
     post suggest_workspace_epistularium_message_path(workspace_slug: workspace.slug, id: message.id), params: { suggestion_type: "reply" }
 
     agent_action = AgentAction.order(:created_at).last
+    expect(response).to have_http_status(:see_other)
     expect(response).to redirect_to(agent_action_path(workspace_slug: workspace.slug, id: agent_action.id))
     expect(agent_action.target_system).to eq("email")
     expect(agent_action.metadata_json["source_email_id"]).to eq(message.id)

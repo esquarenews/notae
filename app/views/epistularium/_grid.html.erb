@@ -166,16 +166,19 @@
                         suggest_workspace_epistularium_message_path(workspace_slug: @workspace.slug, id: @selected_message.id),
                         method: :post,
                         params: { suggestion_type: "reply" },
+                        form: { data: { turbo_frame: "_top" } },
                         class: "notae-chip-button" %>
           <%= button_to "Suggest task draft",
                         suggest_workspace_epistularium_message_path(workspace_slug: @workspace.slug, id: @selected_message.id),
                         method: :post,
                         params: { suggestion_type: "task_ticket" },
+                        form: { data: { turbo_frame: "_top" } },
                         class: "notae-chip-button" %>
           <%= button_to "Suggest calendar hold",
                         suggest_workspace_epistularium_message_path(workspace_slug: @workspace.slug, id: @selected_message.id),
                         method: :post,
                         params: { suggestion_type: "calendar_hold" },
+                        form: { data: { turbo_frame: "_top" } },
                         class: "notae-chip-button" %>
         </div>
       </div>
