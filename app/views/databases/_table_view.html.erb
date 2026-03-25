@@ -105,6 +105,9 @@ end %>
                                   sort_direction: next_direction
                                 }
                               },
+                              form: {
+                                data: { preserve_database_scroll: true }
+                              },
                               form_class: "notae-db-grid-property-sort-form",
                               class: "notae-db-grid-property-link",
                               title: "Sort by #{db_property.name}" %>
@@ -121,6 +124,7 @@ end %>
                               filter_value: params[:filter_value],
                               filter_operator: params[:filter_operator]
                             ),
+                            data: { preserve_database_scroll: true },
                             class: "notae-db-grid-property-link" %>
               <% end %>
               <% if property_is_sorted %>

@@ -109,6 +109,28 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Cmd/Ctrl + K")
   end
 
+  it "renders the create workspace dialog outside the sidebar container" do
+    owner = User.create!(email: "page-workspace-dialog-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Workspace dialog", slug: "workspace-dialog")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Workspace dialog page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    shell = html.at_css(".notae-shell")
+    sidebar = html.at_css("aside.notae-sidebar")
+    workspace_dialog = html.at_css("[data-shell-target='workspaceDialog']")
+
+    expect(shell).to be_present
+    expect(sidebar).to be_present
+    expect(workspace_dialog).to be_present
+    expect(workspace_dialog.parent).to eq(shell)
+    expect(sidebar.at_css("[data-shell-target='workspaceDialog']")).to be_nil
+  end
+
   it "renders mobile-ready page header action labels for icon-only controls" do
     owner = User.create!(email: "page-mobile-header-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Mobile page header", slug: "mobile-page-header")
@@ -150,6 +172,14 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include("body.notae-theme-dark .notae-doc-editor.is-callout .ProseMirror")
     expect(stylesheet).to include("body.notae-theme-dark .notae-doc-editor.is-color-blue .ProseMirror")
     expect(stylesheet).to include("body.notae-theme-system .notae-doc-block.is-focused .notae-doc-editor .ProseMirror")
+  end
+
+  it "keeps topbar menus above page cover controls" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-page-cover-controls {\n  position: absolute;")
+    expect(stylesheet).to include("  z-index: var(--notae-layer-popover-region);")
+    expect(stylesheet).to include(".notae-topbar:has(.notae-actions-menu[open]),\n.notae-topbar:has(.notae-options-menu[open]),\n.notae-topbar:has(.notae-comments-menu[open]) {\n  position: relative;\n  z-index: var(--notae-layer-popover-parent);")
   end
 
   it "includes the compiled app stylesheet and keeps the tailwind entrypoint present" do

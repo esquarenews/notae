@@ -90,7 +90,10 @@
 <% db_layout_classes << "is-font-serif" if @database.font_style == "serif" %>
 <% db_layout_classes << "is-font-mono" if @database.font_style == "mono" %>
 
-<section class="<%= db_layout_classes.join(" ") %>">
+<section class="<%= db_layout_classes.join(" ") %>"
+         data-controller="database-view-state"
+         data-action="turbo:submit-start->database-view-state#capture click->database-view-state#captureLink"
+         data-database-view-state-storage-key-value="database-view-scroll:<%= @database.id %>">
 <section class="notae-db-canvas">
   <% if @database.cover? %>
     <section class="notae-page-cover">
@@ -732,6 +735,7 @@
                                       view_settings: "open"
                                     ),
                                     method: :patch,
+                                    data: { preserve_database_scroll: true },
                                     class: "notae-db-settings-layout-form" do |form| %>
                         <%= form.hidden_field :view_type, value: layout_type %>
                         <button type="submit"
@@ -767,6 +771,7 @@
                                     view_settings: "open"
                                   ),
                                   method: :patch,
+                                  data: { preserve_database_scroll: true },
                                   class: "notae-db-settings-checkbox-list" do |form| %>
                       <%= hidden_field_tag "database_view[visible_property_ids][]", "" %>
                       <% @db_properties.each do |property| %>
@@ -799,6 +804,7 @@
                                     view_settings: "open"
                                   ),
                                   method: :patch,
+                                  data: { preserve_database_scroll: true },
                                   class: "notae-db-view-submenu-form" do |form| %>
                       <%= form.select :filter_property_id,
                                       @db_properties.map { |property| [property.name, property.id] },
@@ -835,6 +841,7 @@
                                     view_settings: "open"
                                   ),
                                   method: :patch,
+                                  data: { preserve_database_scroll: true },
                                   class: "notae-db-view-submenu-form" do |form| %>
                       <%= form.select :sort_property_id,
                                       @db_properties.map { |property| [property.name, property.id] },
@@ -874,6 +881,7 @@
                                     view_settings: "open"
                                   ),
                                   method: :patch,
+                                  data: { preserve_database_scroll: true },
                                   class: "notae-db-view-submenu-form" do |form| %>
                       <%= form.select :conditional_color_mode,
                                       [["Off", ""], ["Highlight overdue", "overdue"]],

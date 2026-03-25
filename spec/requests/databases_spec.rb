@@ -263,8 +263,14 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     html = Nokogiri::HTML(response.body)
+    database_shell = html.at_css("section.notae-db-split-layout[data-controller~='database-view-state']")
+    expect(database_shell).to be_present
+    expect(database_shell["data-action"]).to include("turbo:submit-start->database-view-state#capture")
+    expect(database_shell["data-action"]).to include("click->database-view-state#captureLink")
+    expect(database_shell["data-database-view-state-storage-key-value"]).to eq("database-view-scroll:#{database.id}")
     sort_form = html.at_css("form.notae-db-grid-property-sort-form[action='#{database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id)}']")
     expect(sort_form).to be_present
+    expect(sort_form["data-preserve-database-scroll"]).to eq("true")
     expect(sort_form.at_css("input[name='_method'][value='patch']")).to be_present
     expect(sort_form.at_css("input[name='database_view[sort_property_id]'][value='#{db_property.id}']")).to be_present
     expect(sort_form.at_css("input[name='database_view[sort_direction]'][value='asc']")).to be_present
@@ -1708,7 +1714,8 @@ RSpec.describe "Databases", type: :request do
         id: database.id,
         split_page_id: created_row.linked_page_id,
         split_source: "row",
-        split_row_id: created_row.id
+        split_row_id: created_row.id,
+        anchor: "row_#{created_row.id}"
       )
     )
 
@@ -1723,7 +1730,8 @@ RSpec.describe "Databases", type: :request do
         id: database.id,
         split_page_id: existing_page.id,
         split_source: "row",
-        split_row_id: chosen_row.id
+        split_row_id: chosen_row.id,
+        anchor: "row_#{chosen_row.id}"
       )
     )
   end

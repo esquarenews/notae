@@ -269,8 +269,9 @@ RSpec.describe "Blocks", type: :request do
   it "keeps page flash notices sticky inside the current viewport" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
-    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;")
-    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack {\n  width: min(50%, 760px);")
+    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;")
+    expect(stylesheet).to include("  height: 0;\n  margin: 0;\n  overflow: visible;")
+    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack,\n.notae-content.notae-content-home > #notae_flash_messages .notae-flash-stack {\n  width: min(50%, 760px);")
   end
 
   it "archives and restores blocks while preserving original position priority" do

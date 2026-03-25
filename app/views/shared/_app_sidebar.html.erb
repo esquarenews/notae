@@ -463,49 +463,6 @@
     <% end %>
   </div>
 
-  <% if workspace && can_create_workspace %>
-    <div class="notae-modal is-hidden"
-         data-shell-target="workspaceDialog"
-         data-action="click->shell#closeWorkspaceDialog">
-      <div class="notae-modal-panel notae-workspace-modal-panel" data-action="click->shell#noop">
-        <div class="notae-modal-header">
-          <h2>Create Workspace</h2>
-          <button type="button"
-                  class="notae-inline-icon-button"
-                  data-action="click->shell#closeWorkspaceDialog"
-                  aria-label="Close create workspace dialog">✕</button>
-        </div>
-        <p class="notae-pref-description">Start a new workspace and become its owner.</p>
-        <%= form_with model: Workspace.new, url: workspaces_path, class: "notae-workspace-modal-form" do |form| %>
-          <label class="notae-workspace-modal-label" for="new_workspace_name">Workspace name</label>
-          <%= form.text_field :name,
-                              id: "new_workspace_name",
-                              required: true,
-                              class: "notae-auth-input",
-                              data: {
-                                shell_target: "workspaceNameInput",
-                                action: "input->shell#syncWorkspaceSlug"
-                              } %>
-
-          <label class="notae-workspace-modal-label" for="new_workspace_slug">Workspace URL slug</label>
-          <%= form.text_field :slug,
-                              id: "new_workspace_slug",
-                              required: true,
-                              class: "notae-auth-input",
-                              data: {
-                                shell_target: "workspaceSlugInput",
-                                action: "input->shell#markWorkspaceSlugEdited"
-                              } %>
-
-          <div class="notae-workspace-modal-actions">
-            <button type="button" class="notae-chip-button" data-action="click->shell#closeWorkspaceDialog">Cancel</button>
-            <%= form.submit "Create workspace", class: "notae-chip-button" %>
-          </div>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
-
   <div class="notae-sidebar-footer">
     <%= link_to (workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path),
                 class: notae_sidebar_link_classes(workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path),
@@ -535,3 +492,46 @@
   </div>
   </div>
 </aside>
+
+<% if workspace && can_create_workspace %>
+  <div class="notae-modal is-hidden"
+       data-shell-target="workspaceDialog"
+       data-action="click->shell#closeWorkspaceDialog">
+    <div class="notae-modal-panel notae-workspace-modal-panel" data-action="click->shell#noop">
+      <div class="notae-modal-header">
+        <h2>Create Workspace</h2>
+        <button type="button"
+                class="notae-inline-icon-button"
+                data-action="click->shell#closeWorkspaceDialog"
+                aria-label="Close create workspace dialog">✕</button>
+      </div>
+      <p class="notae-pref-description">Start a new workspace and become its owner.</p>
+      <%= form_with model: Workspace.new, url: workspaces_path, class: "notae-workspace-modal-form" do |form| %>
+        <label class="notae-workspace-modal-label" for="new_workspace_name">Workspace name</label>
+        <%= form.text_field :name,
+                            id: "new_workspace_name",
+                            required: true,
+                            class: "notae-auth-input",
+                            data: {
+                              shell_target: "workspaceNameInput",
+                              action: "input->shell#syncWorkspaceSlug"
+                            } %>
+
+        <label class="notae-workspace-modal-label" for="new_workspace_slug">Workspace URL slug</label>
+        <%= form.text_field :slug,
+                            id: "new_workspace_slug",
+                            required: true,
+                            class: "notae-auth-input",
+                            data: {
+                              shell_target: "workspaceSlugInput",
+                              action: "input->shell#markWorkspaceSlugEdited"
+                            } %>
+
+        <div class="notae-workspace-modal-actions">
+          <button type="button" class="notae-chip-button" data-action="click->shell#closeWorkspaceDialog">Cancel</button>
+          <%= form.submit "Create workspace", class: "notae-chip-button" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

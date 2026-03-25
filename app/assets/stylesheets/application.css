@@ -1352,33 +1352,40 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   padding: 0 0 1.9rem;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages {
+.notae-content.notae-content-page > #notae_flash_messages,
+.notae-content.notae-content-home > #notae_flash_messages {
   position: sticky;
   top: 0.65rem;
   z-index: 25;
   display: flex;
   justify-content: center;
-  margin: 0 0 1rem;
+  height: 0;
+  margin: 0;
+  overflow: visible;
   pointer-events: none;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack {
+.notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack,
+.notae-content.notae-content-home > #notae_flash_messages .notae-flash-stack {
   width: min(50%, 760px);
   max-width: calc(100% - 1.2rem);
   margin: 0;
   pointer-events: auto;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash {
+.notae-content.notae-content-page > #notae_flash_messages .notae-flash,
+.notae-content.notae-content-home > #notae_flash_messages .notae-flash {
   margin: 0;
   animation: notae-flash-fade 420ms ease 5.5s forwards;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash.notice {
+.notae-content.notae-content-page > #notae_flash_messages .notae-flash.notice,
+.notae-content.notae-content-home > #notae_flash_messages .notae-flash.notice {
   animation-delay: 3s;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash.alert {
+.notae-content.notae-content-page > #notae_flash_messages .notae-flash.alert,
+.notae-content.notae-content-home > #notae_flash_messages .notae-flash.alert {
   animation-delay: 4.2s;
 }
 
@@ -6331,13 +6338,20 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-workspace-modal-panel {
-  width: min(460px, 100%);
+  width: min(460px, calc(100vw - 2rem));
+  max-width: 100%;
 }
 
 .notae-workspace-modal-form {
   margin-top: 0.55rem;
   display: grid;
-  gap: 0.42rem;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.notae-workspace-modal-form .notae-auth-input {
+  width: 100%;
+  min-width: 0;
 }
 
 .notae-workspace-modal-label {
@@ -6347,8 +6361,9 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 }
 
 .notae-workspace-modal-actions {
-  margin-top: 0.22rem;
+  margin-top: 0.28rem;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.4rem;
 }
@@ -14715,9 +14730,6 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
 .notae-doc-header:has(.notae-page-header-action[open]),
 .notae-doc-header:has(.notae-cover-picker[open]),
 .notae-doc-header:has(.notae-comments-menu[open]),
-.notae-topbar:has(.notae-actions-menu[open]),
-.notae-topbar:has(.notae-options-menu[open]),
-.notae-topbar:has(.notae-comments-menu[open]),
 .notae-db-header:has(.notae-page-header-action[open]),
 .notae-db-header:has(.notae-cover-picker[open]),
 .notae-db-header:has(.notae-comments-menu[open]),
@@ -14736,6 +14748,14 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
 .notae-sidebar-header-actions:has(.notae-create-menu:not(.is-hidden)) {
   position: relative;
   z-index: var(--notae-layer-popover-region);
+  isolation: isolate;
+}
+
+.notae-topbar:has(.notae-actions-menu[open]),
+.notae-topbar:has(.notae-options-menu[open]),
+.notae-topbar:has(.notae-comments-menu[open]) {
+  position: relative;
+  z-index: var(--notae-layer-popover-parent);
   isolation: isolate;
 }
 
