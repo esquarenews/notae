@@ -72,7 +72,8 @@ RSpec.describe "Epistularium", type: :request do
 
     expect(grid_frame).to be_present
     expect(grid_frame["data-epistularium-poller-target"]).to eq("sections")
-    expect(grid_frame["data-action"]).to include("turbo:frame-load->epistularium-poller#syncEndpoint")
+    expect(grid_frame["data-action"]).to include("turbo:before-fetch-request->epistularium-poller#captureBeforeFrameRequest")
+    expect(grid_frame["data-action"]).to include("turbo:frame-load->epistularium-poller#restoreAfterFrameLoad")
     expect(grid["class"]).to include("is-message-open")
     expect(message_link["data-turbo-frame"]).to eq("epistularium_grid")
     expect(inbox_link["data-turbo-frame"]).to eq("epistularium_grid")

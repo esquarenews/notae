@@ -22,6 +22,9 @@ RSpec.describe "EpistulariumPollerController JavaScript syntax" do
     expect(source).to include("this.currentCursor")
     expect(source).to include("capturePaneScrollPositions()")
     expect(source).to include("restorePaneScrollPositions")
+    expect(source).to include("captureBeforeFrameRequest(event)")
+    expect(source).to include("restoreAfterFrameLoad(event)")
+    expect(source).to include("pendingPaneScrollPositions")
     expect(source).to include("selectedMessageId()")
   end
 end

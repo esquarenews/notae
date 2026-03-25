@@ -22,7 +22,7 @@
     <%= turbo_frame_tag "epistularium_grid",
                         data: {
                           epistularium_poller_target: "sections",
-                          action: "turbo:frame-load->epistularium-poller#syncEndpoint"
+                          action: "turbo:before-fetch-request->epistularium-poller#captureBeforeFrameRequest turbo:frame-load->epistularium-poller#restoreAfterFrameLoad"
                         } do %>
       <%= render "grid" %>
     <% end %>

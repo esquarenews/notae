@@ -13,6 +13,8 @@ export default class extends Controller {
   connect() {
     this.inFlight = false
     this.currentCursor = this.cursorValue || ""
+    this.pendingPaneScrollPositions = null
+    this.pendingSelectedMessageId = ""
     this.intervalId = window.setInterval(() => this.poll(), this.intervalValue)
   }
 
@@ -60,6 +62,25 @@ export default class extends Controller {
     } finally {
       this.inFlight = false
     }
+  }
+
+  captureBeforeFrameRequest(event) {
+    if (!this.frameEventForSectionsTarget(event)) return
+
+    this.pendingPaneScrollPositions = this.capturePaneScrollPositions()
+    this.pendingSelectedMessageId = this.selectedMessageId()
+  }
+
+  restoreAfterFrameLoad(event) {
+    if (!this.frameEventForSectionsTarget(event)) return
+
+    if (this.pendingPaneScrollPositions) {
+      this.restorePaneScrollPositions(this.pendingPaneScrollPositions, this.pendingSelectedMessageId)
+    }
+
+    this.pendingPaneScrollPositions = null
+    this.pendingSelectedMessageId = ""
+    this.syncEndpoint()
   }
 
   capturePaneScrollPositions() {
@@ -111,5 +132,9 @@ export default class extends Controller {
     if (!this.hasSectionsTarget) return ""
 
     return this.sectionsTarget.querySelector(".notae-epistularium-grid")?.dataset.epistulariumCurrentPath || ""
+  }
+
+  frameEventForSectionsTarget(event) {
+    return this.hasSectionsTarget && event?.target === this.sectionsTarget
   }
 }
