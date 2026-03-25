@@ -30,9 +30,16 @@ class DbRowsController < ApplicationController
       if @redirect_split_source == "row" && @redirect_split_page_id.present?
         @redirect_split_row_id ||= @db_row.id
       end
-      redirect_to database_redirect_location(highlight_row_id: highlight_new_row_id_for_response(@db_row)), notice: "Row created."
+      if turbo_create_row_request?
+        render turbo_stream: turbo_stream_create_row_response(@db_row)
+      else
+        redirect_to database_redirect_location(
+          anchor: created_row_redirect_anchor(@db_row),
+          highlight_row_id: highlight_new_row_id_for_response(@db_row)
+        ), notice: "Row created."
+      end
     else
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @db_row.errors.full_messages.to_sentence
+      respond_row_create_failure(message: @db_row.errors.full_messages.to_sentence)
     end
   end
 
@@ -178,6 +185,14 @@ class DbRowsController < ApplicationController
     return false unless title_autosave_requested?
     return false unless request.format.turbo_stream?
     return false if next_row.blank?
+    return false unless simple_table_render_context?
+    return false if params[:split_source].to_s == "row"
+
+    true
+  end
+
+  def turbo_create_row_request?
+    return false unless request.format.turbo_stream?
     return false unless simple_table_render_context?
     return false if params[:split_source].to_s == "row"
 
@@ -453,6 +468,66 @@ class DbRowsController < ApplicationController
     ]
   end
 
+  def turbo_stream_create_row_response(row)
+    load_table_row_render_context!(rows: [ row ])
+    active_row_count = policy_scope(DbRow).for_database(@database).active.count
+    insertion_target = table_row_insertion_target_for_response
+    insertion_stream =
+      if insertion_target.present?
+        turbo_stream.after(
+          "row_#{insertion_target.id}",
+          partial: "databases/table_row",
+          locals: table_row_locals(row: row, autofocus_title: true, highlight_row_id: row.id)
+        )
+      else
+        turbo_stream.append(
+          "database_table_rows",
+          partial: "databases/table_row",
+          locals: table_row_locals(row: row, autofocus_title: true, highlight_row_id: row.id)
+        )
+      end
+
+    [
+      turbo_stream.update(
+        "database_topbar_edited_at",
+        partial: "databases/topbar_edited_meta",
+        locals: { database: @database.reload }
+      ),
+      turbo_stream.update(
+        "database_row_count",
+        partial: "databases/row_count_meta",
+        locals: { row_count: active_row_count }
+      ),
+      insertion_stream,
+      turbo_stream.update(
+        "database_table_placeholders",
+        partial: "databases/table_placeholders",
+        locals: {
+          visible_properties: @visible_db_properties,
+          placeholder_count: [ 6 - active_row_count, 0 ].max
+        }
+      ),
+      turbo_stream.replace(
+        "notae_flash_messages",
+        partial: "shared/flash_messages",
+        locals: { flash_messages: [ [ "notice", "Row created." ] ] }
+      )
+    ]
+  end
+
+  def table_row_insertion_target_for_response
+    reference_id = params[:insert_after_id].to_s.presence
+    return nil if reference_id.blank?
+
+    policy_scope(DbRow).for_database(@database).active.find_by(id: reference_id)
+  end
+
+  def created_row_redirect_anchor(row)
+    return nil unless simple_table_render_context?
+
+    "row_#{row.id}"
+  end
+
   def simple_table_render_context?
     current_view = current_database_view_for_response
     view_config = current_view&.config_json.to_h || {}
@@ -462,6 +537,18 @@ class DbRowsController < ApplicationController
     return false if view_config["sort_property_id"].present? || view_config["filter_property_id"].present?
 
     true
+  end
+
+  def respond_row_create_failure(message:)
+    if request.format.turbo_stream? && simple_table_render_context?
+      render turbo_stream: turbo_stream.replace(
+        "notae_flash_messages",
+        partial: "shared/flash_messages",
+        locals: { flash_messages: [ [ "alert", message ] ] }
+      ), status: :unprocessable_entity
+    else
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: message
+    end
   end
 
   def current_database_view_for_response

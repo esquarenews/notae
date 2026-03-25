@@ -1225,6 +1225,31 @@ RSpec.describe "Databases", type: :request do
     expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])
   end
 
+  it "creates a new row with turbo streams instead of redirecting the full grid for the simple table path" do
+    owner = User.create!(email: "database-row-create-turbo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row create turbo tables", slug: "row-create-turbo-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row create turbo DB")
+    sign_in owner
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: { db_row: { title: "Untitled row" } },
+         as: :turbo_stream
+
+    created_row = database.db_rows.order(:created_at).last
+    expect(created_row).to be_present
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("DbRowsController#create")
+    expect(response.body).to include('turbo-stream action="append" target="database_table_rows"')
+    expect(response.body).to include('turbo-stream action="update" target="database_row_count"')
+    expect(response.body).to include('turbo-stream action="update" target="database_table_placeholders"')
+    expect(response.body).to include('turbo-stream action="replace" target="notae_flash_messages"')
+    expect(response.body).to include('data-auto-submit-focus-on-connect-value="true"')
+    expect(response.body).to include("is-new-row-highlight")
+  end
+
   it "creates a new row directly below when row update requests create_next_row" do
     owner = User.create!(email: "database-row-create-next-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row create next tables", slug: "row-create-next-tables")
@@ -1266,7 +1291,7 @@ RSpec.describe "Databases", type: :request do
     created_row = database.db_rows.where.not(id: existing_untitled_row.id).order(:created_at).last
     expect(created_row).to be_present
     expect(response).to redirect_to(
-      database_path(workspace_slug: workspace.slug, id: database.id, highlight_row_id: created_row.id)
+      database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{created_row.id}", highlight_row_id: created_row.id)
     )
 
     follow_redirect!
@@ -1364,9 +1389,32 @@ RSpec.describe "Databases", type: :request do
          params: { insert_after_id: first_row.id, db_row: { title: "Inserted" } }
 
     inserted_row = database.db_rows.find_by!(title: "Inserted")
-    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, anchor: "row_#{inserted_row.id}"))
     ordered_ids = DbRow.for_database(database).active.ordered.pluck(:id)
     expect(ordered_ids).to eq([ first_row.id, inserted_row.id, second_row.id ])
+  end
+
+  it "inserts a newly created row below the referenced row with turbo streams for the simple table path" do
+    owner = User.create!(email: "database-row-insert-turbo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row insert turbo tables", slug: "row-insert-turbo-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row insert turbo DB")
+    first_row = DbRow.create!(workspace: workspace, database: database, title: "First")
+    second_row = DbRow.create!(workspace: workspace, database: database, title: "Second")
+    sign_in owner
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: { insert_after_id: first_row.id, db_row: { title: "Inserted" } },
+         as: :turbo_stream
+
+    inserted_row = database.db_rows.find_by!(title: "Inserted")
+    expect(inserted_row).to be_present
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include(%(turbo-stream action="after" target="row_#{first_row.id}"))
+    expect(response.body).to include(%(id="row_#{inserted_row.id}"))
+    expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, inserted_row.id, second_row.id ])
   end
 
   it "duplicates a row directly underneath and preserves cells, styling, and linked nota" do
