@@ -9,8 +9,8 @@
 <% end %>
 
 <section class="notae-kalendarium"
-         data-controller="kalendarium-focus"
-         data-action="kalendarium:quick-create->kalendarium-focus#prepareNewEvent"
+         data-controller="kalendarium-focus kalendarium-preview"
+         data-action="kalendarium:quick-create->kalendarium-focus#prepareNewEvent kalendarium:preview-event->kalendarium-preview#render kalendarium:preview-clear->kalendarium-preview#clear"
          data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
          data-kalendarium-focus-view-value="<%= @view %>">
   <header class="notae-kalendarium-head notae-auth-card">
@@ -138,7 +138,7 @@
                   <div class="notae-kalendarium-project-option-row">
                     <div class="notae-kalendarium-project-option-name">
                       <span class="notae-kalendarium-dot" style="--kal-color: <%= project.color_hex %>"></span>
-                      <span><%= project.name %></span>
+                      <span class="notae-kalendarium-project-option-label"><%= project.name %></span>
                     </div>
                     <div class="notae-kalendarium-project-option-actions">
                       <%= link_to(project_visible ? "Show: On" : "Show: Off",
@@ -209,7 +209,8 @@
                           class: "notae-kalendarium-form",
                           data: {
                             controller: "kalendarium-event-form",
-                            kalendarium_event_form_enforce_future_end_value: true
+                            kalendarium_event_form_enforce_future_end_value: true,
+                            kalendarium_event_form_preview_enabled_value: true
                           } do |form| %>
               <%= hidden_field_tag :view, @view %>
               <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
@@ -217,7 +218,11 @@
                                   placeholder: "Event title",
                                   required: true,
                                   class: "notae-auth-input",
-                                  data: { kalendarium_focus_target: "createTitleInput" } %>
+                                  data: {
+                                    kalendarium_focus_target: "createTitleInput",
+                                    kalendarium_event_form_target: "titleInput",
+                                    action: "input->kalendarium-event-form#titleChanged"
+                                  } %>
               <%= form.select :kalendarium_calendar_id,
                               options_from_collection_for_select(@visible_calendars, :id, :name),
                               {},
@@ -259,7 +264,13 @@
               <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
               <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
               <%= form.hidden_field :linked_page_action, value: "" %>
-              <%= form.submit "Create", class: "notae-chip-button" %>
+              <div class="notae-kalendarium-form-actions">
+                <%= button_tag "Cancel",
+                               type: "button",
+                               class: "notae-chip-button notae-chip-button-subtle",
+                               data: { action: "kalendarium-event-form#cancel" } %>
+                <%= form.submit "Create", class: "notae-chip-button" %>
+              </div>
             <% end %>
           </div>
         </div>
@@ -367,7 +378,9 @@
                                calendars: @all_calendars,
                                projects: @projects,
                                timeline: true,
-                               timeline_style: placement[:timeline_style] %>
+                               timeline_style: placement[:timeline_style],
+                               timeline_start_minutes: placement[:start_minutes],
+                               timeline_end_minutes: placement[:end_minutes] %>
                   <% end %>
                 </div>
                 <% if day_timed_events.blank? && day_all_day_events.blank? %>
@@ -488,7 +501,9 @@
                                    calendars: @all_calendars,
                                    projects: @projects,
                                    timeline: true,
-                                   timeline_style: placement[:timeline_style] %>
+                                   timeline_style: placement[:timeline_style],
+                                   timeline_start_minutes: placement[:start_minutes],
+                                   timeline_end_minutes: placement[:end_minutes] %>
                       <% end %>
                     </div>
                   </div>

@@ -263,6 +263,14 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("class=\"notae-doc-handle\"")
     expect(response.body).to include("title=\"Drag block\"")
     expect(response.body).to include("draggable=\"true\"")
+    expect(response.body).to include("data-turbo-stream=\"true\"")
+  end
+
+  it "keeps page flash notices sticky inside the current viewport" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;")
+    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack {\n  width: min(50%, 760px);")
   end
 
   it "archives and restores blocks while preserving original position priority" do
@@ -564,6 +572,73 @@ RSpec.describe "Blocks", type: :request do
     post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
          params: { block_command: { command: "turn_into", target: "bulleted_list" } }
     expect(block.reload.block_type).to eq("paragraph")
+  end
+
+  it "turns hard-return lines into separate bullet items and restores them as hard breaks when toggled off" do
+    owner = User.create!(email: "blocks-hard-break-list-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Hard break lists", slug: "hard-break-lists")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Hard break list page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [
+              { "type" => "text", "text" => "First line" },
+              { "type" => "hardBreak" },
+              { "type" => "text", "text" => "Second line" },
+              { "type" => "hardBreak" },
+              { "type" => "text", "text" => "Third line" }
+            ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "bulleted_list" } }
+
+    expect(response).to have_http_status(:redirect)
+    expect(block.reload.block_type).to eq("bullet_list")
+    list_items = block.content_json.dig("content", 0, "content")
+    expect(list_items.size).to eq(3)
+    expect(list_items.map { |item| item.dig("content", 0, "content", 0, "text") }).to eq([ "First line", "Second line", "Third line" ])
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "bulleted_list" } }
+
+    expect(block.reload.block_type).to eq("paragraph")
+    paragraph_content = block.content_json.dig("content", 0, "content")
+    expect(paragraph_content.map { |node| node["type"] }).to eq([ "text", "hardBreak", "text", "hardBreak", "text" ])
+    expect(paragraph_content.filter_map { |node| node["text"] }).to eq([ "First line", "Second line", "Third line" ])
+  end
+
+  it "updates style commands inline over turbo stream instead of redirecting the full page" do
+    owner = User.create!(email: "blocks-inline-style-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Inline style blocks", slug: "inline-style-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Inline style page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "color", color: "blue" } },
+         as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="replace" target="notae_flash_messages"')
+    expect(response.body).to include("Color updated.")
+    expect(response.body).to include(%(turbo-stream action="replace" target="block_#{block.id}"))
+    expect(block.reload.content_json["notae_color"]).to eq("blue")
   end
 
   it "preserves media blocks when applying a column layout turn-into option" do

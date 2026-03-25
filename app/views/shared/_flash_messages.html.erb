@@ -1,18 +1,21 @@
 <%
-flash_messages = flash.to_hash.each_with_object([]) do |(type, raw_message), messages|
-  Array(raw_message).each do |message|
-    text = message.to_s.strip
-    messages << [ type.to_s, text ] if text.present?
-  end
-end
-flash_messages.sort_by! { |(type, _message)| type == "alert" ? 0 : 1 }
-%>
+provided_flash_messages = local_assigns[:flash_messages]
+flash_messages =
+  if provided_flash_messages.present?
+    Array(provided_flash_messages).filter_map do |entry|
+      type, raw_message = Array(entry)
+      text = raw_message.to_s.strip
+      next if text.blank?
 
-<% if flash_messages.any? %>
-  <div class="notae-flash-stack">
-    <% flash_messages.each do |type, message| %>
-      <% palette = type == "alert" ? "notae-flash alert" : "notae-flash notice" %>
-      <p class="<%= palette %>"><%= message %></p>
-    <% end %>
-  </div>
-<% end %>
+      [ type.to_s, text ]
+    end
+  else
+    flash.to_hash.each_with_object([]) do |(type, raw_message), messages|
+      Array(raw_message).each do |message|
+        text = message.to_s.strip
+        messages << [ type.to_s, text ] if text.present?
+      end
+    end
+  end
+flash_messages.sort_by! { |(type, _message)| type == "alert" ? 0 : 1 }
+%><div id="notae_flash_messages" class="notae-flash-host <%= "is-empty" if flash_messages.empty? %>"><% if flash_messages.any? %><div class="notae-flash-stack"><% flash_messages.each do |type, message| %><% palette = type == "alert" ? "notae-flash alert" : "notae-flash notice" %><p class="<%= palette %>"><%= message %></p><% end %></div><% end %></div>

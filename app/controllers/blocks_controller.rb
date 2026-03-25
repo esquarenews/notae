@@ -139,10 +139,30 @@ class BlocksController < ApplicationController
     touched_blocks.each { |touched_block| broadcast_block_update(touched_block) }
 
     redirect_page_id = result[:redirect_page_id] || @page.id
-    redirect_to page_redirect_path(redirect_page_id, anchor: result[:focus_anchor]),
-                notice: result[:notice]
+    respond_to do |format|
+      format.turbo_stream do
+        if inline_block_command_response?(result)
+          render turbo_stream: inline_block_command_streams(result, touched_blocks)
+        else
+          redirect_to page_redirect_path(redirect_page_id, anchor: result[:focus_anchor]), notice: result[:notice]
+        end
+      end
+      format.html do
+        redirect_to page_redirect_path(redirect_page_id, anchor: result[:focus_anchor]),
+                    notice: result[:notice]
+      end
+    end
   rescue ActionController::ParameterMissing, ActiveRecord::RecordInvalid, ArgumentError => error
-    redirect_to page_redirect_path, alert: error.message
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "notae_flash_messages",
+          partial: "shared/flash_messages",
+          locals: { flash_messages: [ [ "alert", error.message ] ] }
+        ), status: :unprocessable_entity
+      end
+      format.html { redirect_to page_redirect_path, alert: error.message }
+    end
   end
 
   private
@@ -273,5 +293,64 @@ class BlocksController < ApplicationController
 
   def current_embedded_page_params
     embedded_page_shell? ? { embedded: "1" } : {}
+  end
+
+  def inline_block_command_response?(result)
+    return false unless request.format.turbo_stream?
+    return false unless result[:redirect_page_id].blank? || result[:redirect_page_id] == @page.id
+
+    case block_command_params[:command].to_s
+    when "color", "highlight"
+      true
+    when "turn_into"
+      !%w[page page_in synced_block].include?(block_command_params[:target].to_s)
+    else
+      false
+    end
+  end
+
+  def inline_block_command_streams(result, touched_blocks)
+    page_render_context = current_page_render_context
+    streams = [
+      turbo_stream.replace(
+        "notae_flash_messages",
+        partial: "shared/flash_messages",
+        locals: { flash_messages: [ [ "notice", result[:notice] || "Block updated." ] ] }
+      )
+    ]
+
+    touched_blocks
+      .select { |touched_block| touched_block.page_id == @page.id }
+      .each do |touched_block|
+        streams << turbo_stream.replace(
+          "block_#{touched_block.id}",
+          partial: "pages/block_item",
+          locals: {
+            workspace: @workspace,
+            page: @page,
+            block: page_render_context[:block_lookup].fetch(touched_block.id),
+            blocks_by_parent: page_render_context[:blocks_by_parent],
+            all_pages: page_render_context[:move_target_pages],
+            index: page_render_context[:indexes].fetch(touched_block.id, 0),
+            reader_mode: page_render_context[:reader_mode],
+            embedded_page_params: current_embedded_page_params
+          }
+        )
+      end
+
+    streams
+  end
+
+  def current_page_render_context
+    @current_page_render_context ||= begin
+      active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
+      {
+        blocks_by_parent: active_blocks.group_by(&:parent_block_id),
+        block_lookup: active_blocks.index_by(&:id),
+        indexes: active_blocks.each_with_index.to_h { |block, index| [ block.id, index ] },
+        move_target_pages: policy_scope(Page).for_workspace(@workspace).active.order(:created_at).to_a.reject { |candidate| candidate.id == @page.id },
+        reader_mode: @page.remove_blocks? || @page.locked?
+      }
+    end
   end
 end

@@ -2,6 +2,8 @@
 <% project_options = Array(local_assigns[:projects]) %>
 <% timeline = local_assigns.fetch(:timeline, false) %>
 <% timeline_style = local_assigns[:timeline_style] %>
+<% timeline_start_minutes = local_assigns[:timeline_start_minutes] %>
+<% timeline_end_minutes = local_assigns[:timeline_end_minutes] %>
 <% compact = local_assigns.fetch(:compact, false) %>
 <% all_day_badge = local_assigns.fetch(:all_day, event.all_day?) %>
 <% starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone) %>
@@ -16,6 +18,8 @@
 <article id="kalendarium_event_<%= event.id %>"
          class="notae-kalendarium-event-card <%= "is-timeline" if timeline %> <%= "is-compact" if compact %> <%= "is-all-day" if all_day_badge %>"
          style="--kal-color: <%= event_color %>;<%= " #{timeline_style}" if timeline_style.present? %>"
+         data-start-minutes="<%= timeline_start_minutes if timeline %>"
+         data-end-minutes="<%= timeline_end_minutes if timeline %>"
          data-controller="kalendarium-event-modal"
          data-action="click->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
          role="button"

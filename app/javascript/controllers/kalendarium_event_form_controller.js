@@ -1,17 +1,63 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["startInput", "endInput", "allDayInput"]
+  static targets = ["titleInput", "startInput", "endInput", "allDayInput"]
   static values = {
-    enforceFutureEnd: { type: Boolean, default: false }
+    enforceFutureEnd: { type: Boolean, default: false },
+    previewEnabled: { type: Boolean, default: false }
   }
 
   connect() {
+    this.onAccordionToggle = () => this.accordionToggled()
+    this.accordionElement = this.element.closest("details")
+    if (this.previewEnabledValue && this.accordionElement) {
+      this.accordionElement.addEventListener("toggle", this.onAccordionToggle)
+    }
+
     if (this.allDaySelected) {
       this.applyAllDayTimes()
     }
 
     this.syncEndConstraints()
+    this.publishPreview()
+  }
+
+  disconnect() {
+    if (this.previewEnabledValue && this.accordionElement) {
+      this.accordionElement.removeEventListener("toggle", this.onAccordionToggle)
+    }
+
+    this.clearPreview()
+  }
+
+  cancel(event) {
+    event?.preventDefault()
+
+    if (typeof this.element.reset === "function") {
+      this.element.reset()
+    }
+
+    const selectedDate = this.selectedDateValue()
+    if (selectedDate) {
+      if (this.hasStartInputTarget) {
+        this.startInputTarget.value = `${selectedDate}T09:00`
+      }
+
+      if (this.hasEndInputTarget) {
+        this.endInputTarget.value = `${selectedDate}T10:00`
+      }
+    }
+
+    this.syncEndConstraints()
+    this.clearPreview()
+
+    if (this.accordionElement) {
+      this.accordionElement.open = false
+    }
+  }
+
+  titleChanged() {
+    this.publishPreview()
   }
 
   startChanged() {
@@ -21,6 +67,7 @@ export default class extends Controller {
     }
 
     this.syncEndConstraints()
+    this.publishPreview()
   }
 
   endChanged() {
@@ -29,6 +76,7 @@ export default class extends Controller {
     }
 
     this.syncEndConstraints()
+    this.publishPreview()
   }
 
   toggleAllDay() {
@@ -37,6 +85,7 @@ export default class extends Controller {
     }
 
     this.syncEndConstraints()
+    this.publishPreview()
   }
 
   applyAllDayTimes() {
@@ -120,5 +169,69 @@ export default class extends Controller {
   maxDateTimeString(firstValue, secondValue) {
     if (firstValue && secondValue) return firstValue >= secondValue ? firstValue : secondValue
     return firstValue || secondValue || ""
+  }
+
+  accordionToggled() {
+    if (this.accordionElement?.open) {
+      this.publishPreview()
+    } else {
+      this.clearPreview()
+    }
+  }
+
+  publishPreview() {
+    if (!this.previewEnabledValue) return
+    if (this.accordionElement && !this.accordionElement.open) {
+      this.clearPreview()
+      return
+    }
+
+    const detail = this.previewDetail()
+    if (!detail) {
+      this.clearPreview()
+      return
+    }
+
+    this.dispatchPreview("kalendarium:preview-event", detail)
+  }
+
+  clearPreview() {
+    if (!this.previewEnabledValue) return
+
+    this.dispatchPreview("kalendarium:preview-clear", {})
+  }
+
+  previewDetail() {
+    if (!this.hasStartInputTarget || !this.hasEndInputTarget) return null
+    if (!this.startInputTarget.value || !this.endInputTarget.value) return null
+
+    const dateString = this.datePortion(this.startInputTarget.value)
+    if (!dateString) return null
+
+    return {
+      title: this.hasTitleInputTarget ? this.titleInputTarget.value : "",
+      date: dateString,
+      startLocal: this.startInputTarget.value,
+      endLocal: this.endInputTarget.value,
+      allDay: this.allDaySelected
+    }
+  }
+
+  dispatchPreview(name, detail) {
+    const shell = this.element.closest(".notae-kalendarium")
+    if (!shell) return
+
+    shell.dispatchEvent(new CustomEvent(name, {
+      bubbles: true,
+      detail
+    }))
+  }
+
+  selectedDateValue() {
+    const dateInput = this.element.querySelector("input[name='date']")
+    const selectedDate = this.datePortion(dateInput?.value)
+    if (selectedDate) return selectedDate
+
+    return this.hasStartInputTarget ? this.datePortion(this.startInputTarget.value) : null
   }
 }

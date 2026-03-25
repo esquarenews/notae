@@ -291,11 +291,11 @@ module Blocks
 
     def build_content_payload_for(mapped_type)
       metadata = deep_dup_json(block.content_json).slice("notae_color", "notae_highlight")
-      text = extract_text(block.content_json)
+      lines = extract_lines(block.content_json)
 
       payload = {
         "type" => "doc",
-        "content" => [ build_primary_node(mapped_type, text) ]
+        "content" => [ build_primary_node(mapped_type, lines) ]
       }
 
       if mapped_type.start_with?("columns_")
@@ -305,19 +305,23 @@ module Blocks
       payload.merge(metadata)
     end
 
-    def build_primary_node(mapped_type, text)
+    def build_primary_node(mapped_type, lines)
+      normalized_lines = normalize_lines(lines)
+      text = normalized_lines.join(" ").squish
+
       case mapped_type
       when "heading_1" then heading_node(1, text)
       when "heading_2" then heading_node(2, text)
       when "heading_3" then heading_node(3, text)
-      when "bullet_list" then list_node("bulletList", text)
-      when "ordered_list" then list_node("orderedList", text)
+      when "bullet_list" then list_node("bulletList", normalized_lines)
+      when "ordered_list" then list_node("orderedList", normalized_lines)
+      when "todo_list" then task_list_node(normalized_lines)
       when "code_block"
-        { "type" => "codeBlock", "content" => [ { "type" => "text", "text" => text } ] }
+        code_block_node(normalized_lines)
       when "blockquote"
-        { "type" => "blockquote", "content" => [ paragraph_node(text) ] }
+        { "type" => "blockquote", "content" => [ paragraph_node(normalized_lines) ] }
       else
-        paragraph_node(text)
+        paragraph_node(normalized_lines)
       end
     end
 
@@ -329,29 +333,115 @@ module Blocks
       }
     end
 
-    def list_node(list_type, text)
+    def list_node(list_type, lines)
       {
         "type" => list_type,
-        "content" => [
+        "content" => normalize_lines(lines).map do |line|
           {
             "type" => "listItem",
-            "content" => [ paragraph_node(text) ]
+            "content" => [ paragraph_node([ line ]) ]
           }
-        ]
+        end
       }
     end
 
-    def paragraph_node(text)
+    def task_list_node(lines)
       {
-        "type" => "paragraph",
-        "content" => [ { "type" => "text", "text" => text } ]
+        "type" => "taskList",
+        "content" => normalize_lines(lines).map do |line|
+          {
+            "type" => "taskItem",
+            "attrs" => { "checked" => false },
+            "content" => [ paragraph_node([ line ]) ]
+          }
+        end
       }
+    end
+
+    def code_block_node(lines)
+      text = normalize_lines(lines).join("\n")
+      {
+        "type" => "codeBlock",
+        "content" => text.present? ? [ { "type" => "text", "text" => text } ] : []
+      }
+    end
+
+    def paragraph_node(lines)
+      segments = []
+      normalize_lines(lines).each_with_index do |line, index|
+        segments << { "type" => "text", "text" => line } if line.present?
+        segments << { "type" => "hardBreak" } if index < normalize_lines(lines).length - 1
+      end
+
+      node = { "type" => "paragraph" }
+      node["content"] = segments if segments.any?
+      node
     end
 
     def extract_text(node)
       collector = []
       traverse(node, collector)
       collector.join(" ").squish
+    end
+
+    def extract_lines(node)
+      lines =
+        case node
+        when Hash
+          extract_lines_from_hash(node)
+        when Array
+          node.flat_map { |child| extract_lines(child) }
+        else
+          []
+        end
+
+      normalize_lines(lines)
+    end
+
+    def extract_lines_from_hash(node)
+      case node["type"].to_s
+      when "doc", "blockquote", "listItem", "taskItem"
+        Array(node["content"]).flat_map { |child| extract_lines(child) }
+      when "bulletList", "orderedList", "taskList"
+        Array(node["content"]).flat_map { |child| extract_lines(child) }
+      when "paragraph", "heading"
+        extract_inline_lines(node["content"])
+      when "codeBlock"
+        Array(node["content"]).filter_map { |child| child.is_a?(Hash) ? child["text"] : nil }.join.split(/\r?\n/, -1)
+      when "text"
+        [ node["text"].to_s ]
+      else
+        Array(node["content"]).flat_map { |child| extract_lines(child) }
+      end
+    end
+
+    def extract_inline_lines(nodes)
+      lines = [ "" ]
+
+      Array(nodes).each do |child|
+        next unless child.is_a?(Hash)
+
+        case child["type"].to_s
+        when "text"
+          lines[-1] << child["text"].to_s
+        when "hardBreak"
+          lines << ""
+        else
+          nested_lines = extract_lines(child)
+          next if nested_lines.empty?
+
+          lines[-1] << nested_lines.shift.to_s
+          nested_lines.each { |line| lines << line.to_s }
+        end
+      end
+
+      lines
+    end
+
+    def normalize_lines(lines)
+      normalized = Array(lines).map { |line| line.to_s.gsub(/\r\n?/, "\n").strip }
+      normalized.reject!(&:blank?)
+      normalized.presence || [ "" ]
     end
 
     def traverse(node, collector)

@@ -483,6 +483,8 @@ class KalendariumController < ApplicationController
 
       {
         event: segment[:event],
+        start_minutes: segment[:start_minutes],
+        end_minutes: segment[:end_minutes],
         timeline_style: [
           "top: #{top_pixels}px",
           "height: #{height_pixels}px",

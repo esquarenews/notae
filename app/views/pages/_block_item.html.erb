@@ -1,0 +1,265 @@
+<% reader_mode = local_assigns.fetch(:reader_mode, false) %>
+<% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
+<% turn_into_items = [
+  ["T", "Text", "text"],
+  ["H1", "Heading 1", "heading_1"],
+  ["H2", "Heading 2", "heading_2"],
+  ["H3", "Heading 3", "heading_3"],
+  ["Pg", "Page", "page"],
+  ["P+", "Page in", "page_in"],
+  ["ul", "Bulleted list", "bulleted_list"],
+  ["1.", "Numbered list", "numbered_list"],
+  ["[]", "To-do list", "todo_list"],
+  [">", "Toggle list", "toggle_list"],
+  ["<>", "Code", "code"],
+  ["\"\"", "Quote", "quote"],
+  ["!", "Callout", "callout"],
+  ["fx", "Block equation", "block_equation"],
+  ["S", "Synced block", "synced_block"],
+  ["T1", "Toggle heading 1", "toggle_heading_1"],
+  ["T2", "Toggle heading 2", "toggle_heading_2"],
+  ["T3", "Toggle heading 3", "toggle_heading_3"],
+  ["||", "2 columns", "columns_2"],
+  ["|||", "3 columns", "columns_3"],
+  ["||||", "4 columns", "columns_4"],
+  ["|||||", "5 columns", "columns_5"]
+] %>
+<% turn_into_block_type_map = {
+  "text" => "paragraph",
+  "heading_1" => "heading_1",
+  "heading_2" => "heading_2",
+  "heading_3" => "heading_3",
+  "bulleted_list" => "bullet_list",
+  "numbered_list" => "ordered_list",
+  "todo_list" => "todo_list",
+  "toggle_list" => "toggle_list",
+  "code" => "code_block",
+  "quote" => "blockquote",
+  "callout" => "callout",
+  "block_equation" => "equation",
+  "toggle_heading_1" => "toggle_heading_1",
+  "toggle_heading_2" => "toggle_heading_2",
+  "toggle_heading_3" => "toggle_heading_3",
+  "columns_2" => "columns_2",
+  "columns_3" => "columns_3",
+  "columns_4" => "columns_4",
+  "columns_5" => "columns_5"
+} %>
+<% color_items = [
+  ["Default", "default"],
+  ["Gray", "gray"],
+  ["Brown", "brown"],
+  ["Orange", "orange"],
+  ["Yellow", "yellow"],
+  ["Green", "green"],
+  ["Blue", "blue"],
+  ["Purple", "purple"],
+  ["Pink", "pink"],
+  ["Red", "red"]
+] %>
+<% highlight_items = [
+  ["None", "default"],
+  ["Peach", "peach"],
+  ["Lemon", "lemon"],
+  ["Mint", "mint"],
+  ["Sky", "sky"],
+  ["Lavender", "lavender"],
+  ["Rose", "rose"]
+] %>
+<% is_embed_block = block.block_type == "embed" %>
+<% is_media_block = %w[image video file].include?(block.block_type) %>
+<% block_color = block.color.to_s %>
+<% active_color = block_color.presence || "default" %>
+<% block_highlight = block.highlight_color.to_s %>
+<% active_highlight = block_highlight.presence || "default" %>
+<% layout_columns_count = block.layout_columns_count %>
+<% block_route_params = { workspace_slug: workspace.slug, page_id: page.id, id: block.id }.merge(embedded_page_params) %>
+<% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
+
+<article id="block_<%= block.id %>"
+         class="notae-doc-block is-type-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-highlight-#{block_highlight}" if block_highlight.present? %> <%= "is-columns" if block.block_type.start_with?("columns_") %> <%= "is-layout-columns-#{layout_columns_count}" if layout_columns_count.present? %>"
+         data-block-list-target="item"
+         data-action="dragenter->block-list#handleDragEnter dragleave->block-list#handleDragLeave dragover->block-list#handleDragOver drop->block-list#handleDrop"
+         data-block-id="<%= block.id %>"
+         data-block-index="<%= index %>"
+         data-controller="block-tools"
+         data-block-tools-block-id-value="<%= block.id %>"
+         data-block-tools-page-title-value="<%= page.title %>"
+         data-block-tools-block-text-value="<%= block.search_text %>">
+  <% unless reader_mode %>
+    <div class="notae-doc-block-row">
+      <span class="notae-doc-handle"
+            title="Drag block"
+            draggable="true"
+            data-action="dragstart->block-list#handleDragStart dragend->block-list#handleDragEnd">
+        ⋮⋮
+      </span>
+      <p class="hidden pb-1 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>
+      <details class="notae-block-menu" data-action="toggle->block-tools#positionMenu">
+        <summary class="notae-block-menu-trigger" aria-label="Block options">⋯</summary>
+        <div class="notae-block-menu-panel">
+        <section class="notae-block-menu-section">
+          <h4>Turn into</h4>
+          <div class="notae-block-menu-grid">
+            <% turn_into_items.each do |icon, label, key| %>
+              <% turn_into_classes = ["notae-block-menu-item"] %>
+              <% turn_into_classes << "is-active" if turn_into_block_type_map[key] == block.block_type || (is_media_block && layout_columns_count == key.split("_").last.to_i) %>
+              <%= button_to command_page_block_path(block_route_params),
+                            method: :post,
+                            params: { block_command: { command: "turn_into", target: key } },
+                            form: { class: "notae-block-menu-inline-form", data: { turbo_stream: true } },
+                            class: turn_into_classes.join(" ") do %>
+                <span class="notae-menu-item-icon"><%= icon %></span>
+                <span class="notae-menu-item-label"><%= label %></span>
+              <% end %>
+            <% end %>
+          </div>
+        </section>
+
+        <section class="notae-block-menu-section">
+          <h4>Color</h4>
+          <div class="notae-block-menu-grid is-color-grid">
+            <% color_items.each do |label, key| %>
+              <% color_classes = ["notae-block-menu-item"] %>
+              <% color_classes << "is-active" if key == active_color %>
+              <%= button_to command_page_block_path(block_route_params),
+                            method: :post,
+                            params: { block_command: { command: "color", color: key } },
+                            form: { class: "notae-block-menu-inline-form", data: { turbo_stream: true } },
+                            class: color_classes.join(" ") do %>
+                <span class="notae-menu-color-dot is-<%= key %>"></span>
+                <span class="notae-menu-item-label"><%= label %></span>
+              <% end %>
+            <% end %>
+          </div>
+        </section>
+
+        <section class="notae-block-menu-section">
+          <h4>Highlight</h4>
+          <div class="notae-block-menu-grid is-color-grid">
+            <% highlight_items.each do |label, key| %>
+              <% highlight_classes = ["notae-block-menu-item"] %>
+              <% highlight_classes << "is-active" if key == active_highlight %>
+              <%= button_to command_page_block_path(block_route_params),
+                            method: :post,
+                            params: { block_command: { command: "highlight", highlight: key } },
+                            form: { class: "notae-block-menu-inline-form", data: { turbo_stream: true } },
+                            class: highlight_classes.join(" ") do %>
+                <span class="notae-menu-highlight-swatch is-<%= key %>"></span>
+                <span class="notae-menu-item-label"><%= label %></span>
+              <% end %>
+            <% end %>
+          </div>
+        </section>
+
+        <section class="notae-block-menu-section">
+          <h4>Actions</h4>
+          <div class="notae-block-menu-grid">
+            <button type="button" class="notae-block-menu-item" data-action="block-tools#copyLink">
+              <span class="notae-menu-item-icon">#</span>
+              <span class="notae-menu-item-label">Copy link to block</span>
+            </button>
+            <%= button_to command_page_block_path(block_route_params),
+                          method: :post,
+                          params: { block_command: { command: "duplicate" } },
+                          form_class: "notae-block-menu-inline-form",
+                          class: "notae-block-menu-item" do %>
+              <span class="notae-menu-item-icon">+</span>
+              <span class="notae-menu-item-label">Duplicate</span>
+            <% end %>
+            <%= form_with url: command_page_block_path(block_route_params),
+                          method: :post,
+                          class: "notae-block-menu-move-form" do %>
+              <%= hidden_field_tag "block_command[command]", "move_to" %>
+              <%= select_tag "block_command[target_page_id]",
+                             options_from_collection_for_select(all_pages, :id, :title),
+                             include_blank: "Move to page...",
+                             class: "notae-block-menu-select" %>
+              <%= button_tag type: "submit", class: "notae-block-menu-item" do %>
+                <span class="notae-menu-item-icon">></span>
+                <span class="notae-menu-item-label">Move to</span>
+              <% end %>
+            <% end %>
+            <%= button_to command_page_block_path(block_route_params),
+                          method: :post,
+                          params: { block_command: { command: "delete" } },
+                          form_class: "notae-block-menu-inline-form",
+                          class: "notae-block-menu-item is-danger" do %>
+              <span class="notae-menu-item-icon">x</span>
+              <span class="notae-menu-item-label">Delete</span>
+            <% end %>
+            <button type="button" class="notae-block-menu-item" data-action="block-tools#suggestEdits">
+              <span class="notae-menu-item-icon">~</span>
+              <span class="notae-menu-item-label">Suggest edits</span>
+            </button>
+            <button type="button"
+                    class="notae-block-menu-item"
+                    data-prompt-template="Improve this block on <%= page.title %>."
+                    data-action="block-tools#askAi">
+              <span class="notae-menu-item-icon">*</span>
+              <span class="notae-menu-item-label">Ask AI</span>
+            </button>
+            <%= button_to command_page_block_path(block_route_params),
+                          method: :post,
+                          params: { block_command: { command: "insert_media", target: "media" } },
+                          form_class: "notae-block-menu-inline-form",
+                          class: "notae-block-menu-item" do %>
+              <span class="notae-menu-item-icon">Md</span>
+              <span class="notae-menu-item-label">Add media</span>
+            <% end %>
+          </div>
+        </section>
+        </div>
+      </details>
+    </div>
+  <% end %>
+
+  <% if is_embed_block %>
+    <div class="notae-doc-embed">
+      <%= form_with model: block,
+                    url: page_block_path(block_route_params),
+                    method: :patch,
+                    class: "notae-doc-inline-form" do |form| %>
+        <%= form.url_field :embed_url, placeholder: "https://www.youtube.com/embed/...", class: "notae-doc-input" %>
+        <%= form.submit "Save", class: "notae-chip-button" %>
+      <% end %>
+      <% if block.embed_url.present? %>
+        <iframe src="<%= block.embed_url %>" class="notae-doc-embed-frame" loading="lazy" allowfullscreen></iframe>
+      <% else %>
+        <p class="notae-doc-muted">Allowed embed domains: youtube, vimeo, figma, loom.</p>
+      <% end %>
+    </div>
+  <% elsif is_media_block %>
+    <%= render partial: "pages/block_media",
+               locals: {
+                 workspace: workspace,
+                 page: page,
+                 block: block,
+                 embedded_page_params: embedded_page_params
+               } %>
+  <% else %>
+    <div data-controller="block-editor"
+         data-block-editor-url-value="<%= page_block_path(block_route_params) %>"
+         data-block-editor-initial-json-value="<%= block.content_json.to_json %>"
+         data-block-editor-block-type-value="<%= block.block_type %>"
+         data-block-editor-block-id-value="<%= block.id %>">
+      <div data-block-editor-target="editor"
+           class="notae-doc-editor is-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-highlight-#{block_highlight}" if block_highlight.present? %>">
+      </div>
+    </div>
+  <% end %>
+
+  <div class="notae-doc-children">
+    <%= render partial: "pages/block_tree",
+               locals: {
+                 workspace: workspace,
+                 page: page,
+                 blocks_by_parent: blocks_by_parent,
+                 parent_id: block.id,
+                 all_pages: all_pages,
+                 reader_mode: reader_mode,
+                 embedded_page_params: embedded_page_params
+               } %>
+
+  </div>
+</article>

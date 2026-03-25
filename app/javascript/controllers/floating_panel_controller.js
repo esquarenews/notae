@@ -58,6 +58,7 @@ export default class extends Controller {
 
     const summaryRect = summary.getBoundingClientRect()
     const panelRect = panel.getBoundingClientRect()
+    const frame = this.positioningFrame(panel)
     const measuredHeight = Math.max(panelRect.height, panel.scrollHeight || 0)
     const measuredWidth = Math.max(panelRect.width, panel.scrollWidth || 0)
     const availableBelow = Math.max(0, window.innerHeight - summaryRect.bottom - margin)
@@ -78,8 +79,8 @@ export default class extends Controller {
     const maxTop = Math.max(margin, window.innerHeight - panelHeight - margin)
     const clampedTop = Math.min(Math.max(top, margin), maxTop)
 
-    panel.style.top = `${clampedTop}px`
-    panel.style.left = `${left}px`
+    panel.style.top = `${clampedTop - frame.top}px`
+    panel.style.left = `${left - frame.left}px`
     panel.style.maxHeight = `${maxHeight}px`
     panel.style.visibility = ""
   }
@@ -128,5 +129,35 @@ export default class extends Controller {
     if (!controls) return
 
     controls.classList.toggle("is-menu-open", this.element.open)
+  }
+
+  positioningFrame(panel) {
+    const offsetParent = panel?.offsetParent
+    if (offsetParent instanceof HTMLElement) {
+      const rect = offsetParent.getBoundingClientRect()
+      return {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+      }
+    }
+
+    if (!this.layoutRootElement) {
+      return {
+        left: 0,
+        top: 0,
+        width: window.innerWidth,
+        height: window.innerHeight
+      }
+    }
+
+    const rect = this.layoutRootElement.getBoundingClientRect()
+    return {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    }
   }
 }

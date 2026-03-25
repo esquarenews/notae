@@ -42,7 +42,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("Month")
     expect(response.body).to include("Year")
     expect(response.body).to include("Project")
-    expect(response.body).to include("data-controller=\"kalendarium-focus\"")
+    expect(response.body).to include("data-controller=\"kalendarium-focus kalendarium-preview\"")
     expect(response.body).to include("notae-kalendarium-sidebar-accordion-summary")
     expect(response.body).to include("name=\"kalendarium_workspace\"")
     expect(response.body).to include("aria-label=\"Refresh calendars\"")
@@ -58,10 +58,17 @@ RSpec.describe "Kalendarium", type: :request do
     kalendarium_shell = document.at_css(".notae-kalendarium")
     expect(kalendarium_shell).to be_present
     expect(kalendarium_shell["data-action"]).to include("kalendarium:quick-create->kalendarium-focus#prepareNewEvent")
+    expect(kalendarium_shell["data-action"]).to include("kalendarium:preview-event->kalendarium-preview#render")
+    expect(kalendarium_shell["data-action"]).to include("kalendarium:preview-clear->kalendarium-preview#clear")
     sticky_sidebar = document.at_css("aside.notae-kalendarium-sidebar.is-pinned")
     expect(sticky_sidebar).to be_present
     expect(sticky_sidebar.at_css(".notae-kalendarium-sidebar-accordion-summary")&.text.to_s.strip).to eq("Create event")
     expect(sticky_sidebar.at_css("[data-kalendarium-focus-target='createAccordion']")).to be_present
+    create_form = sticky_sidebar.at_css("form[data-controller='kalendarium-event-form']")
+    expect(create_form).to be_present
+    expect(create_form["data-kalendarium-event-form-preview-enabled-value"]).to eq("true")
+    expect(create_form.at_css("[data-kalendarium-event-form-target='titleInput']")).to be_present
+    expect(create_form.at_css("button[data-action='kalendarium-event-form#cancel']")&.text.to_s.strip).to eq("Cancel")
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
   end
@@ -143,6 +150,10 @@ RSpec.describe "Kalendarium", type: :request do
     expect(day_track["data-day-date"]).to eq("2026-03-01")
     expect(document.at_css("[data-kalendarium-focus-target='createStartInput']")).to be_present
     expect(document.at_css("[data-kalendarium-focus-target='createEndInput']")).to be_present
+    timeline_event = document.at_css(".notae-kalendarium-day-track .notae-kalendarium-event-card.is-timeline")
+    expect(timeline_event).to be_present
+    expect(timeline_event["data-start-minutes"]).to eq("570")
+    expect(timeline_event["data-end-minutes"]).to eq("630")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)
@@ -195,6 +206,11 @@ RSpec.describe "Kalendarium", type: :request do
     expect(stylesheet).to include(".notae-kalendarium-event-delete-button {\n  width: 100%;")
     expect(stylesheet).to include(".notae-kalendarium-event-delete-form {\n  width: 100%;")
     expect(stylesheet).to include("background: #dc2626;")
+    expect(stylesheet).to include(".notae-kalendarium-draft-preview {")
+    expect(stylesheet).to include(".notae-kalendarium-draft-preview-conflict {")
+    expect(stylesheet).to include(".notae-kalendarium-draft-preview.is-dragging {")
+    expect(stylesheet).to include("cursor: grab;")
+    expect(stylesheet).to include(".notae-kalendarium-project-card header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 0.55rem;\n  padding-bottom: 0.45rem;")
   end
 
   it "keeps the create rail outside the main calendar column on large screens" do
@@ -206,6 +222,14 @@ RSpec.describe "Kalendarium", type: :request do
     expect(stylesheet).to include("@media (min-width: 1501px)")
     expect(stylesheet).to include(".notae-content.notae-content-kalendarium {\n    padding-inline: clamp(0.45rem, 0.9vw, 0.8rem);")
     expect(stylesheet).to include(".notae-kalendarium {\n    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);")
+  end
+
+  it "stacks each project title above its actions inside the projects filter popover" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-kalendarium-project-option-row {\n  display: flex;\n  flex-direction: column;\n  align-items: stretch;")
+    expect(stylesheet).to include(".notae-kalendarium-project-option-label {\n  display: block;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;")
+    expect(stylesheet).to include(".notae-kalendarium-project-option-actions {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 0.26rem;\n  padding-left: 1rem;")
   end
 
   it "keeps the year-view toggle on its own filter row so projects stays aligned with the other calendar buttons" do
@@ -494,6 +518,9 @@ RSpec.describe "Kalendarium", type: :request do
     document = Nokogiri::HTML.parse(response.body)
     option_row = document.at_css(".notae-kalendarium-project-option-row")
     expect(option_row).to be_present
+    option_label = option_row.at_css(".notae-kalendarium-project-option-label")
+    expect(option_label).to be_present
+    expect(option_label.text).to include(project.name)
     show_link = option_row.at_css("a.notae-kalendarium-project-action-link.is-toggle")
     archive_link = option_row.at_css("a[data-turbo-method='patch']")
     delete_link = option_row.at_css("a[data-turbo-method='delete']")

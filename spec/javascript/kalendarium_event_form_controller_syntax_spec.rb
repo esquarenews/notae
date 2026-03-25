@@ -23,4 +23,24 @@ RSpec.describe "KalendariumEventFormController JavaScript syntax" do
     expect(source).to include("this.endInputTarget.min = minimum")
     expect(source).to include("T23:59")
   end
+
+  it "publishes preview events for the create-event rail" do
+    source = Rails.root.join("app/javascript/controllers/kalendarium_event_form_controller.js").read
+
+    expect(source).to include("previewEnabled")
+    expect(source).to include("publishPreview()")
+    expect(source).to include('this.dispatchPreview("kalendarium:preview-event", detail)')
+    expect(source).to include('this.dispatchPreview("kalendarium:preview-clear", {})')
+    expect(source).to include('shell.dispatchEvent(new CustomEvent(name, {')
+  end
+
+  it "supports canceling the draft event hold" do
+    source = Rails.root.join("app/javascript/controllers/kalendarium_event_form_controller.js").read
+
+    expect(source).to include("cancel(event)")
+    expect(source).to include("this.element.reset()")
+    expect(source).to include('this.startInputTarget.value = `${selectedDate}T09:00`')
+    expect(source).to include('this.endInputTarget.value = `${selectedDate}T10:00`')
+    expect(source).to include("this.accordionElement.open = false")
+  end
 end
