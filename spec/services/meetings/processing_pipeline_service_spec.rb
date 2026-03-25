@@ -125,6 +125,106 @@ RSpec.describe Meetings::ProcessingPipelineService do
     expect(turns.map(&:text)).to eq([ "Hello", "Hi", "Follow up" ])
   end
 
+  it "transcribes long captures in chunks and offsets merged segment timestamps" do
+    service = build_service
+    file = Tempfile.new([ "meeting-capture", ".webm" ])
+    file.write("audio")
+    file.flush
+    chunk_dir = Dir.mktmpdir("meeting-chunks-spec")
+    chunker = instance_double(Meetings::AudioChunker)
+    first_chunk = Meetings::AudioChunker::Chunk.new(path: "/tmp/chunk-001.mp3", start_offset_seconds: 0.0, duration_seconds: 1200.0)
+    second_chunk = Meetings::AudioChunker::Chunk.new(path: "/tmp/chunk-002.mp3", start_offset_seconds: 1200.0, duration_seconds: 337.5)
+
+    allow(service).to receive(:audio_duration_seconds).with(file.path).and_return(1537.57625)
+    allow(Meetings::AudioChunker).to receive(:available?).and_return(true)
+    allow(Meetings::AudioChunker).to receive(:new)
+      .with(max_chunk_duration_seconds: described_class::TRANSCRIPTION_CHUNK_DURATION_SECONDS)
+      .and_return(chunker)
+    allow(chunker).to receive(:split!).with(file_path: file.path).and_return(
+      { directory: chunk_dir, chunks: [ first_chunk, second_chunk ] }
+    )
+    allow(service).to receive(:transcribe_with_preferred_formats).with(first_chunk.path).and_return(
+      {
+        "text" => "First chunk",
+        "segments" => [ { "start" => 0.0, "end" => 3.5, "text" => "Hello", "speaker" => "speaker_a" } ],
+        "usage" => { "input_tokens" => 50, "output_tokens" => 15, "total_tokens" => 65 }
+      }
+    )
+    allow(service).to receive(:transcribe_with_preferred_formats).with(second_chunk.path).and_return(
+      {
+        "text" => "Second chunk",
+        "segments" => [ { "start" => 1.25, "end" => 4.75, "text" => "Back again", "speaker" => "speaker_b" } ],
+        "usage" => { "input_tokens" => 40, "output_tokens" => 12, "total_tokens" => 52 }
+      }
+    )
+
+    response = service.send(:transcribe_audio_file, file.path)
+
+    expect(response["text"]).to eq("First chunk\n\nSecond chunk")
+    expect(response["segments"]).to eq([
+      { "start" => 0.0, "end" => 3.5, "text" => "Hello", "speaker" => "speaker_a" },
+      { "start" => 1201.25, "end" => 1204.75, "text" => "Back again", "speaker" => "speaker_b" }
+    ])
+    expect(response["usage"]).to eq({ "input_tokens" => 90, "output_tokens" => 27, "total_tokens" => 117 })
+    expect(response["chunk_count"]).to eq(2)
+    expect(Dir.exist?(chunk_dir)).to be(false)
+  ensure
+    file.close
+    file.unlink
+  end
+
+  it "falls back to chunking when the transcription API rejects the full capture for duration" do
+    service = build_service
+    file = Tempfile.new([ "meeting-capture", ".webm" ])
+    file.write("audio")
+    file.flush
+    chunk_dir = Dir.mktmpdir("meeting-chunks-duration-spec")
+    chunker = instance_double(Meetings::AudioChunker)
+    chunk = Meetings::AudioChunker::Chunk.new(path: "/tmp/chunk-001.mp3", start_offset_seconds: 0.0, duration_seconds: 900.0)
+
+    allow(service).to receive(:audio_duration_seconds).with(file.path).and_raise(Meetings::AudioChunker::Error, "probe unavailable")
+    allow(Meetings::AudioChunker).to receive(:available?).and_return(true)
+    allow(Meetings::AudioChunker).to receive(:new)
+      .with(max_chunk_duration_seconds: described_class::TRANSCRIPTION_CHUNK_DURATION_SECONDS)
+      .and_return(chunker)
+    allow(chunker).to receive(:split!).with(file_path: file.path).and_return(
+      { directory: chunk_dir, chunks: [ chunk ] }
+    )
+    allow(service).to receive(:transcribe_with_preferred_formats) do |path|
+      if path == file.path
+        raise Openai::AudioTranscriptionsClient::Error, "audio duration 1537.57625 seconds is longer than 1400 seconds which is the maximum for this model"
+      end
+
+      { "text" => "Recovered from chunks", "usage" => { "input_tokens" => 12, "output_tokens" => 4, "total_tokens" => 16 } }
+    end
+
+    response = service.send(:transcribe_audio_file, file.path)
+
+    expect(response["text"]).to eq("Recovered from chunks")
+    expect(response["usage"]).to eq({ "input_tokens" => 12, "output_tokens" => 4, "total_tokens" => 16 })
+    expect(Dir.exist?(chunk_dir)).to be(false)
+  ensure
+    file.close
+    file.unlink
+  end
+
+  it "raises a clear error when long captures need chunking but ffmpeg is unavailable" do
+    service = build_service
+    file = Tempfile.new([ "meeting-capture", ".webm" ])
+    file.write("audio")
+    file.flush
+
+    allow(service).to receive(:audio_duration_seconds).with(file.path).and_return(1537.57625)
+    allow(Meetings::AudioChunker).to receive(:available?).and_return(false)
+
+    expect do
+      service.send(:transcribe_audio_file, file.path)
+    end.to raise_error(Openai::AudioTranscriptionsClient::Error, /ffmpeg\/ffprobe/)
+  ensure
+    file.close
+    file.unlink
+  end
+
   it "logs transcription usage for meeting AI usage tracking" do
     service = build_service
     allow(Search::AiUsageLogger).to receive(:log!)

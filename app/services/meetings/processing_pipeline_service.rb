@@ -1,10 +1,13 @@
 require "tempfile"
+require "fileutils"
 
 module Meetings
   class ProcessingPipelineService
     class Error < StandardError; end
     DIARIZATION_MODEL = "gpt-4o-transcribe-diarize".freeze
     FALLBACK_MODEL = "gpt-4o-mini-transcribe".freeze
+    TRANSCRIPTION_MAX_DURATION_SECONDS = 1400.0
+    TRANSCRIPTION_CHUNK_DURATION_SECONDS = 1200.0
     TRANSCRIPTION_CONNECTION_RETRY_ATTEMPTS = 3
     TRANSCRIPTION_CONNECTION_RETRY_BASE_DELAY = 1.second
 
@@ -62,7 +65,7 @@ module Meetings
       downloaded_path.write(capture_attachment.blob.download)
       downloaded_path.flush
 
-      response = transcribe_with_preferred_formats(downloaded_path.path)
+      response = transcribe_audio_file(downloaded_path.path)
       log_transcription_usage!(response)
       transcript_text = response["text"].to_s.strip
       normalized_segments = normalize_segments(response, transcript_text)
@@ -75,6 +78,48 @@ module Meetings
     ensure
       downloaded_path&.close
       downloaded_path&.unlink if downloaded_path.respond_to?(:unlink)
+    end
+
+    def transcribe_audio_file(file_path)
+      return transcribe_audio_file_in_chunks(file_path) if capture_requires_chunking?(file_path)
+
+      transcribe_with_preferred_formats(file_path)
+    rescue Openai::AudioTranscriptionsClient::Error => error
+      raise error unless duration_limit_error?(error.message)
+
+      transcribe_audio_file_in_chunks(file_path, original_error: error)
+    end
+
+    def capture_requires_chunking?(file_path)
+      audio_duration_seconds(file_path) > TRANSCRIPTION_MAX_DURATION_SECONDS
+    rescue Meetings::AudioChunker::Error => error
+      Rails.logger.warn("Meeting audio probe failed for session=#{session.id}: #{error.class}: #{error.message}")
+      false
+    end
+
+    def audio_duration_seconds(file_path)
+      Meetings::AudioChunker.duration_seconds(file_path)
+    end
+
+    def transcribe_audio_file_in_chunks(file_path, original_error: nil)
+      unless Meetings::AudioChunker.available?
+        message = "Meeting capture exceeds the transcription limit, but ffmpeg/ffprobe are not available to split it into chunks"
+        message = "#{message}. #{original_error.message}" if original_error.present?
+        raise Openai::AudioTranscriptionsClient::Error, message
+      end
+
+      chunker = Meetings::AudioChunker.new(max_chunk_duration_seconds: TRANSCRIPTION_CHUNK_DURATION_SECONDS)
+      split_result = chunker.split!(file_path: file_path)
+      chunk_responses = split_result.fetch(:chunks).map do |chunk|
+        {
+          chunk: chunk,
+          response: transcribe_with_preferred_formats(chunk.path)
+        }
+      end
+
+      merge_chunked_transcriptions(chunk_responses)
+    ensure
+      cleanup_chunk_output_dir(split_result)
     end
 
     def transcribe_with_preferred_formats(file_path)
@@ -104,6 +149,81 @@ module Meetings
 
       raise last_error if last_error
       raise Error, "Audio transcription request failed"
+    end
+
+    def merge_chunked_transcriptions(chunk_responses)
+      text_parts = []
+      segments = []
+      words = []
+      usage = {
+        "input_tokens" => 0,
+        "output_tokens" => 0,
+        "total_tokens" => 0
+      }
+
+      chunk_responses.each do |chunk_response|
+        chunk = chunk_response.fetch(:chunk)
+        response = chunk_response.fetch(:response)
+        payload = response.is_a?(Hash) ? response : {}
+
+        text = payload["text"] || payload[:text]
+        text = text.to_s.strip
+        text_parts << text if text.present?
+        segments.concat(offset_transcription_entries(payload["segments"] || payload[:segments], chunk.start_offset_seconds))
+        words.concat(offset_transcription_entries(payload["words"] || payload[:words], chunk.start_offset_seconds))
+        accumulate_transcription_usage!(usage, payload["usage"] || payload[:usage])
+      end
+
+      {
+        "text" => text_parts.join("\n\n"),
+        "segments" => segments,
+        "words" => words,
+        "usage" => usage,
+        "chunk_count" => chunk_responses.length
+      }
+    end
+
+    def offset_transcription_entries(entries, offset_seconds)
+      Array(entries).filter_map do |entry|
+        next unless entry.is_a?(Hash)
+
+        duplicate = entry.deep_dup
+        offset_transcription_timestamp!(duplicate, "start", offset_seconds)
+        offset_transcription_timestamp!(duplicate, "end", offset_seconds)
+        duplicate
+      end
+    end
+
+    def offset_transcription_timestamp!(entry, key, offset_seconds)
+      if entry.key?(key)
+        entry[key] = entry[key].to_f + offset_seconds
+      elsif entry.key?(key.to_sym)
+        entry[key.to_sym] = entry[key.to_sym].to_f + offset_seconds
+      end
+    end
+
+    def accumulate_transcription_usage!(totals, raw_usage)
+      return if raw_usage.blank?
+
+      normalized = transcription_usage_from_response("usage" => raw_usage)
+      return if normalized.blank?
+
+      totals["input_tokens"] += normalized[:prompt_tokens]
+      totals["output_tokens"] += normalized[:completion_tokens]
+      totals["total_tokens"] += normalized[:total_tokens]
+    end
+
+    def cleanup_chunk_output_dir(split_result)
+      directory = split_result.is_a?(Hash) ? split_result[:directory] || split_result["directory"] : nil
+      return if directory.blank? || !Dir.exist?(directory)
+
+      FileUtils.remove_entry(directory)
+    end
+
+    def duration_limit_error?(message)
+      normalized = message.to_s.downcase
+      normalized.include?("audio duration") &&
+        normalized.include?("maximum for this model")
     end
 
     def transcribe_with_connection_retries(**options)
