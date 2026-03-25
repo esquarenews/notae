@@ -12785,7 +12785,8 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
 
 .notae-epistularium-pane-list {
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .notae-epistularium-pane-list.has-account-accent::before {
