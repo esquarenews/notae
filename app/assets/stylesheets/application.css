@@ -12773,6 +12773,10 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   display: grid;
   align-content: start;
   align-self: start;
+  max-height: calc(100vh - 7.75rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .notae-epistularium-pane-detail[data-epistularium-detail-transition="fade"] {
@@ -12802,7 +12806,8 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
 }
 
 .notae-epistularium-pane-accounts,
-.notae-epistularium-pane-list {
+.notae-epistularium-pane-list,
+.notae-epistularium-pane-detail {
   position: sticky;
   top: 1rem;
 }
@@ -13081,9 +13086,12 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   }
 
   .notae-epistularium-pane-accounts,
-  .notae-epistularium-pane-list {
+  .notae-epistularium-pane-list,
+  .notae-epistularium-pane-detail {
     position: static;
     min-height: 0;
+    max-height: none;
+    overflow: visible;
   }
 
   .notae-epistularium-grid:not(.is-message-open) .notae-epistularium-pane-detail {
@@ -13968,7 +13976,8 @@ input[type="submit"].notae-chip-button,
 }
 
 .notae-epistularium-pane-accounts,
-.notae-epistularium-pane-list {
+.notae-epistularium-pane-list,
+.notae-epistularium-pane-detail {
   top: 1.2rem;
 }
 

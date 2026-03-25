@@ -181,6 +181,14 @@ RSpec.describe "Epistularium", type: :request do
     expect(inactive_item.at_css(".notae-epistularium-account-indicator")).to be_present
   end
 
+  it "keeps the message list and reading pane independently scrollable on desktop" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-epistularium-pane {\n  min-height: 42rem;\n  min-width: 0;\n  display: grid;\n  align-content: start;\n  align-self: start;\n  max-height: calc(100vh - 7.75rem);\n  overflow-y: auto;")
+    expect(stylesheet).to include(".notae-epistularium-pane-accounts,\n.notae-epistularium-pane-list,\n.notae-epistularium-pane-detail {\n  position: sticky;\n  top: 1rem;")
+    expect(stylesheet).to include("@media (max-width: 900px) {\n  .notae-epistularium-grid {\n    grid-template-columns: 1fr;\n  }\n\n  .notae-epistularium-pane-accounts,\n  .notae-epistularium-pane-list,\n  .notae-epistularium-pane-detail {\n    position: static;\n    min-height: 0;\n    max-height: none;\n    overflow: visible;")
+  end
+
   it "renders readable email html without leaking stylesheet text into the reading pane" do
     user, workspace, account, message = build_stack(suffix: "html-render")
     message.update!(
