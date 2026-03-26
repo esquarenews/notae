@@ -33,4 +33,14 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include('direction: event.shiftKey ? "outdent" : "indent"')
     expect(source).to include("focusEditor: true")
   end
+
+  it "flushes pending editor saves before a block reparent happens" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("notae:block-flush-save")
+    expect(source).to include("handleFlushSaveRequest(event)")
+    expect(source).to include("event.detail.promise = this.flushSave()")
+    expect(source).to include("flushSave()")
+    expect(source).to include("if (!this.hasPendingChanges) return true")
+  end
 end

@@ -92,7 +92,24 @@ class BlocksController < ApplicationController
       target_parent_id: params[:target_parent_id],
       target_index: params[:target_index]
     )
-    head :ok
+    respond_to do |format|
+      format.json { head :ok }
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "notae_doc_canvas",
+          partial: "pages/document_canvas",
+          locals: {
+            workspace: @workspace,
+            page: @page,
+            blocks_by_parent: current_page_render_context[:blocks_by_parent],
+            move_target_pages: current_page_render_context[:move_target_pages],
+            reader_mode: current_page_render_context[:reader_mode],
+            embedded_page_params: current_embedded_page_params
+          }
+        )
+      end
+      format.html { redirect_to page_redirect_path(anchor: "block_#{@block.id}"), notice: "Block updated." }
+    end
   end
 
   def archive

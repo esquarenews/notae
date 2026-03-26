@@ -224,28 +224,15 @@
     </div>
   </header>
 
-  <div class="notae-doc-canvas">
-    <%= render partial: "pages/block_tree",
-               locals: {
-                 workspace: @workspace,
-                 page: @page,
-                 blocks_by_parent: @blocks_by_parent,
-                 parent_id: nil,
-                 all_pages: @move_target_pages,
-                 reader_mode: @page_reader_mode,
-                 embedded_page_params: embedded_page_params
-               } %>
-
-    <% if !@page_reader_mode && policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create? %>
-      <%= form_with model: Block.new,
-                    url: page_blocks_path(page_blocks_route_params),
-                    class: "notae-doc-add-form" do |form| %>
-        <%= form.hidden_field :parent_block_id %>
-        <%= form.hidden_field :block_type, value: "paragraph" %>
-        <%= form.submit "+ Add block", class: "notae-doc-add-button" %>
-      <% end %>
-    <% end %>
-  </div>
+  <%= render partial: "pages/document_canvas",
+             locals: {
+               workspace: @workspace,
+               page: @page,
+               blocks_by_parent: @blocks_by_parent,
+               move_target_pages: @move_target_pages,
+               reader_mode: @page_reader_mode,
+               embedded_page_params: embedded_page_params
+             } %>
 
   <section class="notae-doc-backlinks">
     <h2>Backlinks</h2>

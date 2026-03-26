@@ -138,6 +138,8 @@ export default class extends Controller {
   connect() {
     this.currentBlockType = this.blockTypeValue || "paragraph"
     this.saveTimeout = null
+    this.pendingSavePromise = null
+    this.hasPendingChanges = false
     this.editingIdleTimeout = null
     this.suppressUpdateCycle = false
     this.lastKnownUpdatedAtMs = 0
@@ -148,8 +150,10 @@ export default class extends Controller {
     this.slashMenuMouseDownHandler = (event) => this.handleSlashMenuMouseDown(event)
     this.remoteUpdateHandler = (event) => this.applyRemoteUpdate(event.detail)
     this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
+    this.flushSaveHandler = (event) => this.handleFlushSaveRequest(event)
     window.addEventListener("notae:block-remote-update", this.remoteUpdateHandler)
     window.addEventListener("notae:ai-insert", this.aiInsertHandler)
+    window.addEventListener("notae:block-flush-save", this.flushSaveHandler)
 
     this.editor = new Editor({
       element: this.editorTarget,
@@ -178,6 +182,7 @@ export default class extends Controller {
         this.syncBlockTypeFromDocument(editor.getJSON())
         this.markEditingActive()
         this.captureInsertionPoint()
+        this.hasPendingChanges = true
         this.scheduleSave()
       },
       onSelectionUpdate: () => this.captureInsertionPoint(),
@@ -201,6 +206,7 @@ export default class extends Controller {
     this.setBlockFocused(false)
     window.removeEventListener("notae:block-remote-update", this.remoteUpdateHandler)
     window.removeEventListener("notae:ai-insert", this.aiInsertHandler)
+    window.removeEventListener("notae:block-flush-save", this.flushSaveHandler)
     this.markEditingInactive()
     this.clearCapturedInsertionPoint()
 
@@ -265,10 +271,17 @@ export default class extends Controller {
     this.suppressUpdateCycle = true
     this.currentBlockType = block.block_type || this.currentBlockType
     this.editor.commands.setContent(block.content_json || { type: "doc", content: [{ type: "paragraph" }] })
+    this.hasPendingChanges = false
 
     if (Number.isFinite(incomingUpdatedAtMs)) {
       this.lastKnownUpdatedAtMs = incomingUpdatedAtMs
     }
+  }
+
+  handleFlushSaveRequest(event) {
+    if (String(event.detail?.blockId || "") !== String(this.blockIdValue || "")) return
+
+    event.detail.promise = this.flushSave()
   }
 
   handleEditorKeydown(event) {
@@ -683,7 +696,15 @@ export default class extends Controller {
       .trim()
   }
 
+  flushSave() {
+    clearTimeout(this.saveTimeout)
+    return this.save()
+  }
+
   async save() {
+    if (this.pendingSavePromise) return this.pendingSavePromise
+    if (!this.hasPendingChanges) return true
+
     const payload = {
       block: {
         content_json: this.editor.getJSON(),
@@ -691,25 +712,35 @@ export default class extends Controller {
       }
     }
 
-    const response = await fetch(this.urlValue, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
-      },
-      body: JSON.stringify(payload)
-    })
+    this.pendingSavePromise = (async () => {
+      const response = await fetch(this.urlValue, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
+        },
+        body: JSON.stringify(payload)
+      })
 
-    if (!response.ok) return
+      if (!response.ok) return false
 
-    const data = await response.json()
-    const updatedAtMs = Date.parse(data.updated_at || "")
-    if (Number.isFinite(updatedAtMs)) {
-      this.lastKnownUpdatedAtMs = updatedAtMs
+      const data = await response.json()
+      const updatedAtMs = Date.parse(data.updated_at || "")
+      if (Number.isFinite(updatedAtMs)) {
+        this.lastKnownUpdatedAtMs = updatedAtMs
+      }
+
+      this.hasPendingChanges = false
+      this.updatePageTopbarEditedAt(data.page_updated_at || data.updated_at)
+      return true
+    })()
+
+    try {
+      return await this.pendingSavePromise
+    } finally {
+      this.pendingSavePromise = null
     }
-
-    this.updatePageTopbarEditedAt(data.page_updated_at || data.updated_at)
   }
 
   updatePageTopbarEditedAt(isoTimestamp) {

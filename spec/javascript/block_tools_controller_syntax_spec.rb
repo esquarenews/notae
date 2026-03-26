@@ -63,6 +63,8 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     expect(source).to include("outdent(event)")
     expect(source).to include("handleReparentRequest(event)")
     expect(source).to include("persistReparent(plan)")
+    expect(source).to include("flushBlockSave()")
+    expect(source).to include("notae:block-flush-save")
     expect(source).to include("childTreeForBlock(block)")
     expect(source).to include("parentTreeForBlock(block)")
   end

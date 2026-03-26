@@ -270,15 +270,11 @@ export default class extends Controller {
     const plan = direction === "outdent" ? this.outdentPlan() : this.indentPlan()
     if (!plan) return
 
-    plan.apply()
-
     try {
+      await this.flushBlockSave()
       await this.persistReparent(plan)
       if (focusEditor) this.focusEditor()
-    } catch (_error) {
-      plan.revert()
-      if (focusEditor) this.focusEditor()
-    }
+    } catch (_error) {}
   }
 
   indentPlan() {
@@ -294,13 +290,10 @@ export default class extends Controller {
     const targetTree = this.childTreeForBlock(previousSibling)
     if (!targetTree) return null
 
-    return this.buildMovePlan({
-      currentBlock,
-      targetTree,
-      targetSibling: null,
+    return {
       targetParentId: previousSibling.dataset.blockId,
       targetIndex: this.directChildBlocks(targetTree).length
-    })
+    }
   }
 
   outdentPlan() {
@@ -314,32 +307,9 @@ export default class extends Controller {
     const parentIndex = targetSiblings.indexOf(parentBlock)
     if (parentIndex < 0) return null
 
-    return this.buildMovePlan({
-      currentBlock,
-      targetTree,
-      targetSibling: targetSiblings[parentIndex + 1] || null,
+    return {
       targetParentId: targetTree.dataset.blockListParentIdValue || null,
       targetIndex: parentIndex + 1
-    })
-  }
-
-  buildMovePlan({ currentBlock, targetTree, targetSibling, targetParentId, targetIndex }) {
-    const sourceTree = currentBlock.parentElement
-    const sourceNextSibling = currentBlock.nextElementSibling
-
-    return {
-      targetParentId,
-      targetIndex,
-      apply: () => {
-        targetTree.insertBefore(currentBlock, targetSibling)
-      },
-      revert: () => {
-        if (sourceNextSibling && sourceNextSibling.parentElement === sourceTree) {
-          sourceTree.insertBefore(currentBlock, sourceNextSibling)
-        } else {
-          sourceTree.appendChild(currentBlock)
-        }
-      }
     }
   }
 
@@ -349,7 +319,7 @@ export default class extends Controller {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        "Accept": "text/vnd.turbo-stream.html",
         ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {})
       },
       credentials: "same-origin",
@@ -360,6 +330,23 @@ export default class extends Controller {
     })
 
     if (!response.ok) throw new Error("Block nesting update failed")
+
+    const stream = await response.text()
+    if (stream && window.Turbo?.renderStreamMessage) {
+      window.Turbo.renderStreamMessage(stream)
+      return
+    }
+
+    window.location.reload()
+  }
+
+  async flushBlockSave() {
+    const detail = { blockId: this.blockIdValue }
+    window.dispatchEvent(new CustomEvent("notae:block-flush-save", { detail }))
+
+    if (!detail.promise) return
+
+    await detail.promise
   }
 
   reorderUrl() {
@@ -372,14 +359,14 @@ export default class extends Controller {
   }
 
   focusEditor() {
-    const editorSurface = this.element.querySelector(".ProseMirror")
+    const editorSurface = document.querySelector(`#block_${this.blockIdValue} .ProseMirror`)
     if (!(editorSurface instanceof HTMLElement)) return
 
     requestAnimationFrame(() => editorSurface.focus())
   }
 
   currentBlock() {
-    return this.element.closest("[data-block-id]")
+    return this.element
   }
 
   currentTree() {

@@ -269,6 +269,49 @@ RSpec.describe "Blocks", type: :request do
     expect(page.blocks.active.roots.ordered.pluck(:id)).to eq([ parent.id, child_candidate.id ])
   end
 
+  it "rerenders the document canvas over turbo stream when indenting a block" do
+    owner = User.create!(email: "blocks-indent-stream-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Indent stream blocks", slug: "indent-stream-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Indent stream page")
+    parent = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Parent block" } ] }
+        ]
+      }
+    )
+    child_candidate = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Indented block text" } ] }
+        ]
+      }
+    )
+    sign_in owner
+
+    patch reorder_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: child_candidate.id),
+          params: { target_parent_id: parent.id, target_index: 0 },
+          as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="replace" target="notae_doc_canvas"')
+    expect(response.body).to include("Indented block text")
+    expect(response.body).to include(%(id="block_#{child_candidate.id}"))
+    expect(child_candidate.reload.parent_block_id).to eq(parent.id)
+  end
+
   it "renders drag-and-drop action bindings for block items" do
     owner = User.create!(email: "blocks-reorder-binding-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Reorder bindings", slug: "reorder-bindings")
