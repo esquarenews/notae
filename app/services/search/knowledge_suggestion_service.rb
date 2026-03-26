@@ -41,7 +41,7 @@ module Search
       return unavailable(:rate_limited) unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
 
       context_chunks = select_context_chunks
-      return unavailable(delta_mode? ? :no_recent_changes : :no_context) if context_chunks.empty?
+      return unavailable(delta_mode? ? :no_recent_changes : :no_context, context_chunks_count: 0) if context_chunks.empty?
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: prompt_for(context_chunks),
@@ -80,8 +80,7 @@ module Search
         recent_since: since
       )
     rescue Openai::ResponsesClient::Error => error
-      Rails.logger.warn("Knowledge suggestion generation failed for workspace=#{workspace.id}: #{error.message}")
-      unavailable(:provider_error)
+      unavailable(:provider_error, error: error, context_chunks_count: context_chunks&.length)
     end
 
     private
@@ -335,9 +334,44 @@ module Search
       end
     end
 
-    def unavailable(reason)
+    def unavailable(reason, error: nil, context_chunks_count: nil)
       @unavailable_reason = reason
+      metadata = suggestion_attempt_metadata(reason: reason, context_chunks_count: context_chunks_count)
+
+      if error.present?
+        Rails.logger.warn("Knowledge suggestion generation failed for workspace=#{workspace.id}: #{error.class}: #{error.message}")
+        Search::AiUsageLogger.log_outcome!(
+          user: user,
+          workspace: workspace,
+          operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_FAILURE,
+          model: MODEL,
+          metadata: metadata.merge(
+            "error_class" => error.class.name,
+            "error_message" => error.message.to_s
+          )
+        )
+      else
+        Search::AiUsageLogger.log_outcome!(
+          user: user,
+          workspace: workspace,
+          operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_MISS,
+          model: MODEL,
+          metadata: metadata
+        )
+      end
       nil
+    end
+
+    def suggestion_attempt_metadata(reason:, context_chunks_count:)
+      metadata = {
+        "feature" => "knowledge_suggestion_service",
+        "reason" => reason.to_s,
+        "report_mode" => mode
+      }
+      metadata["context_chunks"] = context_chunks_count if !context_chunks_count.nil?
+      metadata["baseline_generated_at"] = previous_report&.generated_at&.iso8601 if previous_report&.generated_at.present?
+      metadata["recent_since"] = since&.iso8601 if since.present?
+      metadata
     end
 
     def delta_mode?

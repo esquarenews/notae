@@ -272,33 +272,58 @@ export default class extends Controller {
   }
 
   handleEditorKeydown(event) {
-    if (!this.slashMenuOpen()) return false
+    if (this.slashMenuOpen()) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault()
+        this.moveSlashSelection(1)
+        return true
+      }
 
-    if (event.key === "ArrowDown") {
-      event.preventDefault()
-      this.moveSlashSelection(1)
-      return true
+      if (event.key === "ArrowUp") {
+        event.preventDefault()
+        this.moveSlashSelection(-1)
+        return true
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault()
+        this.executeSlashCommand(this.selectedSlashIndex)
+        return true
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault()
+        this.hideSlashMenu()
+        return true
+      }
+
+      return false
     }
 
-    if (event.key === "ArrowUp") {
+    if (
+      event.key === "Tab" &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      this.hasBlockIdValue &&
+      this.supportsBlockReparentShortcut()
+    ) {
       event.preventDefault()
-      this.moveSlashSelection(-1)
-      return true
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault()
-      this.executeSlashCommand(this.selectedSlashIndex)
-      return true
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault()
-      this.hideSlashMenu()
+      window.dispatchEvent(new CustomEvent("notae:block-reparent", {
+        detail: {
+          blockId: this.blockIdValue,
+          direction: event.shiftKey ? "outdent" : "indent",
+          focusEditor: true
+        }
+      }))
       return true
     }
 
     return false
+  }
+
+  supportsBlockReparentShortcut() {
+    return !["bullet_list", "ordered_list", "todo_list", "code_block"].includes(this.currentBlockType)
   }
 
   handleBlockReorderDragOver(event) {

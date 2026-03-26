@@ -91,6 +91,26 @@ RSpec.describe "Workspace home styling", type: :request do
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
   end
 
+  it "stays on the workspace home when show_home is explicitly requested" do
+    owner = User.create!(
+      email: "workspace-home-show-home@example.com",
+      password: "password123",
+      open_on_start_preference: "last_visited_page"
+    )
+    workspace = Workspace.create!(name: "Explicit home", slug: "explicit-home")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Visited page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+    expect(response).to have_http_status(:ok)
+
+    get workspace_path(workspace.slug, show_home: 1)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Workspace home")
+    expect(response).not_to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+  end
+
   it "does not duplicate workspace name in hero metadata when slug matches" do
     owner = User.create!(email: "workspace-home-meta-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Test Space", slug: "test-space")

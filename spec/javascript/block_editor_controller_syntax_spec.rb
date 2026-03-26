@@ -24,4 +24,13 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("handleBlockReorderDrop")
     expect(source).to include("application/x-notae-block-id")
   end
+
+  it "dispatches tab-based block reparent requests" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include('event.key === "Tab"')
+    expect(source).to include("notae:block-reparent")
+    expect(source).to include('direction: event.shiftKey ? "outdent" : "indent"')
+    expect(source).to include("focusEditor: true")
+  end
 end

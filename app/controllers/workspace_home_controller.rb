@@ -56,6 +56,8 @@ class WorkspaceHomeController < ApplicationController
   end
 
   def open_last_visited_page?
+    return false if ActiveModel::Type::Boolean.new.cast(params[:show_home])
+
     current_user.open_on_start_preference == "last_visited_page"
   end
 

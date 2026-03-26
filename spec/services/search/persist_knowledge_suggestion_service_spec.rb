@@ -176,5 +176,13 @@ RSpec.describe Search::PersistKnowledgeSuggestionService do
     expect(suggestion.metadata_json["baseline_generated_at"]).to eq(previous.generated_at.iso8601)
     expect(suggestion.metadata_json.fetch("context_snapshot").first.fetch("source_title")).to eq("Fresh brief")
     expect(suggestion.sources_json.first.fetch("title")).to eq("Fresh brief")
+    notification = Notification.where(
+      recipient: user,
+      workspace: workspace,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
+    ).last
+    expect(notification).to be_present
+    expect(notification.metadata).to include("kind" => KnowledgeSuggestion::KIND_PROACTIVE, "title" => "Confirm rollout timing")
   end
 end

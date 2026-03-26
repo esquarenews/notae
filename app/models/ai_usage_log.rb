@@ -5,6 +5,8 @@ class AiUsageLog < ApplicationRecord
   OP_ASSISTANT_QUERY = "assistant_query_generation"
   OP_ASSISTANT_WRITE = "assistant_write_generation"
   OP_KNOWLEDGE_SUGGESTION = "knowledge_suggestion_generation"
+  OP_KNOWLEDGE_SUGGESTION_MISS = "knowledge_suggestion_generation_miss"
+  OP_KNOWLEDGE_SUGGESTION_FAILURE = "knowledge_suggestion_generation_failure"
   OP_MEETING_TRANSCRIPTION = "meeting_transcription"
   OP_MEETING_SUMMARY = "meeting_summary_generation"
   OPERATIONS = [
@@ -14,6 +16,8 @@ class AiUsageLog < ApplicationRecord
     OP_ASSISTANT_QUERY,
     OP_ASSISTANT_WRITE,
     OP_KNOWLEDGE_SUGGESTION,
+    OP_KNOWLEDGE_SUGGESTION_MISS,
+    OP_KNOWLEDGE_SUGGESTION_FAILURE,
     OP_MEETING_TRANSCRIPTION,
     OP_MEETING_SUMMARY
   ].freeze
@@ -24,6 +28,8 @@ class AiUsageLog < ApplicationRecord
     OP_ASSISTANT_QUERY => "Assistant query generation",
     OP_ASSISTANT_WRITE => "Assistant write generation",
     OP_KNOWLEDGE_SUGGESTION => "Knowledge suggestion generation",
+    OP_KNOWLEDGE_SUGGESTION_MISS => "Knowledge suggestion miss",
+    OP_KNOWLEDGE_SUGGESTION_FAILURE => "Knowledge suggestion failure",
     OP_MEETING_TRANSCRIPTION => "Meeting diarization",
     OP_MEETING_SUMMARY => "Meeting summary generation"
   }.freeze

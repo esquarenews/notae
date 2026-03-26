@@ -55,4 +55,15 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     expect(stylesheet).to include(".notae-doc-block-row.is-menu-open")
     expect(stylesheet).to include("z-index: 220;")
   end
+
+  it "supports indent and outdent reparent actions" do
+    source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
+
+    expect(source).to include("indent(event)")
+    expect(source).to include("outdent(event)")
+    expect(source).to include("handleReparentRequest(event)")
+    expect(source).to include("persistReparent(plan)")
+    expect(source).to include("childTreeForBlock(block)")
+    expect(source).to include("parentTreeForBlock(block)")
+  end
 end

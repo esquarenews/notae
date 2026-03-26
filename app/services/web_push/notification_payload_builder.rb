@@ -38,6 +38,8 @@ module WebPush
         "Draft rejected"
       when Notification::TYPE_WORKFLOW_FAILED
         "Workflow failed"
+      when Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
+        knowledge_suggestion_title
       else
         "#{actor_name} mentioned you"
       end
@@ -55,6 +57,14 @@ module WebPush
         return "Open Notifications in Notae." if workflow_run.blank?
 
         [ workflow_run.workflow_kind.to_s.humanize, workflow_run.error_message.presence || "The workflow did not complete." ].join(" · ")
+      when Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
+        suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion)
+        return "Open Notifications in Notae." if suggestion.blank?
+
+        [
+          suggestion.title.presence,
+          comment_excerpt(suggestion.summary)
+        ].compact.join(" · ")
       when Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
            Notification::TYPE_AGENT_ACTION_RESUBMITTED,
            Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
@@ -94,6 +104,15 @@ module WebPush
         return fallback_url if workflow_run.blank?
 
         workflow_run_path(workspace_slug: notification.workspace.slug, id: workflow_run.id)
+      when Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
+        suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion)
+        return fallback_url if suggestion.blank?
+
+        workspace_path(
+          notification.workspace.slug,
+          show_home: 1,
+          anchor: "knowledge-suggestion-#{suggestion.id}"
+        )
       when Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
            Notification::TYPE_AGENT_ACTION_RESUBMITTED,
            Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
@@ -136,6 +155,13 @@ module WebPush
 
     def actor_name
       notification.actor&.email.presence || workspace_name
+    end
+
+    def knowledge_suggestion_title
+      suggestion = notification.notifiable
+      return "New AI suggestion" unless suggestion.is_a?(KnowledgeSuggestion)
+
+      suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief ready" : "New AI suggestion"
     end
 
     def workspace_name

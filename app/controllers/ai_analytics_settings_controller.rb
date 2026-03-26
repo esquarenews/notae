@@ -43,6 +43,16 @@ class AiAnalyticsSettingsController < ApplicationController
     suggestion_total = suggestion_scope.count
     suggestion_converted = suggestion_scope.where(status: KnowledgeSuggestion::STATUS_CONVERTED).count
     @suggestion_quality_rate = suggestion_total.zero? ? nil : (suggestion_converted.to_f / suggestion_total)
+    suggestion_issue_scope = usage_scope.where(
+      operation: [
+        AiUsageLog::OP_KNOWLEDGE_SUGGESTION_MISS,
+        AiUsageLog::OP_KNOWLEDGE_SUGGESTION_FAILURE
+      ],
+      created_at: (now - 30.days)..now
+    )
+    @knowledge_suggestion_miss_count = suggestion_issue_scope.where(operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_MISS).count
+    @knowledge_suggestion_failure_count = suggestion_issue_scope.where(operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_FAILURE).count
+    @recent_suggestion_issues = suggestion_issue_scope.order(created_at: :desc).limit(10)
 
     decided_agent_actions = policy_scope(AgentAction)
                               .for_workspace(@workspace)

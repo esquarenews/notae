@@ -102,6 +102,42 @@
     </section>
 
     <section class="notae-settings-section">
+      <h2>Suggestion health</h2>
+      <div class="notae-ai-analytics-grid">
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Suggestion misses</p>
+          <p class="notae-utility-title"><%= number_with_delimiter(@knowledge_suggestion_miss_count) %></p>
+          <p class="notae-pref-description">Calls that returned no suggestion because the request was blocked or no fresh context was available.</p>
+        </article>
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Suggestion failures</p>
+          <p class="notae-utility-title"><%= number_with_delimiter(@knowledge_suggestion_failure_count) %></p>
+          <p class="notae-pref-description">Provider or transport errors while generating knowledge suggestions.</p>
+        </article>
+      </div>
+
+      <% if @recent_suggestion_issues.any? %>
+        <ul class="notae-workspace-home-list">
+          <% @recent_suggestion_issues.each do |issue| %>
+            <% reason = issue.metadata.to_h["reason"].to_s.tr("_", " ").humanize.presence || "Unknown reason" %>
+            <li class="notae-workspace-home-list-item">
+              <strong><%= AiUsageLog.label_for(issue.operation) %></strong>
+              <div class="notae-page-subtle">
+                <%= issue.created_at.in_time_zone(@user.time_zone.presence || Time.zone).strftime("%b %-d %H:%M") %>
+                · <%= reason %>
+              </div>
+              <% if issue.metadata.to_h["error_message"].present? %>
+                <div class="notae-page-subtle"><%= issue.metadata.to_h["error_message"] %></div>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-pref-description">No recent suggestion misses or failures.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
       <h2>Automation Safety</h2>
       <%= form_with url: workspace_ai_analytics_settings_path(workspace_slug: @workspace.slug),
                     method: :patch,

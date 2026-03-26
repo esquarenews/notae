@@ -7,6 +7,7 @@ class Notification < ApplicationRecord
   TYPE_AGENT_ACTION_APPROVED = "agent_action_approved".freeze
   TYPE_AGENT_ACTION_REJECTED = "agent_action_rejected".freeze
   TYPE_WORKFLOW_FAILED = "workflow_failed".freeze
+  TYPE_KNOWLEDGE_SUGGESTION_READY = "knowledge_suggestion_ready".freeze
   TYPES = [
     TYPE_MENTION,
     TYPE_CALENDAR_REMINDER,
@@ -15,7 +16,8 @@ class Notification < ApplicationRecord
     TYPE_AGENT_ACTION_RESUBMITTED,
     TYPE_AGENT_ACTION_APPROVED,
     TYPE_AGENT_ACTION_REJECTED,
-    TYPE_WORKFLOW_FAILED
+    TYPE_WORKFLOW_FAILED,
+    TYPE_KNOWLEDGE_SUGGESTION_READY
   ].freeze
 
   belongs_to :workspace
@@ -37,6 +39,10 @@ class Notification < ApplicationRecord
 
   def agent_action_notification?
     notification_type.to_s.start_with?("agent_action_")
+  end
+
+  def knowledge_suggestion_notification?
+    notification_type == TYPE_KNOWLEDGE_SUGGESTION_READY
   end
 
   private

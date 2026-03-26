@@ -24,9 +24,10 @@ module Search
       return nil if response.blank?
 
       ActiveRecord::Base.transaction do
-        suggestion = upsert_suggestion!(response)
+        suggestion, created = upsert_suggestion!(response)
         conversation = record_ai_conversation!(suggestion, response)
         suggestion.update!(ai_conversation: conversation) if conversation.present? && suggestion.ai_conversation_id != conversation.id
+        notify_suggestion_ready!(suggestion) if created
         suggestion
       end
     end
@@ -74,6 +75,7 @@ module Search
         else
           policy_scope_scope.new(kind: kind)
         end
+      created = record.new_record?
 
       record.assign_attributes(
         status: KnowledgeSuggestion::STATUS_ACTIVE,
@@ -90,7 +92,7 @@ module Search
         converted_at: nil
       )
       record.save!
-      record
+      [ record, created ]
     end
 
     def record_ai_conversation!(suggestion, response)
@@ -167,6 +169,10 @@ module Search
       metadata["recent_since"] = response.recent_since&.iso8601 if response.recent_since.present?
       metadata["context_snapshot"] = response.context_snapshot if response.context_snapshot.present?
       metadata
+    end
+
+    def notify_suggestion_ready!(suggestion)
+      Search::KnowledgeSuggestionNotificationService.new(suggestion: suggestion, actor: user).notify_ready!
     end
   end
 end

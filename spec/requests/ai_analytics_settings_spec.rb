@@ -71,6 +71,29 @@ RSpec.describe "AI Analytics settings", type: :request do
     )
     second_log.update_columns(created_at: 1.day.ago, updated_at: 1.day.ago)
 
+    AiUsageLog.create!(
+      user: user,
+      workspace: workspace,
+      operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_MISS,
+      model: "gpt-4.1-mini",
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      estimated_cost_usd: 0,
+      metadata: { reason: "no_recent_changes" }
+    )
+    AiUsageLog.create!(
+      user: user,
+      workspace: workspace,
+      operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_FAILURE,
+      model: "gpt-4.1-mini",
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      estimated_cost_usd: 0,
+      metadata: { reason: "provider_error", error_message: "upstream unavailable" }
+    )
+
     sign_in user
     get workspace_ai_analytics_settings_path(workspace_slug: workspace.slug)
 
@@ -83,6 +106,10 @@ RSpec.describe "AI Analytics settings", type: :request do
     expect(response.body).to include("Search answer generation")
     expect(response.body).to include("Meeting diarization")
     expect(response.body).to include("Workflow Metrics")
+    expect(response.body).to include("Suggestion health")
+    expect(response.body).to include("Knowledge suggestion miss")
+    expect(response.body).to include("Knowledge suggestion failure")
+    expect(response.body).to include("upstream unavailable")
     expect(response.body).to include("Automation Safety")
     expect(response.body).to include("Error Monitoring")
     expect(response.body).to include("Create note failed")

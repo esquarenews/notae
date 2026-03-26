@@ -153,6 +153,10 @@ body.notae-theme-dark .notae-utility-subtitle {
   color: #93c5fd;
 }
 
+body.notae-theme-dark .notae-utility-link {
+  color: var(--notae-text-strong);
+}
+
 body.notae-theme-dark .notae-utility-ai-notice {
   border-color: #8b6c00;
   background: #2d260d;
@@ -432,6 +436,10 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
   body.notae-theme-system .notae-utility-subtitle {
     color: #93c5fd;
+  }
+
+  body.notae-theme-system .notae-utility-link {
+    color: var(--notae-text-strong);
   }
 
   body.notae-theme-system .notae-utility-ai-notice {

@@ -248,4 +248,52 @@ RSpec.describe Search::KnowledgeSuggestionService do
     expect(response.task_suggestions.first.fetch("rationale")).to include("You should confirm")
     expect(response.sources.first[:title]).to eq(page.title)
   end
+
+  it "logs a miss outcome when no indexed context is available" do
+    user = User.create!(email: "knowledge-miss@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge miss", slug: "knowledge-miss")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    response = described_class.new(user: user, workspace: workspace).call
+
+    expect(response).to be_nil
+    expect(AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_MISS)).to exist
+    miss = AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_MISS).last
+    expect(miss.metadata).to include("reason" => "no_context", "feature" => "knowledge_suggestion_service")
+    expect(miss.total_tokens).to eq(0)
+  end
+
+  it "logs a failure outcome when the provider request fails" do
+    user = User.create!(email: "knowledge-failure@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge failure", slug: "knowledge-failure")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    page = Page.create!(workspace: workspace, created_by: user, title: "Failure brief")
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "Current status exists but the provider will fail.",
+      token_count: 9,
+      content_hash: "knowledge-failure-chunk",
+      source_content_hash: "knowledge-failure-source",
+      source_uri: "/w/#{workspace.slug}/pages/#{page.id}",
+      source_title: page.title,
+      metadata_json: {}
+    )
+
+    allow(Openai::ResponsesClient).to receive(:generate_text_with_usage)
+      .and_raise(Openai::ResponsesClient::Error, "upstream unavailable")
+
+    service = described_class.new(user: user, workspace: workspace)
+    expect(service.call).to be_nil
+    expect(service.unavailable_reason).to eq(:provider_error)
+
+    failure = AiUsageLog.where(user: user, workspace: workspace, operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_FAILURE).last
+    expect(failure).to be_present
+    expect(failure.metadata).to include("reason" => "provider_error", "error_message" => "upstream unavailable")
+    expect(failure.total_tokens).to eq(0)
+  end
 end

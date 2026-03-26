@@ -36,4 +36,38 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:body]).to include("Create summary note")
     expect(payload[:url]).to eq("/w/#{workspace.slug}/agent-actions/#{agent_action.id}")
   end
+
+  it "builds a knowledge suggestion payload that deep-links to the workspace home card" do
+    workspace = Workspace.create!(name: "Knowledge Push", slug: "knowledge-push")
+    user = User.create!(email: "knowledge-push@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Follow up with finance",
+      summary: "A fresh invoice issue needs attention. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: {}
+    )
+
+    payload = described_class.new(notification: notification).call
+
+    expect(payload[:title]).to eq("New AI suggestion")
+    expect(payload[:body]).to include("Follow up with finance")
+    expect(payload[:url]).to eq("/w/#{workspace.slug}?show_home=1#knowledge-suggestion-#{suggestion.id}")
+  end
 end

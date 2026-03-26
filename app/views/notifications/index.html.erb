@@ -30,6 +30,8 @@
                 Draft rejected
               <% elsif notification.notification_type == Notification::TYPE_WORKFLOW_FAILED %>
                 Workflow failed
+              <% elsif notification.knowledge_suggestion_notification? %>
+                <%= notification.metadata["kind"] == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief ready" : "New AI suggestion" %>
               <% else %>
                 <%= notification.actor.email %> mentioned you
               <% end %>
@@ -76,6 +78,16 @@
             <% end %>
             <%= link_to "Open draft",
                         agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id),
+                        class: "notae-utility-link notae-utility-mini-link" %>
+          <% elsif notification.knowledge_suggestion_notification? && notification.notifiable.is_a?(KnowledgeSuggestion) %>
+            <% suggestion = notification.notifiable %>
+            <p class="notae-utility-copy">
+              <strong><%= suggestion.title %></strong>
+              · <%= suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief" : "Suggested next step" %>
+            </p>
+            <p class="notae-utility-copy"><%= suggestion.summary %></p>
+            <%= link_to "Open suggestion",
+                        workspace_path(@workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"),
                         class: "notae-utility-link notae-utility-mini-link" %>
           <% elsif notification.notification_type == Notification::TYPE_WORKFLOW_FAILED && notification.notifiable.is_a?(WorkflowRun) %>
             <% workflow_run = notification.notifiable %>

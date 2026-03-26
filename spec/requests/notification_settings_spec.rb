@@ -12,6 +12,7 @@ RSpec.describe "Notification settings", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("In-app notifications")
     expect(response.body).to include("Push notifications on this device")
+    expect(response.body).to include("AI suggestions")
     expect(response.body).to include("role=\"switch\"")
     expect(response.body).to include("data-action=\"pwa#togglePush\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsToggle\"")

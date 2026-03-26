@@ -30,7 +30,7 @@
 
   <div class="notae-workspace-home-body">
   <% if @daily_knowledge_suggestion.present? %>
-    <section class="notae-auth-card notae-home-card">
+    <section class="notae-auth-card notae-home-card" id="knowledge-suggestion-<%= @daily_knowledge_suggestion.id %>">
       <div class="notae-home-card-head">
         <h2>Daily workspace brief</h2>
       </div>

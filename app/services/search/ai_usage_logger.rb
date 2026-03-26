@@ -13,7 +13,7 @@ module Search
           completion_tokens: completion_tokens
         )
 
-        AiUsageLog.create!(
+        create_log!(
           user: user,
           workspace: workspace,
           operation: operation,
@@ -23,6 +23,36 @@ module Search
           total_tokens: total_tokens,
           estimated_cost_usd: estimated_cost_usd,
           metadata: metadata || {}
+        )
+      end
+
+      def log_outcome!(user:, workspace:, operation:, model:, metadata: {})
+        create_log!(
+          user: user,
+          workspace: workspace,
+          operation: operation,
+          model: model,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+          estimated_cost_usd: 0,
+          metadata: metadata || {}
+        )
+      end
+
+      private
+
+      def create_log!(user:, workspace:, operation:, model:, prompt_tokens:, completion_tokens:, total_tokens:, estimated_cost_usd:, metadata:)
+        AiUsageLog.create!(
+          user: user,
+          workspace: workspace,
+          operation: operation,
+          model: model,
+          prompt_tokens: prompt_tokens,
+          completion_tokens: completion_tokens,
+          total_tokens: total_tokens,
+          estimated_cost_usd: estimated_cost_usd,
+          metadata: metadata
         )
       end
     end

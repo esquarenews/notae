@@ -243,6 +243,32 @@ RSpec.describe "Blocks", type: :request do
     expect(page.blocks.active.roots.ordered.first.id).to eq(second.id)
   end
 
+  it "reorders blocks into and out of nested indentation levels" do
+    owner = User.create!(email: "blocks-indent-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Indent blocks", slug: "indent-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Indent page")
+    parent = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    child_candidate = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    patch reorder_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: child_candidate.id),
+          params: { target_parent_id: parent.id, target_index: 0 },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(child_candidate.reload.parent_block_id).to eq(parent.id)
+    expect(page.blocks.active.where(parent_block_id: parent.id).ordered.pluck(:id)).to eq([ child_candidate.id ])
+
+    patch reorder_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: child_candidate.id),
+          params: { target_parent_id: nil, target_index: 1 },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(child_candidate.reload.parent_block_id).to be_nil
+    expect(page.blocks.active.roots.ordered.pluck(:id)).to eq([ parent.id, child_candidate.id ])
+  end
+
   it "renders drag-and-drop action bindings for block items" do
     owner = User.create!(email: "blocks-reorder-binding-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Reorder bindings", slug: "reorder-bindings")
@@ -258,6 +284,8 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("dragenter->block-list#handleDragEnter")
     expect(response.body).to include("dragleave->block-list#handleDragLeave")
     expect(response.body).to include("dragover->block-list#handleDragOver")
+    expect(response.body).to include("Indent")
+    expect(response.body).to include("Outdent")
     expect(response.body).to include("drop->block-list#handleDrop")
     expect(response.body).to include("dragend->block-list#handleDragEnd")
     expect(response.body).to include("class=\"notae-doc-handle\"")

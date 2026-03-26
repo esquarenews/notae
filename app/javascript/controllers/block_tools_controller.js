@@ -14,13 +14,16 @@ export default class extends Controller {
     this.repositionOpenMenuHandler = (event) => this.repositionOpenMenu(event)
     this.windowPointerDownHandler = (event) => this.handleWindowPointerDown(event)
     this.documentKeydownHandler = (event) => this.handleDocumentKeydown(event)
+    this.reparentRequestHandler = (event) => this.handleReparentRequest(event)
     window.addEventListener("resize", this.repositionOpenMenuHandler)
     window.addEventListener("scroll", this.repositionOpenMenuHandler, true)
+    window.addEventListener("notae:block-reparent", this.reparentRequestHandler)
   }
 
   disconnect() {
     window.removeEventListener("resize", this.repositionOpenMenuHandler)
     window.removeEventListener("scroll", this.repositionOpenMenuHandler, true)
+    window.removeEventListener("notae:block-reparent", this.reparentRequestHandler)
     const details = this.currentOpenMenu()
     if (details) this.setMenuOpenState(details, false)
     this.removeDismissHandlers()
@@ -77,6 +80,18 @@ export default class extends Controller {
     })
 
     this.closeMenu(event)
+  }
+
+  async indent(event) {
+    event.preventDefault()
+    this.closeMenu(event)
+    await this.reparentBlock("indent")
+  }
+
+  async outdent(event) {
+    event.preventDefault()
+    this.closeMenu(event)
+    await this.reparentBlock("outdent")
   }
 
   closeMenu(event) {
@@ -148,6 +163,12 @@ export default class extends Controller {
     if (!details) return
 
     this.closeDetails(details)
+  }
+
+  async handleReparentRequest(event) {
+    if (String(event.detail?.blockId || "") !== String(this.blockIdValue || "")) return
+
+    await this.reparentBlock(event.detail?.direction, { focusEditor: Boolean(event.detail?.focusEditor) })
   }
 
   closeDetails(details) {
@@ -243,5 +264,146 @@ export default class extends Controller {
     const form = promptInput.form
     if (!form) return
     form.requestSubmit()
+  }
+
+  async reparentBlock(direction, { focusEditor = false } = {}) {
+    const plan = direction === "outdent" ? this.outdentPlan() : this.indentPlan()
+    if (!plan) return
+
+    plan.apply()
+
+    try {
+      await this.persistReparent(plan)
+      if (focusEditor) this.focusEditor()
+    } catch (_error) {
+      plan.revert()
+      if (focusEditor) this.focusEditor()
+    }
+  }
+
+  indentPlan() {
+    const currentBlock = this.currentBlock()
+    const currentTree = this.currentTree()
+    if (!currentBlock || !currentTree) return null
+
+    const siblings = this.directChildBlocks(currentTree)
+    const currentIndex = siblings.indexOf(currentBlock)
+    if (currentIndex <= 0) return null
+
+    const previousSibling = siblings[currentIndex - 1]
+    const targetTree = this.childTreeForBlock(previousSibling)
+    if (!targetTree) return null
+
+    return this.buildMovePlan({
+      currentBlock,
+      targetTree,
+      targetSibling: null,
+      targetParentId: previousSibling.dataset.blockId,
+      targetIndex: this.directChildBlocks(targetTree).length
+    })
+  }
+
+  outdentPlan() {
+    const currentBlock = this.currentBlock()
+    const currentTree = this.currentTree()
+    const parentBlock = this.parentBlockForTree(currentTree)
+    const targetTree = this.parentTreeForBlock(parentBlock)
+    if (!currentBlock || !currentTree || !parentBlock || !targetTree) return null
+
+    const targetSiblings = this.directChildBlocks(targetTree)
+    const parentIndex = targetSiblings.indexOf(parentBlock)
+    if (parentIndex < 0) return null
+
+    return this.buildMovePlan({
+      currentBlock,
+      targetTree,
+      targetSibling: targetSiblings[parentIndex + 1] || null,
+      targetParentId: targetTree.dataset.blockListParentIdValue || null,
+      targetIndex: parentIndex + 1
+    })
+  }
+
+  buildMovePlan({ currentBlock, targetTree, targetSibling, targetParentId, targetIndex }) {
+    const sourceTree = currentBlock.parentElement
+    const sourceNextSibling = currentBlock.nextElementSibling
+
+    return {
+      targetParentId,
+      targetIndex,
+      apply: () => {
+        targetTree.insertBefore(currentBlock, targetSibling)
+      },
+      revert: () => {
+        if (sourceNextSibling && sourceNextSibling.parentElement === sourceTree) {
+          sourceTree.insertBefore(currentBlock, sourceNextSibling)
+        } else {
+          sourceTree.appendChild(currentBlock)
+        }
+      }
+    }
+  }
+
+  async persistReparent(plan) {
+    const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
+    const response = await fetch(this.reorderUrl(), {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {})
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        target_parent_id: plan.targetParentId,
+        target_index: plan.targetIndex
+      })
+    })
+
+    if (!response.ok) throw new Error("Block nesting update failed")
+  }
+
+  reorderUrl() {
+    const tree = this.currentTree()
+    const workspaceSlug = tree?.dataset.blockListWorkspaceSlugValue
+    const pageId = tree?.dataset.blockListPageIdValue
+    if (!workspaceSlug || !pageId || !this.blockIdValue) return window.location.pathname
+
+    return `/w/${workspaceSlug}/pages/${pageId}/blocks/${this.blockIdValue}/reorder`
+  }
+
+  focusEditor() {
+    const editorSurface = this.element.querySelector(".ProseMirror")
+    if (!(editorSurface instanceof HTMLElement)) return
+
+    requestAnimationFrame(() => editorSurface.focus())
+  }
+
+  currentBlock() {
+    return this.element.closest("[data-block-id]")
+  }
+
+  currentTree() {
+    return this.element.closest(".notae-doc-tree")
+  }
+
+  directChildBlocks(tree) {
+    if (!tree) return []
+
+    return Array.from(tree.children).filter((child) => child instanceof HTMLElement && child.hasAttribute("data-block-id"))
+  }
+
+  childTreeForBlock(block) {
+    const childWrapper = Array.from(block?.children || []).find((child) => child.classList?.contains("notae-doc-children"))
+    if (!childWrapper) return null
+
+    return Array.from(childWrapper.children).find((child) => child.classList?.contains("notae-doc-tree")) || null
+  }
+
+  parentBlockForTree(tree) {
+    return tree?.parentElement?.closest?.("[data-block-id]") || null
+  }
+
+  parentTreeForBlock(block) {
+    return block?.parentElement?.closest?.(".notae-doc-tree") || null
   }
 }

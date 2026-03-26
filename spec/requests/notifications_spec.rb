@@ -188,4 +188,48 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include("Database lookup failed")
     expect(response.body).to include("Open workflow")
   end
+
+  it "renders knowledge suggestion notifications in the inbox" do
+    user = User.create!(email: "notif-suggestion@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Suggestion", slug: "notif-suggestion")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Escalate invoice delay",
+      summary: "A supplier email now needs a follow-up. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: { "kind" => suggestion.kind }
+    )
+
+    sign_in user
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("New AI suggestion")
+    expect(response.body).to include("Escalate invoice delay")
+    expect(response.body).to include("Open suggestion")
+    expect(response.body).to include(workspace_path(workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"))
+  end
+
+  it "uses high-contrast notification link text in dark themes" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("body.notae-theme-dark .notae-utility-link {\n  color: var(--notae-text-strong);")
+    expect(stylesheet).to include("body.notae-theme-system .notae-utility-link {\n    color: var(--notae-text-strong);")
+  end
 end

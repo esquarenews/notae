@@ -159,6 +159,14 @@
               <span class="notae-menu-item-icon">#</span>
               <span class="notae-menu-item-label">Copy link to block</span>
             </button>
+            <button type="button" class="notae-block-menu-item" data-action="block-tools#indent">
+              <span class="notae-menu-item-icon">→</span>
+              <span class="notae-menu-item-label">Indent</span>
+            </button>
+            <button type="button" class="notae-block-menu-item" data-action="block-tools#outdent">
+              <span class="notae-menu-item-icon">←</span>
+              <span class="notae-menu-item-label">Outdent</span>
+            </button>
             <%= button_to command_page_block_path(block_route_params),
                           method: :post,
                           params: { block_command: { command: "duplicate" } },
