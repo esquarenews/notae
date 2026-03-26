@@ -182,6 +182,13 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-topbar:has(.notae-actions-menu[open]),\n.notae-topbar:has(.notae-options-menu[open]),\n.notae-topbar:has(.notae-comments-menu[open]) {\n  position: relative;\n  z-index: var(--notae-layer-popover-parent);")
   end
 
+  it "uses darker label text for primary buttons in dark themes" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("body.notae-theme-dark button[type=\"submit\"].notae-chip-button,\nbody.notae-theme-dark input[type=\"submit\"].notae-chip-button,\nbody.notae-theme-dark .notae-db-toolbar-new,\nbody.notae-theme-dark .notae-ai-compose button,\nbody.notae-theme-dark .notae-auth-submit {\n  color: #2b3437;")
+    expect(stylesheet).to include("body.notae-theme-system button[type=\"submit\"].notae-chip-button,\n  body.notae-theme-system input[type=\"submit\"].notae-chip-button,\n  body.notae-theme-system .notae-db-toolbar-new,\n  body.notae-theme-system .notae-ai-compose button,\n  body.notae-theme-system .notae-auth-submit {\n    color: #2b3437;")
+  end
+
   it "includes the compiled app stylesheet and keeps the tailwind entrypoint present" do
     tailwind_entrypoint = Rails.root.join("app/assets/tailwind/application.css")
     expect(tailwind_entrypoint).to exist

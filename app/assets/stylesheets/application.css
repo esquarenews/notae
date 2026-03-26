@@ -13367,6 +13367,24 @@ input[type="submit"].notae-chip-button,
   box-shadow: 0 16px 34px color-mix(in srgb, var(--notae-accent) 28%, transparent);
 }
 
+body.notae-theme-dark button[type="submit"].notae-chip-button,
+body.notae-theme-dark input[type="submit"].notae-chip-button,
+body.notae-theme-dark .notae-db-toolbar-new,
+body.notae-theme-dark .notae-ai-compose button,
+body.notae-theme-dark .notae-auth-submit {
+  color: #2b3437;
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system button[type="submit"].notae-chip-button,
+  body.notae-theme-system input[type="submit"].notae-chip-button,
+  body.notae-theme-system .notae-db-toolbar-new,
+  body.notae-theme-system .notae-ai-compose button,
+  body.notae-theme-system .notae-auth-submit {
+    color: #2b3437;
+  }
+}
+
 .notae-chip-button-subtle {
   background: color-mix(in srgb, var(--notae-panel-muted) 90%, transparent);
   color: var(--notae-text-muted);
