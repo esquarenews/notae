@@ -1,6 +1,14 @@
 require "rails_helper"
 
 RSpec.describe "Databases", type: :request do
+  it "keeps grid topbar menus above table content" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-db-viewbar:has(.notae-db-actions-menu[open]),\n.notae-db-viewbar:has(.notae-db-settings-menu[open]) {\n  position: relative;\n  z-index: var(--notae-layer-popover-parent);")
+    expect(stylesheet).to include("body.notae-theme-dark .notae-db-actions-menu .notae-actions-panel,\nbody.notae-theme-dark .notae-db-settings-panel,\nbody.notae-theme-dark .notae-db-settings-subpanel {\n  background: var(--notae-surface-raised);\n  backdrop-filter: none;")
+    expect(stylesheet).to include("  body.notae-theme-system .notae-db-actions-menu .notae-actions-panel,\n  body.notae-theme-system .notae-db-settings-panel,\n  body.notae-theme-system .notae-db-settings-subpanel {\n    background: var(--notae-surface-raised);\n    backdrop-filter: none;")
+  end
+
   it "creates a grid when optional database columns are unavailable" do
     owner = User.create!(email: "database-legacy-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables legacy", slug: "tables-legacy")

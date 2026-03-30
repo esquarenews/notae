@@ -10102,6 +10102,14 @@ body.notae-theme-dark .notae-actions-panel {
   color: var(--notae-text);
 }
 
+body.notae-theme-dark .notae-db-actions-menu .notae-actions-panel,
+body.notae-theme-dark .notae-db-settings-panel,
+body.notae-theme-dark .notae-db-settings-subpanel {
+  background: var(--notae-surface-raised);
+  backdrop-filter: none;
+  box-shadow: var(--notae-shadow-float);
+}
+
 body.notae-theme-dark .notae-actions-search {
   background: #1f252c;
   color: var(--notae-text);
@@ -10240,6 +10248,14 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
     background: var(--notae-surface-raised);
     border-color: var(--notae-border);
     color: var(--notae-text);
+  }
+
+  body.notae-theme-system .notae-db-actions-menu .notae-actions-panel,
+  body.notae-theme-system .notae-db-settings-panel,
+  body.notae-theme-system .notae-db-settings-subpanel {
+    background: var(--notae-surface-raised);
+    backdrop-filter: none;
+    box-shadow: var(--notae-shadow-float);
   }
 
   body.notae-theme-system .notae-actions-search {
@@ -14978,6 +14994,13 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
 .notae-topbar:has(.notae-actions-menu[open]),
 .notae-topbar:has(.notae-options-menu[open]),
 .notae-topbar:has(.notae-comments-menu[open]) {
+  position: relative;
+  z-index: var(--notae-layer-popover-parent);
+  isolation: isolate;
+}
+
+.notae-db-viewbar:has(.notae-db-actions-menu[open]),
+.notae-db-viewbar:has(.notae-db-settings-menu[open]) {
   position: relative;
   z-index: var(--notae-layer-popover-parent);
   isolation: isolate;
