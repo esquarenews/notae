@@ -23,6 +23,9 @@ RSpec.describe "Import settings", type: :request do
     expect(response.body).to include("Import")
     expect(response.body).to include("Format warning")
     expect(response.body).to include("some structure, styling")
+    expect(response.body).to include("CSV files import as grids by default.")
+    expect(response.body).to include('data-controller="import-status"')
+    expect(response.body).to include("Import ready")
 
     document = Nokogiri::HTML(response.body)
     workspace_picker = document.at_css(".notae-settings-workspace-picker select[name='workspace_nav_picker']")
@@ -56,7 +59,7 @@ RSpec.describe "Import settings", type: :request do
     expect(workspace.pages.where(title: "summary")).to exist
   end
 
-  it "imports html and csv uploads into pages" do
+  it "imports html into a page and csv into a grid" do
     owner = User.create!(email: "import-settings-html-csv@example.com", password: "password123")
     workspace = Workspace.create!(name: "Import html csv", slug: "import-html-csv")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -68,11 +71,16 @@ RSpec.describe "Import settings", type: :request do
     expect do
       post workspace_import_settings_path(workspace_slug: workspace.slug),
            params: { import: { files: [ html, csv ] } }
-    end.to change(Page, :count).by(2)
+    end.to change(Page, :count).by(1).and change(Database, :count).by(1)
 
     expect(response).to redirect_to(workspace_import_settings_path(workspace_slug: workspace.slug))
+    expect(flash[:notice]).to include("Imported 1 Nota and 1 Grid.")
     expect(workspace.pages.where(title: "overview")).to exist
-    expect(workspace.pages.where(title: "table")).to exist
+    expect(workspace.databases.where(name: "table")).to exist
+
+    follow_redirect!
+    expect(response.body).to include("Import complete")
+    expect(response.body).to include("Imported 1 Nota and 1 Grid.")
   end
 
   it "imports malformed pdf without crashing and creates a fallback page" do

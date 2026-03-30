@@ -33,14 +33,17 @@ RSpec.describe Imports::ContentParser, type: :service do
     expect(result.documents.first.blocks.second[:block_type]).to eq("paragraph")
   end
 
-  it "parses csv into table import blocks" do
+  it "parses csv into a grid-targeted document with table rows" do
     csv = "name,score\nA,10\nB,12\n"
 
     result = described_class.parse(filename: "scores.csv", io: make_io(csv))
 
     expect(result.documents.size).to eq(1)
-    expect(result.documents.first.blocks.first[:block_type]).to eq("heading_2")
-    expect(result.documents.first.blocks.second[:block_type]).to eq("code_block")
+    document = result.documents.first
+    expect(document.target_type).to eq(Imports::ContentParser::TARGET_DATABASE)
+    expect(document.table_rows).to eq([["name", "score"], ["A", "10"], ["B", "12"]])
+    expect(document.blocks.first[:block_type]).to eq("heading_2")
+    expect(document.blocks.second[:block_type]).to eq("code_block")
   end
 
   it "parses docx paragraphs from document.xml" do

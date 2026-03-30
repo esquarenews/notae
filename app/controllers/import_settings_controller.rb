@@ -7,19 +7,25 @@ class ImportSettingsController < ApplicationController
   end
 
   def create
-    page_probe = Page.new(workspace: @workspace, created_by: current_user, title: "Import")
-    authorize page_probe, :create?
-
     files = import_params[:files].to_a.reject(&:blank?)
     if files.empty?
       redirect_to workspace_import_settings_path(workspace_slug: @workspace.slug), alert: "Select at least one file to import."
       return
     end
 
+    if files_require_page_import_authorization?(files)
+      page_probe = Page.new(workspace: @workspace, created_by: current_user, title: "Import")
+      authorize page_probe, :create?
+    end
+
+    if files_require_grid_import_authorization?(files)
+      database_probe = Database.new(workspace: @workspace, created_by: current_user, name: "Import")
+      authorize database_probe, :create?
+    end
+
     result = Imports::IngestService.call(workspace: @workspace, user: current_user, files: files)
     if result.imported_count.positive?
-      imported_label = result.imported_count == 1 ? "Nota" : "Notarum"
-      notice_parts = [ "Imported #{result.imported_count} #{imported_label}." ]
+      notice_parts = [ import_notice_for(result) ]
       notice_parts << "Skipped #{result.skipped_files.count} unsupported file#{'s' if result.skipped_files.count != 1}." if result.skipped_files.any?
       redirect_to workspace_import_settings_path(workspace_slug: @workspace.slug), notice: notice_parts.join(" ")
     else
@@ -38,5 +44,33 @@ class ImportSettingsController < ApplicationController
 
   def import_params
     params.fetch(:import, {}).permit(files: [])
+  end
+
+  def files_require_grid_import_authorization?(files)
+    Array(files).any? do |file|
+      extension = File.extname(file.respond_to?(:original_filename) ? file.original_filename.to_s : file.to_s).downcase
+      [ ".csv", ".zip" ].include?(extension)
+    end
+  end
+
+  def files_require_page_import_authorization?(files)
+    Array(files).any? do |file|
+      extension = File.extname(file.respond_to?(:original_filename) ? file.original_filename.to_s : file.to_s).downcase
+      extension != ".csv"
+    end
+  end
+
+  def import_notice_for(result)
+    parts = []
+    if result.imported_page_count.positive?
+      label = result.imported_page_count == 1 ? "Nota" : "Notarum"
+      parts << "#{result.imported_page_count} #{label}"
+    end
+    if result.imported_database_count.positive?
+      label = result.imported_database_count == 1 ? "Grid" : "Grids"
+      parts << "#{result.imported_database_count} #{label}"
+    end
+
+    "Imported #{parts.to_sentence}."
   end
 end

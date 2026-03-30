@@ -2,9 +2,11 @@ require "stringio"
 
 module Imports
   class ContentParser
-    Document = Struct.new(:title, :blocks, keyword_init: true)
+    Document = Struct.new(:title, :blocks, :target_type, :table_rows, keyword_init: true)
     ParseResult = Struct.new(:documents, :skipped_files, keyword_init: true)
     UnsupportedFormatError = Class.new(StandardError)
+    TARGET_PAGE = "page".freeze
+    TARGET_DATABASE = "database".freeze
 
     SUPPORTED_EXTENSIONS = %w[.txt .md .markdown .html .htm .csv .pdf .docx .zip .epub].freeze
     DOCX_NS = { "w" => "http://schemas.openxmlformats.org/wordprocessingml/2006/main" }.freeze
@@ -29,17 +31,17 @@ module Imports
       documents, skipped_files =
         case extension
         when ".txt"
-          [ [ Document.new(title: title_from_filename(filename), blocks: parse_plain_text(data)) ], [] ]
+          [ [ Document.new(title: title_from_filename(filename), blocks: parse_plain_text(data), target_type: TARGET_PAGE) ], [] ]
         when ".md", ".markdown"
-          [ [ Document.new(title: title_from_filename(filename), blocks: parse_markdown(data)) ], [] ]
+          [ [ Document.new(title: title_from_filename(filename), blocks: parse_markdown(data), target_type: TARGET_PAGE) ], [] ]
         when ".html", ".htm"
-          [ [ Document.new(title: title_from_filename(filename), blocks: parse_html(data)) ], [] ]
+          [ [ Document.new(title: title_from_filename(filename), blocks: parse_html(data), target_type: TARGET_PAGE) ], [] ]
         when ".csv"
-          [ [ Document.new(title: title_from_filename(filename), blocks: parse_csv(data)) ], [] ]
+          [ [ parse_csv_document(filename: filename, data: data) ], [] ]
         when ".pdf"
-          [ [ Document.new(title: title_from_filename(filename), blocks: parse_pdf(data)) ], [] ]
+          [ [ Document.new(title: title_from_filename(filename), blocks: parse_pdf(data), target_type: TARGET_PAGE) ], [] ]
         when ".docx"
-          [ [ Document.new(title: title_from_filename(filename), blocks: parse_docx(data)) ], [] ]
+          [ [ Document.new(title: title_from_filename(filename), blocks: parse_docx(data), target_type: TARGET_PAGE) ], [] ]
         when ".epub"
           parse_epub(filename: filename, data: data)
         when ".zip"
@@ -185,6 +187,18 @@ module Imports
       ]
     end
 
+    def parse_csv_document(filename:, data:)
+      raw_text = text_from_data(data)
+      table_rows = parse_csv_rows(raw_text)
+
+      Document.new(
+        title: title_from_filename(filename),
+        blocks: parse_csv(data),
+        target_type: TARGET_DATABASE,
+        table_rows: table_rows
+      )
+    end
+
     def parse_csv_rows(raw_text)
       begin
         require "csv"
@@ -255,10 +269,10 @@ module Imports
 
     def parse_epub(filename:, data:)
       unless ensure_zip_loaded
-        return [ [ Document.new(title: title_from_filename(filename), blocks: [ paragraph_block("EPUB import is unavailable because the rubyzip dependency is missing in this environment.") ]) ], [] ]
+        return [ [ Document.new(title: title_from_filename(filename), blocks: [ paragraph_block("EPUB import is unavailable because the rubyzip dependency is missing in this environment.") ], target_type: TARGET_PAGE) ], [] ]
       end
       unless ensure_nokogiri_loaded
-        return [ [ Document.new(title: title_from_filename(filename), blocks: [ paragraph_block("EPUB import is unavailable because the nokogiri dependency is missing in this environment.") ]) ], [] ]
+        return [ [ Document.new(title: title_from_filename(filename), blocks: [ paragraph_block("EPUB import is unavailable because the nokogiri dependency is missing in this environment.") ], target_type: TARGET_PAGE) ], [] ]
       end
 
       documents = []
@@ -276,12 +290,12 @@ module Imports
           doc = Nokogiri::HTML(html)
           title = doc.at("title")&.text.to_s.strip.presence || title_from_filename(entry.name)
           blocks = blocks_from_html_nodes((doc.at("body") || doc).children)
-          documents << Document.new(title: "#{title_from_filename(filename)} — #{title}", blocks: blocks.presence || [ paragraph_block("Imported section") ])
+          documents << Document.new(title: "#{title_from_filename(filename)} — #{title}", blocks: blocks.presence || [ paragraph_block("Imported section") ], target_type: TARGET_PAGE)
         end
       end
       [ documents, skipped ]
     rescue StandardError
-      [ [ Document.new(title: title_from_filename(filename), blocks: [ paragraph_block("EPUB import failed for this file.") ]) ], [] ]
+      [ [ Document.new(title: title_from_filename(filename), blocks: [ paragraph_block("EPUB import failed for this file.") ], target_type: TARGET_PAGE) ], [] ]
     end
 
     def parse_zip(data:)
@@ -305,7 +319,12 @@ module Imports
 
           entry_result = parse_binary(filename: entry.name, data: entry.get_input_stream.read)
           documents.concat(entry_result.documents.map do |doc|
-            Document.new(title: "#{title_from_filename(entry.name)}#{doc.title.present? ? " — #{doc.title}" : ""}", blocks: doc.blocks)
+            Document.new(
+              title: "#{title_from_filename(entry.name)}#{doc.title.present? ? " — #{doc.title}" : ""}",
+              blocks: doc.blocks,
+              target_type: doc.target_type,
+              table_rows: doc.table_rows
+            )
           end)
           skipped.concat(entry_result.skipped_files)
         rescue UnsupportedFormatError
