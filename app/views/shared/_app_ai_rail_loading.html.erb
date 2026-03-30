@@ -1,0 +1,36 @@
+<div class="notae-ai-rail-shell is-loading"
+     aria-busy="true"
+     aria-live="polite">
+  <button type="button"
+          class="notae-ai-floating-toggle"
+          aria-label="Loading AI assistant"
+          disabled>
+    <%= render "shared/ai_loader_icon",
+               variant: current_user.ai_loader_style,
+               state: "loading",
+               size: 18,
+               reduced_motion: current_user.reduce_ai_loader_motion? %>
+  </button>
+
+  <aside class="notae-ai-rail is-loading">
+    <button type="button"
+            class="notae-ai-rail-reopen"
+            aria-label="Loading AI assistant"
+            disabled>
+      <%= render "shared/ai_loader_icon",
+                 variant: current_user.ai_loader_style,
+                 state: "loading",
+                 size: 18,
+                 reduced_motion: current_user.reduce_ai_loader_motion? %>
+    </button>
+
+    <div class="notae-ai-head">
+      <span>New AI chat</span>
+    </div>
+
+    <div class="notae-ai-card notae-ai-card-loading">
+      <p class="notae-ai-title">Loading AI assistant</p>
+      <p class="notae-ai-copy">The page is ready. AI context is loading separately so it does not hold up navigation.</p>
+    </div>
+  </aside>
+</div>

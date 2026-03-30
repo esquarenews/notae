@@ -1,0 +1,16 @@
+<% kind = local_assigns.fetch(:kind, KnowledgeSuggestion::KIND_PROACTIVE).to_s %>
+<% compact = local_assigns.fetch(:compact, false) %>
+<% title = kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Preparing daily workspace brief" : "Preparing AI suggestion" %>
+<% body = kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "The page is ready. Your daily brief is still generating in the background and will appear when it finishes." : "The page is ready. An AI suggestion is still generating in the background and will appear when it finishes." %>
+
+<div class="notae-knowledge-pending-card<%= " is-compact" if compact %>">
+  <%= render "shared/ai_loader_icon",
+             variant: current_user.ai_loader_style,
+             state: "loading",
+             size: compact ? 36 : 48,
+             reduced_motion: current_user.reduce_ai_loader_motion? %>
+  <div class="notae-knowledge-pending-copy">
+    <p class="notae-knowledge-pending-title"><%= title %></p>
+    <p class="notae-page-subtle"><%= body %></p>
+  </div>
+</div>

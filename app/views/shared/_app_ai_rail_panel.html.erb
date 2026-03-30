@@ -1,3 +1,20 @@
-<%= turbo_frame_tag "ai_rail_panel" do %>
-  <%= render "shared/app_ai_rail" %>
+<%
+  lazy = local_assigns.fetch(:lazy, false)
+  workspace = local_assigns[:workspace] || @ai_rail_workspace || (defined?(@workspace) ? @workspace : nil)
+  current_page_id = local_assigns[:current_page_id] || @ai_rail_current_page_id
+%>
+
+<% if lazy && workspace.present? %>
+  <%= turbo_frame_tag "ai_rail_panel",
+                      src: workspace_ai_assistant_panel_path(
+                        workspace_slug: workspace.slug,
+                        current_page_id: current_page_id
+                      ),
+                      loading: :lazy do %>
+    <%= render "shared/app_ai_rail_loading" %>
+  <% end %>
+<% else %>
+  <%= turbo_frame_tag "ai_rail_panel" do %>
+    <%= render "shared/app_ai_rail" %>
+  <% end %>
 <% end %>

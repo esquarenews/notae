@@ -72,7 +72,10 @@
 
         <% unless embedded_shell %>
           <%= render "shared/app_mobile_tabbar" %>
-          <%= render "shared/app_ai_rail_panel" %>
+          <%= render "shared/app_ai_rail_panel",
+                     lazy: true,
+                     workspace: @ai_rail_workspace,
+                     current_page_id: @ai_rail_current_page_id %>
 
           <div class="notae-modal is-hidden" data-global-shortcuts-target="quickSwitcher" data-action="click->global-shortcuts#closeAll">
             <div class="notae-modal-panel" data-action="click->global-shortcuts#noop">

@@ -9,6 +9,18 @@
 <% ai_rail_conversations = Array(@ai_rail_conversations) %>
 <% ai_agent_updates = Array(@ai_agent_updates) %>
 <% ai_timeline_entries = ai_rail_timeline_entries(conversations: ai_rail_conversations, updates: ai_agent_updates) %>
+<%
+  pending_proactive_knowledge_suggestion =
+    @pending_proactive_knowledge_suggestion ||
+    (
+      ai_rail_workspace.present? &&
+      Search::KnowledgeSuggestionGenerationTracker.pending?(
+        user: current_user,
+        workspace: ai_rail_workspace,
+        kind: KnowledgeSuggestion::KIND_PROACTIVE
+      )
+    )
+%>
 
 <div class="notae-ai-rail-shell"
      data-controller="ai-rail"
@@ -97,6 +109,15 @@
       <% else %>
         <%= render "shared/app_ai_agent_update", update: entry[:update] %>
       <% end %>
+    <% end %>
+
+    <% if pending_proactive_knowledge_suggestion && @active_knowledge_suggestion.blank? %>
+      <article class="notae-ai-message is-assistant is-pending">
+        <p class="notae-ai-message-label">Notae AI</p>
+        <%= render "shared/knowledge_suggestion_pending_card",
+                   kind: KnowledgeSuggestion::KIND_PROACTIVE,
+                   compact: true %>
+      </article>
     <% end %>
 
     <% if ai_timeline_entries.empty? && @ai_assistant_notice.present? %>

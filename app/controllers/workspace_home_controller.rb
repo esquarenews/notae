@@ -1,6 +1,9 @@
 class WorkspaceHomeController < ApplicationController
+  include RequestPerformanceInstrumentation
+
   before_action :authenticate_user!
   before_action :set_workspace
+  track_request_performance_for :show
 
   def show
     authorize @workspace, :show?
@@ -69,7 +72,11 @@ class WorkspaceHomeController < ApplicationController
                  .daily_summaries
                  .active
                  .find_by(generated_for_date: Date.current)
-    return suggestion if suggestion.present?
+    if suggestion.present?
+      clear_knowledge_suggestion_generation_pending!(@workspace, kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY)
+      @daily_knowledge_suggestion_pending = false
+      return suggestion
+    end
 
     return unless current_user.openai_api_key_configured?
 
@@ -79,7 +86,15 @@ class WorkspaceHomeController < ApplicationController
                          .find_by(generated_for_date: Date.current)
     return nil if existing_for_today.present?
 
-    Search::PersistKnowledgeSuggestionService.ensure_daily_summary!(user: current_user, workspace: @workspace)
+    @daily_knowledge_suggestion_pending = knowledge_suggestion_generation_pending?(
+      @workspace,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY
+    )
+    return nil if @daily_knowledge_suggestion_pending
+
+    queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY)
+    @daily_knowledge_suggestion_pending = true
+    nil
   end
 
   def resolve_pending_agent_actions
@@ -98,7 +113,26 @@ class WorkspaceHomeController < ApplicationController
   def resolve_active_proactive_knowledge_suggestion
     return unless data_source_available?("knowledge_suggestions")
 
-    current_active_suggestion_for(@workspace)
+    suggestion = current_active_suggestion_for(@workspace)
+    if suggestion.present?
+      clear_knowledge_suggestion_generation_pending!(@workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
+      @active_proactive_knowledge_suggestion_pending = false
+      return suggestion
+    end
+
+    @active_proactive_knowledge_suggestion_pending = knowledge_suggestion_generation_pending?(
+      @workspace,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE
+    )
+    return nil unless current_user.openai_api_key_configured?
+    return nil unless should_generate_proactive_knowledge_suggestion?
+    return nil if @active_proactive_knowledge_suggestion_pending
+    return nil if proactive_knowledge_suggestion_recently_checked?(@workspace)
+
+    mark_proactive_knowledge_suggestion_checked!(@workspace)
+    queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
+    @active_proactive_knowledge_suggestion_pending = true
+    nil
   end
 
   def redirect_to_last_visited_page

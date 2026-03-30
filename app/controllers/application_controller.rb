@@ -20,10 +20,6 @@ class ApplicationController < ActionController::Base
   before_action :set_paper_trail_whodunnit
   before_action :set_unread_notifications_count
   before_action :set_ai_rail_context, if: :load_shell_context?
-  before_action :set_ai_rail_conversations, if: :load_shell_context?
-  before_action :set_ai_agent_updates, if: :load_shell_context?
-  before_action :set_ai_rail_usage_panel, if: :load_shell_context?
-  before_action :set_active_knowledge_suggestion, if: :load_shell_context?
   before_action :ensure_realtime_channel_loaded
   around_action :use_user_time_zone
   after_action :verify_pundit_authorization, unless: :devise_controller?
@@ -143,14 +139,24 @@ class ApplicationController < ActionController::Base
       current_active_suggestion_for(@ai_rail_workspace)
     end
 
-    return if @active_knowledge_suggestion.present?
+    if @active_knowledge_suggestion.present?
+      clear_knowledge_suggestion_generation_pending!(@ai_rail_workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
+      @pending_proactive_knowledge_suggestion = false
+      return
+    end
+
+    @pending_proactive_knowledge_suggestion = knowledge_suggestion_generation_pending?(
+      @ai_rail_workspace,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE
+    )
+
     return unless should_generate_proactive_knowledge_suggestion?
+    return if @pending_proactive_knowledge_suggestion
     return if proactive_knowledge_suggestion_recently_checked?(@ai_rail_workspace)
 
     mark_proactive_knowledge_suggestion_checked!(@ai_rail_workspace)
-    @active_knowledge_suggestion = with_optional_schema_fallback(default: nil, feature: "proactive knowledge suggestion") do
-      Search::PersistKnowledgeSuggestionService.ensure_proactive!(user: current_user, workspace: @ai_rail_workspace)
-    end
+    queue_knowledge_suggestion_generation!(@ai_rail_workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
+    @pending_proactive_knowledge_suggestion = true
   end
 
   def recent_ai_conversations_for(user:, window: 1.week, limit: nil)
@@ -425,6 +431,77 @@ class ApplicationController < ActionController::Base
 
   def proactive_knowledge_suggestion_check_store
     session.fetch(:notae_proactive_knowledge_suggestion_checks, {}).to_h.stringify_keys
+  end
+
+  def knowledge_suggestion_generation_pending?(workspace, kind:)
+    cache_pending = Search::KnowledgeSuggestionGenerationTracker.pending?(user: current_user, workspace: workspace, kind: kind)
+    session_pending = knowledge_suggestion_generation_pending_in_session?(workspace, kind: kind)
+
+    if cache_pending
+      mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind: kind)
+      return true
+    end
+
+    session_pending
+  end
+
+  def clear_knowledge_suggestion_generation_pending!(workspace, kind:)
+    Search::KnowledgeSuggestionGenerationTracker.clear!(user: current_user, workspace: workspace, kind: kind)
+    clear_knowledge_suggestion_generation_pending_in_session!(workspace, kind: kind)
+  end
+
+  def queue_knowledge_suggestion_generation!(workspace, kind:)
+    Search::KnowledgeSuggestionGenerationTracker.mark_pending!(user: current_user, workspace: workspace, kind: kind)
+    mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind: kind)
+    Search::GenerateKnowledgeSuggestionJob.perform_later(current_user.id, workspace.id, kind)
+  end
+
+  def knowledge_suggestion_generation_pending_in_session?(workspace, kind:)
+    store = knowledge_suggestion_generation_pending_store
+    key = knowledge_suggestion_generation_pending_key(workspace, kind: kind)
+    value = store[key].to_s
+    return false if value.blank?
+
+    recorded_at = Time.zone.parse(value)
+    if recorded_at.present? && recorded_at >= knowledge_suggestion_generation_pending_ttl_for(kind).ago
+      true
+    else
+      store.delete(key)
+      session[:notae_pending_knowledge_suggestion_generations] = store
+      false
+    end
+  rescue ArgumentError
+    store.delete(key)
+    session[:notae_pending_knowledge_suggestion_generations] = store
+    false
+  end
+
+  def mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind:)
+    store = knowledge_suggestion_generation_pending_store
+    store[knowledge_suggestion_generation_pending_key(workspace, kind: kind)] = Time.current.iso8601
+    session[:notae_pending_knowledge_suggestion_generations] = store
+  end
+
+  def clear_knowledge_suggestion_generation_pending_in_session!(workspace, kind:)
+    store = knowledge_suggestion_generation_pending_store
+    store.delete(knowledge_suggestion_generation_pending_key(workspace, kind: kind))
+    session[:notae_pending_knowledge_suggestion_generations] = store
+  end
+
+  def knowledge_suggestion_generation_pending_store
+    session.fetch(:notae_pending_knowledge_suggestion_generations, {}).to_h.stringify_keys
+  end
+
+  def knowledge_suggestion_generation_pending_key(workspace, kind:)
+    parts = [ workspace.id, kind.to_s ]
+    if kind.to_s == KnowledgeSuggestion::KIND_DAILY_SUMMARY
+      parts << Time.use_zone(current_user.time_zone.presence || Time.zone) { Date.current.iso8601 }
+    end
+    parts.join(":")
+  end
+
+  def knowledge_suggestion_generation_pending_ttl_for(kind)
+    kind.to_s == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? 45.minutes : 15.minutes
   end
 
   def build_ai_usage_panel(user:, workspace:)

@@ -75,6 +75,22 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.body).to include("Configure an OpenAI key in Settings &gt; Connections first.")
   end
 
+  it "renders the lazy-loaded ai rail panel on demand" do
+    user = User.create!(email: "ai-assistant-panel-request@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Assistant Panel Request", slug: "ai-assistant-panel-request")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Panel page")
+
+    sign_in user
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug, current_page_id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/html")
+    expect(response.body).to include('<turbo-frame id="ai_rail_panel">')
+    expect(response.body).to include("notae-ai-prompt-input")
+    expect(response.body).to include(%(value="#{page.id}"))
+  end
+
   it "falls back to a notice instead of raising when the assistant service crashes" do
     user = User.create!(email: "ai-assistant-service-crash@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "AI Assistant Service Crash", slug: "ai-assistant-service-crash")
@@ -442,7 +458,7 @@ RSpec.describe "AI Assistant", type: :request do
     end
 
     sign_in user
-    get workspace_path(workspace_slug: workspace.slug)
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML.parse(response.body)
@@ -475,7 +491,7 @@ RSpec.describe "AI Assistant", type: :request do
     )
 
     sign_in user
-    get workspace_path(workspace_slug: workspace.slug)
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Internal page")

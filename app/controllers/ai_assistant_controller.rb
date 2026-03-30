@@ -2,6 +2,13 @@ class AiAssistantController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
 
+  def panel
+    authorize @workspace, :show?
+
+    hydrate_ai_rail_panel!(current_page_id: params[:current_page_id])
+    render partial: "shared/app_ai_rail_panel"
+  end
+
   def updates
     authorize @workspace, :show?
 
@@ -49,16 +56,8 @@ class AiAssistantController < ApplicationController
     @ai_assistant_notice = notice_for(@ai_assistant_error_reason || service.unavailable_reason)
     @ai_insert_payload = insert_payload_for(@ai_assistant_response, target_block: target_block)
     record_ai_conversation!
-    @ai_rail_workspace = @workspace
-    @ai_rail_current_page_id = @ai_assistant_current_page_id
-    @ai_rail_conversations = recent_ai_conversations_for(
-      user: current_user,
-      window: 1.week,
-      limit: ai_rail_conversation_limit
-    ).to_a.reverse
-    @ai_usage_panel = build_ai_usage_panel(user: current_user, workspace: @workspace)
+    hydrate_ai_rail_panel!(current_page_id: @ai_assistant_current_page_id)
     @ai_conversations = recent_ai_conversations_for(user: current_user, window: 1.week, limit: 300).to_a
-    @ai_agent_updates = recent_ai_agent_updates_for(workspace: @workspace, limit: ai_agent_update_limit)
 
     respond_to do |format|
       format.turbo_stream do
@@ -238,5 +237,14 @@ class AiAssistantController < ApplicationController
     Time.iso8601(value)
   rescue ArgumentError
     nil
+  end
+
+  def hydrate_ai_rail_panel!(current_page_id:)
+    @ai_rail_workspace = @workspace
+    @ai_rail_current_page_id = current_page_id.presence
+    set_ai_rail_conversations
+    set_ai_agent_updates
+    set_ai_rail_usage_panel
+    set_active_knowledge_suggestion
   end
 end

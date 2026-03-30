@@ -1451,6 +1451,16 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   display: contents;
 }
 
+.notae-ai-rail-shell.is-loading .notae-ai-floating-toggle,
+.notae-ai-rail-shell.is-loading .notae-ai-rail-reopen {
+  cursor: progress;
+}
+
+.notae-ai-rail-shell.is-loading .notae-ai-card-loading {
+  min-height: 6.5rem;
+  justify-content: center;
+}
+
 .notae-ai-floating-toggle {
   display: none;
   position: fixed;
@@ -1734,6 +1744,13 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   padding: 0.28rem 0.2rem 0.08rem;
   display: grid;
   gap: 0.26rem;
+}
+
+.notae-ai-card-loading {
+  border: 1px dashed var(--notae-border-muted);
+  border-radius: 0.85rem;
+  padding: 0.8rem 0.85rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 94%, transparent);
 }
 
 .notae-ai-title {
@@ -12690,6 +12707,50 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
 .notae-knowledge-card-actions {
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.notae-home-card-pending {
+  min-height: 11.5rem;
+}
+
+.notae-knowledge-pending-card {
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  min-height: 7.25rem;
+  border: 1px dashed var(--notae-border-muted);
+  border-radius: 1rem;
+  padding: 1rem 1.05rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 94%, transparent);
+}
+
+.notae-knowledge-pending-card.is-compact {
+  min-height: 0;
+  padding: 0.1rem 0;
+  border: 0;
+  background: transparent;
+  align-items: flex-start;
+}
+
+.notae-knowledge-pending-card .notae-ai-loader {
+  flex: 0 0 auto;
+}
+
+.notae-knowledge-pending-copy {
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.notae-knowledge-pending-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--notae-text);
+}
+
+.notae-knowledge-pending-card.is-compact .notae-knowledge-pending-title {
+  font-size: 0.82rem;
 }
 
 .notae-chip-button-subtle {

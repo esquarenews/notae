@@ -39,6 +39,13 @@
                  workspace: @workspace,
                  task_databases: @knowledge_task_databases %>
     </section>
+  <% elsif @daily_knowledge_suggestion_pending %>
+    <section class="notae-auth-card notae-home-card notae-home-card-pending">
+      <div class="notae-home-card-head">
+        <h2>Daily workspace brief</h2>
+      </div>
+      <%= render "shared/knowledge_suggestion_pending_card", kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY %>
+    </section>
   <% end %>
 
   <% if @active_proactive_knowledge_suggestion.present? %>
@@ -50,6 +57,13 @@
                  suggestion: @active_proactive_knowledge_suggestion,
                  workspace: @workspace,
                  task_databases: @knowledge_task_databases %>
+    </section>
+  <% elsif @active_proactive_knowledge_suggestion_pending %>
+    <section class="notae-auth-card notae-home-card notae-home-card-pending">
+      <div class="notae-home-card-head">
+        <h2>AI suggestion</h2>
+      </div>
+      <%= render "shared/knowledge_suggestion_pending_card", kind: KnowledgeSuggestion::KIND_PROACTIVE %>
     </section>
   <% end %>
 

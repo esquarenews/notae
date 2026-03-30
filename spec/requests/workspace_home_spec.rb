@@ -1,7 +1,18 @@
 require "rails_helper"
 
 RSpec.describe "Workspace home", type: :request do
+  include ActiveJob::TestHelper
   include ActiveSupport::Testing::TimeHelpers
+
+  around do |example|
+    clear_enqueued_jobs
+    clear_performed_jobs
+    Rails.cache.clear
+    example.run
+    clear_enqueued_jobs
+    clear_performed_jobs
+    Rails.cache.clear
+  end
 
   it "shows only the 3 most recently updated pages and databases" do
     user = User.create!(email: "home-owner@example.com", password: "password123")
@@ -32,27 +43,24 @@ RSpec.describe "Workspace home", type: :request do
     get workspace_path(workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("notae-ai-usage-card")
-    expect(response.body).to include("Today usage")
-    expect(response.body).to include("notae-ai-usage-toggle")
-    expect(response.body).to include("aria-expanded=\"false\"")
-    expect(response.body).to include("notae-ai-rail-toggle")
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceHomeController#show")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
+    expect(response.body).to include("Loading AI assistant")
     expect(response.body).to include("notae-ai-rail-reopen")
     expect(response.body).to include("notae-ai-floating-toggle")
-    expect(response.body).to include("notae-ai-rail-overlay")
     expect(response.body).to include("notae-ai-loader")
-    expect(response.body).to include("notae-ai-compose-swirl")
-    expect(response.body).to include("notae-ai-prompt-input")
     expect(response.body).to include("Kalendārium")
-    expect(response.body).to include("toggleFloatingRail")
     expect(response.body).to include("AI Conversation History")
-    expect(response.body).to include("submitOnShortcut")
     expect(response.body).to include("notae-sidebar-collapse-toggle")
     expect(response.body).to include("notae-sidebar-dock")
     expect(response.body).to include("toggleSidebarCollapse")
     expect(response.body).not_to include("Current context:")
     expect(response.body).not_to include("Ask a question to start a conversation.")
     html = Nokogiri::HTML(response.body)
+
+    ai_rail_frame = html.at_css("turbo-frame#ai_rail_panel")
+    expect(ai_rail_frame).to be_present
+    expect(ai_rail_frame["src"]).to eq(workspace_ai_assistant_panel_path(workspace_slug: workspace.slug))
 
     page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)
     expect(page_titles).to eq([ "Page 4 latest", "Page 3 newer", "Page 2 mid" ])
@@ -147,34 +155,70 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Review the critical blockers before noon. [1]")
     expect(response.body).to include("AI suggestion")
     expect(response.body).to include("knowledge-suggestion-")
-    expect(response.body).to include("Update available from Agent")
-    expect(response.body).to include("Open full window")
     expect(response.body).to include("Escalate the approval gap this afternoon. [1]")
     expect(response.body).to include("Choose tasks grid")
     expect(response.body).to include("Create Nota")
     expect(response.body).to include("Create Grid")
     expect(response.body).to include("Dismiss")
     expect(response.body).not_to include("notae-knowledge-overlay")
+
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Update available from Agent")
+    expect(response.body).to include("Open full window")
   end
 
-  it "throttles proactive suggestion generation across quick page switches" do
+  it "queues a daily brief in the background and shows pending state instead of blocking the page load" do
+    user = User.create!(email: "home-knowledge-daily-pending@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge daily pending", slug: "knowledge-daily-pending")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    sign_in user
+
+    travel_to(Time.utc(2026, 3, 21, 7, 30, 0)) do
+      expect do
+        get workspace_path(workspace.slug)
+      end.to have_enqueued_job(Search::GenerateKnowledgeSuggestionJob)
+        .with(user.id, workspace.id, KnowledgeSuggestion::KIND_DAILY_SUMMARY)
+        .on_queue("default")
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Preparing daily workspace brief")
+    expect(response.body).to include("The page is ready.")
+  end
+
+  it "throttles proactive suggestion generation across quick page switches by queueing background work once" do
     user = User.create!(email: "home-knowledge-throttle@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge throttle", slug: "knowledge-throttle")
     Membership.create!(workspace: workspace, user: user, role: :owner)
 
-    allow(Search::PersistKnowledgeSuggestionService).to receive(:ensure_proactive!).and_return(nil)
-
     sign_in user
 
     travel_to(Time.utc(2026, 3, 21, 10, 0, 0)) do
-      get workspace_path(workspace.slug)
+      expect do
+        get workspace_path(workspace.slug)
+      end.to have_enqueued_job(Search::GenerateKnowledgeSuggestionJob)
+        .with(user.id, workspace.id, KnowledgeSuggestion::KIND_PROACTIVE)
+        .on_queue("default")
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Preparing AI suggestion")
 
       get workspace_library_path(workspace_slug: workspace.slug)
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(src="#{workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)}"))
+
+      get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Preparing AI suggestion")
     end
 
-    expect(Search::PersistKnowledgeSuggestionService).to have_received(:ensure_proactive!).once.with(user: user, workspace: workspace)
+    proactive_jobs = enqueued_jobs.select do |job|
+      job[:job] == Search::GenerateKnowledgeSuggestionJob &&
+        Array(job[:args]).last == KnowledgeSuggestion::KIND_PROACTIVE
+    end
+    expect(proactive_jobs.size).to eq(1)
   end
 
   it "renders pending agent draft actions on the workspace home page" do
@@ -210,7 +254,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("New draft")
   end
 
-  it "renders AI agent updates in the rail and exposes the polling endpoint" do
+  it "renders AI agent updates in the lazy-loaded rail panel and exposes the polling endpoint" do
     user = User.create!(email: "home-ai-agent-updates@example.com", password: "password123")
     workspace = Workspace.create!(name: "Home AI Agent Updates", slug: "home-ai-agent-updates")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -248,7 +292,7 @@ RSpec.describe "Workspace home", type: :request do
     workflow_run.update_column(:updated_at, 5.minutes.ago)
 
     sign_in user
-    get workspace_path(workspace.slug)
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-ai-agent-toast")
@@ -266,7 +310,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(update_titles).to include("Quarterly review email", "Roadmap follow-up")
   end
 
-  it "renders AI rail entries in timeline order across conversations and agent updates" do
+  it "renders AI rail entries in timeline order across conversations and agent updates in the lazy-loaded panel" do
     user = User.create!(email: "home-ai-rail-timeline@example.com", password: "password123")
     workspace = Workspace.create!(name: "Home AI Rail Timeline", slug: "home-ai-rail-timeline")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -313,7 +357,7 @@ RSpec.describe "Workspace home", type: :request do
     newer_conversation.update_column(:created_at, 10.minutes.ago)
 
     sign_in user
-    get workspace_path(workspace.slug)
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
 
