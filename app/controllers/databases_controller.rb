@@ -9,7 +9,7 @@ class DatabasesController < ApplicationController
   track_request_performance_for :show, :update
 
   COVER_SHIFT_STEP = 10
-  FILTER_OPERATORS = %w[eq before after].freeze
+  FILTER_OPERATORS = %w[eq neq before after].freeze
 
   def show
     authorize @database
@@ -613,15 +613,17 @@ class DatabasesController < ApplicationController
   end
 
   def filter_match?(row_value, normalized_filter)
-    return false if row_value.nil?
-
     case @filter_operator
+    when "neq"
+      row_value != normalized_filter
     when "before"
       return false unless @filter_property.number? || @filter_property.date?
+      return false if row_value.nil?
 
       row_value < normalized_filter
     when "after"
       return false unless @filter_property.number? || @filter_property.date?
+      return false if row_value.nil?
 
       row_value > normalized_filter
     else

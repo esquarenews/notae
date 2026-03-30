@@ -360,12 +360,47 @@ RSpec.describe "Databases", type: :request do
       workspace_slug: workspace.slug,
       id: database.id,
       filter_property_id: estimate_property.id,
+      filter_operator: "neq",
+      filter_value: "2"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Low estimate")
+    expect(response.body).to include("High estimate")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      filter_property_id: estimate_property.id,
       filter_operator: "after",
       filter_value: "5"
     )
     expect(response).to have_http_status(:ok)
     expect(response.body).not_to include("Low estimate")
     expect(response.body).to include("High estimate")
+  end
+
+  it "renders the expanded filter operator list with clearer date and number wording" do
+    owner = User.create!(email: "database-filter-operators-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Filter operators tables", slug: "filter-operators-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Filter operators DB")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id, view_settings: "open")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Does not equal")
+    expect(response.body).to include("Before / less than")
+    expect(response.body).to include("After / greater than")
+    expect(response.body).to include("For dates, before/after means earlier or later. For numbers, it means less than or greater than.")
   end
 
   it "blocks non-members from accessing a workspace database" do
@@ -706,6 +741,7 @@ RSpec.describe "Databases", type: :request do
              sort_property_id: status_property.id,
              sort_direction: "desc",
              filter_property_id: status_property.id,
+             filter_operator: "neq",
              filter_value: "Done",
              default: true
            }
@@ -718,6 +754,7 @@ RSpec.describe "Databases", type: :request do
       "sort_property_id" => status_property.id,
       "sort_direction" => "desc",
       "filter_property_id" => status_property.id,
+      "filter_operator" => "neq",
       "filter_value" => "Done"
     )
 

@@ -135,7 +135,7 @@ class DatabaseViewsController < ApplicationController
 
   def normalize_filter_operator(value)
     operator = value.to_s
-    return operator if %w[eq before after].include?(operator)
+    return operator if %w[eq neq before after].include?(operator)
 
     nil
   end

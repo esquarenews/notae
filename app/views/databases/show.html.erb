@@ -763,6 +763,12 @@
                 </summary>
                 <div class="notae-db-settings-subpanel">
                   <% if can_update_view %>
+                    <% filter_operator_options = [
+                      ["Equals", "eq"],
+                      ["Does not equal", "neq"],
+                      ["Before / less than", "before"],
+                      ["After / greater than", "after"]
+                    ] %>
                     <%= form_with model: @current_view,
                                   url: database_database_view_path(
                                     workspace_slug: @workspace.slug,
@@ -811,13 +817,14 @@
                                       { include_blank: "No filter", selected: @view_config["filter_property_id"] },
                                       class: "notae-options-input" %>
                       <%= form.select :filter_operator,
-                                      [["Equals", "eq"], ["Before", "before"], ["After", "after"]],
+                                      filter_operator_options,
                                       { selected: @view_config["filter_operator"].presence || "eq" },
                                       class: "notae-options-input" %>
                       <%= form.text_field :filter_value,
                                           value: @view_config["filter_value"],
                                           placeholder: "Value",
                                           class: "notae-options-input" %>
+                      <p class="notae-db-settings-muted">For dates, before/after means earlier or later. For numbers, it means less than or greater than.</p>
                       <%= form.submit "Apply", class: "notae-chip-button" %>
                     <% end %>
                   <% else %>
