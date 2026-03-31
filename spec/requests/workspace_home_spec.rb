@@ -189,6 +189,36 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("The page is ready.")
   end
 
+  it "renders an empty workspace home when AI suggestion enqueue fails" do
+    user = User.create!(email: "home-knowledge-enqueue-failure@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Empty workspace", slug: "empty-workspace")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    sign_in user
+    allow(Search::GenerateKnowledgeSuggestionJob).to receive(:perform_later).and_raise(ActiveJob::EnqueueError, "queue offline")
+
+    travel_to(Time.utc(2026, 3, 21, 7, 30, 0)) do
+      get workspace_path(workspace.slug)
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("No Notarum yet.")
+    expect(response.body).to include("No grids yet.")
+    expect(response.body).not_to include("Preparing daily workspace brief")
+
+    failure_log = AiUsageLog.order(:created_at).last
+    expect(failure_log).to be_present
+    expect(failure_log.user).to eq(user)
+    expect(failure_log.workspace).to eq(workspace)
+    expect(failure_log.operation).to eq(AiUsageLog::OP_KNOWLEDGE_SUGGESTION_FAILURE)
+    expect(failure_log.model).to eq("background_job")
+    expect(failure_log.metadata).to include(
+      "kind" => KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+      "stage" => "enqueue",
+      "error_class" => "ActiveJob::EnqueueError"
+    )
+  end
+
   it "throttles proactive suggestion generation across quick page switches by queueing background work once" do
     user = User.create!(email: "home-knowledge-throttle@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge throttle", slug: "knowledge-throttle")

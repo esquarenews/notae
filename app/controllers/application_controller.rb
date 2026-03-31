@@ -155,8 +155,8 @@ class ApplicationController < ActionController::Base
     return if proactive_knowledge_suggestion_recently_checked?(@ai_rail_workspace)
 
     mark_proactive_knowledge_suggestion_checked!(@ai_rail_workspace)
-    queue_knowledge_suggestion_generation!(@ai_rail_workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
-    @pending_proactive_knowledge_suggestion = true
+    @pending_proactive_knowledge_suggestion =
+      queue_knowledge_suggestion_generation!(@ai_rail_workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
   end
 
   def recent_ai_conversations_for(user:, window: 1.week, limit: nil)
@@ -454,6 +454,36 @@ class ApplicationController < ActionController::Base
     Search::KnowledgeSuggestionGenerationTracker.mark_pending!(user: current_user, workspace: workspace, kind: kind)
     mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind: kind)
     Search::GenerateKnowledgeSuggestionJob.perform_later(current_user.id, workspace.id, kind)
+    true
+  rescue StandardError => error
+    Search::KnowledgeSuggestionGenerationTracker.clear!(user: current_user, workspace: workspace, kind: kind)
+    clear_knowledge_suggestion_generation_pending_in_session!(workspace, kind: kind)
+    log_knowledge_suggestion_enqueue_failure!(workspace: workspace, kind: kind, error: error)
+    false
+  end
+
+  def log_knowledge_suggestion_enqueue_failure!(workspace:, kind:, error:)
+    Rails.logger.error(
+      "[KnowledgeSuggestionQueue] Failed to enqueue #{kind} for workspace=#{workspace&.id} user=#{current_user&.id}: #{error.class}: #{error.message}"
+    )
+
+    return unless current_user.present? && workspace.present?
+    return unless data_source_available?("ai_usage_logs")
+
+    with_optional_schema_fallback(default: nil, feature: "knowledge suggestion enqueue logging") do
+      Search::AiUsageLogger.log_outcome!(
+        user: current_user,
+        workspace: workspace,
+        operation: AiUsageLog::OP_KNOWLEDGE_SUGGESTION_FAILURE,
+        model: "background_job",
+        metadata: {
+          kind: kind,
+          stage: "enqueue",
+          error_class: error.class.name,
+          error_message: error.message.to_s.first(300)
+        }
+      )
+    end
   end
 
   def knowledge_suggestion_generation_pending_in_session?(workspace, kind:)

@@ -92,8 +92,8 @@ class WorkspaceHomeController < ApplicationController
     )
     return nil if @daily_knowledge_suggestion_pending
 
-    queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY)
-    @daily_knowledge_suggestion_pending = true
+    @daily_knowledge_suggestion_pending =
+      queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY)
     nil
   end
 
@@ -130,8 +130,8 @@ class WorkspaceHomeController < ApplicationController
     return nil if proactive_knowledge_suggestion_recently_checked?(@workspace)
 
     mark_proactive_knowledge_suggestion_checked!(@workspace)
-    queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
-    @active_proactive_knowledge_suggestion_pending = true
+    @active_proactive_knowledge_suggestion_pending =
+      queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
     nil
   end
 
