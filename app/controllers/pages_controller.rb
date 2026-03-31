@@ -281,9 +281,6 @@ class PagesController < ApplicationController
   end
 
   def remember_last_page_visit!
-    store = session["notae_last_page_visits"]
-    store = {} unless store.is_a?(Hash)
-    store[@workspace.id.to_s] = @page.id.to_s
-    session["notae_last_page_visits"] = store
+    remember_last_page_visit_for!(workspace: @workspace, page: @page)
   end
 end

@@ -43,7 +43,7 @@ class LibrariesController < ApplicationController
 
     owner_email_lookup = owner_email_by_workspace_id(selected_workspace_ids)
     favorite_lookup = favorite_lookup_for(selected_workspace_ids)
-    last_visited_ids = session.fetch("notae_last_page_visits", {}).values.map(&:to_s)
+    last_visited_ids = last_page_visit_store.values
 
     @library_rows = []
     @library_rows.concat(page_rows(filtered_page_scope(selected_workspace_ids), owner_email_lookup, favorite_lookup, last_visited_ids))

@@ -91,6 +91,10 @@ class WorkspaceHomeController < ApplicationController
       kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY
     )
     return nil if @daily_knowledge_suggestion_pending
+    return nil unless knowledge_suggestion_generation_context_available?(
+      @workspace,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY
+    )
 
     @daily_knowledge_suggestion_pending =
       queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY)
@@ -128,6 +132,10 @@ class WorkspaceHomeController < ApplicationController
     return nil unless should_generate_proactive_knowledge_suggestion?
     return nil if @active_proactive_knowledge_suggestion_pending
     return nil if proactive_knowledge_suggestion_recently_checked?(@workspace)
+    return nil unless knowledge_suggestion_generation_context_available?(
+      @workspace,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE
+    )
 
     mark_proactive_knowledge_suggestion_checked!(@workspace)
     @active_proactive_knowledge_suggestion_pending =
@@ -136,7 +144,7 @@ class WorkspaceHomeController < ApplicationController
   end
 
   def redirect_to_last_visited_page
-    last_page_id = session.dig("notae_last_page_visits", @workspace.id.to_s)
+    last_page_id = last_page_visit_store[@workspace.id.to_s]
     return unless last_page_id
 
     last_page = policy_scope(Page).for_workspace(@workspace).active.find_by(id: last_page_id)

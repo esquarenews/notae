@@ -40,6 +40,20 @@ module Search
       new(user: user, workspace: workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE).call
     end
 
+    def self.generation_context_available?(user:, workspace:, kind:)
+      new(user: user, workspace: workspace, kind: kind).generation_context_available?
+    end
+
+    def generation_context_available?
+      Search::KnowledgeSuggestionService.new(
+        user: user,
+        workspace: workspace,
+        mode: suggestion_mode,
+        since: proactive_recent_since,
+        previous_report: latest_report
+      ).context_available?
+    end
+
     private
 
     attr_reader :user, :workspace, :kind

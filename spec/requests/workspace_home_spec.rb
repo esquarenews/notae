@@ -4,6 +4,25 @@ RSpec.describe "Workspace home", type: :request do
   include ActiveJob::TestHelper
   include ActiveSupport::Testing::TimeHelpers
 
+  def create_indexed_page(workspace:, user:, title:, text:)
+    page = Page.create!(workspace: workspace, created_by: user, title: title)
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: text,
+      token_count: text.split.size,
+      content_hash: "workspace-home-chunk-#{page.id}",
+      source_content_hash: "workspace-home-source-#{page.id}",
+      source_uri: "/w/#{workspace.slug}/pages/#{page.id}",
+      source_title: page.title,
+      metadata_json: {}
+    )
+    page
+  end
+
   around do |example|
     clear_enqueued_jobs
     clear_performed_jobs
@@ -173,6 +192,12 @@ RSpec.describe "Workspace home", type: :request do
     user = User.create!(email: "home-knowledge-daily-pending@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge daily pending", slug: "knowledge-daily-pending")
     Membership.create!(workspace: workspace, user: user, role: :owner)
+    create_indexed_page(
+      workspace: workspace,
+      user: user,
+      title: "Daily context",
+      text: "The workspace contains actionable indexed context for a daily brief."
+    )
 
     sign_in user
 
@@ -193,6 +218,12 @@ RSpec.describe "Workspace home", type: :request do
     user = User.create!(email: "home-knowledge-enqueue-failure@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Empty workspace", slug: "empty-workspace")
     Membership.create!(workspace: workspace, user: user, role: :owner)
+    create_indexed_page(
+      workspace: workspace,
+      user: user,
+      title: "Failure context",
+      text: "This workspace has indexed context so the enqueue path is exercised."
+    )
 
     sign_in user
     allow(Search::GenerateKnowledgeSuggestionJob).to receive(:perform_later).and_raise(ActiveJob::EnqueueError, "queue offline")
@@ -202,7 +233,7 @@ RSpec.describe "Workspace home", type: :request do
     end
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("No Notarum yet.")
+    expect(response.body).to include("Failure context")
     expect(response.body).to include("No grids yet.")
     expect(response.body).not_to include("Preparing daily workspace brief")
 
@@ -223,6 +254,12 @@ RSpec.describe "Workspace home", type: :request do
     user = User.create!(email: "home-knowledge-throttle@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge throttle", slug: "knowledge-throttle")
     Membership.create!(workspace: workspace, user: user, role: :owner)
+    create_indexed_page(
+      workspace: workspace,
+      user: user,
+      title: "Proactive context",
+      text: "Fresh indexed context exists so proactive generation can be queued."
+    )
 
     sign_in user
 
@@ -249,6 +286,64 @@ RSpec.describe "Workspace home", type: :request do
         Array(job[:args]).last == KnowledgeSuggestion::KIND_PROACTIVE
     end
     expect(proactive_jobs.size).to eq(1)
+  end
+
+  it "skips knowledge suggestion generation for workspaces without indexed context" do
+    user = User.create!(email: "home-knowledge-empty-context@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "No indexed context", slug: "no-indexed-context")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    sign_in user
+
+    travel_to(Time.utc(2026, 3, 21, 10, 0, 0)) do
+      expect do
+        get workspace_path(workspace.slug)
+      end.not_to have_enqueued_job(Search::GenerateKnowledgeSuggestionJob)
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Preparing daily workspace brief")
+    expect(response.body).not_to include("Preparing AI suggestion")
+
+    clear_enqueued_jobs
+
+    travel_to(Time.utc(2026, 3, 21, 10, 0, 0)) do
+      expect do
+        get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
+      end.not_to have_enqueued_job(Search::GenerateKnowledgeSuggestionJob)
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Preparing AI suggestion")
+  end
+
+  it "does not overflow the session cookie when switching across many workspaces" do
+    user = User.create!(email: "home-session-overflow@example.com", password: "password123", openai_api_key: "sk-test")
+    visited_workspaces = Array.new(30) do |index|
+      workspace = Workspace.create!(name: "Session workspace #{index}", slug: "session-workspace-#{index}")
+      Membership.create!(workspace: workspace, user: user, role: :owner)
+      page = create_indexed_page(
+        workspace: workspace,
+        user: user,
+        title: "Visited page #{index}",
+        text: "Indexed context #{index} keeps suggestion generation eligible while switching workspaces."
+      )
+      [ workspace, page ]
+    end
+
+    sign_in user
+
+    travel_to(Time.utc(2026, 3, 21, 10, 0, 0)) do
+      expect do
+        visited_workspaces.each do |workspace, page|
+          get page_path(workspace_slug: workspace.slug, id: page.id)
+          expect(response).to have_http_status(:ok)
+
+          get workspace_path(workspace.slug)
+          expect(response).to have_http_status(:ok)
+        end
+      end.not_to raise_error
+    end
   end
 
   it "renders pending agent draft actions on the workspace home page" do

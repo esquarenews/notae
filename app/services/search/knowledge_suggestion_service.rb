@@ -35,6 +35,10 @@ module Search
       @unavailable_reason = nil
     end
 
+    def context_available?
+      select_context_chunks.any?
+    end
+
     def call
       return unavailable(:missing_api_key) unless user.openai_api_key_configured?
       return unavailable(:budget_exceeded) unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
