@@ -1,0 +1,74 @@
+<% wrapper_class = local_assigns.fetch(:wrapper_class, "notae-db-inline-details notae-db-row-more-menu") %>
+<% button_class = local_assigns.fetch(:button_class, "notae-db-row-hover-control") %>
+<% button_title = local_assigns.fetch(:button_title, "Row options") %>
+<% linked_page = local_assigns[:linked_page] %>
+<% row_can_destroy = policy(row).destroy? && !database.locked? %>
+
+<div class="<%= wrapper_class %>"
+     data-controller="row-menu"
+     data-row-menu-gap-value="6"
+     data-row-menu-margin-value="12">
+  <button type="button"
+          class="<%= button_class %>"
+          title="<%= button_title %>"
+          aria-label="<%= button_title %>"
+          aria-expanded="false"
+          data-row-menu-target="button"
+          data-action="click->row-menu#toggle">⋯</button>
+  <div class="notae-db-inline-panel notae-db-row-more-panel" data-row-menu-target="panel" hidden>
+    <div class="notae-db-row-more-actions">
+      <%= button_to duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+                    params: row_params,
+                    class: "notae-db-row-menu-button",
+                    form: { class: "notae-db-row-menu-form" } do %>
+        <span class="notae-db-row-menu-icon">⧉</span>
+        <span class="notae-db-row-menu-label">Duplicate row</span>
+      <% end %>
+      <% if linked_page.present? %>
+        <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+          <%= form.hidden_field :linked_page_id, value: "" %>
+          <button type="submit" class="notae-db-row-menu-button">
+            <span class="notae-db-row-menu-icon">⤬</span>
+            <span class="notae-db-row-menu-label">Remove Nota association</span>
+          </button>
+        <% end %>
+      <% end %>
+      <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+        <%= form.hidden_field :style_action, value: "toggle_bold" %>
+        <button type="submit" class="notae-db-row-menu-button">
+          <span class="notae-db-row-menu-icon">B</span>
+          <span class="notae-db-row-menu-label"><%= row.row_bold? ? "Unbold row" : "Bold row" %></span>
+        </button>
+      <% end %>
+      <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+        <%= form.hidden_field :style_action, value: "toggle_italic" %>
+        <button type="submit" class="notae-db-row-menu-button">
+          <span class="notae-db-row-menu-icon">I</span>
+          <span class="notae-db-row-menu-label"><%= row.row_italic? ? "Unitalic row" : "Italic row" %></span>
+        </button>
+      <% end %>
+      <div class="notae-db-row-menu-color-grid">
+        <% row_color_options.each do |label, color_key| %>
+          <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+            <%= form.hidden_field :style_action, value: "set_color" %>
+            <%= form.hidden_field :text_color, value: color_key %>
+            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_text_color == color_key %>">
+              <span class="notae-db-row-menu-color-swatch is-<%= color_key %>"></span>
+              <span class="notae-db-row-menu-label"><%= label %></span>
+            </button>
+          <% end %>
+        <% end %>
+      </div>
+      <% if row_can_destroy %>
+        <%= button_to database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+                      method: :delete,
+                      params: row_params,
+                      class: "notae-db-row-menu-button is-danger",
+                      form: { class: "notae-db-row-menu-form" } do %>
+          <span class="notae-db-row-menu-icon">x</span>
+          <span class="notae-db-row-menu-label">Delete row</span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

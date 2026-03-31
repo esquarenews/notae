@@ -88,6 +88,44 @@ RSpec.describe "Library page", type: :request do
     expect(headers).not_to include("Last edited time")
   end
 
+  it "renders child tabs as parent references instead of standalone documents" do
+    user = User.create!(email: "library-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Library tabs", slug: "library-tabs")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    parent_page = Page.create!(workspace: workspace, created_by: user, title: "Strategy")
+    Page.create!(workspace: workspace, created_by: user, parent_page: parent_page, title: "Notes")
+    grid_parent = Page.create!(workspace: workspace, created_by: user, title: "Finance")
+    grid_tab_page = Page.create!(workspace: workspace, created_by: user, parent_page: grid_parent, title: "Forecast")
+    Database.create!(workspace: workspace, name: "Forecast grid", linked_page: grid_tab_page)
+
+    sign_in user
+    get workspace_library_path(workspace_slug: workspace.slug)
+
+    titles = library_titles(response.body)
+    expect(titles).to include("Strategy / Notes")
+    expect(titles.grep(/Finance \/ Forecast/).count).to eq(1)
+    expect(library_row_text(response.body, "Strategy / Notes")).to include("Tab")
+    expect(library_row_text(response.body, "Finance / Forecast")).to include("Grid tab")
+  end
+
+  it "does not list top-level grid shell pages as standalone Notarum" do
+    user = User.create!(email: "library-grid-shell-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Library grid shells", slug: "library-grid-shells")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    Page.create!(workspace: workspace, created_by: user, title: "Standalone page")
+    grid_shell = Page.create!(workspace: workspace, created_by: user, title: "Grid shell page")
+    Database.create!(workspace: workspace, created_by: user, name: "Ops grid", linked_page: grid_shell)
+
+    sign_in user
+    get workspace_library_path(workspace_slug: workspace.slug)
+
+    titles = library_titles(response.body)
+    expect(titles).to include("Standalone page", "🗃️ Ops grid")
+    expect(titles).not_to include("Grid shell page")
+  end
+
   it "paginates all documents with 50 records per page" do
     user = User.create!(email: "library-pagination-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Library pagination", slug: "library-pagination")

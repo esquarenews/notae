@@ -1,0 +1,140 @@
+<% row_update_path = database_db_row_path({ workspace_slug: workspace.slug, database_id: database.id, id: row.id }.merge(row_params)) %>
+<% linked_page = linkable_pages_by_id[row.linked_page_id] %>
+<% row_can_update = policy(row).update? && !database.locked? %>
+
+<dialog class="notae-db-board-card-modal"
+        data-board-card-dialog
+        data-action="click->database-drag#closeDialogOnBackdrop close->database-drag#handleDialogClose cancel->database-drag#handleDialogCancel">
+  <div class="notae-db-board-card-modal-panel">
+    <header class="notae-db-board-card-modal-header">
+      <div class="notae-db-board-card-modal-heading">
+        <p class="notae-db-board-card-modal-kicker">Card details</p>
+        <p class="notae-db-board-card-modal-id">#<%= row.id.to_s.first(8) %></p>
+      </div>
+      <div class="notae-db-board-card-modal-actions">
+        <% if linked_page.present? %>
+          <%= link_to page_path(workspace_slug: workspace.slug, id: linked_page.id),
+                      class: "notae-db-board-card-modal-link",
+                      title: "Open linked Nota",
+                      aria: { label: "Open linked Nota" } do %>
+            ↗
+          <% end %>
+        <% end %>
+        <% if row_can_update %>
+          <%= render "databases/row_context_menu",
+                     row: row,
+                     workspace: workspace,
+                     database: database,
+                     row_update_path: row_update_path,
+                     row_params: row_params,
+                     row_color_options: row_color_options,
+                     linked_page: linked_page,
+                     wrapper_class: "notae-db-inline-details notae-db-row-more-menu notae-db-board-card-modal-menu",
+                     button_class: "notae-db-board-card-modal-menu-button",
+                     button_title: "Card options" %>
+        <% end %>
+        <button type="button"
+                class="notae-db-board-card-modal-close"
+                aria-label="Close card editor"
+                data-action="click->database-drag#closeDialog">
+          ×
+        </button>
+      </div>
+    </header>
+
+    <div class="notae-db-board-card-modal-body">
+      <section class="notae-db-board-card-modal-section">
+        <label class="notae-db-board-card-modal-label" for="board_row_title_<%= row.id %>">Title</label>
+        <% if row_can_update %>
+          <%= form_with model: row,
+                        url: row_update_path,
+                        method: :patch,
+                        class: "notae-db-board-card-modal-title-form",
+                        data: {
+                          controller: "auto-submit",
+                          action: "turbo:submit-end->database-drag#refreshBoardOnSubmit"
+                        } do |form| %>
+            <%= form.text_field :title,
+                                value: row.title,
+                                id: "board_row_title_#{row.id}",
+                                class: "notae-db-board-card-modal-title-input",
+                                placeholder: "Enter card title",
+                                data: { action: "change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter" } %>
+            <%= hidden_field_tag "db_row[autosave_title]", "1" %>
+          <% end %>
+        <% else %>
+          <div class="notae-db-board-card-modal-static-value"><%= row.title %></div>
+        <% end %>
+      </section>
+
+      <section class="notae-db-board-card-modal-section">
+        <div class="notae-db-board-card-modal-fields">
+          <% editor_properties.each do |db_property| %>
+            <% db_cell = cells_by_key[[row.id, db_property.id]] %>
+            <% field_id = "board_row_#{row.id}_property_#{db_property.id}" %>
+            <div class="notae-db-board-card-modal-field">
+              <label class="notae-db-board-card-modal-label" for="<%= field_id %>"><%= db_property.name %></label>
+              <% if db_cell.present? && policy(db_cell).update? && !database.locked? %>
+                <%= form_with model: db_cell,
+                              url: database_db_cell_path({ workspace_slug: workspace.slug, database_id: database.id, id: db_cell.id }.merge(row_params)),
+                              method: :patch,
+                              data: {
+                                controller: "auto-submit",
+                                action: "turbo:submit-end->database-drag#refreshBoardOnSubmit"
+                              },
+                              class: "notae-db-board-card-modal-field-form" do |form| %>
+                  <% field_classes = db_property.select? ? select_input_classes_for(db_property, db_cell.value_text) : "notae-db-cell-input" %>
+                  <% if db_property.checkbox? %>
+                    <label class="notae-db-board-card-modal-checkbox">
+                      <%= form.check_box :value_text,
+                                         {
+                                           checked: db_cell.value_text == "true",
+                                           class: "h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400",
+                                           data: { action: "change->auto-submit#submit" },
+                                           id: field_id
+                                         },
+                                         "true",
+                                         "false" %>
+                      <span>Checked</span>
+                    </label>
+                  <% elsif db_property.select? %>
+                    <% blank_label = db_property.name.to_s.strip.casecmp("status").zero? ? "Select status" : "Select option" %>
+                    <%= form.select :value_text,
+                                    options_for_select(select_options_for(db_property), db_cell.value_text),
+                                    { include_blank: blank_label },
+                                    class: field_classes,
+                                    id: field_id,
+                                    data: { action: "change->auto-submit#submit" } %>
+                  <% elsif db_property.number? %>
+                    <%= form.number_field :value_text,
+                                          value: db_cell.value_text,
+                                          id: field_id,
+                                          step: "any",
+                                          class: field_classes,
+                                          data: { action: "change->auto-submit#submit" } %>
+                  <% elsif db_property.date? %>
+                    <%= form.date_field :value_text,
+                                        value: db_cell.value_text,
+                                        id: field_id,
+                                        class: field_classes,
+                                        data: { action: "change->auto-submit#submit" } %>
+                  <% else %>
+                    <%= form.text_field :value_text,
+                                        value: db_cell.value_text,
+                                        id: field_id,
+                                        class: field_classes,
+                                        data: { action: "change->auto-submit#submit" } %>
+                  <% end %>
+                <% end %>
+              <% else %>
+                <div class="notae-db-board-card-modal-static-value">
+                  <%= db_cell&.value_text.presence || "Empty" %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    </div>
+  </div>
+</dialog>

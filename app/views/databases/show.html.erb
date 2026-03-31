@@ -1,5 +1,6 @@
-<% content_for :title, @database.name %>
-<% content_for :topbar_page_icon, @database.icon.presence || "🗃️" %>
+<% display_title = @page_title_page&.title.presence || @database.name %>
+<% content_for :title, display_title %>
+<% content_for :topbar_page_icon, @page_title_page&.icon.presence || @database.icon.presence || "🗃️" %>
 <% database_privacy_label =
      case @database.permission_mode
      when "private_database"
@@ -19,6 +20,10 @@
 <% can_archive_database = @can_archive_database %>
 <% supported_layout_types = %w[table board timeline calendar list gallery chart feed map] %>
 <% enabled_layout_types = %w[table board calendar list gallery] %>
+<% shell_page = @page_title_page %>
+<% shell_page_route_params = shell_page.present? ? { workspace_slug: @workspace.slug, id: shell_page.id } : nil %>
+<% can_edit_shell_page = shell_page.present? && @can_update_page_title_page && !shell_page.locked? %>
+<% current_path = request.fullpath %>
 <% topbar_view_params = {
   workspace_slug: @workspace.slug,
   id: @database.id,
@@ -95,43 +100,77 @@
          data-action="turbo:submit-start->database-view-state#capture click->database-view-state#captureLink"
          data-database-view-state-storage-key-value="database-view-scroll:<%= @database.id %>">
 <section class="notae-db-canvas">
-  <% if @database.cover? %>
+  <% if shell_page.present? ? shell_page.cover? : @database.cover? %>
     <section class="notae-page-cover">
       <div class="notae-page-cover-frame">
-        <% if @database.cover_image.attached? %>
+        <% if shell_page&.cover_image&.attached? %>
+          <%= image_tag shell_page.cover_image,
+                        class: "notae-page-cover-image",
+                        style: "object-position: center #{shell_page.cover_focal_y}%" %>
+        <% elsif @database.cover_image.attached? && shell_page.blank? %>
           <%= image_tag @database.cover_image,
                         class: "notae-page-cover-image",
                         style: "object-position: center #{@database.cover_focal_y}%" %>
-        <% elsif (cover_style = page_cover_preset_style(@database.cover_preset_key, focal_y: @database.cover_focal_y)).present? %>
+        <% elsif (cover_style =
+                    if shell_page.present?
+                      page_cover_preset_style(shell_page.cover_preset_key, focal_y: shell_page.cover_focal_y)
+                    else
+                      page_cover_preset_style(@database.cover_preset_key, focal_y: @database.cover_focal_y)
+                    end).present? %>
           <div class="notae-page-cover-preset"
                style="<%= cover_style %>">
           </div>
         <% end %>
 
-        <% if can_edit_database %>
+        <% if can_edit_shell_page || (shell_page.blank? && can_edit_database) %>
           <div class="notae-page-cover-controls">
             <details class="notae-cover-picker">
               <summary class="notae-chip-button notae-cover-chip">Change</summary>
-              <%= render "shared/cover_picker_panel",
-                         update_url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                         param_key: :database,
-                         selected_cover_key: @database.cover_preset_key %>
+              <% if shell_page.present? %>
+                <%= render "shared/cover_picker_panel",
+                           update_url: page_path(shell_page_route_params),
+                           param_key: :page,
+                           selected_cover_key: shell_page.cover_preset_key,
+                           return_to: current_path %>
+              <% else %>
+                <%= render "shared/cover_picker_panel",
+                           update_url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                           param_key: :database,
+                           selected_cover_key: @database.cover_preset_key %>
+              <% end %>
             </details>
 
-            <%= button_to "↑",
-                          database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                          method: :patch,
-                          params: { database: { cover_shift: "up" } },
-                          class: "notae-chip-button notae-cover-chip",
-                          title: "Move cover up",
-                          aria: { label: "Move cover up" } %>
-            <%= button_to "↓",
-                          database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                          method: :patch,
-                          params: { database: { cover_shift: "down" } },
-                          class: "notae-chip-button notae-cover-chip",
-                          title: "Move cover down",
-                          aria: { label: "Move cover down" } %>
+            <% if shell_page.present? %>
+              <%= button_to "↑",
+                            page_path(shell_page_route_params),
+                            method: :patch,
+                            params: { return_to: current_path, page: { cover_shift: "up" } },
+                            class: "notae-chip-button notae-cover-chip",
+                            title: "Move cover up",
+                            aria: { label: "Move cover up" } %>
+              <%= button_to "↓",
+                            page_path(shell_page_route_params),
+                            method: :patch,
+                            params: { return_to: current_path, page: { cover_shift: "down" } },
+                            class: "notae-chip-button notae-cover-chip",
+                            title: "Move cover down",
+                            aria: { label: "Move cover down" } %>
+            <% else %>
+              <%= button_to "↑",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { cover_shift: "up" } },
+                            class: "notae-chip-button notae-cover-chip",
+                            title: "Move cover up",
+                            aria: { label: "Move cover up" } %>
+              <%= button_to "↓",
+                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            params: { database: { cover_shift: "down" } },
+                            class: "notae-chip-button notae-cover-chip",
+                            title: "Move cover down",
+                            aria: { label: "Move cover down" } %>
+            <% end %>
           </div>
         <% end %>
       </div>
@@ -139,102 +178,198 @@
   <% end %>
 
   <header class="notae-db-header">
-    <% if @database.icon.present? %>
+    <% if shell_page&.icon.present? %>
+      <div class="notae-page-icon-display"><%= shell_page.icon %></div>
+    <% elsif @database.icon.present? %>
       <div class="notae-page-icon-display"><%= @database.icon %></div>
     <% end %>
 
-    <% if can_edit_database %>
+    <% if can_edit_shell_page || (shell_page.blank? && can_edit_database) %>
       <div class="notae-db-header-tools">
-        <details class="notae-page-header-action">
-          <summary aria-label="<%= @database.icon.present? ? "Change icon" : "Add icon" %>">
-            <span class="notae-page-header-action-icon">◌</span>
-            <span class="notae-page-header-action-label"><%= @database.icon.present? ? "Change icon" : "Add icon" %></span>
-          </summary>
-          <div class="notae-page-header-panel">
-            <%= form_with model: @database,
-                          url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                          method: :patch,
-                          class: "notae-page-header-panel-form" do |form| %>
-              <%= hidden_field_tag "database[icon_action]", "set" %>
-              <%= form.text_field :icon, maxlength: 8, placeholder: "🗃️", class: "notae-options-input", value: @database.icon %>
-              <%= form.submit(@database.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
-            <% end %>
-            <div class="notae-page-emoji-grid">
-              <% Database::ICON_SUGGESTIONS.each do |emoji| %>
-                <%= button_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                              method: :patch,
-                              params: { database: { icon_action: "set", icon: emoji } },
-                              class: "notae-page-emoji-button",
-                              title: "Use #{emoji}" do %>
-                  <%= emoji %>
+        <% if shell_page.present? %>
+          <details class="notae-page-header-action">
+            <summary aria-label="<%= shell_page.icon.present? ? "Change icon" : "Add icon" %>">
+              <span class="notae-page-header-action-icon">◌</span>
+              <span class="notae-page-header-action-label"><%= shell_page.icon.present? ? "Change icon" : "Add icon" %></span>
+            </summary>
+            <div class="notae-page-header-panel">
+              <%= form_with model: shell_page,
+                            url: page_path(shell_page_route_params),
+                            method: :patch,
+                            class: "notae-page-header-panel-form" do |form| %>
+                <%= hidden_field_tag :return_to, current_path %>
+                <%= hidden_field_tag "page[icon_action]", "set" %>
+                <%= form.text_field :icon, maxlength: 8, placeholder: "🗃️", class: "notae-options-input", value: shell_page.icon %>
+                <%= form.submit(shell_page.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
+              <% end %>
+              <div class="notae-page-emoji-grid">
+                <% Database::ICON_SUGGESTIONS.each do |emoji| %>
+                  <%= button_to page_path(shell_page_route_params),
+                                method: :patch,
+                                params: { return_to: current_path, page: { icon_action: "set", icon: emoji } },
+                                class: "notae-page-emoji-button",
+                                title: "Use #{emoji}" do %>
+                    <%= emoji %>
+                  <% end %>
                 <% end %>
+              </div>
+              <% if shell_page.icon.present? %>
+                <%= button_to "Remove icon",
+                              page_path(shell_page_route_params),
+                              method: :patch,
+                              params: { return_to: current_path, page: { icon_action: "clear" } },
+                              class: "notae-page-header-link-button" %>
               <% end %>
             </div>
-            <% if @database.icon.present? %>
-              <%= button_to "Remove icon",
-                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                            method: :patch,
-                            params: { database: { icon_action: "clear" } },
-                            class: "notae-page-header-link-button" %>
-            <% end %>
-          </div>
-        </details>
+          </details>
 
-        <details class="notae-page-header-action">
-          <summary aria-label="<%= @database.cover? ? "Change cover" : "Add cover" %>">
-            <span class="notae-page-header-action-icon">▭</span>
-            <span class="notae-page-header-action-label"><%= @database.cover? ? "Change cover" : "Add cover" %></span>
-          </summary>
-          <div class="notae-page-header-panel notae-page-header-cover-panel">
-            <div class="notae-page-cover-panel-actions">
-              <%= button_to "Move up",
-                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                            method: :patch,
-                            params: { database: { cover_shift: "up" } },
-                            class: "notae-chip-button" %>
-              <%= button_to "Move down",
-                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                            method: :patch,
-                            params: { database: { cover_shift: "down" } },
-                            class: "notae-chip-button" %>
+          <details class="notae-page-header-action">
+            <summary aria-label="<%= shell_page.cover? ? "Change cover" : "Add cover" %>">
+              <span class="notae-page-header-action-icon">▭</span>
+              <span class="notae-page-header-action-label"><%= shell_page.cover? ? "Change cover" : "Add cover" %></span>
+            </summary>
+            <div class="notae-page-header-panel notae-page-header-cover-panel">
+              <div class="notae-page-cover-panel-actions">
+                <%= button_to "Move up",
+                              page_path(shell_page_route_params),
+                              method: :patch,
+                              params: { return_to: current_path, page: { cover_shift: "up" } },
+                              class: "notae-chip-button" %>
+                <%= button_to "Move down",
+                              page_path(shell_page_route_params),
+                              method: :patch,
+                              params: { return_to: current_path, page: { cover_shift: "down" } },
+                              class: "notae-chip-button" %>
+              </div>
+              <%= render "shared/cover_picker_panel",
+                         update_url: page_path(shell_page_route_params),
+                         param_key: :page,
+                         selected_cover_key: shell_page.cover_preset_key,
+                         embedded: true,
+                         allow_remove: shell_page.cover?,
+                         remove_label: "Remove cover",
+                         return_to: current_path %>
             </div>
-            <%= render "shared/cover_picker_panel",
-                       update_url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                       param_key: :database,
-                       selected_cover_key: @database.cover_preset_key,
-                       embedded: true,
-                       allow_remove: @database.cover?,
-                       remove_label: "Remove cover" %>
-          </div>
-        </details>
-
-        <details class="notae-page-header-action">
-          <summary aria-label="<%= @database.description.present? ? "Edit description" : "Add description" %>">
-            <span class="notae-page-header-action-icon">ℹ</span>
-            <span class="notae-page-header-action-label"><%= @database.description.present? ? "Edit description" : "Add description" %></span>
-          </summary>
-          <div class="notae-page-header-panel">
-            <%= form_with model: @database,
-                          url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                          method: :patch,
-                          class: "notae-page-header-panel-form" do |form| %>
-              <%= hidden_field_tag "database[description_action]", "set" %>
-              <%= form.text_area :description, rows: 3, class: "notae-options-input", placeholder: "Describe this grid..." %>
-              <%= form.submit "Save description", class: "notae-chip-button" %>
-            <% end %>
-            <% if @database.description.present? %>
-              <%= button_to "Remove description",
-                            database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+          </details>
+        <% else %>
+          <details class="notae-page-header-action">
+            <summary aria-label="<%= @database.icon.present? ? "Change icon" : "Add icon" %>">
+              <span class="notae-page-header-action-icon">◌</span>
+              <span class="notae-page-header-action-label"><%= @database.icon.present? ? "Change icon" : "Add icon" %></span>
+            </summary>
+            <div class="notae-page-header-panel">
+              <%= form_with model: @database,
+                            url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
                             method: :patch,
-                            params: { database: { description_action: "clear" } },
-                            class: "notae-page-header-link-button" %>
-            <% end %>
-          </div>
-        </details>
+                            class: "notae-page-header-panel-form" do |form| %>
+                <%= hidden_field_tag "database[icon_action]", "set" %>
+                <%= form.text_field :icon, maxlength: 8, placeholder: "🗃️", class: "notae-options-input", value: @database.icon %>
+                <%= form.submit(@database.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
+              <% end %>
+              <div class="notae-page-emoji-grid">
+                <% Database::ICON_SUGGESTIONS.each do |emoji| %>
+                  <%= button_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                                method: :patch,
+                                params: { database: { icon_action: "set", icon: emoji } },
+                                class: "notae-page-emoji-button",
+                                title: "Use #{emoji}" do %>
+                    <%= emoji %>
+                  <% end %>
+                <% end %>
+              </div>
+              <% if @database.icon.present? %>
+                <%= button_to "Remove icon",
+                              database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                              method: :patch,
+                              params: { database: { icon_action: "clear" } },
+                              class: "notae-page-header-link-button" %>
+              <% end %>
+            </div>
+          </details>
+
+          <details class="notae-page-header-action">
+            <summary aria-label="<%= @database.cover? ? "Change cover" : "Add cover" %>">
+              <span class="notae-page-header-action-icon">▭</span>
+              <span class="notae-page-header-action-label"><%= @database.cover? ? "Change cover" : "Add cover" %></span>
+            </summary>
+            <div class="notae-page-header-panel notae-page-header-cover-panel">
+              <div class="notae-page-cover-panel-actions">
+                <%= button_to "Move up",
+                              database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                              method: :patch,
+                              params: { database: { cover_shift: "up" } },
+                              class: "notae-chip-button" %>
+                <%= button_to "Move down",
+                              database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                              method: :patch,
+                              params: { database: { cover_shift: "down" } },
+                              class: "notae-chip-button" %>
+              </div>
+              <%= render "shared/cover_picker_panel",
+                         update_url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                         param_key: :database,
+                         selected_cover_key: @database.cover_preset_key,
+                         embedded: true,
+                         allow_remove: @database.cover?,
+                         remove_label: "Remove cover" %>
+            </div>
+          </details>
+
+          <details class="notae-page-header-action">
+            <summary aria-label="<%= @database.description.present? ? "Edit description" : "Add description" %>">
+              <span class="notae-page-header-action-icon">ℹ</span>
+              <span class="notae-page-header-action-label"><%= @database.description.present? ? "Edit description" : "Add description" %></span>
+            </summary>
+            <div class="notae-page-header-panel">
+              <%= form_with model: @database,
+                            url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                            method: :patch,
+                            class: "notae-page-header-panel-form" do |form| %>
+                <%= hidden_field_tag "database[description_action]", "set" %>
+                <%= form.text_area :description, rows: 3, class: "notae-options-input", placeholder: "Describe this grid..." %>
+                <%= form.submit "Save description", class: "notae-chip-button" %>
+              <% end %>
+              <% if @database.description.present? %>
+                <%= button_to "Remove description",
+                              database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                              method: :patch,
+                              params: { database: { description_action: "clear" } },
+                              class: "notae-page-header-link-button" %>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
       </div>
       <% end %>
 
-    <% if can_edit_database %>
+    <% if shell_page.present? %>
+      <% if can_edit_shell_page %>
+        <%= form_with model: shell_page,
+                      url: page_path(shell_page_route_params),
+                      method: :patch,
+                      class: "notae-page-title-form",
+                      data: {
+                        controller: "page-title",
+                        page_title_url_value: page_path(shell_page_route_params)
+                      } do |form| %>
+          <%= hidden_field_tag :return_to, current_path %>
+          <%= form.text_area :title,
+                             value: shell_page.title,
+                             rows: 1,
+                             wrap: "off",
+                             class: "notae-page-title-input",
+                             required: true,
+                             aria: { label: "Parent title" },
+                             data: {
+                               page_title_target: "input",
+                               action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
+                             } %>
+          <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
+        <% end %>
+      <% else %>
+        <h1 class="notae-db-title"><%= shell_page.title %></h1>
+      <% end %>
+    <% elsif can_edit_database %>
       <%= form_with model: @database,
                     url: database_path(view_params),
                     method: :patch,
@@ -261,9 +396,16 @@
     <% else %>
       <h1 class="notae-db-title"><%= @database.name %></h1>
     <% end %>
-    <% if @database.description.present? %>
+    <% if shell_page.blank? && @database.description.present? %>
       <p class="notae-db-description"><%= @database.description %></p>
     <% end %>
+
+    <%= render "shared/page_tabs",
+               workspace: @workspace,
+               navigation: @page_tabs,
+               can_create_tab_page: @can_create_tab_page,
+               create_tab_as_database: true,
+               current_path: request.fullpath %>
   </header>
 
   <div class="notae-db-viewbar">
@@ -288,12 +430,15 @@
             <%= form.hidden_field :name, value: "Untitled grid" %>
             <%= form.submit "Grid", class: "notae-chip-button notae-db-template-button" %>
           <% end %>
-          <%= form_with model: Database.new, url: databases_path(workspace_slug: @workspace.slug), class: "notae-db-template-form" do |form| %>
-            <%= hidden_field_tag :quick_create, "1" %>
-            <%= hidden_field_tag :template, "tasks" %>
-            <%= form.hidden_field :name, value: "Tasks grid" %>
-            <%= form.submit "Tasks", class: "notae-chip-button notae-db-template-button" %>
-          <% end %>
+        <% end %>
+        <%= form_with url: taskify_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                      method: :post,
+                      class: "notae-db-template-form" do %>
+          <%= button_tag "Tasks",
+                         type: "submit",
+                         class: [ "notae-chip-button", "notae-db-template-button", ("is-active" if @tasks_template_ready && @view_type == "table") ].compact.join(" "),
+                         disabled: !can_edit_database || !@can_apply_tasks_template,
+                         title: (!can_edit_database || @can_apply_tasks_template) ? nil : "Open a blank grid or new tab before using the Tasks template." %>
         <% end %>
         <%= form_with url: kanbanize_database_path(workspace_slug: @workspace.slug, id: @database.id),
                       method: :post,

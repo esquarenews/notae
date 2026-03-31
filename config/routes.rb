@@ -113,6 +113,7 @@ Rails.application.routes.draw do
     resources :databases, only: %i[show create update destroy] do
       member do
         post :duplicate
+        post :taskify
         post :kanbanize
         patch :archive
         patch :restore
@@ -156,6 +157,7 @@ Rails.application.routes.draw do
         patch :archive
         patch :restore
         patch :permissions
+        patch :remove_tab
         get :export_markdown, to: "page_exports#markdown"
         post :export_zip, to: "page_exports#create"
         post :save_as_template, to: "page_templates#create"

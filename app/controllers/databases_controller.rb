@@ -4,16 +4,35 @@ class DatabasesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv permissions kanbanize]
+  before_action :set_database, only: %i[show update duplicate archive export_csv permissions taskify kanbanize]
   before_action :set_archived_database, only: %i[restore destroy]
   track_request_performance_for :show, :update
 
   COVER_SHIFT_STEP = 10
   FILTER_OPERATORS = %w[eq neq before after].freeze
+  TASK_TEMPLATE_PROPERTIES = [
+    [ "Status", "select" ],
+    [ "Date created", "date" ],
+    [ "Due date", "date" ],
+    [ "Notes", "text" ]
+  ].freeze
+  TASK_TEMPLATE_PROPERTY_TYPES = TASK_TEMPLATE_PROPERTIES.each_with_object({}) do |(name, property_type), index|
+    index[name.downcase] = property_type
+  end.freeze
 
   def show
     authorize @database
+    ensure_tab_shell_page!
     ensure_default_view!
+    @page_tabs = resolve_page_tabs
+    @page_title_page = @database.linked_page&.parent_page
+    @can_update_page_title_page = @page_title_page.present? && policy(@page_title_page).update?
+    @can_create_tab_page =
+      if @page_tabs.group_page.present?
+        policy(Page.new(workspace: @workspace, created_by: current_user, parent_page: @page_tabs.group_page, title: "New tab")).create?
+      else
+        false
+      end
 
     can_manage_permissions = policy(@database).permissions?
     @memberships =
@@ -23,6 +42,8 @@ class DatabasesController < ApplicationController
         []
       end
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+    @can_apply_tasks_template = tasks_template_convertible?(properties: @db_properties)
+    @tasks_template_ready = tasks_template_ready?(properties: @db_properties)
     @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
     @archived_rows = policy_scope(DbRow).for_database(@database).where.not(archived_at: nil).ordered.to_a
     @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
@@ -81,10 +102,19 @@ class DatabasesController < ApplicationController
     template = normalize_template(params[:template])
     apply_template_default_name!(template)
     apply_quick_create_name!
+    linked_tab_parent = create_tab_parent_page
+    linked_tab_title = create_tab_title
     authorize @database
+    authorize_linked_tab_page!(linked_tab_parent, linked_tab_title)
 
     ActiveRecord::Base.transaction do
       @database.save!
+      Databases::EnsureLinkedPageService.call(
+        database: @database,
+        actor: current_user,
+        parent_page: linked_tab_parent,
+        title: linked_tab_title
+      )
       table_view = ensure_default_view!
       apply_template!(template, table_view:)
       log_database_audit_event!(action: "create", kind: "database_created")
@@ -94,6 +124,35 @@ class DatabasesController < ApplicationController
   rescue ActiveRecord::RecordInvalid => error
     message = @database.errors.full_messages.to_sentence.presence || error.record.errors.full_messages.to_sentence
     redirect_to workspace_path(@workspace.slug), alert: message
+  end
+
+  def taskify
+    authorize @database, :update?
+
+    if @database.locked?
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: "Grid is locked. Unlock to make changes."
+      return
+    end
+
+    unless tasks_template_convertible?
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
+                  alert: "This grid already has custom fields. Open a blank grid or new tab before using the Tasks template."
+      return
+    end
+
+    table_view = nil
+
+    ActiveRecord::Base.transaction do
+      table_view = resolve_or_create_table_view!
+      build_tasks_template!(table_view:)
+      log_database_audit_event!(action: "update", kind: "database_taskified")
+    end
+
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: table_view.id),
+                notice: "Switched to Tasks view."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
+                alert: error.record.errors.full_messages.to_sentence
   end
 
   def kanbanize
@@ -254,7 +313,34 @@ class DatabasesController < ApplicationController
   end
 
   def database_params
-    params.require(:database).permit(:name)
+    params.require(:database).permit(:name, :parent_page_id, :tab_title).except(:parent_page_id, :tab_title)
+  end
+
+  def create_tab_parent_page
+    parent_page_id = params.dig(:database, :parent_page_id).to_s.strip
+    return nil if parent_page_id.blank?
+
+    parent_page = policy_scope(Page).for_workspace(@workspace).active.find_by(id: parent_page_id)
+    return parent_page if parent_page.present?
+
+    @database.errors.add(:base, "The selected tab group could not be found.")
+    raise ActiveRecord::RecordInvalid, @database
+  end
+
+  def create_tab_title
+    params.dig(:database, :tab_title).to_s.strip.presence
+  end
+
+  def authorize_linked_tab_page!(parent_page, title)
+    return if parent_page.blank?
+
+    tab_page = Page.new(
+      workspace: @workspace,
+      created_by: current_user,
+      parent_page: parent_page,
+      title: title.presence || @database.name
+    )
+    authorize tab_page, :create?
   end
 
   def apply_quick_create_name!
@@ -417,6 +503,10 @@ class DatabasesController < ApplicationController
     return @database_views.find { |view| view.id.to_s == view_id } if view_id
 
     @database_views.find(&:default?) || @database_views.first
+  end
+
+  def ensure_tab_shell_page!
+    Databases::EnsureLinkedPageService.call(database: @database, actor: current_user)
   end
 
   def resolve_filter_and_sort_settings!
@@ -690,6 +780,16 @@ class DatabasesController < ApplicationController
     policy_scope(Page).for_workspace(@workspace).active.find_by(id: split_page_id)
   end
 
+  def resolve_page_tabs
+    PageTabs::Resolver.new(
+      workspace: @workspace,
+      page_scope: policy_scope(Page),
+      database_scope: policy_scope(Database),
+      group_page: @database.linked_page&.parent_page || @database.linked_page,
+      current_database: @database
+    ).call
+  end
+
   def ensure_cells_for_rendered_rows!(property_ids: nil)
     return if @rows.empty? || @db_properties.empty?
 
@@ -740,6 +840,7 @@ class DatabasesController < ApplicationController
 
   def required_property_ids_for_cell_load
     required_ids = []
+    required_ids.concat(@db_properties.map(&:id)) if @view_type == "board"
     required_ids.concat(Array(@visible_db_properties).map(&:id))
     required_ids << @sort_property&.id
     required_ids << @filter_property&.id
@@ -769,32 +870,16 @@ class DatabasesController < ApplicationController
   end
 
   def build_tasks_template!(table_view:)
-    created_properties = []
-    created_properties << @database.db_properties.create!(
-      workspace: @workspace,
-      name: "Status",
-      property_type: :select
-    )
-    created_properties << @database.db_properties.create!(
-      workspace: @workspace,
-      name: "Date created",
-      property_type: :date
-    )
-    created_properties << @database.db_properties.create!(
-      workspace: @workspace,
-      name: "Due date",
-      property_type: :date
-    )
-    created_properties << @database.db_properties.create!(
-      workspace: @workspace,
-      name: "Notes",
-      property_type: :text
-    )
+    task_properties = TASK_TEMPLATE_PROPERTIES.map do |name, property_type|
+      find_or_create_task_template_property!(name:, property_type:)
+    end
+
+    seed_task_template_cells!(properties: task_properties)
 
     return if table_view.blank?
 
     config = table_view.config_json.to_h
-    config["visible_property_ids"] = created_properties.map { |property| property.id.to_s }
+    config["visible_property_ids"] = task_properties.map { |property| property.id.to_s }
     table_view.update!(config_json: config)
   end
 
@@ -851,6 +936,19 @@ class DatabasesController < ApplicationController
     end
   end
 
+  def resolve_or_create_table_view!
+    existing_table = @database.database_views.ordered.find { |view| view.view_type == "table" }
+    return existing_table if existing_table.present?
+
+    @database.database_views.create!(
+      workspace: @workspace,
+      created_by: current_user,
+      name: next_available_view_name("Table"),
+      view_type: :table,
+      default: @database.database_views.none?
+    )
+  end
+
   def ensure_default_view!
     default_view = @database.database_views.find_by(default: true)
     return default_view if default_view.present?
@@ -888,5 +986,94 @@ class DatabasesController < ApplicationController
       metadata: metadata.merge(kind: kind, database_id: @database.id).compact,
       auditable: auditable
     )
+  end
+
+  def tasks_template_convertible?(properties: nil)
+    grouped_properties = Array(properties || @database.db_properties.ordered.to_a).group_by do |property|
+      normalize_task_template_property_name(property.name)
+    end
+
+    grouped_properties.all? do |property_name, matching_properties|
+      expected_type = TASK_TEMPLATE_PROPERTY_TYPES[property_name]
+      expected_type.present? &&
+        matching_properties.one? &&
+        matching_properties.first.property_type == expected_type
+    end
+  end
+
+  def tasks_template_ready?(properties: nil)
+    normalized_types = Array(properties || @database.db_properties.ordered.to_a).each_with_object({}) do |property, index|
+      index[normalize_task_template_property_name(property.name)] = property.property_type
+    end
+
+    TASK_TEMPLATE_PROPERTY_TYPES.all? do |property_name, property_type|
+      normalized_types[property_name] == property_type
+    end
+  end
+
+  def find_or_create_task_template_property!(name:, property_type:)
+    existing_property = @database.db_properties.ordered.find do |property|
+      normalize_task_template_property_name(property.name) == normalize_task_template_property_name(name)
+    end
+    return existing_property if existing_property.present? && existing_property.property_type == property_type
+
+    if existing_property.present?
+      existing_property.errors.add(:property_type, "must be #{property_type} to use the Tasks template")
+      raise ActiveRecord::RecordInvalid, existing_property
+    end
+
+    @database.db_properties.create!(
+      workspace: @workspace,
+      name: name,
+      property_type: property_type
+    )
+  end
+
+  def seed_task_template_cells!(properties:)
+    rows = @database.db_rows.order(:created_at).to_a
+    return if rows.empty? || properties.empty?
+
+    property_ids = properties.map(&:id)
+    existing_cells = policy_scope(DbCell)
+                       .for_database(@database)
+                       .where(db_row_id: rows.map(&:id), db_property_id: property_ids)
+                       .index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
+
+    rows.each do |row|
+      properties.each do |property|
+        default_value = task_template_default_value_for(row:, property:)
+        existing_cell = existing_cells[[ row.id, property.id ]]
+
+        if existing_cell.present?
+          next if default_value.blank?
+          next unless existing_cell.value_text.to_s.blank?
+
+          existing_cell.update!(value_text: default_value)
+          next
+        end
+
+        DbCell.create!(
+          workspace: @workspace,
+          db_row: row,
+          db_property: property,
+          value_text: default_value
+        )
+      end
+    end
+  end
+
+  def task_template_default_value_for(row:, property:)
+    case normalize_task_template_property_name(property.name)
+    when "status"
+      "not started"
+    when "date created"
+      row.created_at.to_date.iso8601
+    else
+      ""
+    end
+  end
+
+  def normalize_task_template_property_name(name)
+    name.to_s.strip.downcase
   end
 end

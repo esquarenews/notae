@@ -72,6 +72,7 @@ module ApplicationHelper
     @ui_sidebar_recent_pages[limit] ||= policy_scope(Page)
                                         .for_workspace(workspace)
                                         .active
+                                        .standalone_top_level
                                         .select(:id, :title, :icon, :updated_at)
                                         .order(updated_at: :desc)
                                         .limit(limit)
@@ -86,6 +87,8 @@ module ApplicationHelper
     @ui_sidebar_recent_databases[limit] ||= policy_scope(Database)
                                             .for_workspace(workspace)
                                             .active
+                                            .left_outer_joins(:linked_page)
+                                            .where(pages: { parent_page_id: nil })
                                             .select(:id, :name, :icon, :updated_at)
                                             .order(updated_at: :desc)
                                             .limit(limit)
@@ -100,6 +103,7 @@ module ApplicationHelper
     @ui_sidebar_recent_meetings[limit] ||= policy_scope(Page)
                                            .for_workspace(workspace)
                                            .active
+                                           .top_level
                                            .meeting_notes
                                            .select(:id, :title, :updated_at)
                                            .order(updated_at: :desc)

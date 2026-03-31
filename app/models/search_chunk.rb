@@ -42,7 +42,12 @@ class SearchChunk < ApplicationRecord
   end
 
   def self.context_preload_associations
-    associations = [ :workspace, :page, { db_row: :database } ]
+    associations = [
+      :workspace,
+      { page: [ :parent_page, :linked_database ] },
+      { database: { linked_page: :parent_page } },
+      { db_row: { database: { linked_page: :parent_page } } }
+    ]
     associations << :kalendarium_event if reference_column_available?(:kalendarium_event_id)
     associations << :meeting_session if reference_column_available?(:meeting_session_id)
     associations << { epistularium_message: :epistularium_account } if reference_column_available?(:epistularium_message_id)

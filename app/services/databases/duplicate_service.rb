@@ -37,12 +37,12 @@ module Databases
         icon: database.icon,
         cover_preset_key: database.cover_preset_key,
         cover_focal_y: database.cover_focal_y,
-        linked_page: database.linked_page,
         small_text: database.small_text,
         font_style: database.font_style,
         locked: false
       )
       duplicate.cover_image.attach(database.cover_image.blob) if database.cover_image.attached?
+      Databases::EnsureLinkedPageService.call(database: duplicate, actor: created_by)
       duplicate
     end
 

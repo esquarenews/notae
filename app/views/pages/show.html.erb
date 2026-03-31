@@ -1,10 +1,15 @@
-<% content_for :title, @page.title.presence || "New page" %>
-<% content_for :topbar_page_icon, @page.icon.presence || "📄" %>
-<% content_for :topbar_privacy, @page.permission_mode.humanize %>
+<% shell_page = @page_title_page || @page %>
+<% can_edit_shell_page = @can_update_page_title_page && !shell_page.locked? %>
+<% can_show_comment_action = @can_comment_on_page && !@page.locked? %>
+<% content_for :title, shell_page.title.presence || "New page" %>
+<% content_for :topbar_page_icon, shell_page.icon.presence || @page.icon.presence || "📄" %>
+<% content_for :topbar_privacy, shell_page.permission_mode.humanize %>
 <% content_for :content_class, "notae-content-page" %>
 <% embedded_page_params = params[:embedded].to_s == "1" ? { embedded: "1" } : {} %>
 <% page_route_params = { workspace_slug: @workspace.slug, id: @page.id }.merge(embedded_page_params) %>
 <% page_blocks_route_params = { workspace_slug: @workspace.slug, page_id: @page.id }.merge(embedded_page_params) %>
+<% shell_page_route_params = { workspace_slug: @workspace.slug, id: shell_page.id }.merge(embedded_page_params) %>
+<% current_path = request.fullpath %>
 <% content_for :topbar_actions do %>
   <span id="page_topbar_edited_at" class="notae-topbar-meta">Edited <%= time_ago_in_words(@page.updated_at) %> ago</span>
   <% unless @page.locked? %>
@@ -57,7 +62,7 @@
   <% end %>
 <% end %>
 
-<% has_cover = @page.cover? %>
+<% has_cover = shell_page.cover? %>
 <% doc_layout_classes = [ "notae-doc-layout" ] %>
 <% doc_layout_classes << "is-full-width" if @page.full_width? %>
 <% doc_layout_classes << "is-small-text" if @page.small_text? %>
@@ -67,36 +72,37 @@
 <% if has_cover %>
   <section class="notae-page-cover">
     <div class="notae-page-cover-frame">
-      <% if @page.cover_image.attached? %>
-        <%= image_tag @page.cover_image,
+      <% if shell_page.cover_image.attached? %>
+        <%= image_tag shell_page.cover_image,
                       class: "notae-page-cover-image",
-                      style: "object-position: center #{@page.cover_focal_y}%" %>
-      <% elsif (cover_style = page_cover_preset_style(@page.cover_preset_key, focal_y: @page.cover_focal_y)).present? %>
+                      style: "object-position: center #{shell_page.cover_focal_y}%" %>
+      <% elsif (cover_style = page_cover_preset_style(shell_page.cover_preset_key, focal_y: shell_page.cover_focal_y)).present? %>
         <div class="notae-page-cover-preset"
              style="<%= cover_style %>">
         </div>
       <% end %>
 
-      <% if @can_update_page %>
+      <% if can_edit_shell_page %>
         <div class="notae-page-cover-controls">
           <details class="notae-cover-picker">
             <summary class="notae-chip-button notae-cover-chip">Change</summary>
             <%= render "shared/cover_picker_panel",
-                       update_url: page_path(page_route_params),
+                       update_url: page_path(shell_page_route_params),
                        param_key: :page,
-                       selected_cover_key: @page.cover_preset_key %>
+                       selected_cover_key: shell_page.cover_preset_key,
+                       return_to: current_path %>
           </details>
           <%= button_to "↑",
-                        page_path(page_route_params),
+                        page_path(shell_page_route_params),
                         method: :patch,
-                        params: { page: { cover_shift: "up" } },
+                        params: { return_to: current_path, page: { cover_shift: "up" } },
                         class: "notae-chip-button notae-cover-chip",
                         title: "Move cover up",
                         aria: { label: "Move cover up" } %>
           <%= button_to "↓",
-                        page_path(page_route_params),
+                        page_path(shell_page_route_params),
                         method: :patch,
-                        params: { page: { cover_shift: "down" } },
+                        params: { return_to: current_path, page: { cover_shift: "down" } },
                         class: "notae-chip-button notae-cover-chip",
                         title: "Move cover down",
                         aria: { label: "Move cover down" } %>
@@ -114,47 +120,48 @@
 
   <header class="notae-doc-header">
     <div class="notae-page-header-main">
-      <% if @page.icon.present? %>
-        <div class="notae-page-icon-display"><%= @page.icon %></div>
+      <% if shell_page.icon.present? %>
+        <div class="notae-page-icon-display"><%= shell_page.icon %></div>
       <% end %>
 
-      <% if !@page.locked? && (@can_update_page || @can_comment_on_page) %>
+      <% if can_edit_shell_page || can_show_comment_action %>
         <div class="notae-page-header-tools">
-          <% if @can_update_page %>
+          <% if can_edit_shell_page %>
             <details class="notae-page-header-action">
-              <summary aria-label="<%= @page.icon.present? ? "Change icon" : "Add icon" %>">
+              <summary aria-label="<%= shell_page.icon.present? ? "Change icon" : "Add icon" %>">
                 <span class="notae-page-header-action-icon">◌</span>
-                <span class="notae-page-header-action-label"><%= @page.icon.present? ? "Change icon" : "Add icon" %></span>
+                <span class="notae-page-header-action-label"><%= shell_page.icon.present? ? "Change icon" : "Add icon" %></span>
               </summary>
               <div class="notae-page-header-panel">
-                <%= form_with model: @page,
-                              url: page_path(page_route_params),
+                <%= form_with model: shell_page,
+                              url: page_path(shell_page_route_params),
                               method: :patch,
                               class: "notae-page-header-panel-form" do |form| %>
+                  <%= hidden_field_tag :return_to, current_path %>
                   <%= hidden_field_tag "page[icon_action]", "set" %>
                   <%= form.text_field :icon,
                                       maxlength: 8,
                                       placeholder: "😀",
                                       class: "notae-options-input",
-                                      value: @page.icon %>
-                  <%= form.submit(@page.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
+                                      value: shell_page.icon %>
+                  <%= form.submit(shell_page.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
                 <% end %>
                 <div class="notae-page-emoji-grid">
                   <% Page::ICON_SUGGESTIONS.each do |emoji| %>
-                    <%= button_to page_path(page_route_params),
+                    <%= button_to page_path(shell_page_route_params),
                                   method: :patch,
-                                  params: { page: { icon_action: "set", icon: emoji } },
+                                  params: { return_to: current_path, page: { icon_action: "set", icon: emoji } },
                                   class: "notae-page-emoji-button",
                                   title: "Use #{emoji}" do %>
                       <%= emoji %>
                     <% end %>
                   <% end %>
                 </div>
-                <% if @page.icon.present? %>
+                <% if shell_page.icon.present? %>
                   <%= button_to "Remove icon",
-                                page_path(page_route_params),
+                                page_path(shell_page_route_params),
                                 method: :patch,
-                                params: { page: { icon_action: "clear" } },
+                                params: { return_to: current_path, page: { icon_action: "clear" } },
                                 class: "notae-page-header-link-button" %>
                 <% end %>
               </div>
@@ -168,28 +175,29 @@
               <div class="notae-page-header-panel notae-page-header-cover-panel">
                 <div class="notae-page-cover-panel-actions">
                   <%= button_to "Move up",
-                                page_path(page_route_params),
+                                page_path(shell_page_route_params),
                                 method: :patch,
-                                params: { page: { cover_shift: "up" } },
+                                params: { return_to: current_path, page: { cover_shift: "up" } },
                                 class: "notae-chip-button" %>
                   <%= button_to "Move down",
-                                page_path(page_route_params),
+                                page_path(shell_page_route_params),
                                 method: :patch,
-                                params: { page: { cover_shift: "down" } },
+                                params: { return_to: current_path, page: { cover_shift: "down" } },
                                 class: "notae-chip-button" %>
                 </div>
                 <%= render "shared/cover_picker_panel",
-                           update_url: page_path(page_route_params),
+                           update_url: page_path(shell_page_route_params),
                            param_key: :page,
-                           selected_cover_key: @page.cover_preset_key,
+                           selected_cover_key: shell_page.cover_preset_key,
                            embedded: true,
                            allow_remove: has_cover,
-                           remove_label: "Remove cover" %>
+                           remove_label: "Remove cover",
+                           return_to: current_path %>
               </div>
             </details>
           <% end %>
 
-          <% if @can_comment_on_page %>
+          <% if can_show_comment_action %>
             <button type="button"
                     class="notae-page-header-link"
                     data-action="click->shell#openCommentsMenu"
@@ -201,14 +209,15 @@
         </div>
       <% end %>
 
-      <%= form_with model: @page,
-                    url: page_path(page_route_params),
+      <%= form_with model: shell_page,
+                    url: page_path(shell_page_route_params),
                     method: :patch,
                     class: "notae-page-title-form",
                     data: {
                       controller: "page-title",
-                      page_title_url_value: page_path(page_route_params)
+                      page_title_url_value: page_path(shell_page_route_params)
                     } do |form| %>
+        <%= hidden_field_tag :return_to, current_path %>
         <%= form.text_area :title,
                            rows: 1,
                            wrap: "off",
@@ -218,9 +227,17 @@
                              page_title_target: "input",
                              action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
                            },
-                           aria: { label: "Page title" } %>
+                           aria: { label: "Page title" },
+                           readonly: !can_edit_shell_page %>
         <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
       <% end %>
+
+      <%= render "shared/page_tabs",
+               workspace: @workspace,
+               navigation: @page_tabs,
+               can_create_tab_page: @can_create_tab_page,
+               embedded_page_params: embedded_page_params,
+               current_path: current_path %>
     </div>
   </header>
 

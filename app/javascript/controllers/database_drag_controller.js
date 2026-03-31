@@ -13,14 +13,23 @@ export default class extends Controller {
     this.draggedCard = null
     this.dropLane = null
     this.editingCard = null
+    this.openDialogCard = null
+    this.boardRefreshPending = false
     this.placeholder = document.createElement("div")
     this.placeholder.className = "notae-db-board-card-placeholder"
+    this.boundBeforeCache = this.beforeCache.bind(this)
+    document.addEventListener("turbo:before-cache", this.boundBeforeCache)
+  }
+
+  disconnect() {
+    document.removeEventListener("turbo:before-cache", this.boundBeforeCache)
+    this.closeOpenDialog({ reason: "internal" })
   }
 
   dragstart(event) {
     const card = event.currentTarget
     const rowId = card?.dataset.databaseDragRowId
-    if (!rowId || card?.classList.contains("is-editing")) {
+    if (!rowId || card?.classList.contains("is-editing") || card?.classList.contains("is-dialog-open")) {
       event.preventDefault()
       return
     }
@@ -123,13 +132,67 @@ export default class extends Controller {
   }
 
   beginEdit(event) {
-    if (event.target.closest("input, textarea, button, select, a, summary")) return
+    if (event.target.closest("input, textarea, button, select, a, summary, dialog, form")) return
 
     const card = event.currentTarget
     if (!(card instanceof HTMLElement)) return
     if (this.draggedCard instanceof HTMLElement) return
 
-    this.showEdit(card)
+    this.openDialog(card)
+  }
+
+  closeDialog(event) {
+    const dialog = event.currentTarget?.closest?.("[data-board-card-dialog]")
+    if (!(dialog instanceof HTMLDialogElement)) return
+
+    const card = dialog.closest("[data-database-drag-row-id]")
+    if (!(card instanceof HTMLElement)) return
+
+    this.closeDialogForCard(card, { reason: "explicit" })
+  }
+
+  closeDialogOnBackdrop(event) {
+    if (!(event.currentTarget instanceof HTMLDialogElement)) return
+    if (event.target !== event.currentTarget) return
+
+    event.preventDefault()
+  }
+
+  handleDialogCancel(event) {
+    event.preventDefault()
+  }
+
+  handleDialogClose(event) {
+    const dialog = event.currentTarget
+    if (!(dialog instanceof HTMLDialogElement)) return
+
+    const card = dialog.closest("[data-database-drag-row-id]")
+    if (!(card instanceof HTMLElement)) return
+
+    card.classList.remove("is-dialog-open")
+    if (this.openDialogCard === card) {
+      this.openDialogCard = null
+    }
+
+    const closeReason = dialog.dataset.closeReason
+    delete dialog.dataset.closeReason
+
+    if (closeReason === "explicit" && this.boardRefreshPending) {
+      this.boardRefreshPending = false
+      window.setTimeout(() => {
+        if (window.Turbo?.visit) {
+          window.Turbo.visit(window.location.href, { action: "replace" })
+        } else {
+          window.location.reload()
+        }
+      }, 24)
+    }
+  }
+
+  refreshBoardOnSubmit(event) {
+    if (!event.detail?.success) return
+
+    this.boardRefreshPending = true
   }
 
   submitEditFromKeydown(event) {
@@ -259,6 +322,60 @@ export default class extends Controller {
     }
   }
 
+  dialogFor(card) {
+    return card.querySelector("[data-board-card-dialog]")
+  }
+
+  openDialog(card) {
+    if (!(card instanceof HTMLElement)) return
+
+    if (this.openDialogCard && this.openDialogCard !== card) {
+      this.closeDialogForCard(this.openDialogCard)
+    }
+
+    const dialog = this.dialogFor(card)
+    if (!(dialog instanceof HTMLDialogElement)) return
+
+    card.classList.add("is-dialog-open")
+    dialog.showModal()
+    this.openDialogCard = card
+    this.focusDialogPrimaryInput(dialog)
+  }
+
+  closeDialogForCard(card, { reason = "internal" } = {}) {
+    if (!(card instanceof HTMLElement)) return
+
+    const dialog = this.dialogFor(card)
+    if (!(dialog instanceof HTMLDialogElement) || !dialog.open) {
+      card.classList.remove("is-dialog-open")
+      if (this.openDialogCard === card) {
+        this.openDialogCard = null
+      }
+      return
+    }
+
+    dialog.dataset.closeReason = reason
+    dialog.close()
+  }
+
+  closeOpenDialog({ reason = "internal" } = {}) {
+    if (!(this.openDialogCard instanceof HTMLElement)) return
+
+    this.closeDialogForCard(this.openDialogCard, { reason })
+  }
+
+  focusDialogPrimaryInput(dialog) {
+    const input = dialog.querySelector(".notae-db-board-card-modal-title-input, input:not([type='hidden']), textarea, select")
+    if (!(input instanceof HTMLElement)) return
+
+    requestAnimationFrame(() => {
+      input.focus({ preventScroll: true })
+      if (typeof input.select === "function") {
+        input.select()
+      }
+    })
+  }
+
   displayFor(card) {
     return card.querySelector("[data-board-card-display]")
   }
@@ -320,6 +437,11 @@ export default class extends Controller {
     this.placeholder.remove()
     this.dropLane = null
     this.draggedCard = null
+  }
+
+  beforeCache() {
+    this.boardRefreshPending = false
+    this.closeOpenDialog({ reason: "internal" })
   }
 
   updateEditedMeta(html) {

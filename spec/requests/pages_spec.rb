@@ -1,7 +1,47 @@
 require "rails_helper"
 
 RSpec.describe "Pages", type: :request do
-  it "creates nested pages and renders hierarchy in workspace sidebar" do
+  it "styles the active tab with stronger emphasis" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-page-tab-shell.is-active {\n  border-color: color-mix(in srgb, var(--notae-tab-accent) 56%, var(--notae-border));\n  background: color-mix(in srgb, var(--notae-tab-accent) 22%, var(--notae-surface-raised));\n  box-shadow: 0 8px 18px color-mix(in srgb, var(--notae-tab-accent) 18%, rgba(15, 23, 42, 0.18)), inset 0 1px 0 rgba(255, 255, 255, 0.42);\n  transform: translateY(-1px);")
+  end
+
+  it "pins the new tab action to the right edge of the tab strip" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-page-tabs {\n  display: flex;\n  align-items: flex-start;\n  gap: 0.72rem;")
+    expect(stylesheet).to include(".notae-page-tabs-list {\n  display: flex;\n  align-items: center;\n  flex: 1 1 auto;\n  min-width: 0;")
+    expect(stylesheet).to include(".notae-page-tab-create-form {\n  margin: 0 0 0 auto;\n  flex: 0 0 auto;")
+  end
+
+  it "keeps the title save status above the cover controls without lifting the closed picker" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-page-title-form {\n  width: 100%;\n  position: relative;\n  z-index: 80;")
+    expect(stylesheet).to include(".notae-page-title-form .notae-doc-muted {\n  position: relative;\n  z-index: 81;")
+    expect(stylesheet).to include(".notae-page-cover-controls {\n  position: absolute;")
+    expect(stylesheet).to include("  z-index: 32;")
+    expect(stylesheet).to include(".notae-page-cover-controls:has(.notae-cover-picker[open]) {\n  z-index: var(--notae-layer-popover-region);\n}")
+  end
+
+  it "keeps the green flash notice above page controls and popovers" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("--notae-layer-flash: 1400;")
+    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;\n  z-index: var(--notae-layer-flash);")
+  end
+
+  it "restores the collapsed ai rail before turbo swaps the next shell into place" do
+    application_js = Rails.root.join("app/javascript/application.js").read
+
+    expect(application_js).to include('const AI_RAIL_COLLAPSED_CLASS = "is-ai-rail-collapsed"')
+    expect(application_js).to include('syncAiRailCollapsedState(document)')
+    expect(application_js).to include('document.addEventListener("turbo:before-render", (event) => {')
+    expect(application_js).to include("syncAiRailCollapsedState(newBody)")
+  end
+
+  it "creates child tabs without surfacing them as standalone sidebar items" do
     owner = User.create!(email: "pages-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Knowledge", slug: "knowledge")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -13,7 +53,171 @@ RSpec.describe "Pages", type: :request do
     expect(response).to have_http_status(:redirect)
     get workspace_path(workspace.slug)
     expect(response.body).to include("Parent Page")
-    expect(response.body).to include("Child Page")
+    expect(response.body).not_to include("Child Page")
+  end
+
+  it "shows a default tab for a top-level page before any child tabs exist" do
+    owner = User.create!(email: "pages-default-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Default tabs", slug: "default-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Original note")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    labels = html.css(".notae-page-tabs .notae-page-tab-label").map(&:text).map(&:strip)
+    active_link = html.at_css(%(.notae-page-tab.is-active[href="#{page_path(workspace_slug: workspace.slug, id: page.id)}"]))
+
+    expect(labels).to eq([ page.title ])
+    expect(active_link).to be_present
+    expect(html.at_css(".notae-page-tab-create-form input[name='page[parent_page_id]']")["value"]).to eq(page.id)
+  end
+
+  it "renders top-of-page tabs under the parent title for sibling notes and linked grids" do
+    owner = User.create!(email: "pages-tabs-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page tabs", slug: "page-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Project")
+    note_tab = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Research")
+    grid_tab_page = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Tasks anchor")
+    grid_tab = Database.create!(workspace: workspace, created_by: owner, name: "Sprint Grid", linked_page: grid_tab_page)
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: note_tab.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    labels = html.css(".notae-page-tabs .notae-page-tab-label").map(&:text).map(&:strip)
+    title_input = html.at_css(".notae-page-title-input")
+
+    expect(labels).to eq([ group_page.title, note_tab.title, grid_tab_page.title ])
+    expect(title_input["aria-label"]).to eq("Page title")
+    expect(title_input.text.strip).to eq(group_page.title)
+    expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: group_page.id)}"]))).to be_present
+    expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: note_tab.id)}"]))).to be_present
+    expect(html.at_css(%(.notae-page-tab[href="#{database_path(workspace_slug: workspace.slug, id: grid_tab.id)}"]))).to be_present
+    expect(html.at_css(".notae-page-tab-create-form input[name='page[parent_page_id]']")["value"]).to eq(group_page.id)
+  end
+
+  it "keeps the parent shell visible while switching context into a child tab" do
+    owner = User.create!(email: "pages-shell-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Shell tabs", slug: "shell-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Main document",
+      icon: "🌿",
+      cover_preset_key: Page::COVER_PRESET_KEYS.first
+    )
+    child_tab = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Draft tab")
+    sibling_tab = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Second tab")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: child_tab.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    shell_titles = html.css(".notae-page-title-input").map(&:text).map(&:strip)
+    tab_shells = html.css(".notae-page-tab-shell")
+    tab_labels = html.css(".notae-page-tab-label").map(&:text).map(&:strip)
+
+    expect(shell_titles).to include(group_page.title)
+    expect(html.at_css(".notae-page-icon-display")&.text&.strip).to eq(group_page.icon)
+    expect(html.at_css(".notae-page-cover-preset")).to be_present
+    expect(tab_labels).to eq([ group_page.title, child_tab.title, sibling_tab.title ])
+    expect(tab_shells).not_to be_empty
+    expect(tab_shells.all? { |node| node.at_css(".notae-page-tab-menu-trigger").present? }).to be(true)
+    expect(html.at_css(%(.notae-page-tab.is-active[href="#{page_path(workspace_slug: workspace.slug, id: child_tab.id)}"]))).to be_present
+  end
+
+  it "redirects a new tab into the child context while preserving the parent shell" do
+    owner = User.create!(email: "pages-new-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "New child tab", slug: "new-child-tab")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Parent shell",
+      icon: "🧠",
+      cover_preset_key: Page::COVER_PRESET_KEYS.first
+    )
+    sign_in owner
+
+    post pages_path(workspace_slug: workspace.slug),
+         params: { page: { title: "New tab", parent_page_id: group_page.id } }
+
+    created_tab = workspace.pages.find_by!(parent_page: group_page, title: "New tab")
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: created_tab.id))
+
+    get page_path(workspace_slug: workspace.slug, id: created_tab.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css(".notae-page-title-input")&.text&.strip).to eq(group_page.title)
+    expect(html.at_css(".notae-page-icon-display")&.text&.strip).to eq(group_page.icon)
+    expect(html.at_css(".notae-page-cover-preset")).to be_present
+    expect(html.at_css(%(.notae-page-tab.is-active[href="#{page_path(workspace_slug: workspace.slug, id: created_tab.id)}"]))).to be_present
+  end
+
+  it "marks the current child page tab as active" do
+    owner = User.create!(email: "pages-active-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Active tabs", slug: "active-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Product")
+    active_tab = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Specs")
+    Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Notes")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: active_tab.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    active_link = html.at_css(".notae-page-tabs .notae-page-tab.is-active .notae-page-tab-label")
+
+    expect(active_link).to be_present
+    expect(active_link.text.strip).to eq(active_tab.title)
+    expect(html.at_css(".notae-page-tab-create-form input[name='page[parent_page_id]']")["value"]).to eq(group_page.id)
+  end
+
+  it "renames and recolors a tab without leaving the current page" do
+    owner = User.create!(email: "pages-rename-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Rename tabs", slug: "rename-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Project Alpha")
+    target_tab = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Draft")
+    current_tab = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Current")
+    sign_in owner
+
+    patch page_path(workspace_slug: workspace.slug, id: target_tab.id),
+          params: {
+            return_to: page_path(workspace_slug: workspace.slug, id: current_tab.id),
+            page: { title: "Released", tab_color: "purple" }
+          }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: current_tab.id))
+    expect(target_tab.reload.title).to eq("Released")
+    expect(target_tab.tab_color).to eq("purple")
+    expect(target_tab.parent_page_id).to eq(group_page.id)
+  end
+
+  it "archives a tab and clears any linked grid association" do
+    owner = User.create!(email: "pages-delete-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Delete tabs", slug: "delete-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Ops")
+    tab_page = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Tracker")
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Tracker grid", linked_page: tab_page)
+    sign_in owner
+
+    patch remove_tab_page_path(workspace_slug: workspace.slug, id: tab_page.id),
+          params: { return_to: page_path(workspace_slug: workspace.slug, id: group_page.id) }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: group_page.id))
+    expect(tab_page.reload).to be_archived
+    expect(database.reload.linked_page).to be_nil
   end
 
   it "hides archived pages from workspace sidebar" do

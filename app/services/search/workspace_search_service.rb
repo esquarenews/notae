@@ -36,13 +36,14 @@ module Search
             .active
             .distinct(false)
             .search_full_text(query)
+            .includes(:parent_page, :linked_database)
             .limit(15)
             .map do |page|
         Result.new(
-          kind: "Page",
-          title: page.title,
-          excerpt: highlighted_excerpt(page.title),
-          url: Rails.application.routes.url_helpers.page_path(workspace_slug: workspace.slug, id: page.id),
+          kind: page_result_kind(page),
+          title: page_result_title(page),
+          excerpt: highlighted_excerpt(page.tab_child? ? page.tab_reference_title : page.title),
+          url: page_result_url(page),
           score: 30
         )
       end
@@ -53,14 +54,14 @@ module Search
             .for_workspace(workspace)
             .active
             .search_full_text(query)
-            .includes(:page)
+            .includes(page: [ :parent_page, :linked_database ])
             .limit(20)
             .map do |block|
         Result.new(
-          kind: "Block",
-          title: block.page.title,
+          kind: block.page.tab_child? ? "Tab block" : "Block",
+          title: page_result_title(block.page),
           excerpt: highlighted_excerpt(block.search_text),
-          url: "#{Rails.application.routes.url_helpers.page_path(workspace_slug: workspace.slug, id: block.page_id)}#block_#{block.id}",
+          url: "#{page_result_url(block.page)}#block_#{block.id}",
           score: 20
         )
       end
@@ -71,12 +72,12 @@ module Search
             .for_workspace(workspace)
             .active
             .search_full_text(query)
-            .includes(:database)
+            .includes(database: { linked_page: :parent_page })
             .limit(15)
             .map do |row|
         Result.new(
-          kind: "Row",
-          title: row.title.presence || row.database.name,
+          kind: row.database.tab_child? ? "Grid tab row" : "Row",
+          title: row_result_title(row, row.database),
           excerpt: highlighted_excerpt(row.search_text),
           url: Rails.application.routes.url_helpers.database_path(workspace_slug: workspace.slug, id: row.database_id, anchor: "row_#{row.id}"),
           score: 10
@@ -239,18 +240,18 @@ module Search
     def build_semantic_result(chunk, similarity)
       if chunk.page.present?
         Result.new(
-          kind: "Page",
-          title: chunk.page.title,
+          kind: page_result_kind(chunk.page),
+          title: page_result_title(chunk.page),
           excerpt: highlighted_excerpt(chunk.text),
-          url: Rails.application.routes.url_helpers.page_path(workspace_slug: workspace.slug, id: chunk.page_id),
+          url: page_result_url(chunk.page),
           score: 36 + (similarity * 12)
         )
       elsif chunk.db_row.present?
         database = chunk.database || chunk.db_row.database
 
         Result.new(
-          kind: "Row",
-          title: chunk.db_row.title.presence || database&.name || "Row",
+          kind: database&.tab_child? ? "Grid tab row" : "Row",
+          title: row_result_title(chunk.db_row, database),
           excerpt: highlighted_excerpt(chunk.text),
           url: Rails.application.routes.url_helpers.database_path(workspace_slug: workspace.slug, id: chunk.database_id, anchor: "row_#{chunk.db_row_id}"),
           score: 30 + (similarity * 12)
@@ -336,6 +337,36 @@ module Search
 
       score += 2.4 if title == query.downcase
       score
+    end
+
+    def page_result_kind(page)
+      return "Grid tab" if page.tab_child? && page.linked_database.present?
+      return "Grid" if page.linked_database.present?
+      return "Page" unless page.tab_child?
+
+      "Tab"
+    end
+
+    def page_result_title(page)
+      page.tab_child? ? page.tab_reference_title : page.title
+    end
+
+    def page_result_url(page)
+      if page.linked_database.present?
+        Rails.application.routes.url_helpers.database_path(workspace_slug: workspace.slug, id: page.linked_database.id)
+      else
+        Rails.application.routes.url_helpers.page_path(workspace_slug: workspace.slug, id: page.id)
+      end
+    end
+
+    def row_result_title(row, database)
+      return row.title.presence || "Row" if database.blank?
+      return row.title.presence || database.name unless database.tab_child?
+
+      row_title = row.title.presence
+      return database.tab_reference_title if row_title.blank?
+
+      "#{row_title} · #{database.tab_reference_title}"
     end
 
     def highlighted_excerpt(text)

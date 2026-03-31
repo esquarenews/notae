@@ -11,6 +11,16 @@ RSpec.describe Page, type: :model do
     expect(child.parent_page).to eq(parent)
   end
 
+  it "builds a tab reference title for child tabs" do
+    owner = User.create!(email: "page-tab-reference-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tab refs", slug: "tab-refs")
+    parent = described_class.create!(workspace: workspace, created_by: owner, title: "Project")
+    child = described_class.create!(workspace: workspace, parent_page: parent, created_by: owner, title: "Notes")
+
+    expect(parent.tab_reference_title).to eq("Project")
+    expect(child.tab_reference_title).to eq("Project / Notes")
+  end
+
   it "archives and restores pages" do
     owner = User.create!(email: "page-archive-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Roadmap", slug: "roadmap")
@@ -41,5 +51,14 @@ RSpec.describe Page, type: :model do
     described_class.create!(workspace: workspace, created_by: owner, title: "Regular note", page_kind: "nota")
 
     expect(described_class.meeting_notes).to contain_exactly(meeting_note)
+  end
+
+  it "restricts tab colors to the supported palette" do
+    owner = User.create!(email: "page-tab-color-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tab colors", slug: "tab-colors")
+    page = described_class.new(workspace: workspace, created_by: owner, title: "Colored tab", tab_color: "infrared")
+
+    expect(page).not_to be_valid
+    expect(page.errors[:tab_color]).to include("is not included in the list")
   end
 end

@@ -187,7 +187,12 @@
               <% if visible_columns.include?("source") %>
                 <td class="notae-library-col notae-library-col-source">
                   <span class="notae-library-source-pill is-<%= row[:visibility] %>"><%= row[:visibility].titleize %></span>
-                  <span class="notae-library-source-label"><%= row[:kind] == "database" ? "Grid" : row[:kind].titleize %></span>
+                  <span class="notae-library-source-label"><%= case row[:kind]
+                                                               when "database" then "Grid"
+                                                               when "grid_tab" then "Grid tab"
+                                                               when "tab" then "Tab"
+                                                               else row[:kind].titleize
+                                                               end %></span>
                 </td>
               <% end %>
               <% if visible_columns.include?("created_time") %>

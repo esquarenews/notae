@@ -3,6 +3,8 @@ import "@hotwired/turbo-rails"
 import "controllers"
 
 let pwaRegistrationPromise
+const AI_RAIL_COLLAPSED_CLASS = "is-ai-rail-collapsed"
+const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed"
 
 function securePwaContext() {
   if (window.isSecureContext) return true
@@ -19,8 +21,35 @@ function registerPwaServiceWorker() {
   return pwaRegistrationPromise
 }
 
+function aiRailCollapsedPreference() {
+  try {
+    return window.localStorage.getItem(AI_RAIL_COLLAPSED_PREFERENCE_KEY) === "true"
+  } catch (_error) {
+    return false
+  }
+}
+
+function syncAiRailCollapsedState(root) {
+  const collapsed = aiRailCollapsedPreference()
+  const scope = root instanceof Document || root instanceof HTMLElement ? root : document
+
+  scope.querySelectorAll?.(".notae-shell").forEach((shell) => {
+    shell.classList.toggle(AI_RAIL_COLLAPSED_CLASS, collapsed)
+  })
+}
+
+syncAiRailCollapsedState(document)
+
 document.addEventListener("turbo:load", () => {
+  syncAiRailCollapsedState(document)
   registerPwaServiceWorker()
+})
+
+document.addEventListener("turbo:before-render", (event) => {
+  const newBody = event.detail?.newBody
+  if (!(newBody instanceof HTMLBodyElement)) return
+
+  syncAiRailCollapsedState(newBody)
 })
 
 document.addEventListener("turbo:frame-missing", async (event) => {

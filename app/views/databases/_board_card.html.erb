@@ -1,0 +1,39 @@
+<% property_rows = board_card_properties.filter_map do |property| %>
+  <% value = cell_value_for(row, property).to_s.strip %>
+  <% next if value.blank? %>
+  <% [ property, property.name, value ] %>
+<% end %>
+
+<article id="board_row_<%= row.id %>"
+         class="notae-db-board-card"
+         draggable="true"
+         data-database-drag-row-id="<%= row.id %>"
+         data-database-drag-update-url="<%= row_update_path %>"
+         data-database-drag-title="<%= row.title %>"
+         data-action="dragstart->database-drag#dragstart dragend->database-drag#dragend dblclick->database-drag#beginEdit">
+  <div class="notae-db-board-card-display" data-board-card-display>
+    <div class="notae-db-board-card-title" data-board-card-title><%= row.title %></div>
+    <div class="notae-db-board-card-meta">#<%= row.id.to_s.first(8) %></div>
+    <% if property_rows.any? %>
+      <dl class="notae-db-board-card-details">
+        <% property_rows.each do |property, property_name, property_value| %>
+          <div class="notae-db-board-card-detail-row">
+            <dt class="notae-db-board-card-detail-label"><%= property_name %></dt>
+            <dd class="<%= task_status_badge_classes_for(property, property_value, base_class: 'notae-db-board-card-detail-value') %>"
+                title="<%= property_value %>"><%= property_value %></dd>
+          </div>
+        <% end %>
+      </dl>
+    <% end %>
+  </div>
+
+  <%= render "databases/board_card_dialog",
+             row: row,
+             workspace: workspace,
+             database: database,
+             row_params: row_params,
+             editor_properties: editor_properties,
+             cells_by_key: cells_by_key,
+             linkable_pages_by_id: linkable_pages_by_id,
+             row_color_options: row_color_options %>
+</article>

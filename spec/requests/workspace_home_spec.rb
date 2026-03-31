@@ -94,6 +94,77 @@ RSpec.describe "Workspace home", type: :request do
     expect(hero_subtle_lines).to eq([ "Workspace home" ])
   end
 
+  it "does not surface child tabs as standalone Notarum or Grids on the home page" do
+    user = User.create!(email: "home-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Home tabs", slug: "home-tabs")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    parent_page = Page.create!(workspace: workspace, created_by: user, title: "Launch plan")
+    child_tab = Page.create!(workspace: workspace, created_by: user, parent_page: parent_page, title: "Budget tab")
+    top_level_page = Page.create!(workspace: workspace, created_by: user, title: "Standalone nota")
+    top_level_page.touch(time: 1.hour.ago)
+    child_tab.touch(time: Time.current)
+
+    grid_parent = Page.create!(workspace: workspace, created_by: user, title: "Operations")
+    grid_tab_page = Page.create!(workspace: workspace, created_by: user, parent_page: grid_parent, title: "Runbook tab")
+    tab_database = Database.create!(workspace: workspace, name: "Runbook grid", linked_page: grid_tab_page)
+    top_level_database = Database.create!(workspace: workspace, name: "Standalone grid")
+    tab_database.touch(time: Time.current)
+    top_level_database.touch(time: 1.hour.ago)
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    html = Nokogiri::HTML(response.body)
+    page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)
+    expect(page_titles).to include("Standalone nota")
+    expect(page_titles).not_to include("Budget tab")
+
+    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map(&:text)
+    normalized_database_titles = database_titles.map { |title| title.gsub(/\A\S+\s+/, "") }
+    expect(normalized_database_titles).to include("Standalone grid")
+    expect(normalized_database_titles).not_to include("Runbook grid")
+
+    sidebar_labels = html.css(".notae-sidebar-section .notae-sidebar-page-title").map { |node| node.text.squish }
+    expect(sidebar_labels).to include(match(/Standalone nota/))
+    expect(sidebar_labels).to include(match(/Standalone grid/))
+    expect(sidebar_labels).not_to include(match(/Budget tab/))
+    expect(sidebar_labels).not_to include(match(/Runbook grid/))
+  end
+
+  it "does not surface top-level grid shell pages as standalone Notarum on the home page" do
+    user = User.create!(email: "home-grid-shell-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Home grid shells", slug: "home-grid-shells")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    standalone_page = Page.create!(workspace: workspace, created_by: user, title: "Standalone nota")
+    grid_shell = Page.create!(workspace: workspace, created_by: user, title: "Grid shell page")
+    database = Database.create!(workspace: workspace, created_by: user, name: "Ops grid", linked_page: grid_shell)
+    standalone_page.touch(time: Time.current)
+    database.touch(time: 1.hour.ago)
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    html = Nokogiri::HTML(response.body)
+    page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)
+    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map(&:text)
+    normalized_database_titles = database_titles.map { |title| title.gsub(/\A\S+\s+/, "") }
+
+    expect(page_titles).to include("Standalone nota")
+    expect(page_titles).not_to include("Grid shell page")
+    expect(normalized_database_titles).to include("Ops grid")
+
+    sidebar_labels = html.css(".notae-sidebar-section .notae-sidebar-page-title").map { |node| node.text.squish }
+    expect(sidebar_labels).to include(match(/Standalone nota/))
+    expect(sidebar_labels).to include(match(/Ops grid/))
+    expect(sidebar_labels).not_to include(match(/Grid shell page/))
+  end
+
   it "lazy loads recent page cover images on the workspace home page" do
     user = User.create!(email: "home-cover-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Home cover", slug: "home-cover")

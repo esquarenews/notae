@@ -11,6 +11,7 @@ export default class extends Controller {
     this.isOpen = false
     this.controlsElement = this.element.closest(".notae-db-row-hover-controls")
     this.placeholder = null
+    this.portalRoot = null
     this.buttonElement = this.buttonTarget
     this.panelElement = this.panelTarget
 
@@ -162,24 +163,28 @@ export default class extends Controller {
   }
 
   portalPanel() {
-    if (this.panelElement.parentNode === document.body) return
+    const nextPortalRoot = this.element.closest("dialog[open]") || document.body
+    if (this.panelElement.parentNode === nextPortalRoot) return
 
     this.placeholder = document.createComment("row-menu-placeholder")
     this.panelElement.parentNode.insertBefore(this.placeholder, this.panelElement)
-    document.body.appendChild(this.panelElement)
+    nextPortalRoot.appendChild(this.panelElement)
     this.panelElement.classList.add("is-portaled")
+    this.portalRoot = nextPortalRoot
   }
 
   restorePanel() {
-    if (this.panelElement.parentNode !== document.body) return
+    if (!this.portalRoot || this.panelElement.parentNode !== this.portalRoot) return
 
     if (this.placeholder?.parentNode) {
       this.placeholder.parentNode.insertBefore(this.panelElement, this.placeholder)
       this.placeholder.remove()
       this.placeholder = null
+      this.portalRoot = null
       return
     }
 
     this.element.appendChild(this.panelElement)
+    this.portalRoot = null
   }
 }

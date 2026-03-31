@@ -87,6 +87,16 @@ class Page < ApplicationRecord
   FONT_STYLES = %w[default serif mono].freeze
   PAGE_KINDS = %w[nota meeting_note].freeze
   ICON_SUGGESTIONS = %w[📄 ✨ 🧠 📝 📌 🧭 🚀 🗂️ 🌿 🌅].freeze
+  TAB_COLOR_OPTIONS = [
+    [ "Default", "default" ],
+    [ "Slate", "slate" ],
+    [ "Blue", "blue" ],
+    [ "Green", "green" ],
+    [ "Amber", "amber" ],
+    [ "Rose", "rose" ],
+    [ "Purple", "purple" ]
+  ].freeze
+  TAB_COLOR_KEYS = TAB_COLOR_OPTIONS.map(&:last).freeze
 
   attribute :permission_mode, :integer, default: 0
   enum :permission_mode, { shared_to_workspace: 0, private_page: 1, specific_users: 2 }, default: :shared_to_workspace
@@ -113,10 +123,12 @@ class Page < ApplicationRecord
   has_many :incoming_page_links, class_name: "PageLink", foreign_key: :target_page_id, dependent: :destroy
   has_many :meeting_sessions, dependent: :nullify
   has_one_attached :cover_image
+  has_one :linked_database, class_name: "Database", foreign_key: :linked_page_id, inverse_of: :linked_page
 
   validates :title, presence: true
   validates :page_kind, inclusion: { in: PAGE_KINDS }
   validates :font_style, inclusion: { in: FONT_STYLES }
+  validates :tab_color, inclusion: { in: TAB_COLOR_KEYS }
   validates :cover_preset_key, inclusion: { in: COVER_PRESET_KEYS }, allow_blank: true
   validates :cover_focal_y,
             numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
@@ -131,6 +143,11 @@ class Page < ApplicationRecord
   scope :archived, -> { where.not(archived_at: nil) }
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
   scope :meeting_notes, -> { where(page_kind: "meeting_note") }
+  scope :top_level, -> { where(parent_page_id: nil) }
+  scope :standalone_top_level, -> { top_level.where.missing(:linked_database) }
+  scope :excluding_top_level_linked_database_shells, -> {
+    left_outer_joins(:linked_database).where("pages.parent_page_id IS NOT NULL OR databases.id IS NULL")
+  }
 
   pg_search_scope :search_full_text,
                   against: :title,
@@ -165,6 +182,19 @@ class Page < ApplicationRecord
 
   def archived?
     archived_at.present?
+  end
+
+  def tab_child?
+    parent_page_id.present?
+  end
+
+  def tab_reference_title
+    return title unless tab_child?
+
+    parent_title = parent_page&.title.presence
+    return title if parent_title.blank?
+
+    "#{parent_title} / #{title}"
   end
 
   def search_source_text

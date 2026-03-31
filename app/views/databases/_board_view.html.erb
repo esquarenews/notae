@@ -3,7 +3,34 @@
     Board view requires a property with type <code>select</code>. Choose one in the view config.
   </p>
 <% else %>
+  <% row_params = {
+    view_id: @current_view&.id,
+    month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+    sort_property_id: params[:sort_property_id],
+    sort_direction: params[:sort_direction],
+    filter_property_id: params[:filter_property_id],
+    filter_value: params[:filter_value],
+    filter_operator: params[:filter_operator],
+    highlight_row_id: params[:highlight_row_id],
+    split_page_id: params[:split_page_id],
+    split_source: params[:split_source],
+    split_row_id: params[:split_row_id]
+  }.compact %>
   <% board_card_properties = @db_properties.reject { |property| property.id == @board_group_property.id } %>
+  <% editor_properties = @db_properties %>
+  <% linkable_pages_by_id = @linkable_pages_by_id || Array(@linkable_pages).index_by(&:id) %>
+  <% row_color_options = [
+    ["Default", "default"],
+    ["Gray", "gray"],
+    ["Brown", "brown"],
+    ["Orange", "orange"],
+    ["Yellow", "yellow"],
+    ["Green", "green"],
+    ["Blue", "blue"],
+    ["Purple", "purple"],
+    ["Pink", "pink"],
+    ["Red", "red"]
+  ] %>
   <div data-controller="database-drag"
        data-database-drag-workspace-slug-value="<%= @workspace.slug %>"
        data-database-drag-database-id-value="<%= @database.id %>"
@@ -27,42 +54,17 @@
           <% end %>
           <% column[:rows].each do |row| %>
             <% row_update_path = database_db_row_path(workspace_slug: @workspace.slug, database_id: @database.id, id: row.id) %>
-            <article id="board_row_<%= row.id %>"
-                     class="notae-db-board-card"
-                     draggable="true"
-                     data-database-drag-row-id="<%= row.id %>"
-                     data-database-drag-update-url="<%= row_update_path %>"
-                     data-database-drag-title="<%= row.title %>"
-                     data-action="dragstart->database-drag#dragstart dragend->database-drag#dragend dblclick->database-drag#beginEdit">
-              <div class="notae-db-board-card-display" data-board-card-display>
-                <div class="notae-db-board-card-title" data-board-card-title><%= row.title %></div>
-                <div class="notae-db-board-card-meta">#<%= row.id.to_s.first(8) %></div>
-                <% property_rows = board_card_properties.filter_map do |property| %>
-                  <% value = cell_value_for(row, property).to_s.strip %>
-                  <% next if value.blank? %>
-                  <% [ property, property.name, value ] %>
-                <% end %>
-                <% if property_rows.any? %>
-                  <dl class="notae-db-board-card-details">
-                    <% property_rows.each do |property, property_name, property_value| %>
-                      <div class="notae-db-board-card-detail-row">
-                        <dt class="notae-db-board-card-detail-label"><%= property_name %></dt>
-                        <dd class="<%= task_status_badge_classes_for(property, property_value, base_class: 'notae-db-board-card-detail-value') %>"><%= property_value %></dd>
-                      </div>
-                    <% end %>
-                  </dl>
-                <% end %>
-              </div>
-              <form class="notae-db-board-card-edit-form"
-                    data-action="submit->database-drag#submitEdit"
-                    hidden>
-                <input type="text"
-                       value="<%= row.title %>"
-                       class="notae-db-board-card-edit-input"
-                       placeholder="Enter task name"
-                       data-action="keydown.enter->database-drag#submitEditFromKeydown keydown.esc->database-drag#cancelEdit blur->database-drag#submitEditOnBlur">
-              </form>
-            </article>
+            <%= render "databases/board_card",
+                       row: row,
+                       workspace: @workspace,
+                       database: @database,
+                       row_update_path: row_update_path,
+                       row_params: row_params,
+                       board_card_properties: board_card_properties,
+                       editor_properties: editor_properties,
+                       cells_by_key: @cells_by_key,
+                       linkable_pages_by_id: linkable_pages_by_id,
+                       row_color_options: row_color_options %>
           <% end %>
         </div>
       </section>

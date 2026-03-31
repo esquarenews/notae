@@ -3,6 +3,8 @@
 <% panel_classes << "is-embedded" if local_assigns[:embedded] %>
 <% initial_group_index = page_cover_preset_group_index(selected_cover_key) %>
 <% initial_group = page_cover_picker_groups.fetch(initial_group_index) %>
+<% return_path = local_assigns[:return_to].to_s.presence %>
+<% base_params = return_path.present? ? { return_to: return_path } : {} %>
 
 <div class="<%= panel_classes.join(" ") %>"
      data-controller="cover-carousel"
@@ -36,7 +38,7 @@
           <% group.fetch(:presets).each do |preset| %>
             <%= button_to update_url,
                           method: :patch,
-                          params: { param_key.to_sym => { cover_action: "preset", cover_preset_key: preset.fetch(:key) } },
+                          params: base_params.merge(param_key.to_sym => { cover_action: "preset", cover_preset_key: preset.fetch(:key) }),
                           class: [ "notae-cover-picker-tile-button", ("is-active" if selected_cover_key == preset.fetch(:key)) ].compact.join(" "),
                           title: preset.fetch(:label),
                           aria: { label: "Use #{preset.fetch(:label)} cover" } do %>
@@ -66,18 +68,21 @@
     <%= button_to "Random",
                   update_url,
                   method: :patch,
-                  params: { param_key.to_sym => { cover_action: "random" } },
+                  params: base_params.merge(param_key.to_sym => { cover_action: "random" }),
                   class: "notae-cover-picker-action" %>
     <% if local_assigns.fetch(:allow_remove, true) %>
       <%= button_to local_assigns.fetch(:remove_label, "Remove"),
                     update_url,
                     method: :patch,
-                    params: { param_key.to_sym => { cover_action: "clear" } },
+                    params: base_params.merge(param_key.to_sym => { cover_action: "clear" }),
                     class: "notae-cover-picker-action is-danger" %>
     <% end %>
   </div>
 
   <%= form_with url: update_url, method: :patch, class: "notae-cover-picker-upload-form", html: { multipart: true } do %>
+      <% if return_path.present? %>
+        <%= hidden_field_tag :return_to, return_path %>
+      <% end %>
       <%= hidden_field_tag "#{param_key}[cover_action]", "upload" %>
       <%= file_field_tag "#{param_key}[cover_image]", accept: "image/*", class: "notae-cover-picker-upload-input" %>
       <%= submit_tag "Upload", class: "notae-cover-picker-action" %>

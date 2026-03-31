@@ -137,12 +137,14 @@ class LibrariesController < ApplicationController
   def page_rows(scope, owner_email_lookup, favorite_lookup, last_visited_ids)
     scope
       .to_a
-      .map do |page|
+      .filter_map do |page|
+        next if page.linked_database.present?
+
         meeting = page.page_kind == "meeting_note"
         creator_email = page.created_by&.email || owner_email_lookup[page.workspace_id] || "—"
         {
-          kind: meeting ? "meeting" : "page",
-          title: page.title,
+          kind: page.tab_child? ? "tab" : (meeting ? "meeting" : "page"),
+          title: page.tab_child? ? page.tab_reference_title : page.title,
           icon: page.icon.presence || (meeting ? "🗒️" : "📄"),
           created_by: creator_email,
           created_time: page.created_at,
@@ -163,8 +165,8 @@ class LibrariesController < ApplicationController
       .map do |database|
         creator_email = owner_email_lookup[database.workspace_id] || "—"
         {
-          kind: "database",
-          title: database.name,
+          kind: database.tab_child? ? "grid_tab" : "database",
+          title: database.tab_child? ? database.tab_reference_title : database.name,
           icon: database.icon.presence || "🗃️",
           created_by: database.created_by&.email || creator_email,
           created_time: database.created_at,
@@ -183,8 +185,9 @@ class LibrariesController < ApplicationController
     scope = policy_scope(Page)
               .where(workspace_id: workspace_ids)
               .active
-              .select(:id, :title, :icon, :created_by_id, :created_at, :updated_at, :workspace_id, :page_kind, :permission_mode)
-              .includes(:workspace, :created_by)
+              .excluding_top_level_linked_database_shells
+              .select(:id, :title, :icon, :created_by_id, :created_at, :updated_at, :workspace_id, :page_kind, :permission_mode, :parent_page_id)
+              .includes(:workspace, :created_by, :parent_page, :linked_database)
 
     scope = apply_page_source_filter(scope)
     scope = apply_page_tab_filter(scope, workspace_ids)
@@ -196,8 +199,8 @@ class LibrariesController < ApplicationController
     scope = policy_scope(Database)
               .where(workspace_id: workspace_ids)
               .active
-              .select(:id, :name, :icon, :created_by_id, :created_at, :updated_at, :workspace_id, :permission_mode)
-              .includes(:workspace, :created_by)
+              .select(:id, :name, :icon, :created_by_id, :created_at, :updated_at, :workspace_id, :permission_mode, :linked_page_id)
+              .includes(:workspace, :created_by, linked_page: :parent_page)
 
     scope = apply_database_source_filter(scope)
     scope = apply_database_tab_filter(scope, workspace_ids)

@@ -18,11 +18,19 @@ class WorkspaceHomeController < ApplicationController
     @recent_pages = policy_scope(Page)
                     .for_workspace(@workspace)
                     .active
+                    .standalone_top_level
                     .includes(cover_image_attachment: :blob)
                     .order(updated_at: :desc)
                     .limit(3)
                     .to_a
-    @recent_databases = policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).limit(3).to_a
+    @recent_databases = policy_scope(Database)
+                        .for_workspace(@workspace)
+                        .active
+                        .left_outer_joins(:linked_page)
+                        .where(pages: { parent_page_id: nil })
+                        .order(updated_at: :desc)
+                        .limit(3)
+                        .to_a
     @knowledge_task_databases = knowledge_task_databases_for(@workspace)
     @daily_knowledge_suggestion = resolve_daily_knowledge_suggestion
     @active_proactive_knowledge_suggestion = resolve_active_proactive_knowledge_suggestion

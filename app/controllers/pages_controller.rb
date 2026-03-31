@@ -1,12 +1,15 @@
 class PagesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy]
+  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy remove_tab]
   COVER_SHIFT_STEP = 10
 
   def show
     authorize @page
     remember_last_page_visit!
+    @page_tabs = resolve_page_tabs
+    @page_title_page = @page.parent_page || @page
+    @can_update_page_title_page = policy(@page_title_page).update?
 
     @can_manage_permissions = policy(@page).permissions?
     @memberships =
@@ -57,6 +60,12 @@ class PagesController < ApplicationController
     @page_word_count = @page_plain_text.scan(/\b[\p{L}\p{N}'-]+\b/u).size
     @page_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @page)
     @page_reader_mode = @page.remove_blocks? || @page.locked?
+    @can_create_tab_page =
+      if @page_tabs.group_page.present?
+        policy(Page.new(workspace: @workspace, created_by: current_user, parent_page: @page_tabs.group_page, title: "New tab")).create?
+      else
+        false
+      end
   end
 
   def update
@@ -73,7 +82,7 @@ class PagesController < ApplicationController
 
     if @page.errors.empty?
       respond_to do |format|
-        format.html { redirect_to page_redirect_path, notice: "Page updated." }
+        format.html { redirect_to page_return_path(default: page_redirect_path), notice: "Page updated." }
         format.json do
           render json: {
             id: @page.id,
@@ -86,7 +95,7 @@ class PagesController < ApplicationController
     else
       respond_to do |format|
         format.html do
-          redirect_to page_redirect_path, alert: @page.errors.full_messages.to_sentence
+          redirect_to page_return_path(default: page_redirect_path), alert: @page.errors.full_messages.to_sentence
         end
         format.json { render json: { errors: @page.errors.full_messages }, status: :unprocessable_entity }
       end
@@ -127,6 +136,38 @@ class PagesController < ApplicationController
       auditable: @page
     )
     redirect_to workspace_path(@workspace.slug), notice: "Page archived."
+  end
+
+  def remove_tab
+    authorize @page, :archive?
+
+    if @page.parent_page.blank?
+      redirect_to page_redirect_path, alert: "Only sub-pages can be removed as tabs."
+      return
+    end
+
+    linked_database_ids = policy_scope(Database).for_workspace(@workspace).where(linked_page_id: @page.id).pluck(:id)
+
+    ActiveRecord::Base.transaction do
+      policy_scope(Database).for_workspace(@workspace).where(id: linked_database_ids).find_each do |database|
+        database.update!(linked_page: nil)
+      end
+
+      @page.archive!
+      AuditEventLogger.log!(
+        workspace: @workspace,
+        actor: current_user,
+        action: "delete",
+        metadata: {
+          kind: "page_tab_removed",
+          page_id: @page.id,
+          linked_database_ids: linked_database_ids
+        },
+        auditable: @page
+      )
+    end
+
+    redirect_to remove_tab_redirect_path(linked_database_ids), notice: "Tab removed."
   end
 
   def restore
@@ -204,9 +245,11 @@ class PagesController < ApplicationController
 
   def page_update_params
     permitted = params.fetch(:page, ActionController::Parameters.new)
-                      .permit(:title, :parent_page_id, :font_style, :small_text, :full_width, :remove_blocks, :locked, :suggest_edits)
+                      .permit(:title, :parent_page_id, :font_style, :small_text, :full_width, :remove_blocks, :locked, :suggest_edits, :tab_color)
 
-    permitted[:parent_page_id] = nil if permitted[:parent_page_id].blank?
+    if permitted.key?(:parent_page_id)
+      permitted[:parent_page_id] = nil if permitted[:parent_page_id].blank?
+    end
     permitted.delete(:locked) unless policy(@page).permissions?
     permitted
   end
@@ -269,6 +312,10 @@ class PagesController < ApplicationController
     page_path(redirect_params)
   end
 
+  def page_return_path(default:)
+    safe_return_to_path || default
+  end
+
   def open_menu_query_params
     query = {}
     query[:actions_menu] = "open" if params[:actions_menu].to_s == "open"
@@ -280,7 +327,41 @@ class PagesController < ApplicationController
     params[:embedded].to_s == "1"
   end
 
+  def safe_return_to_path
+    candidate = params[:return_to].to_s
+    return nil if candidate.blank?
+    return nil unless candidate.start_with?("/")
+    return nil if candidate.start_with?("//")
+
+    candidate
+  end
+
+  def remove_tab_redirect_path(linked_database_ids)
+    candidate = safe_return_to_path
+    deleted_base_paths = [ page_path(workspace_slug: @workspace.slug, id: @page.id) ]
+    deleted_base_paths.concat(linked_database_ids.map { |database_id| database_path(workspace_slug: @workspace.slug, id: database_id) })
+
+    if candidate.present? && !deleted_base_paths.include?(candidate.to_s.split(/[?#]/, 2).first)
+      return candidate
+    end
+
+    return page_path(workspace_slug: @workspace.slug, id: @page.parent_page_id, embedded: "1") if embedded_page_shell?
+    return page_path(workspace_slug: @workspace.slug, id: @page.parent_page_id) if @page.parent_page_id.present?
+
+    workspace_path(@workspace.slug)
+  end
+
   def remember_last_page_visit!
     remember_last_page_visit_for!(workspace: @workspace, page: @page)
+  end
+
+  def resolve_page_tabs
+    PageTabs::Resolver.new(
+      workspace: @workspace,
+      page_scope: policy_scope(Page),
+      database_scope: policy_scope(Database),
+      group_page: @page.parent_page || @page,
+      current_page: @page
+    ).call
   end
 end

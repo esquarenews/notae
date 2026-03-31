@@ -1,6 +1,13 @@
 require "rails_helper"
 
 RSpec.describe "Authentication branding", type: :request do
+  it "keeps the auth submit button label high contrast on the accent button" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-auth-submit,\na.notae-auth-submit,\nbutton.notae-auth-submit,\ninput[type=\"submit\"].notae-auth-submit {\n  color: #f8fbfc;\n  text-shadow: 0 1px 1px rgba(15, 23, 42, 0.22);")
+    expect(stylesheet).to include(".notae-auth-submit:hover,\n.notae-auth-submit:focus-visible {\n  color: #ffffff;\n}")
+  end
+
   it "renders a branded login page with icon and streamlined form" do
     get new_user_session_path
 

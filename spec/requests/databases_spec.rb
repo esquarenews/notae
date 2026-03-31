@@ -1,12 +1,32 @@
 require "rails_helper"
 
 RSpec.describe "Databases", type: :request do
+  it "keeps an open tab menu above grid surfaces" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-page-tab-shell:has(.notae-page-tab-menu[open]) {\n  z-index: var(--notae-layer-popover-parent);\n  isolation: isolate;\n}")
+    expect(stylesheet).to include(".notae-page-tab-menu {\n  position: static;\n}")
+    expect(stylesheet).to include(".notae-page-tab-menu-panel {\n  position: absolute;\n  top: calc(100% + 0.38rem);\n  left: 0;\n  right: auto;")
+  end
+
   it "keeps grid topbar menus above table content" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include(".notae-db-viewbar:has(.notae-db-actions-menu[open]),\n.notae-db-viewbar:has(.notae-db-settings-menu[open]) {\n  position: relative;\n  z-index: var(--notae-layer-popover-parent);")
     expect(stylesheet).to include("body.notae-theme-dark .notae-db-actions-menu .notae-actions-panel,\nbody.notae-theme-dark .notae-db-settings-panel,\nbody.notae-theme-dark .notae-db-settings-subpanel {\n  background: var(--notae-surface-raised);\n  backdrop-filter: none;")
     expect(stylesheet).to include("  body.notae-theme-system .notae-db-actions-menu .notae-actions-panel,\n  body.notae-theme-system .notae-db-settings-panel,\n  body.notae-theme-system .notae-db-settings-subpanel {\n    background: var(--notae-surface-raised);\n    backdrop-filter: none;")
+  end
+
+  it "keeps the board card dialog centered in the viewport" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-db-board-card-modal[open] {\n  position: fixed;\n  inset: 0;\n  margin: auto;\n}")
+  end
+
+  it "truncates long board card detail values with ellipsis" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-db-board-card-detail-value {\n  margin: 0;\n  display: block;\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;")
   end
 
   it "creates a grid when optional database columns are unavailable" do
@@ -21,6 +41,8 @@ RSpec.describe "Databases", type: :request do
          params: { database: { name: "Legacy Tasks" } }
 
     database = Database.find_by!(workspace: workspace, name: "Legacy Tasks")
+    expect(database.linked_page).to be_present
+    expect(database.linked_page.title).to eq("Legacy Tasks")
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
   end
 
@@ -80,6 +102,261 @@ RSpec.describe "Databases", type: :request do
     status_option_values = status_dropdown.css("option").map { |option| option["value"] }.compact
     expect(status_option_values).to include("", "not started", "started", "overdue", "hold", "done")
     expect(status_dropdown.at_css("option[selected]")&.[]("value")).to eq("not started")
+  end
+
+  it "turns the current blank grid into a tasks grid instead of creating a new database" do
+    owner = User.create!(email: "database-taskify-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Taskify tables", slug: "taskify-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Planning")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Existing row")
+    sign_in owner
+
+    expect do
+      post taskify_database_path(workspace_slug: workspace.slug, id: database.id)
+    end.not_to change(Database, :count)
+
+    database.reload
+    table_view = database.database_views.find_by!(view_type: :table)
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: table_view.id))
+    expect(database.db_properties.order(:position).pluck(:name, :property_type)).to eq(
+      [
+        [ "Status", "select" ],
+        [ "Date created", "date" ],
+        [ "Due date", "date" ],
+        [ "Notes", "text" ]
+      ]
+    )
+
+    status_property = database.db_properties.find_by!(name: "Status")
+    date_created_property = database.db_properties.find_by!(name: "Date created")
+    expect(row.db_cells.find_by!(db_property: status_property).value_text).to eq("not started")
+    expect(row.db_cells.find_by!(db_property: date_created_property).value_text).to eq(row.created_at.to_date.iso8601)
+    expect(Array(table_view.reload.config_json["visible_property_ids"]).map(&:to_s)).to eq(
+      database.db_properties.order(:position).pluck(:id).map(&:to_s)
+    )
+  end
+
+  it "upgrades a kanban starter grid into a tasks grid on the same database" do
+    owner = User.create!(email: "database-taskify-kanban-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Taskify kanban tables", slug: "taskify-kanban-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Sprint board")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    post kanbanize_database_path(workspace_slug: workspace.slug, id: database.id)
+    board_view = database.reload.database_views.find_by!(view_type: :board)
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id))
+
+    expect do
+      post taskify_database_path(workspace_slug: workspace.slug, id: database.id)
+    end.not_to change(Database, :count)
+
+    database.reload
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: database.database_views.find_by!(view_type: :table).id))
+    expect(database.db_properties.order(:position).pluck(:name, :property_type)).to eq(
+      [
+        [ "Status", "select" ],
+        [ "Date created", "date" ],
+        [ "Due date", "date" ],
+        [ "Notes", "text" ]
+      ]
+    )
+  end
+
+  it "disables taskify for custom grids and rejects direct taskify requests" do
+    owner = User.create!(email: "database-taskify-custom-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Taskify custom tables", slug: "taskify-custom-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Custom grid")
+    DbProperty.create!(workspace: workspace, database: database, name: "Priority", property_type: :text)
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    tasks_button = html.at_css("form[action='#{taskify_database_path(workspace_slug: workspace.slug, id: database.id)}'] button")
+    expect(tasks_button).to be_present
+    expect(tasks_button["disabled"]).to be_present
+
+    post taskify_database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(flash[:alert]).to eq("This grid already has custom fields. Open a blank grid or new tab before using the Tasks template.")
+    expect(database.reload.db_properties.order(:position).pluck(:name, :property_type)).to eq([ [ "Priority", "text" ] ])
+  end
+
+  it "renders linked tabs under the parent page title for a tabbed grid" do
+    owner = User.create!(email: "database-tabs-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database tabs", slug: "database-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Operations")
+    note_tab = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Summary")
+    grid_tab_page = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Tasks anchor")
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Tasks Grid", linked_page: grid_tab_page)
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    labels = html.css(".notae-page-tabs .notae-page-tab-label").map(&:text).map(&:strip)
+    active_link = html.at_css(".notae-page-tabs .notae-page-tab.is-active .notae-page-tab-label")
+    title_input = html.at_css(".notae-page-title-input")
+
+    expect(labels).to eq([ group_page.title, note_tab.title, grid_tab_page.title ])
+    expect(active_link).to be_present
+    expect(active_link.text.strip).to eq(grid_tab_page.title)
+    expect(title_input.text.strip).to eq(group_page.title)
+    expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: group_page.id)}"]))).to be_present
+    expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: note_tab.id)}"]))).to be_present
+    expect(html.at_css(%(.notae-page-tab[href="#{database_path(workspace_slug: workspace.slug, id: database.id)}"]))).to be_present
+    expect(html.at_css(".notae-page-tab-create-form input[name='quick_create']")["value"]).to eq("1")
+    expect(html.at_css(".notae-page-tab-create-form input[name='database[parent_page_id]']")["value"]).to eq(group_page.id)
+    expect(html.at_css(".notae-page-tab-create-form input[name='database[tab_title]']")["value"]).to eq("New tab")
+  end
+
+  it "backfills a shell page for an existing top-level grid and shows its default tab" do
+    owner = User.create!(email: "database-default-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database default tabs", slug: "database-default-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Original grid")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(database.reload.linked_page).to be_present
+    html = Nokogiri::HTML(response.body)
+    labels = html.css(".notae-page-tabs .notae-page-tab-label").map(&:text).map(&:strip)
+    active_link = html.at_css(%(.notae-page-tab.is-active[href="#{database_path(workspace_slug: workspace.slug, id: database.id)}"]))
+
+    expect(labels).to eq([ database.linked_page.title ])
+    expect(active_link).to be_present
+    expect(html.at_css(".notae-page-tab-create-form input[name='quick_create']")["value"]).to eq("1")
+    expect(html.at_css(".notae-page-tab-create-form input[name='database[parent_page_id]']")["value"]).to eq(database.linked_page.id)
+    expect(html.at_css(".notae-page-tab-create-form input[name='database[tab_title]']")["value"]).to eq("New tab")
+  end
+
+  it "keeps the parent shell visible for a tabbed grid while shifting the content context" do
+    owner = User.create!(email: "database-shell-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database shell", slug: "database-shell")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Planning",
+      icon: "🚀",
+      cover_preset_key: Page::COVER_PRESET_KEYS.first
+    )
+    Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Notes")
+    grid_tab_page = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Execution")
+    database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Execution grid",
+      description: "Grid-specific description",
+      linked_page: grid_tab_page
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css(".notae-page-title-input")&.text&.strip).to eq(group_page.title)
+    expect(html.at_css(".notae-page-icon-display")&.text&.strip).to eq(group_page.icon)
+    expect(html.at_css(".notae-page-cover-preset")).to be_present
+    expect(html.at_css(".notae-db-description")).to be_nil
+    expect(html.css(".notae-page-tab-label").map(&:text).map(&:strip)).to eq([ group_page.title, "Notes", grid_tab_page.title ])
+    expect(html.at_css(%(.notae-page-tab.is-active[href="#{database_path(workspace_slug: workspace.slug, id: database.id)}"]))).to be_present
+  end
+
+  it "renames and recolors a grid tab without detaching it from the parent page" do
+    owner = User.create!(email: "database-rename-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database rename tabs", slug: "database-rename-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Finance")
+    linked_tab_page = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Forecast")
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Forecast grid", linked_page: linked_tab_page)
+    sign_in owner
+
+    patch page_path(workspace_slug: workspace.slug, id: linked_tab_page.id),
+          params: {
+            return_to: database_path(workspace_slug: workspace.slug, id: database.id),
+            page: { title: "Approved forecast", tab_color: "blue" }
+          }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(linked_tab_page.reload.title).to eq("Approved forecast")
+    expect(linked_tab_page.tab_color).to eq("blue")
+    expect(linked_tab_page.parent_page_id).to eq(group_page.id)
+  end
+
+  it "creates a new grid tab under the same parent shell instead of a blank nota" do
+    owner = User.create!(email: "database-new-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database new tabs", slug: "database-new-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Roadmap")
+    linked_tab_page = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Current sprint")
+    existing_database = Database.create!(workspace: workspace, created_by: owner, name: "Sprint grid", linked_page: linked_tab_page)
+    sign_in owner
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: {
+           database: {
+             name: "Untitled grid",
+             parent_page_id: group_page.id,
+             tab_title: "New tab"
+           }
+         }
+
+    created_database = workspace.databases.order(:created_at).last
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: created_database.id))
+    expect(created_database).not_to eq(existing_database)
+    expect(created_database.linked_page).to be_present
+    expect(created_database.linked_page.parent_page_id).to eq(group_page.id)
+    expect(created_database.linked_page.title).to eq("New tab")
+    expect(created_database.name).to eq("Untitled grid")
+  end
+
+  it "creates a new top-level grid tab without falling back home when the default name already exists" do
+    owner = User.create!(email: "database-top-level-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database top level tabs", slug: "database-top-level-tabs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Planning grid")
+    Databases::EnsureLinkedPageService.call(database: database, actor: owner)
+    Database.create!(workspace: workspace, created_by: owner, name: "Untitled grid")
+    sign_in owner
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: {
+           quick_create: "1",
+           database: {
+             name: "Untitled grid",
+             parent_page_id: database.linked_page.id,
+             tab_title: "New tab"
+           }
+         }
+
+    created_database = workspace.databases.order(:created_at).last
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: created_database.id))
+    expect(created_database).not_to eq(database)
+    expect(created_database.name).to eq("Untitled grid 2")
+    expect(created_database.linked_page).to be_present
+    expect(created_database.linked_page.parent_page_id).to eq(database.linked_page.id)
+    expect(created_database.linked_page.title).to eq("New tab")
   end
 
   it "does not auto-seed hidden property cells during grid render" do
@@ -583,6 +860,69 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("2026-03-12")
     expect(response.body).to include("Notes")
     expect(response.body).to include("Follow up with vendor")
+    document = Nokogiri::HTML.parse(response.body)
+    notes_value = document.css(".notae-db-board-card-detail-row").find do |node|
+      node.at_css(".notae-db-board-card-detail-label")&.text&.strip == "Notes"
+    end&.at_css(".notae-db-board-card-detail-value")
+    expect(notes_value).to be_present
+    expect(notes_value["title"]).to eq("Follow up with vendor")
+  end
+
+  it "renders a board card dialog with all editable row fields and row options" do
+    owner = User.create!(email: "database-board-dialog-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Board dialog tables", slug: "board-dialog-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Board dialog")
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    estimate_property = DbProperty.create!(workspace: workspace, database: database, name: "Estimate", property_type: :number)
+    blocked_property = DbProperty.create!(workspace: workspace, database: database, name: "Blocked", property_type: :checkbox)
+    notes_property = DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Dialog row")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-03")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: estimate_property, value_text: "3")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: blocked_property, value_text: "true")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: notes_property, value_text: "Check the final scope")
+    board_view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Board dialog",
+      view_type: :board,
+      config_json: { "group_property_id" => status_property.id },
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML.parse(response.body)
+    card = document.at_css("#board_row_#{row.id}")
+    dialog = card.at_css(".notae-db-board-card-modal")
+    labels = dialog.css(".notae-db-board-card-modal-label").map(&:text).map(&:strip)
+
+    expect(card["data-action"]).to include("dblclick->database-drag#beginEdit")
+    expect(dialog).to be_present
+    expect(dialog.at_css("input#board_row_title_#{row.id}[name='db_row[title]']")).to be_present
+    expect(dialog.at_css("form.notae-db-board-card-modal-title-form")["data-action"]).to include("turbo:submit-end->database-drag#refreshBoardOnSubmit")
+    expect(labels).to include("Title", "Status", "Due date", "Estimate", "Blocked", "Notes")
+    expect(dialog.at_css("[data-controller='row-menu']")).to be_present
+    status_select = dialog.at_css("select[name='db_cell[value_text]']")
+    due_date_input = dialog.at_css("input[type='date'][name='db_cell[value_text]']")
+    estimate_input = dialog.at_css("input[type='number'][name='db_cell[value_text]']")
+    blocked_input = dialog.at_css("input[type='checkbox'][name='db_cell[value_text]']")
+    notes_input = dialog.at_css("input[type='text'][name='db_cell[value_text]']")
+
+    expect(status_select).to be_present
+    expect(due_date_input).to be_present
+    expect(estimate_input).to be_present
+    expect(blocked_input).to be_present
+    expect(notes_input).to be_present
+    expect(status_select.ancestors("form").first["data-action"]).to include("turbo:submit-end->database-drag#refreshBoardOnSubmit")
+    expect(dialog.at_css("form[action='#{duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)}']")).to be_present
   end
 
   it "updates a row title over json for inline board edits" do
@@ -1883,6 +2223,7 @@ RSpec.describe "Databases", type: :request do
     workspace = Workspace.create!(name: "Duplicate tables", slug: "duplicate-tables")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     database = Database.create!(workspace: workspace, name: "Ops grid")
+    Databases::EnsureLinkedPageService.call(database: database, actor: owner)
     status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
     row = DbRow.create!(workspace: workspace, database: database, title: "Ship launch")
     DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "Done")
@@ -1896,6 +2237,9 @@ RSpec.describe "Databases", type: :request do
     duplicate = Database.find(duplicate_id)
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: duplicate.id))
     expect(duplicate.name).to start_with("Ops grid (copy)")
+    expect(duplicate.linked_page).to be_present
+    expect(duplicate.linked_page).not_to eq(database.linked_page)
+    expect(duplicate.linked_page.title).to eq(duplicate.name)
 
     copied_property = duplicate.db_properties.find_by!(name: "Status")
     copied_row = duplicate.db_rows.find_by!(title: "Ship launch")

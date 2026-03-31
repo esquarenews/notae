@@ -9,7 +9,7 @@ class Database < ApplicationRecord
 
   belongs_to :workspace
   belongs_to :created_by, class_name: "User", optional: true
-  belongs_to :linked_page, class_name: "Page", optional: true
+  belongs_to :linked_page, class_name: "Page", optional: true, inverse_of: :linked_database
   has_many :db_properties, -> { order(:position, :created_at) }, dependent: :destroy
   has_many :db_rows, dependent: :destroy
   has_many :database_views, dependent: :destroy
@@ -77,6 +77,16 @@ class Database < ApplicationRecord
     return false unless self.class.has_column?(:archived_at)
 
     archived_at.present?
+  end
+
+  def tab_child?
+    linked_page&.tab_child? == true
+  end
+
+  def tab_reference_title
+    return name unless tab_child?
+
+    linked_page&.tab_reference_title.presence || name
   end
 
   def linked_page_id

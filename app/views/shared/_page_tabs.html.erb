@@ -1,0 +1,105 @@
+<% navigation ||= nil %>
+<% can_create_tab_page ||= false %>
+<% create_tab_as_database ||= false %>
+<% embedded_page_params ||= {} %>
+<% current_path ||= request.fullpath %>
+<% if navigation.present? && (navigation.tabs.any? || can_create_tab_page) %>
+  <section class="notae-page-tabs" aria-label="Linked tabs">
+    <% if navigation.tabs.any? %>
+      <nav class="notae-page-tabs-list">
+        <% navigation.tabs.each do |tab| %>
+          <% destination =
+               if tab.database.present?
+                 database_path(workspace_slug: workspace.slug, id: tab.database.id)
+               else
+                 page_path({ workspace_slug: workspace.slug, id: tab.page.id }.merge(embedded_page_params))
+               end %>
+          <% can_rename_tab = policy(tab.page).update? %>
+          <% can_delete_tab = policy(tab.page).archive? %>
+          <div class="notae-page-tab-shell <%= "is-active" if tab.active %> is-color-<%= tab.color_key %>">
+            <%= link_to destination,
+                        class: [ "notae-page-tab", ("is-active" if tab.active) ].compact.join(" "),
+                        aria: { current: ("page" if tab.active) } do %>
+              <span class="notae-page-tab-icon"><%= tab.icon %></span>
+              <span class="notae-page-tab-label"><%= tab.label %></span>
+            <% end %>
+
+          <% if can_rename_tab || can_delete_tab %>
+              <details class="notae-page-tab-menu">
+                <summary class="notae-page-tab-menu-trigger" aria-label="Tab options">⋯</summary>
+                <div class="notae-page-tab-menu-panel">
+                  <% if can_rename_tab %>
+                    <%= form_with model: tab.page,
+                                  url: page_path(workspace_slug: workspace.slug, id: tab.page.id),
+                                  method: :patch,
+                                  class: "notae-page-tab-menu-form is-rename" do |form| %>
+                      <%= hidden_field_tag :return_to, current_path %>
+                      <%= form.label :title, "Rename tab", class: "notae-page-tab-menu-label" %>
+                      <div class="notae-page-tab-menu-inline-fields">
+                        <%= form.text_field :title,
+                                            value: tab.page.title,
+                                            class: "notae-page-tab-menu-input",
+                                            required: true,
+                                            maxlength: 255 %>
+                        <%= form.submit "Save", class: "notae-chip-button" %>
+                      </div>
+                    <% end %>
+
+                    <div class="notae-page-tab-color-grid">
+                      <% Page::TAB_COLOR_OPTIONS.each do |color_label, color_key| %>
+                        <%= form_with model: tab.page,
+                                      url: page_path(workspace_slug: workspace.slug, id: tab.page.id),
+                                      method: :patch,
+                                      class: "notae-page-tab-menu-form" do |form| %>
+                          <%= hidden_field_tag :return_to, current_path %>
+                          <%= form.hidden_field :tab_color, value: color_key %>
+                          <button type="submit"
+                                  class="notae-page-tab-color-button <%= "is-active" if tab.color_key == color_key %>">
+                            <span class="notae-page-tab-color-swatch is-<%= color_key %>"></span>
+                            <span><%= color_label %></span>
+                          </button>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+
+                  <% if can_delete_tab %>
+                    <%= button_to remove_tab_page_path(workspace_slug: workspace.slug, id: tab.page.id),
+                                  method: :patch,
+                                  params: { return_to: current_path },
+                                  class: "notae-page-tab-delete-button",
+                                  form: { class: "notae-page-tab-menu-form" } do %>
+                      Delete tab
+                    <% end %>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
+      </nav>
+    <% end %>
+
+    <% if can_create_tab_page && navigation.group_page.present? %>
+      <% if create_tab_as_database %>
+        <%= form_with model: Database.new,
+                      url: databases_path(workspace_slug: workspace.slug),
+                      class: "notae-page-tab-create-form" do |form| %>
+          <%= hidden_field_tag :quick_create, "1" %>
+          <%= form.hidden_field :name, value: "Untitled grid" %>
+          <%= form.hidden_field :parent_page_id, value: navigation.group_page.id %>
+          <%= form.hidden_field :tab_title, value: "New tab" %>
+          <%= form.submit "+ New tab", class: "notae-page-tab-create-button" %>
+        <% end %>
+      <% else %>
+        <%= form_with model: Page.new,
+                      url: pages_path(workspace_slug: workspace.slug),
+                      class: "notae-page-tab-create-form" do |form| %>
+          <%= form.hidden_field :title, value: "New tab" %>
+          <%= form.hidden_field :parent_page_id, value: navigation.group_page.id %>
+          <%= form.submit "+ New tab", class: "notae-page-tab-create-button" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>
