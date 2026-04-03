@@ -108,12 +108,12 @@
   <% if shell_page.present? ? shell_page.cover? : @database.cover? %>
     <section class="notae-page-cover">
       <div class="notae-page-cover-frame">
-        <% if shell_page&.cover_image&.attached? %>
-          <%= image_tag shell_page.cover_image,
+        <% if shell_page.present? && (cover_image = cover_display_image(shell_page)).present? %>
+          <%= image_tag cover_image,
                         class: "notae-page-cover-image",
                         style: "object-position: center #{shell_page.cover_focal_y}%" %>
-        <% elsif @database.cover_image.attached? && shell_page.blank? %>
-          <%= image_tag @database.cover_image,
+        <% elsif shell_page.blank? && (cover_image = cover_display_image(@database)).present? %>
+          <%= image_tag cover_image,
                         class: "notae-page-cover-image",
                         style: "object-position: center #{@database.cover_focal_y}%" %>
         <% elsif (cover_style =
@@ -126,6 +126,7 @@
                style="<%= cover_style %>">
           </div>
         <% end %>
+        <%= render "shared/cover_attribution", attribution: cover_attribution(shell_page || @database) %>
 
         <% if can_edit_shell_page || (shell_page.blank? && can_edit_database) %>
           <div class="notae-page-cover-controls">
@@ -136,12 +137,18 @@
                            update_url: page_path(shell_page_route_params),
                            param_key: :page,
                            selected_cover_key: shell_page.cover_preset_key,
+                           workspace: @workspace,
+                           cover_record: shell_page,
+                           unsplash_url: workspace_cover_unsplash_path(workspace_slug: @workspace.slug),
                            return_to: current_path %>
               <% else %>
                 <%= render "shared/cover_picker_panel",
                            update_url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
                            param_key: :database,
-                           selected_cover_key: @database.cover_preset_key %>
+                           selected_cover_key: @database.cover_preset_key,
+                           workspace: @workspace,
+                           cover_record: @database,
+                           unsplash_url: workspace_cover_unsplash_path(workspace_slug: @workspace.slug) %>
               <% end %>
             </details>
 
@@ -229,6 +236,9 @@
                          update_url: page_path(shell_page_route_params),
                          param_key: :page,
                          selected_cover_key: shell_page.cover_preset_key,
+                         workspace: @workspace,
+                         cover_record: shell_page,
+                         unsplash_url: workspace_cover_unsplash_path(workspace_slug: @workspace.slug),
                          embedded: true,
                          allow_remove: shell_page.cover?,
                          remove_label: "Remove cover",
@@ -272,6 +282,9 @@
                          update_url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
                          param_key: :database,
                          selected_cover_key: @database.cover_preset_key,
+                         workspace: @workspace,
+                         cover_record: @database,
+                         unsplash_url: workspace_cover_unsplash_path(workspace_slug: @workspace.slug),
                          embedded: true,
                          allow_remove: @database.cover?,
                          remove_label: "Remove cover" %>

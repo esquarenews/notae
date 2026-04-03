@@ -60,7 +60,13 @@ class Database < ApplicationRecord
   before_validation :normalize_icon
 
   def cover?
-    cover_image.attached? || cover_preset_key.present?
+    cover_image.attached? || cover_preset_key.present? || cover_remote_url.present?
+  end
+
+  def cover_remote?
+    return false unless self.class.has_column?(:cover_remote_url)
+
+    cover_remote_url.present?
   end
 
   def archive!
@@ -149,6 +155,78 @@ class Database < ApplicationRecord
     return unless self.class.has_column?(:cover_focal_y)
 
     self[:cover_focal_y] = value
+  end
+
+  def cover_remote_url
+    return nil unless self.class.has_column?(:cover_remote_url)
+
+    self[:cover_remote_url]
+  end
+
+  def cover_remote_url=(value)
+    return unless self.class.has_column?(:cover_remote_url)
+
+    self[:cover_remote_url] = value
+  end
+
+  def cover_remote_thumb_url
+    return nil unless self.class.has_column?(:cover_remote_thumb_url)
+
+    self[:cover_remote_thumb_url]
+  end
+
+  def cover_remote_thumb_url=(value)
+    return unless self.class.has_column?(:cover_remote_thumb_url)
+
+    self[:cover_remote_thumb_url] = value
+  end
+
+  def cover_artist_name
+    return nil unless self.class.has_column?(:cover_artist_name)
+
+    self[:cover_artist_name]
+  end
+
+  def cover_artist_name=(value)
+    return unless self.class.has_column?(:cover_artist_name)
+
+    self[:cover_artist_name] = value
+  end
+
+  def cover_artist_url
+    return nil unless self.class.has_column?(:cover_artist_url)
+
+    self[:cover_artist_url]
+  end
+
+  def cover_artist_url=(value)
+    return unless self.class.has_column?(:cover_artist_url)
+
+    self[:cover_artist_url] = value
+  end
+
+  def cover_source_name
+    return nil unless self.class.has_column?(:cover_source_name)
+
+    self[:cover_source_name]
+  end
+
+  def cover_source_name=(value)
+    return unless self.class.has_column?(:cover_source_name)
+
+    self[:cover_source_name] = value
+  end
+
+  def cover_source_url
+    return nil unless self.class.has_column?(:cover_source_url)
+
+    self[:cover_source_url]
+  end
+
+  def cover_source_url=(value)
+    return unless self.class.has_column?(:cover_source_url)
+
+    self[:cover_source_url] = value
   end
 
   def locked

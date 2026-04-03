@@ -213,6 +213,33 @@ RSpec.describe "Workspace home", type: :request do
     expect(cover_image["decoding"]).to eq("async")
   end
 
+  it "renders remote Unsplash covers on the workspace home page" do
+    user = User.create!(email: "home-remote-cover-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Home remote cover", slug: "home-remote-cover")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Page.create!(
+      workspace: workspace,
+      created_by: user,
+      title: "Unsplash page card",
+      cover_remote_url: "https://images.unsplash.com/home-cover-regular",
+      cover_remote_thumb_url: "https://images.unsplash.com/home-cover-small",
+      cover_artist_name: "Mika Frame",
+      cover_artist_url: "https://unsplash.com/@mika?utm_source=notae&utm_medium=referral",
+      cover_source_name: "Unsplash",
+      cover_source_url: "https://unsplash.com/?utm_source=notae&utm_medium=referral"
+    )
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    cover_image = document.at_css(".notae-workspace-page-card-cover-image")
+    expect(cover_image).to be_present
+    expect(cover_image["src"]).to include("images.unsplash.com/home-cover-small")
+  end
+
   it "renders the workspace library page for members" do
     user = User.create!(email: "library-member@example.com", password: "password123")
     workspace = Workspace.create!(name: "Library test", slug: "library-test")

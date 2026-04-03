@@ -16,15 +16,21 @@ RSpec.describe "CoverCarouselController JavaScript syntax" do
     skip "node is not available in this environment"
   end
 
-  it "cycles between grouped cover preset screens" do
+  it "cycles between grouped cover preset screens and drives the Unsplash modal" do
     source = Rails.root.join("app/javascript/controllers/cover_carousel_controller.js").read
 
-    expect(source).to include("static targets = [\"screen\", \"label\", \"dot\"]")
-    expect(source).to include("static values = { initialIndex: Number }")
+    expect(source).to include("static targets = [")
+    expect(source).to include("\"unsplashDialog\"")
+    expect(source).to include("static values = {")
+    expect(source).to include("unsplashUrl: String")
     expect(source).to include("this.goTo(this.index - 1)")
     expect(source).to include("this.goTo(this.index + 1)")
     expect(source).to include("event.params.index")
     expect(source).to include("screen.hidden = !isActive")
     expect(source).to include("dot.setAttribute(\"aria-current\", isActive ? \"true\" : \"false\")")
+    expect(source).to include("showModal()")
+    expect(source).to include("loadUnsplashPage")
+    expect(source).to include("prefetchNextPage")
+    expect(source).to include("requestSubmit()")
   end
 end

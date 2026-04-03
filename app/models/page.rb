@@ -178,7 +178,7 @@ class Page < ApplicationRecord
   end
 
   def cover?
-    cover_image.attached? || cover_preset_key.present?
+    cover_image.attached? || cover_preset_key.present? || cover_remote_url.present?
   end
 
   def archived?
@@ -196,6 +196,10 @@ class Page < ApplicationRecord
     return title if parent_title.blank?
 
     "#{parent_title} / #{title}"
+  end
+
+  def cover_remote?
+    cover_remote_url.present?
   end
 
   def search_source_text

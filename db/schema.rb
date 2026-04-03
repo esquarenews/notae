@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_03_193000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_04_101000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -291,8 +291,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_03_193000) do
 
   create_table "databases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "archived_at"
+    t.string "cover_artist_name"
+    t.text "cover_artist_url"
     t.integer "cover_focal_y", default: 50, null: false
     t.string "cover_preset_key"
+    t.text "cover_remote_thumb_url"
+    t.text "cover_remote_url"
+    t.string "cover_source_name"
+    t.text "cover_source_url"
     t.datetime "created_at", null: false
     t.uuid "created_by_id"
     t.text "description"
@@ -787,8 +793,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_03_193000) do
 
   create_table "pages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "archived_at"
+    t.string "cover_artist_name"
+    t.text "cover_artist_url"
     t.integer "cover_focal_y", default: 50, null: false
     t.string "cover_preset_key"
+    t.text "cover_remote_thumb_url"
+    t.text "cover_remote_url"
+    t.string "cover_source_name"
+    t.text "cover_source_url"
     t.datetime "created_at", null: false
     t.uuid "created_by_id", null: false
     t.string "font_style", default: "default", null: false
@@ -988,6 +1000,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_03_193000) do
     t.index ["workspace_id"], name: "index_workflow_runs_on_workspace_id"
   end
 
+  create_table "workspace_cover_assets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "artist_name"
+    t.text "artist_url"
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.string "external_id"
+    t.string "label"
+    t.text "remote_image_url"
+    t.text "remote_thumb_url"
+    t.string "source_kind", default: "upload", null: false
+    t.string "source_name"
+    t.text "source_url"
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_workspace_cover_assets_on_created_by_id"
+    t.index ["workspace_id", "created_by_id", "created_at"], name: "index_workspace_cover_assets_picker_lookup"
+    t.index ["workspace_id", "created_by_id", "source_kind", "external_id"], name: "index_workspace_cover_assets_on_external_source", unique: true, where: "(external_id IS NOT NULL)"
+    t.index ["workspace_id"], name: "index_workspace_cover_assets_on_workspace_id"
+  end
+
   create_table "workspace_emojis", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1137,5 +1169,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_03_193000) do
   add_foreign_key "web_push_subscriptions", "users"
   add_foreign_key "workflow_runs", "users"
   add_foreign_key "workflow_runs", "workspaces"
+  add_foreign_key "workspace_cover_assets", "users", column: "created_by_id"
+  add_foreign_key "workspace_cover_assets", "workspaces"
   add_foreign_key "workspace_emojis", "workspaces"
 end

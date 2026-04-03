@@ -1,0 +1,14 @@
+<% if attribution.present? %>
+  <p class="<%= local_assigns.fetch(:wrapper_class, "notae-cover-attribution") %>">
+    Photo by
+    <%= link_to attribution.fetch(:artist_name),
+                attribution.fetch(:artist_url),
+                target: "_blank",
+                rel: "noopener noreferrer" %>
+    on
+    <%= link_to attribution.fetch(:source_name),
+                attribution.fetch(:source_url),
+                target: "_blank",
+                rel: "noopener noreferrer" %>
+  </p>
+<% end %>

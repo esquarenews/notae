@@ -286,7 +286,7 @@ class PagesController < ApplicationController
 
   def page_header_params
     params.fetch(:page, ActionController::Parameters.new)
-          .permit(:icon, :icon_action, :cover_action, :cover_shift, :cover_focal_y, :cover_image, :cover_preset_key)
+          .permit(:icon, :icon_action, :cover_action, :cover_shift, :cover_focal_y, :cover_image, :cover_preset_key, :cover_asset_id, :cover_remote_id)
   end
 
   def apply_header_customizations!
@@ -306,33 +306,7 @@ class PagesController < ApplicationController
   end
 
   def apply_cover_update!(payload)
-    case payload[:cover_action]
-    when "random"
-      @page.cover_preset_key = Page::COVER_PRESET_KEYS.sample
-      @page.cover_image.purge if @page.cover_image.attached?
-    when "preset"
-      requested_key = payload[:cover_preset_key].to_s
-      if Page::COVER_PRESET_KEYS.include?(requested_key)
-        @page.cover_preset_key = requested_key
-        @page.cover_image.purge if @page.cover_image.attached?
-      end
-    when "upload"
-      if payload[:cover_image].present?
-        @page.cover_image.attach(payload[:cover_image])
-        @page.cover_preset_key = nil
-      end
-    when "clear"
-      @page.cover_preset_key = nil
-      @page.cover_image.purge if @page.cover_image.attached?
-    end
-
-    shift_delta = { "up" => -COVER_SHIFT_STEP, "down" => COVER_SHIFT_STEP }[payload[:cover_shift].to_s]
-    if shift_delta
-      base = @page.cover_focal_y || 50
-      @page.cover_focal_y = (base + shift_delta).clamp(0, 100)
-    elsif payload[:cover_focal_y].present?
-      @page.cover_focal_y = payload[:cover_focal_y].to_i.clamp(0, 100)
-    end
+    CoverAssets::ApplyService.call(record: @page, workspace: @workspace, user: current_user, payload:)
   end
 
   def page_redirect_path(page_id = @page.id, anchor: nil, split_page_id: nil, split_source: nil)

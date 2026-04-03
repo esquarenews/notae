@@ -85,8 +85,8 @@
 <% if has_cover %>
   <section class="notae-page-cover">
     <div class="notae-page-cover-frame">
-      <% if shell_page.cover_image.attached? %>
-        <%= image_tag shell_page.cover_image,
+      <% if (cover_image = cover_display_image(shell_page)).present? %>
+        <%= image_tag cover_image,
                       class: "notae-page-cover-image",
                       style: "object-position: center #{shell_page.cover_focal_y}%" %>
       <% elsif (cover_style = page_cover_preset_style(shell_page.cover_preset_key, focal_y: shell_page.cover_focal_y)).present? %>
@@ -94,6 +94,7 @@
              style="<%= cover_style %>">
         </div>
       <% end %>
+      <%= render "shared/cover_attribution", attribution: cover_attribution(shell_page) %>
 
       <% if can_edit_shell_page %>
         <div class="notae-page-cover-controls">
@@ -103,6 +104,9 @@
                        update_url: page_path(shell_page_route_params),
                        param_key: :page,
                        selected_cover_key: shell_page.cover_preset_key,
+                       workspace: @workspace,
+                       cover_record: shell_page,
+                       unsplash_url: workspace_cover_unsplash_path(workspace_slug: @workspace.slug),
                        return_to: current_path %>
           </details>
           <%= button_to "↑",
@@ -180,6 +184,9 @@
                              update_url: page_path(shell_page_route_params),
                              param_key: :page,
                              selected_cover_key: shell_page.cover_preset_key,
+                             workspace: @workspace,
+                             cover_record: shell_page,
+                             unsplash_url: workspace_cover_unsplash_path(workspace_slug: @workspace.slug),
                              embedded: true,
                              allow_remove: has_cover,
                              remove_label: "Remove cover",

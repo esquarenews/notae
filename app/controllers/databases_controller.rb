@@ -380,7 +380,7 @@ class DatabasesController < ApplicationController
 
   def database_header_params
     params.fetch(:database, ActionController::Parameters.new)
-          .permit(:icon, :icon_action, :cover_action, :cover_shift, :cover_focal_y, :cover_image, :cover_preset_key, :description_action, :description)
+          .permit(:icon, :icon_action, :cover_action, :cover_shift, :cover_focal_y, :cover_image, :cover_preset_key, :cover_asset_id, :cover_remote_id, :description_action, :description)
   end
 
   def apply_header_customizations!
@@ -401,33 +401,7 @@ class DatabasesController < ApplicationController
   end
 
   def apply_cover_update!(payload)
-    case payload[:cover_action]
-    when "random"
-      @database.cover_preset_key = Database::COVER_PRESET_KEYS.sample
-      @database.cover_image.purge if @database.cover_image.attached?
-    when "preset"
-      requested_key = payload[:cover_preset_key].to_s
-      if Database::COVER_PRESET_KEYS.include?(requested_key)
-        @database.cover_preset_key = requested_key
-        @database.cover_image.purge if @database.cover_image.attached?
-      end
-    when "upload"
-      if payload[:cover_image].present?
-        @database.cover_image.attach(payload[:cover_image])
-        @database.cover_preset_key = nil
-      end
-    when "clear"
-      @database.cover_preset_key = nil
-      @database.cover_image.purge if @database.cover_image.attached?
-    end
-
-    shift_delta = { "up" => -COVER_SHIFT_STEP, "down" => COVER_SHIFT_STEP }[payload[:cover_shift].to_s]
-    if shift_delta
-      base = @database.cover_focal_y || 50
-      @database.cover_focal_y = (base + shift_delta).clamp(0, 100)
-    elsif payload[:cover_focal_y].present?
-      @database.cover_focal_y = payload[:cover_focal_y].to_i.clamp(0, 100)
-    end
+    CoverAssets::ApplyService.call(record: @database, workspace: @workspace, user: current_user, payload:)
   end
 
   def apply_description_update!(payload)

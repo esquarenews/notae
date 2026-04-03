@@ -76,6 +76,13 @@ RSpec.describe "Page header features", type: :request do
     expect(stylesheet).to include(".notae-db-header > .notae-page-icon-display {\n  margin-left: 20px;\n}")
   end
 
+  it "centers the Unsplash browser modal in the viewport" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-cover-unsplash-modal {\n  position: fixed;\n  inset: 0;\n  width: 100vw;\n  height: 100vh;")
+    expect(stylesheet).to include(".notae-cover-unsplash-modal[open] {\n  display: grid;\n  place-items: center;\n}")
+  end
+
   it "supports random cover, upload cover, repositioning, and clearing" do
     owner = User.create!(email: "page-header-cover-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Header Cover", slug: "header-cover")
@@ -96,6 +103,8 @@ RSpec.describe "Page header features", type: :request do
     expect(response.body).to include("notae-cover-picker-grid")
     expect(response.body).to include("notae-cover-picker-quick-actions")
     expect(response.body).to include("notae-cover-picker-upload-form")
+    expect(response.body).to include("Browse Unsplash")
+    expect(response.body).to include("notae-cover-unsplash-modal")
     expect(response.body).to include('enctype="multipart/form-data"')
     expect(response.body).to include("data-controller=\"cover-carousel\"")
     expect(response.body).to include("Original")
@@ -126,11 +135,64 @@ RSpec.describe "Page header features", type: :request do
 
     expect(page.reload.cover_image).to be_attached
     expect(page.cover_preset_key).to be_nil
+    expect(workspace.cover_assets.where(created_by: owner, source_kind: "upload").count).to eq(1)
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+    expect(response.body).to include("Recent")
 
     patch page_path(workspace_slug: workspace.slug, id: page.id),
           params: { page: { cover_action: "clear" } }
     expect(page.reload.cover_preset_key).to be_nil
     expect(page.cover_image).not_to be_attached
+  end
+
+  it "applies Unsplash covers remotely, records them for reuse, and renders attribution" do
+    owner = User.create!(email: "page-header-unsplash-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Unsplash header", slug: "unsplash-header")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Unsplash page")
+    sign_in owner
+
+    client = instance_double(
+      Unsplash::Client,
+      photo: {
+        id: "photo-77",
+        alt: "Ocean dusk",
+        preview_url: "https://images.unsplash.com/photo-77-small",
+        full_url: "https://images.unsplash.com/photo-77-regular",
+        artist_name: "Ava Artist",
+        artist_url: "https://unsplash.com/@ava?utm_source=notae&utm_medium=referral",
+        source_name: "Unsplash",
+        source_url: "https://unsplash.com/?utm_source=notae&utm_medium=referral",
+        download_location: "https://api.unsplash.com/photos/photo-77/download"
+      }
+    )
+    allow(client).to receive(:register_download!).with("https://api.unsplash.com/photos/photo-77/download")
+    allow(Unsplash::Client).to receive(:new).and_return(client)
+
+    patch page_path(workspace_slug: workspace.slug, id: page.id),
+          params: { page: { cover_action: "unsplash", cover_remote_id: "photo-77" } }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    expect(page.reload.cover_remote_url).to eq("https://images.unsplash.com/photo-77-regular")
+    expect(page.cover_remote_thumb_url).to eq("https://images.unsplash.com/photo-77-small")
+    expect(page.cover_artist_name).to eq("Ava Artist")
+    expect(page.cover_source_name).to eq("Unsplash")
+    expect(page.cover_image).not_to be_attached
+
+    recent_asset = workspace.cover_assets.find_by!(created_by: owner, source_kind: "unsplash", external_id: "photo-77")
+    expect(recent_asset.remote_image_url).to eq("https://images.unsplash.com/photo-77-regular")
+
+    patch page_path(workspace_slug: workspace.slug, id: page.id),
+          params: { page: { cover_action: "recent", cover_asset_id: recent_asset.id } }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    expect(page.reload.cover_remote_url).to eq("https://images.unsplash.com/photo-77-regular")
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+    expect(response.body).to include("Photo by")
+    expect(response.body).to include("Ava Artist")
+    expect(response.body).to include("Recent")
   end
 
   it "renders hover action affordances and topbar comments menu with existing comments" do

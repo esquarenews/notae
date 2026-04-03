@@ -145,6 +145,8 @@ Rails.application.routes.draw do
       resources :db_cells, only: :update
     end
 
+    get "cover-browser/unsplash", to: "workspace_cover_browser#unsplash", as: :workspace_cover_unsplash
+
     resources :pages, only: %i[show create update destroy] do
       resource :favorite, only: %i[create destroy], controller: "page_favorites"
       resources :share_links, only: %i[create destroy]

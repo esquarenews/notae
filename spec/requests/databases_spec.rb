@@ -1521,6 +1521,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("🚀")
     expect(response.body).to include("notae-page-cover")
     expect(response.body).to include("data-controller=\"cover-carousel\"")
+    expect(response.body).to include("Browse Unsplash")
     expect(response.body).to include("Original")
     expect(response.body).to include("Vector")
     expect(response.body).to include("Pastel")
@@ -1538,6 +1539,50 @@ RSpec.describe "Databases", type: :request do
     expect(database.reload.icon).to be_nil
     expect(database.reload.description).to be_nil
     expect(database.reload.cover_preset_key).to be_nil
+  end
+
+  it "applies Unsplash covers to a grid header and reuses them from recent covers" do
+    owner = User.create!(email: "database-header-unsplash-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database Unsplash", slug: "database-unsplash")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Unsplash DB")
+    sign_in owner
+
+    client = instance_double(
+      Unsplash::Client,
+      photo: {
+        id: "grid-photo-2",
+        alt: "City glow",
+        preview_url: "https://images.unsplash.com/grid-photo-2-small",
+        full_url: "https://images.unsplash.com/grid-photo-2-regular",
+        artist_name: "Noah Lens",
+        artist_url: "https://unsplash.com/@noah?utm_source=notae&utm_medium=referral",
+        source_name: "Unsplash",
+        source_url: "https://unsplash.com/?utm_source=notae&utm_medium=referral",
+        download_location: "https://api.unsplash.com/photos/grid-photo-2/download"
+      }
+    )
+    allow(client).to receive(:register_download!).with("https://api.unsplash.com/photos/grid-photo-2/download")
+    allow(Unsplash::Client).to receive(:new).and_return(client)
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { cover_action: "unsplash", cover_remote_id: "grid-photo-2" } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.cover_remote_url).to eq("https://images.unsplash.com/grid-photo-2-regular")
+    expect(database.cover_artist_name).to eq("Noah Lens")
+
+    recent_asset = workspace.cover_assets.find_by!(created_by: owner, source_kind: "unsplash", external_id: "grid-photo-2")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { cover_action: "recent", cover_asset_id: recent_asset.id } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.cover_remote_url).to eq("https://images.unsplash.com/grid-photo-2-regular")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response.body).to include("Photo by")
+    expect(response.body).to include("Recent")
   end
 
   it "updates row titles inline and normalizes blank titles" do

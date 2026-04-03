@@ -183,8 +183,8 @@
         <% @recent_pages.each do |page| %>
           <%= link_to page_path(workspace_slug: @workspace.slug, id: page.id), class: "notae-workspace-page-card" do %>
             <div class="notae-workspace-page-card-cover">
-              <% if page.cover_image.attached? %>
-                <%= image_tag page.cover_image,
+              <% if (cover_image = cover_display_image(page, preview: true)).present? %>
+                <%= image_tag cover_image,
                               class: "notae-workspace-page-card-cover-image",
                               loading: "lazy",
                               decoding: "async" %>

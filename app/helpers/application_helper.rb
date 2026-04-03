@@ -310,8 +310,12 @@ module ApplicationHelper
     "page_covers/#{definition.fetch(:key)}.svg"
   end
 
-  def page_cover_picker_groups
-    Page::COVER_PRESET_GROUPS
+  def page_cover_picker_groups(workspace: nil, user: current_user)
+    groups = Page::COVER_PRESET_GROUPS.dup
+    recent_assets = workspace_recent_cover_assets(workspace, user)
+    return groups if recent_assets.empty?
+
+    groups + [ { key: "recent", label: "Recent", presets: recent_assets, kind: :recent } ]
   end
 
   def epistularium_account_indicator_style(account)
@@ -359,6 +363,62 @@ module ApplicationHelper
     end
 
     style_parts.join("; ")
+  end
+
+  def workspace_recent_cover_assets(workspace, user)
+    return [] if workspace.blank? || user.blank?
+
+    @workspace_recent_cover_assets ||= {}
+    @workspace_recent_cover_assets[[workspace.id, user.id]] ||=
+      workspace.cover_assets.for_picker(workspace, user).with_attached_image.limit(12).to_a
+  end
+
+  def cover_display_image(record, preview: false)
+    return nil if record.blank?
+
+    if record.cover_image.attached?
+      record.cover_image
+    elsif preview
+      record.cover_remote_thumb_url.presence || record.cover_remote_url.presence
+    else
+      record.cover_remote_url.presence
+    end
+  end
+
+  def cover_attribution(record)
+    return nil if record.blank?
+    return nil if record.cover_artist_name.blank? || record.cover_artist_url.blank? || record.cover_source_url.blank?
+
+    {
+      artist_name: record.cover_artist_name,
+      artist_url: record.cover_artist_url,
+      source_name: record.cover_source_name.presence || WorkspaceCoverAsset::DEFAULT_SOURCE_NAME,
+      source_url: record.cover_source_url
+    }
+  end
+
+  def cover_asset_attribution(asset)
+    return nil if asset.blank?
+    return nil if asset.artist_name.blank? || asset.artist_url.blank? || asset.source_url.blank?
+
+    {
+      artist_name: asset.artist_name,
+      artist_url: asset.artist_url,
+      source_name: asset.display_source_name,
+      source_url: asset.source_url
+    }
+  end
+
+  def cover_asset_selected?(asset, record)
+    return false if asset.blank? || record.blank?
+
+    if asset.remote?
+      record.cover_remote_url.present? && record.cover_remote_url == asset.remote_image_url
+    elsif asset.image.attached? && record.cover_image.attached?
+      asset.image.blob_id == record.cover_image.blob_id
+    else
+      false
+    end
   end
 
   def notae_theme_body_class
