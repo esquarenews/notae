@@ -275,6 +275,27 @@ export default class extends Controller {
     this.copyText(source.value || source.textContent || "")
   }
 
+  async copyCurrentBlockMarkdown(event) {
+    event.preventDefault()
+
+    const template = event.currentTarget?.dataset?.blockMarkdownUrlTemplate
+    const blockId = this.currentBlockIdForExport()
+    if (!template || !blockId) return
+
+    await this.flushBlockSaveFor(blockId)
+
+    const url = template.replace("__BLOCK_ID__", encodeURIComponent(blockId))
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      headers: { Accept: "text/markdown" }
+    })
+    if (!response.ok) return
+
+    const markdown = await response.text()
+    this.copyText(markdown)
+    this.closeActionsMenu()
+  }
+
   undo(event) {
     event.preventDefault()
     document.execCommand("undo")
@@ -365,6 +386,28 @@ export default class extends Controller {
     textarea.select()
     document.execCommand("copy")
     textarea.remove()
+  }
+
+  async flushBlockSaveFor(blockId) {
+    if (!blockId) return
+
+    const detail = { blockId: String(blockId), promise: null }
+    window.dispatchEvent(new CustomEvent("notae:block-flush-save", { detail }))
+    if (detail.promise && typeof detail.promise.then === "function") {
+      await detail.promise
+    }
+  }
+
+  currentBlockIdForExport() {
+    const candidates = [
+      window.notaeAiInsertionPoint?.blockId,
+      document.querySelector(".ProseMirror-focused")?.closest?.("[data-block-id]")?.dataset?.blockId,
+      document.querySelector(".notae-block-menu[open]")?.closest?.("[data-block-id]")?.dataset?.blockId
+    ]
+
+    return candidates
+      .map((value) => String(value || "").trim())
+      .find((value) => value.length > 0 && document.getElementById(`block_${value}`))
   }
 
   clearMenuQuery(paramKey) {

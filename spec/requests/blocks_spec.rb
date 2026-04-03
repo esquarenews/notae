@@ -407,6 +407,46 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to eq("file content")
   end
 
+  it "exports the current block as markdown without including the rest of the page" do
+    owner = User.create!(email: "blocks-markdown-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Block markdown", slug: "block-markdown")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Export page")
+    target_block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          { "type" => "heading", "attrs" => { "level" => 3 }, "content" => [ { "type" => "text", "text" => "Current block" } ] },
+          { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Only this block" } ] }
+        ]
+      }
+    )
+    Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [ { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Other block" } ] } ]
+      }
+    )
+    sign_in owner
+
+    get export_markdown_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: target_block.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/markdown")
+    expect(response.body).to include("### Current block")
+    expect(response.body).to include("Only this block")
+    expect(response.body).not_to include("Other block")
+    expect(response.body).not_to include("# Export page")
+  end
+
   it "returns rendered media html after image upload so the nota can update in place" do
     owner = User.create!(email: "blocks-image-upload-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Image blocks", slug: "image-blocks")
@@ -485,6 +525,10 @@ RSpec.describe "Blocks", type: :request do
     expect(block.reload.asset.blob.id).to eq(original_blob_id)
 
     get download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id)
+
+    expect([ 302, 404 ]).to include(response.status)
+
+    get export_markdown_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id)
 
     expect([ 302, 404 ]).to include(response.status)
   end
@@ -575,6 +619,7 @@ RSpec.describe "Blocks", type: :request do
       "heading_1" => "heading_1",
       "heading_2" => "heading_2",
       "heading_3" => "heading_3",
+      "heading_4" => "heading_4",
       "bulleted_list" => "bullet_list",
       "numbered_list" => "ordered_list",
       "todo_list" => "todo_list",
@@ -583,9 +628,6 @@ RSpec.describe "Blocks", type: :request do
       "quote" => "blockquote",
       "callout" => "callout",
       "block_equation" => "equation",
-      "toggle_heading_1" => "toggle_heading_1",
-      "toggle_heading_2" => "toggle_heading_2",
-      "toggle_heading_3" => "toggle_heading_3",
       "columns_2" => "columns_2",
       "columns_3" => "columns_3",
       "columns_4" => "columns_4",
@@ -747,6 +789,180 @@ RSpec.describe "Blocks", type: :request do
     expect(block.asset).to be_attached
   end
 
+  it "creates linked notas and grids from block actions and opens them in split panes" do
+    owner = User.create!(email: "blocks-linked-create-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Linked create blocks", slug: "linked-create-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    source_page = Page.create!(workspace: workspace, created_by: owner, title: "Source note")
+    note_block = Block.create!(
+      workspace: workspace,
+      page: source_page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Client brief" } ]
+          }
+        ]
+      }
+    )
+    grid_block = Block.create!(
+      workspace: workspace,
+      page: source_page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Project board" } ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: note_block.id),
+           params: { block_command: { command: "create_linked_nota" } }
+    end.to change(Page, :count).by(1)
+
+    linked_note = workspace.pages.where.not(id: source_page.id).order(:created_at).last
+    expect(response).to redirect_to(
+      page_path(
+        workspace_slug: workspace.slug,
+        id: source_page.id,
+        split_page_id: linked_note.id,
+        split_source: "block",
+        anchor: "block_#{note_block.id}"
+      )
+    )
+    expect(note_block.reload.block_type).to eq("paragraph")
+    expect(note_block.content_json.dig("content", 0, "content", 0, "text")).to eq(linked_note.title)
+    expect(note_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "href")).to eq(
+      page_path(workspace_slug: workspace.slug, id: source_page.id, split_page_id: linked_note.id, split_source: "block")
+    )
+    expect(note_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "target")).to eq("_self")
+    expect(PageLink.where(source_block: note_block, target_page: linked_note)).to exist
+
+    get page_path(workspace_slug: workspace.slug, id: source_page.id, split_page_id: linked_note.id, split_source: "block")
+
+    expect(response).to have_http_status(:ok)
+    note_split_html = Nokogiri::HTML(response.body)
+    expect(note_split_html.at_css(".notae-db-split-frame")["src"]).to eq(
+      page_path(workspace_slug: workspace.slug, id: linked_note.id, embedded: "1")
+    )
+
+    get page_path(workspace_slug: workspace.slug, id: linked_note.id)
+
+    expect(response.body).to include("data-backlink-source=\"#{source_page.id}\"")
+    expect(response.body).to include(source_page.title)
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: grid_block.id),
+           params: { block_command: { command: "create_linked_grid" } }
+    end.to change(Database, :count).by(1).and change(Page, :count).by(1)
+
+    linked_grid = workspace.databases.order(:created_at).last
+    linked_grid_page = linked_grid.linked_page
+    expect(linked_grid_page).to be_present
+    expect(response).to redirect_to(
+      page_path(
+        workspace_slug: workspace.slug,
+        id: source_page.id,
+        split_page_id: linked_grid_page.id,
+        split_source: "block",
+        anchor: "block_#{grid_block.id}"
+      )
+    )
+    expect(grid_block.reload.content_json.dig("content", 0, "content", 0, "text")).to eq(linked_grid.name)
+    expect(grid_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "href")).to eq(
+      page_path(workspace_slug: workspace.slug, id: source_page.id, split_page_id: linked_grid_page.id, split_source: "block")
+    )
+    expect(grid_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "target")).to eq("_self")
+    expect(PageLink.where(source_block: grid_block, target_page: linked_grid_page)).to exist
+
+    get page_path(workspace_slug: workspace.slug, id: source_page.id, split_page_id: linked_grid_page.id, split_source: "block")
+
+    expect(response).to have_http_status(:ok)
+    grid_split_html = Nokogiri::HTML(response.body)
+    expect(grid_split_html.at_css(".notae-db-split-frame")["src"]).to eq(
+      database_path(workspace_slug: workspace.slug, id: linked_grid.id, embedded: "1")
+    )
+
+    get database_path(workspace_slug: workspace.slug, id: linked_grid.id)
+
+    expect(response.body).to include("data-backlink-source=\"#{source_page.id}\"")
+    expect(response.body).to include(source_page.title)
+  end
+
+  it "links existing notas and grids from block actions without creating standalone records" do
+    owner = User.create!(email: "blocks-linked-existing-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Linked existing blocks", slug: "linked-existing-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    source_page = Page.create!(workspace: workspace, created_by: owner, title: "Source note")
+    existing_note = Page.create!(workspace: workspace, created_by: owner, title: "Existing note")
+    existing_grid = Database.create!(workspace: workspace, name: "Existing grid", created_by: owner)
+    existing_grid_page = Databases::EnsureLinkedPageService.call(database: existing_grid, actor: owner)
+    note_block = Block.create!(workspace: workspace, page: source_page, created_by: owner, block_type: "paragraph")
+    grid_block = Block.create!(workspace: workspace, page: source_page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: note_block.id),
+           params: { block_command: { command: "link_existing_nota", target_page_id: existing_note.id } }
+    end.not_to change(Page, :count)
+
+    expect(response).to redirect_to(
+      page_path(
+        workspace_slug: workspace.slug,
+        id: source_page.id,
+        split_page_id: existing_note.id,
+        split_source: "block",
+        anchor: "block_#{note_block.id}"
+      )
+    )
+    expect(note_block.reload.content_json.dig("content", 0, "content", 0, "text")).to eq(existing_note.title)
+    expect(note_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "href")).to eq(
+      page_path(workspace_slug: workspace.slug, id: source_page.id, split_page_id: existing_note.id, split_source: "block")
+    )
+    expect(note_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "target")).to eq("_self")
+    expect(PageLink.where(source_block: note_block, target_page: existing_note)).to exist
+
+    expect do
+      post command_page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: grid_block.id),
+           params: { block_command: { command: "link_existing_grid", target_database_id: existing_grid.id } }
+    end.not_to change(Database, :count)
+
+    expect(response).to redirect_to(
+      page_path(
+        workspace_slug: workspace.slug,
+        id: source_page.id,
+        split_page_id: existing_grid_page.id,
+        split_source: "block",
+        anchor: "block_#{grid_block.id}"
+      )
+    )
+    expect(grid_block.reload.content_json.dig("content", 0, "content", 0, "text")).to eq(existing_grid.name)
+    expect(grid_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "href")).to eq(
+      page_path(workspace_slug: workspace.slug, id: source_page.id, split_page_id: existing_grid_page.id, split_source: "block")
+    )
+    expect(grid_block.content_json.dig("content", 0, "content", 0, "marks", 0, "attrs", "target")).to eq("_self")
+    expect(PageLink.where(source_block: grid_block, target_page: existing_grid_page)).to exist
+
+    get page_path(workspace_slug: workspace.slug, id: source_page.id, split_page_id: existing_grid_page.id, split_source: "block")
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css(".notae-db-split-frame")["src"]).to eq(
+      database_path(workspace_slug: workspace.slug, id: existing_grid.id, embedded: "1")
+    )
+  end
+
   it "supports color, duplicate, move, delete, and suggest edits commands" do
     owner = User.create!(email: "blocks-command-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Command blocks", slug: "command-blocks")
@@ -800,5 +1016,41 @@ RSpec.describe "Blocks", type: :request do
          params: { block_command: { command: "delete" } }
     expect(response).to have_http_status(:redirect)
     expect(block.reload.archived_at).to be_present
+  end
+
+  it "renders expandable pickers for linking existing notas and grids from the block menu" do
+    owner = User.create!(email: "blocks-picker-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Block picker workspace", slug: "block-picker-workspace")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    source_page = Page.create!(workspace: workspace, created_by: owner, title: "Source page")
+    Page.create!(workspace: workspace, created_by: owner, title: "Existing note")
+    Database.create!(workspace: workspace, name: "Existing grid", created_by: owner)
+    block = Block.create!(workspace: workspace, page: source_page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: source_page.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    block_node = document.at_css("#block_#{block.id}")
+    expect(block_node).to be_present
+
+    picker_forms = block_node.css("form.notae-block-menu-picker-form")
+    expect(picker_forms.size).to eq(2)
+
+    note_form = picker_forms.find do |form|
+      form.at_css('input[name="block_command[command]"][value="link_existing_nota"]')
+    end
+    grid_form = picker_forms.find do |form|
+      form.at_css('input[name="block_command[command]"][value="link_existing_grid"]')
+    end
+
+    expect(note_form.at_css('button[data-action="block-tools#togglePicker"]')).to be_present
+    expect(note_form.at_css('.notae-block-menu-picker[hidden]')).to be_present
+    expect(note_form.at_css('select[data-action="change->block-tools#submitPicker"]')).to be_present
+
+    expect(grid_form.at_css('button[data-action="block-tools#togglePicker"]')).to be_present
+    expect(grid_form.at_css('.notae-block-menu-picker[hidden]')).to be_present
+    expect(grid_form.at_css('select[data-action="change->block-tools#submitPicker"]')).to be_present
   end
 end

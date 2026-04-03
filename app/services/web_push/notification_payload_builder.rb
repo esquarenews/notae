@@ -11,7 +11,7 @@ module WebPush
         notification_id: notification.id,
         title: title,
         body: body,
-        url: destination_url,
+        url: pwa_notification_launch_path(id: notification.id),
         tag: "notae-#{notification.notification_type}-#{notification.id}",
         icon: "/icon-192-v2.png",
         badge: "/icon-192-v2.png"
@@ -85,65 +85,6 @@ module WebPush
         comment = notification.notifiable if notification.notifiable.is_a?(Comment)
         comment_excerpt(comment&.body.to_s)
       end.presence || "Open Notifications in Notae."
-    end
-
-    def destination_url
-      case notification.notification_type
-      when Notification::TYPE_CALENDAR_REMINDER
-        event = notification.notifiable if notification.notifiable.is_a?(KalendariumEvent)
-        return fallback_url if event.blank?
-
-        kalendarium_path(
-          workspace_slug: notification.workspace.slug,
-          view: "day",
-          date: event.starts_at_utc.to_date,
-          anchor: "kalendarium_event_#{event.id}"
-        )
-      when Notification::TYPE_WORKFLOW_FAILED
-        workflow_run = notification.notifiable if notification.notifiable.is_a?(WorkflowRun)
-        return fallback_url if workflow_run.blank?
-
-        workflow_run_path(workspace_slug: notification.workspace.slug, id: workflow_run.id)
-      when Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
-        suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion)
-        return fallback_url if suggestion.blank?
-
-        workspace_path(
-          notification.workspace.slug,
-          show_home: 1,
-          anchor: "knowledge-suggestion-#{suggestion.id}"
-        )
-      when Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
-           Notification::TYPE_AGENT_ACTION_RESUBMITTED,
-           Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
-           Notification::TYPE_AGENT_ACTION_APPROVED,
-           Notification::TYPE_AGENT_ACTION_REJECTED
-        agent_action = notification.notifiable if notification.notifiable.is_a?(AgentAction)
-        return fallback_url if agent_action.blank?
-
-        agent_action_path(workspace_slug: notification.workspace.slug, id: agent_action.id)
-      else
-        comment_destination_url || fallback_url
-      end
-    end
-
-    def comment_destination_url
-      comment = notification.notifiable
-      return unless comment.is_a?(Comment)
-
-      commentable = comment.commentable
-      case commentable
-      when Page
-        page_path(workspace_slug: notification.workspace.slug, id: commentable.id)
-      when Block
-        page_path(workspace_slug: notification.workspace.slug, id: commentable.page_id, anchor: "block_#{commentable.id}")
-      when Database
-        database_path(workspace_slug: notification.workspace.slug, id: commentable.id, anchor: "database-comments-menu")
-      end
-    end
-
-    def fallback_url
-      workspace_notifications_path(workspace_slug: notification.workspace.slug)
     end
 
     def comment_excerpt(raw_text)

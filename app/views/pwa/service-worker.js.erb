@@ -21,6 +21,7 @@ const FONT_CACHE = `notae-fonts-${CACHE_VERSION}`
 const PRIVATE_CACHE_PREFIXES = ["notae-documents-"]
 const ACTIVE_CACHES = [SHELL_CACHE, DOCUMENT_CACHE, ASSET_CACHE, FONT_CACHE]
 const OFFLINE_FALLBACK_URL = "<%= pwa_offline_path %>"
+const NOTIFICATION_LAUNCH_TEMPLATE = "<%= pwa_notification_launch_path(id: "__NOTIFICATION_ID__") %>"
 const PRECACHE_URLS = <%= raw(precache_urls.to_json) %>
 
 self.addEventListener("install", (event) => {
@@ -63,7 +64,7 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close()
 
-  const url = event.notification.data?.url || "/app"
+  const url = notificationLaunchUrl(event.notification.data)
   event.waitUntil(openNotificationDestination(url))
 })
 
@@ -236,6 +237,15 @@ function parsePushPayload(data) {
   } catch (_error) {
     return { body: data.text() }
   }
+}
+
+function notificationLaunchUrl(data) {
+  const notificationId = data?.notificationId || data?.notification_id
+  if (notificationId) {
+    return NOTIFICATION_LAUNCH_TEMPLATE.replace("__NOTIFICATION_ID__", notificationId)
+  }
+
+  return data?.url || "/app"
 }
 
 async function openNotificationDestination(rawUrl) {

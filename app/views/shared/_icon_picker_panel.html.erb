@@ -1,0 +1,78 @@
+<% current_icon_value = current_icon.to_s.strip.presence %>
+<% current_is_custom = Page.custom_emoji_token?(current_icon_value) %>
+<% custom_emojis = workspace_custom_emojis(workspace) %>
+
+<div class="notae-page-header-panel notae-page-header-icon-panel">
+  <div class="notae-emoji-picker" data-controller="emoji-picker">
+    <%= form_with url: update_url,
+                  method: :patch,
+                  class: "notae-page-header-panel-form",
+                  data: {
+                    emoji_picker_target: "form"
+                  } do %>
+      <% if local_assigns[:return_to].present? %>
+        <%= hidden_field_tag :return_to, local_assigns[:return_to] %>
+      <% end %>
+      <%= hidden_field_tag "#{param_key}[icon_action]", "set" %>
+      <%= text_field_tag "#{param_key}[icon]",
+                         (current_is_custom ? "" : current_icon_value),
+                         placeholder: placeholder,
+                         class: "notae-options-input",
+                         data: {
+                           emoji_picker_target: "input"
+                         } %>
+      <%= submit_tag(current_icon_value.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
+    <% end %>
+
+    <% if current_icon_value.present? %>
+      <div class="notae-emoji-picker-current">
+        <span class="notae-options-muted">Current icon</span>
+        <span class="notae-emoji-picker-current-value">
+          <%= render_notae_icon(current_icon_value, workspace:, fallback:, css_class: "notae-emoji-picker-current-icon") %>
+        </span>
+      </div>
+    <% end %>
+
+    <% if custom_emojis.any? %>
+      <details class="notae-emoji-picker-section" open>
+        <summary>Custom emoji</summary>
+        <div class="notae-page-emoji-grid notae-page-emoji-grid-custom">
+          <% custom_emojis.each do |emoji| %>
+            <button type="button"
+                    class="notae-page-emoji-button is-custom"
+                    title="<%= emoji.display_name %>"
+                    data-action="emoji-picker#choose"
+                    data-icon-value="<%= emoji.icon_token %>">
+              <%= image_tag emoji.image, alt: emoji.display_name, class: "notae-page-custom-emoji" %>
+            </button>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+
+    <% emoji_picker_categories.each_with_index do |category, index| %>
+      <details class="notae-emoji-picker-section" <%= "open" if index.zero? %>>
+        <summary><%= category.label %></summary>
+        <div class="notae-page-emoji-grid">
+          <% category.emojis.each do |emoji| %>
+            <button type="button"
+                    class="notae-page-emoji-button"
+                    title="Use <%= emoji %>"
+                    data-action="emoji-picker#choose"
+                    data-icon-value="<%= emoji %>">
+              <%= emoji %>
+            </button>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+
+    <% if current_icon_value.present? %>
+      <%= button_to "Remove icon",
+                    update_url,
+                    method: :patch,
+                    params: local_assigns[:return_to].present? ? { return_to: local_assigns[:return_to], param_key => { icon_action: "clear" } } : { param_key => { icon_action: "clear" } },
+                    class: "notae-page-header-link-button" %>
+    <% end %>
+  </div>
+</div>

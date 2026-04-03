@@ -43,4 +43,45 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("flushSave()")
     expect(source).to include("if (!this.hasPendingChanges) return true")
   end
+
+  it "loads the Tiptap link extension for block-linked split previews" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include('import Link from "@tiptap/extension-link"')
+    expect(source).to include("Link.configure({")
+    expect(source).to include("openOnClick: false")
+  end
+
+  it "offers heading 4 in the slash command list" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include('label: "Heading 4"')
+    expect(source).to include('blockType: "heading_4"')
+    expect(source).to include("setHeading({ level: 4 })")
+  end
+
+  it "keeps block-linked split preview clicks in the current pane" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("click: (_view, event) => this.handleEditorClick(event)")
+    expect(source).to include("handleEditorClick(event)")
+    expect(source).to include("splitPreviewLink(url)")
+    expect(source).to include('url.searchParams.get("split_source") === "block"')
+    expect(source).to include('Boolean(url.searchParams.get("split_page_id"))')
+    expect(source).to include("event.preventDefault()")
+    expect(source).to include("visitSplitPreview(url)")
+    expect(source).to include("hostWindow()")
+    expect(source).to include("window.top")
+    expect(source).to include("visitWindow.Turbo.visit(url.toString())")
+  end
+
+  it "falls back to explicit navigation for non-split links when tiptap link clicks are disabled" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("standardNavigableLink(event, clickedLink)")
+    expect(source).to include("followStandardLink(clickedLink, url, event)")
+    expect(source).to include('clickedLink.getAttribute("target") === "_blank"')
+    expect(source).to include('window.open(url.toString(), "_blank", "noopener")')
+    expect(source).to include("window.location.assign(url.toString())")
+  end
 end

@@ -68,4 +68,16 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     expect(source).to include("childTreeForBlock(block)")
     expect(source).to include("parentTreeForBlock(block)")
   end
+
+  it "opens existing-link pickers from block menu buttons and submits on selection" do
+    source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
+
+    expect(source).to include("togglePicker(event)")
+    expect(source).to include("submitPicker(event)")
+    expect(source).to include("closest(\".notae-block-menu-picker-form\")")
+    expect(source).to include("closeInlinePickers(form)")
+    expect(source).to include("select.focus()")
+    expect(source).to include("typeof select.showPicker === \"function\"")
+    expect(source).to include("select.form?.requestSubmit()")
+  end
 end

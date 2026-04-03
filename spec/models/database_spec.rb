@@ -8,6 +8,23 @@ RSpec.describe Database, type: :model do
     expect(database.reload.icon).to eq("🚀✨")
   end
 
+  it "preserves custom emoji icon tokens" do
+    workspace = Workspace.create!(name: "Database model workspace custom", slug: "database-model-workspace-custom")
+    database = nil
+
+    Tempfile.create([ "database-custom-emoji", ".png" ]) do |file|
+      file.write("fake-png-content")
+      file.rewind
+
+      emoji = workspace.custom_emojis.build
+      emoji.image.attach(Rack::Test::UploadedFile.new(file.path, "image/png"))
+      emoji.save!
+
+      database = described_class.create!(workspace: workspace, name: "Specs", icon: emoji.icon_token)
+      expect(database.reload.icon).to eq(emoji.icon_token)
+    end
+  end
+
   it "accepts blank icon and description values" do
     workspace = Workspace.create!(name: "Database model workspace 2", slug: "database-model-workspace-2")
     database = described_class.new(workspace: workspace, name: "Specs", icon: "", description: "")

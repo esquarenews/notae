@@ -5,6 +5,7 @@
   ["H1", "Heading 1", "heading_1"],
   ["H2", "Heading 2", "heading_2"],
   ["H3", "Heading 3", "heading_3"],
+  ["H4", "Heading 4", "heading_4"],
   ["Pg", "Page", "page"],
   ["P+", "Page in", "page_in"],
   ["ul", "Bulleted list", "bulleted_list"],
@@ -16,9 +17,6 @@
   ["!", "Callout", "callout"],
   ["fx", "Block equation", "block_equation"],
   ["S", "Synced block", "synced_block"],
-  ["T1", "Toggle heading 1", "toggle_heading_1"],
-  ["T2", "Toggle heading 2", "toggle_heading_2"],
-  ["T3", "Toggle heading 3", "toggle_heading_3"],
   ["||", "2 columns", "columns_2"],
   ["|||", "3 columns", "columns_3"],
   ["||||", "4 columns", "columns_4"],
@@ -29,6 +27,7 @@
   "heading_1" => "heading_1",
   "heading_2" => "heading_2",
   "heading_3" => "heading_3",
+  "heading_4" => "heading_4",
   "bulleted_list" => "bullet_list",
   "numbered_list" => "ordered_list",
   "todo_list" => "todo_list",
@@ -37,9 +36,6 @@
   "quote" => "blockquote",
   "callout" => "callout",
   "block_equation" => "equation",
-  "toggle_heading_1" => "toggle_heading_1",
-  "toggle_heading_2" => "toggle_heading_2",
-  "toggle_heading_3" => "toggle_heading_3",
   "columns_2" => "columns_2",
   "columns_3" => "columns_3",
   "columns_4" => "columns_4",
@@ -75,6 +71,8 @@
 <% layout_columns_count = block.layout_columns_count %>
 <% block_route_params = { workspace_slug: workspace.slug, page_id: page.id, id: block.id }.merge(embedded_page_params) %>
 <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
+<% linkable_note_pages = local_assigns.fetch(:linkable_note_pages, []) %>
+<% linkable_databases = local_assigns.fetch(:linkable_databases, []) %>
 
 <article id="block_<%= block.id %>"
          class="notae-doc-block is-type-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-highlight-#{block_highlight}" if block_highlight.present? %> <%= "is-columns" if block.block_type.start_with?("columns_") %> <%= "is-layout-columns-#{layout_columns_count}" if layout_columns_count.present? %>"
@@ -187,6 +185,60 @@
                 <span class="notae-menu-item-icon">></span>
                 <span class="notae-menu-item-label">Move to</span>
               <% end %>
+            <% end %>
+            <%= button_to command_page_block_path(block_route_params),
+                          method: :post,
+                          params: { block_command: { command: "create_linked_nota" } },
+                          form_class: "notae-block-menu-inline-form",
+                          class: "notae-block-menu-item" do %>
+              <span class="notae-menu-item-icon">↗</span>
+              <span class="notae-menu-item-label">Create linked Nota</span>
+            <% end %>
+            <%= form_with url: command_page_block_path(block_route_params),
+                          method: :post,
+                          class: "notae-block-menu-picker-form" do %>
+              <%= hidden_field_tag "block_command[command]", "link_existing_nota" %>
+              <%= button_tag type: "button",
+                             class: "notae-block-menu-item",
+                             disabled: linkable_note_pages.empty?,
+                             data: { action: "block-tools#togglePicker" } do %>
+                <span class="notae-menu-item-icon">🔗</span>
+                <span class="notae-menu-item-label">Link existing Nota</span>
+              <% end %>
+              <div class="notae-block-menu-picker" hidden>
+                <%= select_tag "block_command[target_page_id]",
+                               options_from_collection_for_select(linkable_note_pages, :id, :title),
+                               include_blank: "Choose a Nota...",
+                               class: "notae-block-menu-select",
+                               data: { action: "change->block-tools#submitPicker" } %>
+              </div>
+            <% end %>
+            <%= button_to command_page_block_path(block_route_params),
+                          method: :post,
+                          params: { block_command: { command: "create_linked_grid" } },
+                          form_class: "notae-block-menu-inline-form",
+                          class: "notae-block-menu-item" do %>
+              <span class="notae-menu-item-icon">⊞</span>
+              <span class="notae-menu-item-label">Create linked Grid</span>
+            <% end %>
+            <%= form_with url: command_page_block_path(block_route_params),
+                          method: :post,
+                          class: "notae-block-menu-picker-form" do %>
+              <%= hidden_field_tag "block_command[command]", "link_existing_grid" %>
+              <%= button_tag type: "button",
+                             class: "notae-block-menu-item",
+                             disabled: linkable_databases.empty?,
+                             data: { action: "block-tools#togglePicker" } do %>
+                <span class="notae-menu-item-icon">⊡</span>
+                <span class="notae-menu-item-label">Link existing Grid</span>
+              <% end %>
+              <div class="notae-block-menu-picker" hidden>
+                <%= select_tag "block_command[target_database_id]",
+                               options_from_collection_for_select(linkable_databases, :id, :name),
+                               include_blank: "Choose a Grid...",
+                               class: "notae-block-menu-select",
+                               data: { action: "change->block-tools#submitPicker" } %>
+              </div>
             <% end %>
             <%= button_to command_page_block_path(block_route_params),
                           method: :post,

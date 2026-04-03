@@ -23,4 +23,15 @@ RSpec.describe "ShellController JavaScript syntax" do
     expect(source).to include("is-mobile-viewport")
     expect(source).to include("viewportWidth()")
   end
+
+  it "copies the current block markdown through the action menu export control" do
+    source = Rails.root.join("app/javascript/controllers/shell_controller.js").read
+
+    expect(source).to include("copyCurrentBlockMarkdown(event)")
+    expect(source).to include("event.currentTarget?.dataset?.blockMarkdownUrlTemplate")
+    expect(source).to include("window.notaeAiInsertionPoint?.blockId")
+    expect(source).to include("new CustomEvent(\"notae:block-flush-save\"")
+    expect(source).to include("fetch(url, {")
+    expect(source).to include("headers: { Accept: \"text/markdown\" }")
+  end
 end

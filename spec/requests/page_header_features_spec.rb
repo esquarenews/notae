@@ -16,15 +16,52 @@ RSpec.describe "Page header features", type: :request do
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("notae-page-icon-display")
-    expect(response.body).to include("<span class=\"notae-topbar-page-icon\">🧠</span>")
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css(".notae-page-icon-display .notae-icon-renderer-glyph")&.text&.strip).to eq("🧠")
+    expect(html.at_css(".notae-topbar-page-icon .notae-icon-renderer-glyph")&.text&.strip).to eq("🧠")
 
     get workspace_path(workspace.slug)
-    expect(response.body).to include("🧠 Icon page")
+    home_html = Nokogiri::HTML(response.body)
+    page_card = home_html.at_css(".notae-workspace-page-card")
+    expect(page_card.at_css(".notae-workspace-page-card-icon .notae-icon-renderer-glyph")&.text&.strip).to eq("🧠")
+    expect(page_card.at_css(".notae-workspace-page-card-text strong")&.text&.strip).to eq("Icon page")
 
     patch page_path(workspace_slug: workspace.slug, id: page.id),
           params: { page: { icon_action: "clear" } }
     expect(page.reload.icon).to be_nil
+  end
+
+  it "renders custom workspace emoji in the icon picker and overlaps the title icon over a cover" do
+    owner = User.create!(email: "page-header-custom-emoji-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Header Emoji", slug: "header-emoji")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Cover icon page",
+      cover_preset_key: Page::COVER_PRESET_KEYS.first
+    )
+
+    Tempfile.create([ "custom-emoji", ".png" ]) do |file|
+      file.write("fake-png-content")
+      file.rewind
+
+      emoji = workspace.custom_emojis.build
+      emoji.image.attach(Rack::Test::UploadedFile.new(file.path, "image/png"))
+      emoji.save!
+      page.update!(icon: emoji.icon_token)
+    end
+
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css(".notae-page-icon-display.is-over-cover .notae-icon-renderer.is-custom img")).to be_present
+    picker_labels = html.css(".notae-emoji-picker-section summary").map { |summary| summary.text.squish }
+    expect(picker_labels).to include("Custom emoji")
+    expect(picker_labels).to include("Smileys & Emotion")
   end
 
   it "supports random cover, upload cover, repositioning, and clearing" do
@@ -102,13 +139,16 @@ RSpec.describe "Page header features", type: :request do
     expect(response.body).to include("notae-comments-trigger")
     expect(response.body).to include("aria-label=\"Actions\"")
     expect(response.body).to include("aria-label=\"Options\"")
-    expect(response.body).to include("data-controller=\"actions-menu\"")
-    expect(response.body).to include("data-actions-menu-target=\"nav\"")
-    expect(response.body).to include("data-actions-menu-target=\"section\"")
+    html = Nokogiri::HTML(response.body)
+    actions_menu = html.at_css("[data-controller*='actions-menu']")
+    expect(actions_menu).to be_present
+    expect(actions_menu.at_css("[data-actions-menu-target='nav']")).to be_present
+    expect(actions_menu.at_css("[data-actions-menu-target='section']")).to be_present
     expect(response.body).to include("notae-actions-mobile-panes")
-    expect(response.body).to include("data-controller=\"options-menu\"")
-    expect(response.body).to include("data-options-menu-target=\"nav\"")
-    expect(response.body).to include("data-options-menu-target=\"section\"")
+    options_menu = html.at_css("[data-controller*='options-menu']")
+    expect(options_menu).to be_present
+    expect(options_menu.at_css("[data-options-menu-target='nav']")).to be_present
+    expect(options_menu.at_css("[data-options-menu-target='section']")).to be_present
     expect(response.body).to include("notae-options-mobile-panes")
     expect(response.body).to include("notae-actions-trigger-label")
     expect(response.body).to include("First page comment")

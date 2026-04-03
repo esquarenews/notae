@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Editor } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
+import Link from "@tiptap/extension-link"
 import TaskList from "@tiptap/extension-task-list"
 import TaskItem from "@tiptap/extension-task-item"
 
@@ -36,6 +37,13 @@ const SLASH_COMMANDS = [
     keywords: ["h3", "section"],
     blockType: "heading_3",
     run: (editor) => editor.chain().focus().setHeading({ level: 3 }).run()
+  },
+  {
+    category: "Structure",
+    label: "Heading 4",
+    keywords: ["h4", "subsection"],
+    blockType: "heading_4",
+    run: (editor) => editor.chain().focus().setHeading({ level: 4 }).run()
   },
   {
     category: "Lists",
@@ -159,6 +167,11 @@ export default class extends Controller {
       element: this.editorTarget,
       extensions: [
         StarterKit,
+        Link.configure({
+          openOnClick: false,
+          linkOnPaste: false,
+          autolink: false
+        }),
         TaskList,
         TaskItem.configure({
           nested: true
@@ -168,6 +181,7 @@ export default class extends Controller {
       editorProps: {
         handleKeyDown: (_view, event) => this.handleEditorKeydown(event),
         handleDOMEvents: {
+          click: (_view, event) => this.handleEditorClick(event),
           dragover: (_view, event) => this.handleBlockReorderDragOver(event),
           drop: (_view, event) => this.handleBlockReorderDrop(event)
         }
@@ -333,6 +347,87 @@ export default class extends Controller {
     }
 
     return false
+  }
+
+  handleEditorClick(event) {
+    if (event.defaultPrevented) return false
+
+    const clickedLink = event.target.closest("a[href]")
+    if (!(clickedLink instanceof HTMLAnchorElement)) return false
+
+    let url
+    try {
+      url = new URL(clickedLink.href, window.location.origin)
+    } catch (_error) {
+      return false
+    }
+
+    const splitPreviewLink = this.splitPreviewLink(url)
+    const standardNavigableLink = !splitPreviewLink && this.standardNavigableLink(event, clickedLink)
+
+    if (!splitPreviewLink && !standardNavigableLink) return false
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    Promise.resolve(this.flushSave()).finally(() => {
+      if (splitPreviewLink) {
+        this.visitSplitPreview(url)
+        return
+      }
+
+      this.followStandardLink(clickedLink, url, event)
+    })
+
+    return true
+  }
+
+  splitPreviewLink(url) {
+    return url.origin === window.location.origin &&
+      url.searchParams.get("split_source") === "block" &&
+      Boolean(url.searchParams.get("split_page_id"))
+  }
+
+  standardNavigableLink(event, clickedLink) {
+    if (event.shiftKey || event.altKey) return false
+    if (event.metaKey || event.ctrlKey) return true
+
+    const href = clickedLink.getAttribute("href") || ""
+    return href.length > 0
+  }
+
+  visitSplitPreview(url) {
+    const visitWindow = this.hostWindow()
+
+    if (visitWindow.Turbo?.visit) {
+      visitWindow.Turbo.visit(url.toString())
+      return
+    }
+
+    visitWindow.location.assign(url.toString())
+  }
+
+  followStandardLink(clickedLink, url, event) {
+    const openInNewTab = clickedLink.getAttribute("target") === "_blank" || event.metaKey || event.ctrlKey
+
+    if (openInNewTab) {
+      const opened = window.open(url.toString(), "_blank", "noopener")
+      if (opened) return
+    }
+
+    window.location.assign(url.toString())
+  }
+
+  hostWindow() {
+    try {
+      if (window.top && window.top.location.origin === window.location.origin) {
+        return window.top
+      }
+    } catch (_error) {
+      return window
+    }
+
+    return window
   }
 
   supportsBlockReparentShortcut() {

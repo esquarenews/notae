@@ -34,7 +34,7 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
 
     expect(payload[:title]).to eq("Agent draft awaiting approval")
     expect(payload[:body]).to include("Create summary note")
-    expect(payload[:url]).to eq("/w/#{workspace.slug}/agent-actions/#{agent_action.id}")
+    expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
   end
 
   it "builds a knowledge suggestion payload that deep-links to the workspace home card" do
@@ -68,6 +68,6 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
 
     expect(payload[:title]).to eq("New AI suggestion")
     expect(payload[:body]).to include("Follow up with finance")
-    expect(payload[:url]).to eq("/w/#{workspace.slug}?show_home=1#knowledge-suggestion-#{suggestion.id}")
+    expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
   end
 end

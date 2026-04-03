@@ -40,6 +40,7 @@ class Workspace < ApplicationRecord
   has_many :page_templates, dependent: :destroy
   has_many :page_presences, dependent: :destroy
   has_many :favorites, dependent: :destroy
+  has_many :custom_emojis, class_name: "WorkspaceEmoji", dependent: :destroy
   has_many :search_chunks, dependent: :destroy
   has_many :ai_usage_logs, dependent: :destroy
   has_many :ai_conversations, dependent: :destroy

@@ -26,7 +26,10 @@
         <% @archived_pages.each do |page| %>
           <li class="notae-trash-item">
             <div class="notae-trash-item-main">
-              <p class="notae-pref-label"><%= page.icon.presence || "📄" %> <%= page.title %></p>
+              <p class="notae-pref-label">
+                <%= render_notae_icon(page.icon, workspace: @workspace, fallback: "📄", css_class: "notae-inline-linked-icon", label: page.title) %>
+                <%= page.title %>
+              </p>
               <p class="notae-pref-description">Archived <%= time_ago_in_words(page.archived_at) %> ago</p>
             </div>
             <div class="notae-trash-item-actions">
@@ -51,7 +54,10 @@
         <% @archived_databases.each do |database| %>
           <li class="notae-trash-item">
             <div class="notae-trash-item-main">
-              <p class="notae-pref-label"><%= database.icon.presence || "🗃️" %> <%= database.name %></p>
+              <p class="notae-pref-label">
+                <%= render_notae_icon(database.icon, workspace: @workspace, fallback: "🗃️", css_class: "notae-inline-linked-icon", label: database.name) %>
+                <%= database.name %>
+              </p>
               <p class="notae-pref-description">Archived <%= time_ago_in_words(database.archived_at) %> ago</p>
             </div>
             <div class="notae-trash-item-actions">

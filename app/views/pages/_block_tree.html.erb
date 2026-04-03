@@ -1,6 +1,8 @@
 <% blocks = blocks_by_parent[parent_id] || [] %>
 <% reader_mode = local_assigns.fetch(:reader_mode, false) %>
 <% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
+<% linkable_note_pages = local_assigns.fetch(:linkable_note_pages, []) %>
+<% linkable_databases = local_assigns.fetch(:linkable_databases, []) %>
 
 <div class="notae-doc-tree <%= "is-reader-mode" if reader_mode %>"
      data-controller="block-list"
@@ -15,6 +17,8 @@
                  block: block,
                  blocks_by_parent: blocks_by_parent,
                  all_pages: all_pages,
+                 linkable_note_pages: linkable_note_pages,
+                 linkable_databases: linkable_databases,
                  index: index,
                  reader_mode: reader_mode,
                  embedded_page_params: embedded_page_params

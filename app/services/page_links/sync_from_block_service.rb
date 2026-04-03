@@ -2,6 +2,7 @@ module PageLinks
   class SyncFromBlockService
     WIKI_LINK_PATTERN = /\[\[([^\[\]]+)\]\]/
     PAGE_PATH_PATTERN = %r{/w/[^/]+/pages/([0-9a-f-]{36})}i
+    SPLIT_PAGE_PATH_PATTERN = %r{/w/[^/]+/pages/[0-9a-f-]{36}[^"']*?[?&]split_page_id=([0-9a-f-]{36})}i
 
     def self.call(block:)
       new(block:).call
@@ -44,6 +45,11 @@ module PageLinks
       explicit_ids = block.content_json.to_json.scan(PAGE_PATH_PATTERN).flatten
       if explicit_ids.any?
         ids.concat(block.workspace.pages.where(id: explicit_ids).pluck(:id))
+      end
+
+      split_target_ids = block.content_json.to_json.scan(SPLIT_PAGE_PATH_PATTERN).flatten
+      if split_target_ids.any?
+        ids.concat(block.workspace.pages.where(id: split_target_ids).pluck(:id))
       end
 
       ids.uniq

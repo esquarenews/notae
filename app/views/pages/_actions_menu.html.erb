@@ -1,9 +1,11 @@
 <details id="page-actions-menu"
          class="notae-actions-menu"
-         data-controller="actions-menu"
+         data-controller="actions-menu page-import"
          data-shell-target="actionsMenu"
+         data-page-import-default-block-id-value="<%= local_assigns[:default_import_insert_after_id] %>"
          data-shell-actions-menu
          <%= "open" if params[:actions_menu].to_s == "open" %>>
+  <% can_import_page = local_assigns.fetch(:can_import_page, false) && !page.locked? %>
   <summary class="notae-chip-button notae-actions-trigger" aria-label="Actions">
     <span class="notae-actions-trigger-icon" aria-hidden="true">⚡</span>
     <span class="notae-actions-trigger-label">Actions</span>
@@ -214,13 +216,6 @@
         <% end %>
       </div>
 
-      <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="customize page options">
-        <button type="button" class="notae-actions-row-button" data-action="click->shell#openOptionsMenu">
-          <span class="notae-actions-row-icon">⚙</span>
-          <span class="notae-actions-row-label">Customize page</span>
-        </button>
-      </div>
-
       <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="suggest edits">
         <%= form_with model: page,
                       url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
@@ -256,41 +251,26 @@
                  data-shell-actions-section
                  data-actions-menu-target="section"
                  data-actions-menu-label="Advanced">
-      <div class="notae-actions-row is-disabled" data-shell-action-item data-shell-action-terms="import">
-        <button type="button" class="notae-actions-row-button" disabled>
+      <div class="notae-actions-row <%= "is-disabled" unless can_import_page %>" data-shell-action-item data-shell-action-terms="import files upload media text">
+        <button type="button"
+                class="notae-actions-row-button"
+                <%= "disabled" unless can_import_page %>
+                data-action="click->page-import#open">
           <span class="notae-actions-row-icon">↓</span>
           <span class="notae-actions-row-label">Import</span>
-          <span class="notae-actions-row-meta">Not implemented</span>
+          <span class="notae-actions-row-meta">into Nota</span>
         </button>
       </div>
 
-      <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="export markdown zip">
-        <a class="notae-actions-row-link" href="<%= export_markdown_page_path(workspace_slug: workspace.slug, id: page.id) %>">
+      <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="export markdown block clipboard">
+        <button type="button"
+                class="notae-actions-row-button"
+                data-block-markdown-url-template="<%= export_markdown_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: "__BLOCK_ID__") %>"
+                data-action="click->shell#copyCurrentBlockMarkdown">
           <span class="notae-actions-row-icon">↑</span>
           <span class="notae-actions-row-label">Export</span>
-          <span class="notae-actions-row-meta">Markdown</span>
-        </a>
-      </div>
-
-      <div class="notae-actions-row <%= "is-disabled" unless can_manage_permissions %>"
-           data-shell-action-item
-           data-shell-action-terms="turn into wiki share workspace">
-        <% if can_manage_permissions %>
-          <%= form_with url: permissions_page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
-                        method: :patch,
-                        class: "notae-actions-inline-form" do %>
-            <%= hidden_field_tag "page[permission_mode]", "shared_to_workspace" %>
-            <button type="submit" class="notae-actions-row-button">
-              <span class="notae-actions-row-icon">⇄</span>
-              <span class="notae-actions-row-label">Turn into wiki</span>
-            </button>
-          <% end %>
-        <% else %>
-          <button type="button" class="notae-actions-row-button" disabled>
-            <span class="notae-actions-row-icon">⇄</span>
-            <span class="notae-actions-row-label">Turn into wiki</span>
-          </button>
-        <% end %>
+          <span class="notae-actions-row-meta">Current block as MD</span>
+        </button>
       </div>
 
       <details class="notae-actions-submenu" data-shell-action-item data-shell-action-terms="updates analytics audit">
@@ -341,12 +321,6 @@
         </button>
       </div>
 
-      <div class="notae-actions-row is-disabled" data-shell-action-item data-shell-action-terms="open mac app desktop">
-        <button type="button" class="notae-actions-row-button" disabled>
-          <span class="notae-actions-row-icon">N</span>
-          <span class="notae-actions-row-label">Open in Mac app</span>
-        </button>
-      </div>
         </section>
 
         <footer class="notae-actions-footer" data-actions-menu-target="footer">
@@ -357,4 +331,9 @@
       </div>
     </div>
   </div>
+
+  <%= render "pages/import_modal",
+             workspace: workspace,
+             page: page,
+             current_path: local_assigns.fetch(:current_path, request.fullpath) %>
 </details>

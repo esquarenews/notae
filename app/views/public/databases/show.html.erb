@@ -3,7 +3,10 @@
 <section class="mx-auto max-w-6xl space-y-6 px-4 py-8">
   <header class="space-y-2 border-b border-stone-200 pb-4">
     <p class="text-xs uppercase tracking-wide text-stone-500">Shared grid</p>
-    <h1 class="break-words text-3xl font-semibold text-stone-900"><%= @database.icon.presence || "🗃️" %> <%= @database.name %></h1>
+    <h1 class="break-words text-3xl font-semibold text-stone-900">
+      <%= render_notae_icon(@database.icon, workspace: @workspace, fallback: "🗃️", css_class: "notae-inline-linked-icon", label: @database.name) %>
+      <%= @database.name %>
+    </h1>
     <p class="text-sm text-stone-500">Shared from <%= @workspace.name %></p>
     <% if @database.description.present? %>
       <p class="text-sm text-stone-600"><%= @database.description %></p>

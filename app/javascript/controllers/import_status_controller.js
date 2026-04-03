@@ -36,7 +36,7 @@ export default class extends Controller {
     if (this.hasStatusBodyTarget) this.statusBodyTarget.textContent = "The import could not finish. Fix the issue and try again."
 
     if (this.hasSubmitButtonTarget) {
-      this.submitButtonTarget.value = this.submitButtonTarget.dataset.originalText || "Import files"
+      this.submitButtonTarget.value = this.submitButtonTarget.dataset.originalText || "Import into Nota"
       this.submitButtonTarget.disabled = false
     }
     if (this.hasFileInputTarget) this.fileInputTarget.disabled = false

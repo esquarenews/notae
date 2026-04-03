@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   }
   root "home#index"
   get "/app", to: "pwa#launch", as: :pwa_launch
+  get "/app/notifications/:id", to: "pwa#notification_launch", as: :pwa_notification_launch
   get "/offline", to: "pwa#offline", as: :pwa_offline
   get "/manifest.webmanifest", to: "pwa#manifest", as: :pwa_manifest
   get "/service-worker.js", to: "pwa#service_worker", as: :pwa_service_worker
@@ -42,6 +43,9 @@ Rails.application.routes.draw do
     get "settings/ai-analytics", to: "ai_analytics_settings#show", as: :workspace_ai_analytics_settings
     patch "settings/ai-analytics", to: "ai_analytics_settings#update"
     get "settings/favicon-lab", to: "favicon_settings#show", as: :workspace_favicon_settings
+    get "settings/emoji", to: "emoji_settings#show", as: :workspace_emoji_settings
+    post "settings/emoji", to: "emoji_settings#create"
+    delete "settings/emoji/:id", to: "emoji_settings#destroy", as: :workspace_emoji_setting
     get "settings/connections", to: "connection_settings#show", as: :workspace_connection_settings
     patch "settings/connections", to: "connection_settings#update"
     get "settings/notifications", to: "notification_settings#show", as: :workspace_notification_settings
@@ -154,11 +158,13 @@ Rails.application.routes.draw do
 
       member do
         post :duplicate
+        post :import
         patch :archive
         patch :restore
         patch :permissions
         patch :remove_tab
         get :export_markdown, to: "page_exports#markdown"
+        get :export_pdf, to: "page_exports#pdf"
         post :export_zip, to: "page_exports#create"
         post :save_as_template, to: "page_templates#create"
       end
@@ -174,6 +180,7 @@ Rails.application.routes.draw do
         member do
           patch :attach
           get :download
+          get :export_markdown
           patch :reorder
           patch :archive
           patch :restore

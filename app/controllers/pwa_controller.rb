@@ -1,5 +1,5 @@
 class PwaController < ApplicationController
-  before_action :authenticate_user!, only: :launch
+  before_action :authenticate_user!, only: %i[launch notification_launch]
   skip_forgery_protection only: :service_worker
   skip_after_action :verify_pundit_authorization
   skip_after_action :verify_same_origin_request, only: :service_worker
@@ -34,6 +34,14 @@ class PwaController < ApplicationController
 
   def offline
     render :offline
+  end
+
+  def notification_launch
+    notification = policy_scope(Notification).includes(:workspace, :notifiable).find_by(id: params[:id])
+    return redirect_to pwa_launch_path, alert: "That notification is no longer available." if notification.blank?
+
+    notification.mark_as_read! if notification.read_at.blank?
+    redirect_to Notifications::DestinationResolver.new(notification: notification).call
   end
 
   private

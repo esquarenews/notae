@@ -59,6 +59,12 @@ class DatabasesController < ApplicationController
     @linkable_pages = policy_scope(Page).for_workspace(@workspace).active.select(:id, :title, :updated_at).order(updated_at: :desc).to_a
     @linkable_pages_by_id = @linkable_pages.index_by(&:id)
     @split_page = resolve_split_page
+    @backlinks =
+      if @database.linked_page.present?
+        policy_scope(PageLink).for_target(@database.linked_page).includes(source_page: :linked_database).order(created_at: :desc)
+      else
+        []
+      end
 
     apply_row_filter!
     sort_rows!

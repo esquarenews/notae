@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_31_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_03_182000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -988,6 +988,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_31_170000) do
     t.index ["workspace_id"], name: "index_workflow_runs_on_workspace_id"
   end
 
+  create_table "workspace_emojis", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["workspace_id", "name"], name: "index_workspace_emojis_on_workspace_id_and_name", unique: true
+    t.index ["workspace_id"], name: "index_workspace_emojis_on_workspace_id"
+  end
+
   create_table "workspaces", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "analytics_enabled", default: true, null: false
     t.datetime "archived_at"
@@ -1127,4 +1136,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_31_170000) do
   add_foreign_key "web_push_subscriptions", "users"
   add_foreign_key "workflow_runs", "users"
   add_foreign_key "workflow_runs", "workspaces"
+  add_foreign_key "workspace_emojis", "workspaces"
 end

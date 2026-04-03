@@ -1,0 +1,75 @@
+<dialog class="notae-page-import-modal"
+        data-page-import-target="dialog"
+        data-action="click->page-import#backdropClose">
+  <div class="notae-page-import-modal-panel">
+    <header class="notae-page-import-modal-header">
+      <div>
+        <p class="notae-page-import-modal-kicker">Import</p>
+        <h2>Import into this Nota</h2>
+      </div>
+      <button type="button"
+              class="notae-page-import-modal-close"
+              aria-label="Close import dialog"
+              data-action="click->page-import#close">
+        ×
+      </button>
+    </header>
+
+    <p class="notae-pref-description">
+      Import text documents or media directly into this Nota. Imported content is inserted after the last selected block.
+    </p>
+    <p class="notae-pref-description">
+      Use Settings → Import for CSV or ZIP imports that should create new Notarum or Grids.
+    </p>
+
+    <%= form_with url: import_page_path(workspace_slug: workspace.slug, id: page.id),
+                  method: :post,
+                  class: "notae-page-import-form",
+                  multipart: true,
+                  data: {
+                    controller: "import-status",
+                    action: "submit->page-import#prepareSubmit turbo:submit-start->import-status#submitStart turbo:submit-end->import-status#submitEnd"
+                  } do |form| %>
+      <%= hidden_field_tag :return_to, current_path %>
+      <%= hidden_field_tag "import[insert_after_id]", "", data: { page_import_target: "insertAfterInput" } %>
+
+      <div class="notae-import-status-card"
+           data-import-status-target="statusCard"
+           aria-live="polite"
+           aria-atomic="true"
+           hidden>
+        <div class="notae-import-status-indicator">
+          <span class="notae-import-status-dot"></span>
+          <span class="notae-import-status-label" data-import-status-target="statusTitle">Import ready</span>
+        </div>
+        <p class="notae-pref-description" data-import-status-target="statusBody">
+          Choose one or more files to import into this Nota.
+        </p>
+      </div>
+
+      <label class="notae-page-import-modal-label" for="page_import_files">Files</label>
+      <%= form.file_field :files,
+                          id: "page_import_files",
+                          multiple: true,
+                          required: true,
+                          accept: ".txt,.md,.markdown,.html,.htm,.pdf,.docx,.epub,image/*,video/*,audio/*",
+                          class: "notae-import-file-input notae-page-import-file-input",
+                          name: "import[files][]",
+                          data: {
+                            import_status_target: "fileInput",
+                            page_import_target: "fileInput"
+                          } %>
+
+      <div class="notae-page-import-modal-actions">
+        <button type="button"
+                class="notae-chip-button"
+                data-action="click->page-import#close">
+          Cancel
+        </button>
+        <%= form.submit "Import into Nota",
+                        class: "notae-chip-button notae-page-import-submit",
+                        data: { import_status_target: "submitButton" } %>
+      </div>
+    <% end %>
+  </div>
+</dialog>

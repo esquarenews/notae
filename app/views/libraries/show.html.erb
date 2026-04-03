@@ -167,9 +167,14 @@
                 <td class="notae-library-col notae-library-col-page-name">
                   <%= link_to row[:path], class: "notae-library-name-link" do %>
                     <% if row[:kind] == "database" %>
-                      <span class="notae-library-row-title"><%= "#{row[:icon]} #{row[:title]}" %></span>
+                      <span class="notae-library-row-title">
+                        <%= render_notae_icon(row[:icon], workspace: row[:workspace], fallback: "🗃️", css_class: "notae-inline-linked-icon", label: row[:title]) %>
+                        <%= row[:title] %>
+                      </span>
                     <% else %>
-                      <span class="notae-library-row-icon"><%= row[:icon] %></span>
+                      <span class="notae-library-row-icon">
+                        <%= render_notae_icon(row[:icon], workspace: row[:workspace], fallback: "📄", css_class: "notae-inline-linked-icon", label: row[:title]) %>
+                      </span>
                       <span class="notae-library-row-title"><%= row[:title] %></span>
                     <% end %>
                     <% if row[:favorited] %>

@@ -2,10 +2,16 @@
 <% can_edit_shell_page = @can_update_page_title_page && !shell_page.locked? %>
 <% can_show_comment_action = @can_comment_on_page && !@page.locked? %>
 <% content_for :title, shell_page.title.presence || "New page" %>
-<% content_for :topbar_page_icon, shell_page.icon.presence || @page.icon.presence || "📄" %>
+<% content_for :topbar_page_icon do %>
+  <%= render_notae_icon(shell_page.icon.presence || @page.icon.presence, workspace: @workspace, fallback: "📄", css_class: "notae-topbar-page-icon-inner", label: "Page icon") %>
+<% end %>
 <% content_for :topbar_privacy, shell_page.permission_mode.humanize %>
 <% content_for :content_class, "notae-content-page" %>
 <% embedded_page_params = params[:embedded].to_s == "1" ? { embedded: "1" } : {} %>
+<% page_canvas_params = embedded_page_params.merge(
+     split_page_id: params[:split_page_id].presence,
+     split_source: params[:split_source].presence
+   ).compact %>
 <% page_route_params = { workspace_slug: @workspace.slug, id: @page.id }.merge(embedded_page_params) %>
 <% page_blocks_route_params = { workspace_slug: @workspace.slug, page_id: @page.id }.merge(embedded_page_params) %>
 <% shell_page_route_params = { workspace_slug: @workspace.slug, id: shell_page.id }.merge(embedded_page_params) %>
@@ -40,6 +46,9 @@
   <%= render "pages/actions_menu",
              workspace: @workspace,
              page: @page,
+             can_import_page: @can_update_page,
+             default_import_insert_after_id: @default_import_insert_after_id,
+             current_path: current_path,
              move_target_pages: @move_target_pages,
              can_manage_permissions: @can_manage_permissions,
              can_archive_page: @can_archive_page,
@@ -63,12 +72,16 @@
 <% end %>
 
 <% has_cover = shell_page.cover? %>
+<% header_icon_value = shell_page.icon.presence %>
+<% icon_over_cover = has_cover && header_icon_value.present? %>
 <% doc_layout_classes = [ "notae-doc-layout" ] %>
 <% doc_layout_classes << "is-full-width" if @page.full_width? %>
 <% doc_layout_classes << "is-small-text" if @page.small_text? %>
 <% doc_layout_classes << "is-font-serif" if @page.font_style == "serif" %>
 <% doc_layout_classes << "is-font-mono" if @page.font_style == "mono" %>
 <% doc_layout_classes << "is-reader-mode" if @page_reader_mode %>
+<% page_split_layout_classes = [ "notae-page-split-layout" ] %>
+<% page_split_layout_classes << "has-side-peek" if @split_page.present? %>
 <% if has_cover %>
   <section class="notae-page-cover">
     <div class="notae-page-cover-frame">
@@ -112,160 +125,182 @@
   </section>
 <% end %>
 
-<section class="<%= doc_layout_classes.join(" ") %>"
-         data-controller="page-collaboration"
-         data-page-collaboration-workspace-slug-value="<%= @workspace.slug %>"
-         data-page-collaboration-page-id-value="<%= @page.id %>"
-         data-page-collaboration-current-user-id-value="<%= current_user.id %>">
+<section class="<%= page_split_layout_classes.join(" ") %>">
+  <section class="<%= doc_layout_classes.join(" ") %>"
+           data-controller="page-collaboration"
+           data-page-collaboration-workspace-slug-value="<%= @workspace.slug %>"
+           data-page-collaboration-page-id-value="<%= @page.id %>"
+           data-page-collaboration-current-user-id-value="<%= current_user.id %>">
 
-  <header class="notae-doc-header">
-    <div class="notae-page-header-main">
-      <% if shell_page.icon.present? %>
-        <div class="notae-page-icon-display"><%= shell_page.icon %></div>
-      <% end %>
-
-      <% if can_edit_shell_page || can_show_comment_action %>
-        <div class="notae-page-header-tools">
-          <% if can_edit_shell_page %>
-            <details class="notae-page-header-action">
-              <summary aria-label="<%= shell_page.icon.present? ? "Change icon" : "Add icon" %>">
-                <span class="notae-page-header-action-icon">◌</span>
-                <span class="notae-page-header-action-label"><%= shell_page.icon.present? ? "Change icon" : "Add icon" %></span>
-              </summary>
-              <div class="notae-page-header-panel">
-                <%= form_with model: shell_page,
-                              url: page_path(shell_page_route_params),
-                              method: :patch,
-                              class: "notae-page-header-panel-form" do |form| %>
-                  <%= hidden_field_tag :return_to, current_path %>
-                  <%= hidden_field_tag "page[icon_action]", "set" %>
-                  <%= form.text_field :icon,
-                                      maxlength: 8,
-                                      placeholder: "😀",
-                                      class: "notae-options-input",
-                                      value: shell_page.icon %>
-                  <%= form.submit(shell_page.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
-                <% end %>
-                <div class="notae-page-emoji-grid">
-                  <% Page::ICON_SUGGESTIONS.each do |emoji| %>
-                    <%= button_to page_path(shell_page_route_params),
-                                  method: :patch,
-                                  params: { return_to: current_path, page: { icon_action: "set", icon: emoji } },
-                                  class: "notae-page-emoji-button",
-                                  title: "Use #{emoji}" do %>
-                      <%= emoji %>
-                    <% end %>
-                  <% end %>
-                </div>
-                <% if shell_page.icon.present? %>
-                  <%= button_to "Remove icon",
-                                page_path(shell_page_route_params),
-                                method: :patch,
-                                params: { return_to: current_path, page: { icon_action: "clear" } },
-                                class: "notae-page-header-link-button" %>
-                <% end %>
-              </div>
-            </details>
-
-            <details class="notae-page-header-action">
-              <summary aria-label="<%= has_cover ? "Change cover" : "Add cover" %>">
-                <span class="notae-page-header-action-icon">▭</span>
-                <span class="notae-page-header-action-label"><%= has_cover ? "Change cover" : "Add cover" %></span>
-              </summary>
-              <div class="notae-page-header-panel notae-page-header-cover-panel">
-                <div class="notae-page-cover-panel-actions">
-                  <%= button_to "Move up",
-                                page_path(shell_page_route_params),
-                                method: :patch,
-                                params: { return_to: current_path, page: { cover_shift: "up" } },
-                                class: "notae-chip-button" %>
-                  <%= button_to "Move down",
-                                page_path(shell_page_route_params),
-                                method: :patch,
-                                params: { return_to: current_path, page: { cover_shift: "down" } },
-                                class: "notae-chip-button" %>
-                </div>
-                <%= render "shared/cover_picker_panel",
-                           update_url: page_path(shell_page_route_params),
-                           param_key: :page,
-                           selected_cover_key: shell_page.cover_preset_key,
-                           embedded: true,
-                           allow_remove: has_cover,
-                           remove_label: "Remove cover",
-                           return_to: current_path %>
-              </div>
-            </details>
-          <% end %>
-
-          <% if can_show_comment_action %>
-            <button type="button"
-                    class="notae-page-header-link"
-                    data-action="click->shell#openCommentsMenu"
-                    aria-label="Add comment">
-              <span class="notae-page-header-action-icon">💬</span>
-              <span class="notae-page-header-link-label">Add comment</span>
-            </button>
-          <% end %>
-        </div>
-      <% end %>
-
-      <%= form_with model: shell_page,
-                    url: page_path(shell_page_route_params),
-                    method: :patch,
-                    class: "notae-page-title-form",
-                    data: {
-                      controller: "page-title",
-                      page_title_url_value: page_path(shell_page_route_params)
-                    } do |form| %>
-        <%= hidden_field_tag :return_to, current_path %>
-        <%= form.text_area :title,
-                           rows: 1,
-                           wrap: "off",
-                           placeholder: "New page",
-                           class: "notae-page-title-input",
-                           data: {
-                             page_title_target: "input",
-                             action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
-                           },
-                           aria: { label: "Page title" },
-                           readonly: !can_edit_shell_page %>
-        <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
-      <% end %>
-
-      <%= render "shared/page_tabs",
-               workspace: @workspace,
-               navigation: @page_tabs,
-               can_create_tab_page: @can_create_tab_page,
-               embedded_page_params: embedded_page_params,
-               current_path: current_path %>
-    </div>
-  </header>
-
-  <%= render partial: "pages/document_canvas",
-             locals: {
-               workspace: @workspace,
-               page: @page,
-               blocks_by_parent: @blocks_by_parent,
-               move_target_pages: @move_target_pages,
-               reader_mode: @page_reader_mode,
-               embedded_page_params: embedded_page_params
-             } %>
-
-  <section class="notae-doc-backlinks">
-    <h2>Backlinks</h2>
-    <% backlink_pages = @backlinks.map(&:source_page).uniq { |source_page| source_page.id } %>
-    <% if backlink_pages.any? %>
-      <ul>
-        <% backlink_pages.each do |source_page| %>
-          <li>
-            <%= link_to source_page.title,
-                        page_path({ workspace_slug: @workspace.slug, id: source_page.id }.merge(embedded_page_params)),
-                        data: { backlink_source: source_page.id } %>
-          </li>
+    <header class="notae-doc-header <%= "has-overlapping-icon" if icon_over_cover %>">
+      <div class="notae-page-header-main">
+        <% if header_icon_value.present? %>
+          <div class="notae-page-icon-display <%= "is-over-cover" if icon_over_cover %>">
+            <%= render_notae_icon(header_icon_value, workspace: @workspace, fallback: "📄", css_class: "notae-page-title-icon", label: "Page icon") %>
+          </div>
         <% end %>
-      </ul>
-    <% else %>
-      <p>No backlinks yet.</p>
-    <% end %>
+
+        <% if can_edit_shell_page || can_show_comment_action %>
+          <div class="notae-page-header-tools">
+            <% if can_edit_shell_page %>
+              <details class="notae-page-header-action">
+                <summary aria-label="<%= shell_page.icon.present? ? "Change icon" : "Add icon" %>">
+                  <span class="notae-page-header-action-icon">◌</span>
+                  <span class="notae-page-header-action-label"><%= shell_page.icon.present? ? "Change icon" : "Add icon" %></span>
+                </summary>
+                <%= render "shared/icon_picker_panel",
+                           update_url: page_path(shell_page_route_params),
+                           workspace: @workspace,
+                           param_key: :page,
+                           current_icon: shell_page.icon,
+                           placeholder: "Type an emoji",
+                           fallback: "📄",
+                           return_to: current_path %>
+              </details>
+
+              <details class="notae-page-header-action">
+                <summary aria-label="<%= has_cover ? "Change cover" : "Add cover" %>">
+                  <span class="notae-page-header-action-icon">▭</span>
+                  <span class="notae-page-header-action-label"><%= has_cover ? "Change cover" : "Add cover" %></span>
+                </summary>
+                <div class="notae-page-header-panel notae-page-header-cover-panel">
+                  <div class="notae-page-cover-panel-actions">
+                    <%= button_to "Move up",
+                                  page_path(shell_page_route_params),
+                                  method: :patch,
+                                  params: { return_to: current_path, page: { cover_shift: "up" } },
+                                  class: "notae-chip-button" %>
+                    <%= button_to "Move down",
+                                  page_path(shell_page_route_params),
+                                  method: :patch,
+                                  params: { return_to: current_path, page: { cover_shift: "down" } },
+                                  class: "notae-chip-button" %>
+                  </div>
+                  <%= render "shared/cover_picker_panel",
+                             update_url: page_path(shell_page_route_params),
+                             param_key: :page,
+                             selected_cover_key: shell_page.cover_preset_key,
+                             embedded: true,
+                             allow_remove: has_cover,
+                             remove_label: "Remove cover",
+                             return_to: current_path %>
+                </div>
+              </details>
+            <% end %>
+
+            <% if can_show_comment_action %>
+              <button type="button"
+                      class="notae-page-header-link"
+                      data-action="click->shell#openCommentsMenu"
+                      aria-label="Add comment">
+                <span class="notae-page-header-action-icon">💬</span>
+                <span class="notae-page-header-link-label">Add comment</span>
+              </button>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= form_with model: shell_page,
+                      url: page_path(shell_page_route_params),
+                      method: :patch,
+                      class: "notae-page-title-form",
+                      data: {
+                        controller: "page-title",
+                        page_title_url_value: page_path(shell_page_route_params)
+                      } do |form| %>
+          <%= hidden_field_tag :return_to, current_path %>
+          <%= form.text_area :title,
+                             rows: 1,
+                             wrap: "off",
+                             placeholder: "New page",
+                             class: "notae-page-title-input",
+                             data: {
+                               page_title_target: "input",
+                               action: "input->page-title#queueSave blur->page-title#flushSave change->page-title#flushSave keydown.enter->page-title#preventSubmit"
+                             },
+                             aria: { label: "Page title" },
+                             readonly: !can_edit_shell_page %>
+          <span class="notae-doc-muted" data-page-title-target="status" aria-live="polite">Saved</span>
+        <% end %>
+
+        <%= render "shared/page_tabs",
+                 workspace: @workspace,
+                 navigation: @page_tabs,
+                 can_create_tab_page: @can_create_tab_page,
+                 embedded_page_params: embedded_page_params,
+                 current_path: current_path %>
+      </div>
+    </header>
+
+    <%= render partial: "pages/document_canvas",
+               locals: {
+                 workspace: @workspace,
+                 page: @page,
+                 blocks_by_parent: @blocks_by_parent,
+                 move_target_pages: @move_target_pages,
+                 linkable_note_pages: @linkable_note_pages,
+                 linkable_databases: @linkable_databases,
+                 reader_mode: @page_reader_mode,
+                 embedded_page_params: page_canvas_params
+               } %>
+
+    <section class="notae-doc-backlinks">
+      <h2>Backlinks</h2>
+      <% backlink_targets = [] %>
+      <% @backlinks.each do |backlink| %>
+        <% source_page = backlink.source_page %>
+        <% next if source_page.blank? %>
+        <% backlink_targets << { key: "page:#{source_page.id}", record: source_page, source: source_page.id } %>
+      <% end %>
+      <% @row_backlink_databases.each do |database| %>
+        <% backlink_targets << { key: "database:#{database.id}", record: database, source: "database:#{database.id}" } %>
+      <% end %>
+      <% backlink_targets = backlink_targets.uniq { |entry| entry[:key] } %>
+      <% if backlink_targets.any? %>
+        <ul>
+          <% backlink_targets.each do |entry| %>
+            <li>
+              <%= link_to linked_document_label(entry[:record]),
+                          linked_document_path(
+                            entry[:record],
+                            workspace: @workspace,
+                            embedded: params[:embedded].to_s == "1"
+                          ),
+                          data: { backlink_source: entry[:source] } %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p>No backlinks yet.</p>
+      <% end %>
+    </section>
   </section>
+
+  <% if @split_page.present? %>
+    <% split_record = @split_page.linked_database || @split_page %>
+    <aside class="notae-db-split-pane">
+      <div class="notae-db-split-pane-head">
+        <p class="notae-db-split-pane-title">
+          <%= render_notae_icon(linked_document_icon(split_record), workspace: @workspace, fallback: "📄", css_class: "notae-inline-linked-icon", label: linked_document_label(split_record)) %>
+          <%= linked_document_label(split_record) %>
+        </p>
+        <div class="notae-db-split-pane-actions">
+          <%= link_to "Open full",
+                      linked_document_path(split_record, workspace: @workspace),
+                      class: "notae-chip-button",
+                      target: "_blank",
+                      rel: "noopener" %>
+          <%= link_to "✕",
+                      page_path({ workspace_slug: @workspace.slug, id: @page.id }.merge(embedded_page_params)),
+                      class: "notae-inline-icon-button",
+                      aria: { label: "Close side peek" },
+                      title: "Close side peek" %>
+        </div>
+      </div>
+      <iframe src="<%= linked_document_path(split_record, workspace: @workspace, embedded: true) %>"
+              title="Linked document side peek"
+              class="notae-db-split-frame"
+              loading="lazy"></iframe>
+    </aside>
+  <% end %>
 </section>

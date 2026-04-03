@@ -1,7 +1,7 @@
 class PageExportsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_page, only: %i[markdown create]
+  before_action :set_page, only: %i[markdown pdf create]
   before_action :set_page_export, only: :download
 
   def markdown
@@ -11,6 +11,16 @@ class PageExportsController < ApplicationController
     send_data result.markdown,
               filename: "#{sanitize_filename(@page.title)}.md",
               type: "text/markdown; charset=utf-8",
+              disposition: "attachment"
+  end
+
+  def pdf
+    authorize @page, :show?
+
+    result = Pages::PdfExportService.call(page: @page)
+    send_data result.pdf,
+              filename: "#{sanitize_filename(@page.title)}.pdf",
+              type: "application/pdf",
               disposition: "attachment"
   end
 

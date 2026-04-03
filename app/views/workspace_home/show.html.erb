@@ -143,7 +143,7 @@
               <% end %>
             </div>
             <div class="notae-workspace-page-card-body">
-              <span class="notae-workspace-page-card-icon"><%= page.icon.presence || "📄" %></span>
+              <%= render_notae_icon(page.icon, workspace: @workspace, fallback: "📄", css_class: "notae-workspace-page-card-icon", label: page.title) %>
               <div class="notae-workspace-page-card-text">
                 <strong><%= page.title %></strong>
                 <span>Nota</span>
@@ -165,7 +165,10 @@
       <div class="notae-workspace-home-link-grid">
         <% @recent_databases.each do |database| %>
           <%= link_to database_path(workspace_slug: @workspace.slug, id: database.id), class: "notae-home-workspace-item" do %>
-            <strong><%= database.icon.presence || "🗃️" %> <%= database.name %></strong>
+            <strong>
+              <%= render_notae_icon(database.icon, workspace: @workspace, fallback: "🗃️", css_class: "notae-inline-linked-icon", label: database.name) %>
+              <%= database.name %>
+            </strong>
             <span>Grid view</span>
           <% end %>
         <% end %>

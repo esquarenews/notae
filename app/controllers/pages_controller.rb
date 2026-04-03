@@ -1,13 +1,14 @@
 class PagesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy remove_tab]
+  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy remove_tab import]
   COVER_SHIFT_STEP = 10
 
   def show
     authorize @page
     remember_last_page_visit!
     @page_tabs = resolve_page_tabs
+    @split_page = resolve_split_page
     @page_title_page = @page.parent_page || @page
     @can_update_page_title_page = policy(@page_title_page).update?
 
@@ -18,8 +19,10 @@ class PagesController < ApplicationController
       else
         []
       end
-    @pages = policy_scope(Page).for_workspace(@workspace).active.order(:created_at).to_a
+    @pages = policy_scope(Page).for_workspace(@workspace).active.includes(:linked_database).order(:created_at).to_a
     @move_target_pages = @pages.reject { |candidate| candidate.id == @page.id }
+    @linkable_note_pages = @pages.reject { |candidate| candidate.id == @page.id || candidate.linked_database.present? }
+    @linkable_databases = policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).to_a
 
     @active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
     if @active_blocks.empty? && policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create?
@@ -30,7 +33,8 @@ class PagesController < ApplicationController
     @archived_blocks = policy_scope(Block).for_page(@page).archived.ordered.to_a
     @can_archive_page = policy(@page).archive?
     @shared_user_ids = @can_manage_permissions ? @page.page_shares.pluck(:user_id) : []
-    @backlinks = policy_scope(PageLink).for_target(@page).includes(:source_page).order(created_at: :desc)
+    @backlinks = policy_scope(PageLink).for_target(@page).includes(source_page: :linked_database).order(created_at: :desc)
+    @row_backlink_databases = resolve_row_backlink_databases
     @page_exports = policy_scope(PageExport).for_page(@page).recent_first.limit(10).to_a
     @page_templates = policy_scope(PageTemplate).for_workspace(@workspace).recent_first.limit(20).to_a
     @recent_audit_events = policy_scope(AuditEvent)
@@ -66,6 +70,7 @@ class PagesController < ApplicationController
       else
         false
       end
+    @default_import_insert_after_id = @active_blocks.last&.id
   end
 
   def update
@@ -123,6 +128,31 @@ class PagesController < ApplicationController
     else
       redirect_back fallback_location: workspace_path(@workspace.slug), alert: @page.errors.full_messages.to_sentence
     end
+  end
+
+  def import
+    authorize @page, :update?
+
+    result = Pages::ImportContentService.call(
+      page: @page,
+      workspace: @workspace,
+      user: current_user,
+      files: params.dig(:import, :files),
+      insert_after_id: params.dig(:import, :insert_after_id)
+    )
+
+    notice = nil
+    alert = nil
+
+    if result.imported_count.positive?
+      notice = "Imported #{result.imported_count} #{'block'.pluralize(result.imported_count)}."
+      warnings = [ result.skipped_message, result.error_message ].compact
+      notice = [ notice, warnings.join(" ") ].join(" ") if warnings.any?
+    else
+      alert = result.error_message || result.skipped_message || "Choose at least one supported file to import."
+    end
+
+    redirect_to page_return_path(default: page_redirect_path), notice:, alert:
   end
 
   def archive
@@ -305,9 +335,11 @@ class PagesController < ApplicationController
     end
   end
 
-  def page_redirect_path(page_id = @page.id, anchor: nil)
+  def page_redirect_path(page_id = @page.id, anchor: nil, split_page_id: nil, split_source: nil)
     redirect_params = { workspace_slug: @workspace.slug, id: page_id }.merge(open_menu_query_params)
     redirect_params[:embedded] = "1" if embedded_page_shell?
+    redirect_params[:split_page_id] = split_page_id || params[:split_page_id].presence
+    redirect_params[:split_source] = split_source || params[:split_source].presence
     redirect_params[:anchor] = anchor if anchor.present?
     page_path(redirect_params)
   end
@@ -363,5 +395,25 @@ class PagesController < ApplicationController
       group_page: @page.parent_page || @page,
       current_page: @page
     ).call
+  end
+
+  def resolve_split_page
+    split_page_id = params[:split_page_id].presence
+    return nil if split_page_id.blank?
+    return nil if split_page_id == @page.id
+
+    policy_scope(Page).for_workspace(@workspace).active.find_by(id: split_page_id)
+  end
+
+  def resolve_row_backlink_databases
+    policy_scope(Database)
+      .for_workspace(@workspace)
+      .active
+      .joins(:db_rows)
+      .where(db_rows: { linked_page_id: @page.id, archived_at: nil })
+      .includes(:linked_page)
+      .distinct
+      .order(updated_at: :desc)
+      .to_a
   end
 end

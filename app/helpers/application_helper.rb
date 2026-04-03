@@ -17,6 +17,32 @@ module ApplicationHelper
   NOTAE_PWA_DARK_THEME_COLOR = "#171a1d".freeze
   NOTAE_PWA_BACKGROUND_COLOR = "#f5f5f4".freeze
 
+  def emoji_picker_categories
+    EmojiCatalog.categories
+  end
+
+  def workspace_custom_emojis(workspace)
+    return [] if workspace.blank?
+
+    @workspace_custom_emojis ||= {}
+    @workspace_custom_emojis[workspace.id] ||= workspace.custom_emojis.ordered.with_attached_image.to_a
+  end
+
+  def render_notae_icon(icon_value, workspace:, fallback:, css_class: nil, label: nil)
+    resolved_icon = resolved_notae_icon(icon_value, workspace:, fallback:)
+    wrapper_classes = [ "notae-icon-renderer", css_class, ("is-custom" if resolved_icon[:kind] == :custom) ].compact.join(" ")
+    wrapper_options = { class: wrapper_classes }
+    wrapper_options[:aria] = { label: label } if label.present?
+
+    content_tag(:span, **wrapper_options) do
+      if resolved_icon[:kind] == :custom
+        image_tag resolved_icon[:emoji].image, alt: label || resolved_icon[:emoji].display_name, class: "notae-icon-renderer-image"
+      else
+        content_tag(:span, resolved_icon[:value], class: "notae-icon-renderer-glyph")
+      end
+    end
+  end
+
   def ui_workspaces
     return [] unless user_signed_in?
 
@@ -164,6 +190,46 @@ module ApplicationHelper
     }
   end
 
+  def linked_document_label(record)
+    case record
+    when Database
+      record.name
+    when Page
+      record.linked_database&.name.presence || record.title
+    else
+      record.to_s
+    end
+  end
+
+  def linked_document_icon(record)
+    case record
+    when Database
+      record.icon.presence || record.linked_page&.icon.presence || "🗃️"
+    when Page
+      database = record.linked_database
+      database&.icon.presence || record.icon.presence || (database.present? ? "🗃️" : "📄")
+    else
+      "📄"
+    end
+  end
+
+  def linked_document_path(record, workspace:, embedded: false)
+    case record
+    when Database
+      params = { workspace_slug: workspace.slug, id: record.id }
+      params[:embedded] = "1" if embedded
+      database_path(params)
+    when Page
+      if record.linked_database.present?
+        linked_document_path(record.linked_database, workspace:, embedded:)
+      else
+        params = { workspace_slug: workspace.slug, id: record.id }
+        params[:embedded] = "1" if embedded
+        page_path(params)
+      end
+    end
+  end
+
   def notae_pwa_light_theme_color
     NOTAE_PWA_LIGHT_THEME_COLOR
   end
@@ -298,7 +364,11 @@ module ApplicationHelper
 
   def knowledge_suggestion_task_database_options(databases)
     Array(databases).map do |database|
-      icon = database.icon.presence || "🗃️"
+      icon = if Page.custom_emoji_token?(database.icon)
+        "🗃️"
+      else
+        database.icon.presence || "🗃️"
+      end
       [ "#{icon} #{database.name}", database.id ]
     end
   end
@@ -387,6 +457,19 @@ module ApplicationHelper
   end
 
   private
+
+  def resolved_notae_icon(icon_value, workspace:, fallback:)
+    value = icon_value.to_s.strip.presence || fallback
+    return { kind: :unicode, value: fallback } if value.blank?
+
+    if workspace.present? && Page.custom_emoji_token?(value)
+      custom_emoji_id = Page.custom_emoji_id_from_token(value)
+      custom_emoji = workspace_custom_emojis(workspace).find { |emoji| emoji.id.to_s == custom_emoji_id.to_s }
+      return { kind: :custom, emoji: custom_emoji } if custom_emoji&.image&.attached?
+    end
+
+    { kind: :unicode, value: value }
+  end
 
   def workspace_scope_with_slug
     policy_scope(Workspace).where.not(slug: [ nil, "" ])

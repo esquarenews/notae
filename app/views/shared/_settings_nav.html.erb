@@ -1,6 +1,6 @@
 <aside class="notae-settings-nav" data-controller="auto-submit">
   <% settings_workspace_slug = params[:settings_workspace_slug].to_s %>
-  <% workspace_section_item = %i[general people import].include?(active_item) ? active_item : :general %>
+  <% workspace_section_item = %i[general people import emoji].include?(active_item) ? active_item : :general %>
   <% workspace_options = policy_scope(Workspace).where.not(slug: [ nil, "" ]).order(updated_at: :desc).to_a %>
   <% selected_workspace = workspace_options.find { |candidate_workspace| candidate_workspace.slug == settings_workspace_slug } || workspace %>
   <% active_item_labels = {
@@ -14,6 +14,7 @@
        ai_analytics: "AI Analytics",
        kalendarium: "Kalendarium",
        epistularium: "Epistularium",
+       emoji: "Emoji",
        favicon: "Favicon Lab"
      } %>
   <% active_nav_key = active_item.respond_to?(:to_sym) ? active_item.to_sym : nil %>
@@ -24,6 +25,8 @@
          workspace_people_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
        when :import
          workspace_import_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
+       when :emoji
+         workspace_emoji_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
        else
          workspace_general_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
        end
@@ -141,13 +144,13 @@
     </span>
     <em>Future</em>
   </span>
-  <span class="notae-settings-nav-item is-disabled">
+  <%= link_to workspace_emoji_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :emoji) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 10h.01M15.5 10h.01"/><path d="M8 15c1 .8 2.3 1.2 4 1.2s3-.4 4-1.2"/></svg>
       <span>Emoji</span>
     </span>
-    <em>Future</em>
-  </span>
+  <% end %>
 
   <p class="notae-settings-nav-group">Integrations</p>
   <span class="notae-settings-nav-item is-disabled">

@@ -52,6 +52,7 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("OFFLINE_FALLBACK_URL")
     expect(response.body).to include("CLEAR_PRIVATE_CACHES")
     expect(response.body).to include("/app")
+    expect(response.body).to include("/app/notifications/__NOTIFICATION_ID__")
     expect(response.body).to include("self.addEventListener(\"push\"")
     expect(response.body).to include("self.addEventListener(\"notificationclick\"")
 
@@ -74,6 +75,49 @@ RSpec.describe "PWA", type: :request do
     get pwa_launch_path
 
     expect(response).to redirect_to(new_user_session_path)
+  end
+
+  it "routes signed-in notification launches through the server and marks them as read" do
+    user = User.create!(email: "pwa-notification-launch@example.com", password: "password123")
+    workspace = create_workspace_for(user:, slug: "pwa-notification", name: "PWA Notification")
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Follow up on the board",
+      summary: "A new AI suggestion is waiting. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: {}
+    )
+    sign_in user
+
+    get pwa_notification_launch_path(id: notification.id)
+
+    expect(response).to redirect_to(workspace_path(workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(notification.reload.read_at).to be_present
+  end
+
+  it "falls back to the app launch route when the notification no longer exists" do
+    user = User.create!(email: "pwa-notification-missing@example.com", password: "password123")
+    create_workspace_for(user:, slug: "pwa-notification-missing", name: "PWA Notification Missing")
+    sign_in user
+
+    get pwa_notification_launch_path(id: SecureRandom.uuid)
+
+    expect(response).to redirect_to(pwa_launch_path)
   end
 
   it "launches signed-in users into the remembered workspace home" do

@@ -1,5 +1,6 @@
 class Page < ApplicationRecord
   include PgSearch::Model
+  include IconTokenSupport
 
   has_paper_trail
   ORIGINAL_COVER_PRESETS = %w[
@@ -226,8 +227,7 @@ class Page < ApplicationRecord
   end
 
   def normalize_icon
-    normalized = icon.to_s.strip.presence
-    self.icon = normalized&.scan(/\X/)&.first(2)&.join
+    self.icon = normalize_icon_token(icon)
   end
 
   def parent_page_workspace_matches

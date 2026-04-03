@@ -1,6 +1,8 @@
 <% display_title = @page_title_page&.title.presence || @database.name %>
 <% content_for :title, display_title %>
-<% content_for :topbar_page_icon, @page_title_page&.icon.presence || @database.icon.presence || "🗃️" %>
+<% content_for :topbar_page_icon do %>
+  <%= render_notae_icon(@page_title_page&.icon.presence || @database.icon.presence, workspace: @workspace, fallback: "🗃️", css_class: "notae-topbar-page-icon-inner", label: "Grid icon") %>
+<% end %>
 <% database_privacy_label =
      case @database.permission_mode
      when "private_database"
@@ -24,6 +26,9 @@
 <% shell_page_route_params = shell_page.present? ? { workspace_slug: @workspace.slug, id: shell_page.id } : nil %>
 <% can_edit_shell_page = shell_page.present? && @can_update_page_title_page && !shell_page.locked? %>
 <% current_path = request.fullpath %>
+<% header_icon_value = shell_page&.icon.presence || @database.icon.presence %>
+<% has_display_cover = shell_page.present? ? shell_page.cover? : @database.cover? %>
+<% icon_over_cover = has_display_cover && header_icon_value.present? %>
 <% topbar_view_params = {
   workspace_slug: @workspace.slug,
   id: @database.id,
@@ -177,11 +182,11 @@
     </section>
   <% end %>
 
-  <header class="notae-db-header">
-    <% if shell_page&.icon.present? %>
-      <div class="notae-page-icon-display"><%= shell_page.icon %></div>
-    <% elsif @database.icon.present? %>
-      <div class="notae-page-icon-display"><%= @database.icon %></div>
+  <header class="notae-db-header <%= "has-overlapping-icon" if icon_over_cover %>">
+    <% if header_icon_value.present? %>
+      <div class="notae-page-icon-display <%= "is-over-cover" if icon_over_cover %>">
+        <%= render_notae_icon(header_icon_value, workspace: @workspace, fallback: "🗃️", css_class: "notae-page-title-icon", label: "Grid icon") %>
+      </div>
     <% end %>
 
     <% if can_edit_shell_page || (shell_page.blank? && can_edit_database) %>
@@ -192,35 +197,14 @@
               <span class="notae-page-header-action-icon">◌</span>
               <span class="notae-page-header-action-label"><%= shell_page.icon.present? ? "Change icon" : "Add icon" %></span>
             </summary>
-            <div class="notae-page-header-panel">
-              <%= form_with model: shell_page,
-                            url: page_path(shell_page_route_params),
-                            method: :patch,
-                            class: "notae-page-header-panel-form" do |form| %>
-                <%= hidden_field_tag :return_to, current_path %>
-                <%= hidden_field_tag "page[icon_action]", "set" %>
-                <%= form.text_field :icon, maxlength: 8, placeholder: "🗃️", class: "notae-options-input", value: shell_page.icon %>
-                <%= form.submit(shell_page.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
-              <% end %>
-              <div class="notae-page-emoji-grid">
-                <% Database::ICON_SUGGESTIONS.each do |emoji| %>
-                  <%= button_to page_path(shell_page_route_params),
-                                method: :patch,
-                                params: { return_to: current_path, page: { icon_action: "set", icon: emoji } },
-                                class: "notae-page-emoji-button",
-                                title: "Use #{emoji}" do %>
-                    <%= emoji %>
-                  <% end %>
-                <% end %>
-              </div>
-              <% if shell_page.icon.present? %>
-                <%= button_to "Remove icon",
-                              page_path(shell_page_route_params),
-                              method: :patch,
-                              params: { return_to: current_path, page: { icon_action: "clear" } },
-                              class: "notae-page-header-link-button" %>
-              <% end %>
-            </div>
+            <%= render "shared/icon_picker_panel",
+                       update_url: page_path(shell_page_route_params),
+                       workspace: @workspace,
+                       param_key: :page,
+                       current_icon: shell_page.icon,
+                       placeholder: "Type an emoji",
+                       fallback: "🗃️",
+                       return_to: current_path %>
           </details>
 
           <details class="notae-page-header-action">
@@ -257,34 +241,13 @@
               <span class="notae-page-header-action-icon">◌</span>
               <span class="notae-page-header-action-label"><%= @database.icon.present? ? "Change icon" : "Add icon" %></span>
             </summary>
-            <div class="notae-page-header-panel">
-              <%= form_with model: @database,
-                            url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                            method: :patch,
-                            class: "notae-page-header-panel-form" do |form| %>
-                <%= hidden_field_tag "database[icon_action]", "set" %>
-                <%= form.text_field :icon, maxlength: 8, placeholder: "🗃️", class: "notae-options-input", value: @database.icon %>
-                <%= form.submit(@database.icon.present? ? "Update icon" : "Add icon", class: "notae-chip-button") %>
-              <% end %>
-              <div class="notae-page-emoji-grid">
-                <% Database::ICON_SUGGESTIONS.each do |emoji| %>
-                  <%= button_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                                method: :patch,
-                                params: { database: { icon_action: "set", icon: emoji } },
-                                class: "notae-page-emoji-button",
-                                title: "Use #{emoji}" do %>
-                    <%= emoji %>
-                  <% end %>
-                <% end %>
-              </div>
-              <% if @database.icon.present? %>
-                <%= button_to "Remove icon",
-                              database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
-                              method: :patch,
-                              params: { database: { icon_action: "clear" } },
-                              class: "notae-page-header-link-button" %>
-              <% end %>
-            </div>
+            <%= render "shared/icon_picker_panel",
+                       update_url: database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: @current_view&.id),
+                       workspace: @workspace,
+                       param_key: :database,
+                       current_icon: @database.icon,
+                       placeholder: "Type an emoji",
+                       fallback: "🗃️" %>
           </details>
 
           <details class="notae-page-header-action">
@@ -1180,15 +1143,41 @@
   <% else %>
     <%= render "databases/table_view" %>
   <% end %>
+
+  <section class="notae-doc-backlinks">
+    <h2>Backlinks</h2>
+    <% backlink_pages = @backlinks.map(&:source_page).compact.uniq { |source_page| source_page.id } %>
+    <% if backlink_pages.any? %>
+      <ul>
+        <% backlink_pages.each do |source_page| %>
+          <li>
+            <%= link_to linked_document_label(source_page),
+                        linked_document_path(
+                          source_page,
+                          workspace: @workspace,
+                          embedded: params[:embedded].to_s == "1"
+                        ),
+                        data: { backlink_source: source_page.id } %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>No backlinks yet.</p>
+    <% end %>
+  </section>
 </section>
 
 <% if @split_page.present? %>
+  <% split_record = @split_page.linked_database || @split_page %>
   <aside class="notae-db-split-pane">
     <div class="notae-db-split-pane-head">
-      <p class="notae-db-split-pane-title"><%= @split_page.icon.presence || "📄" %> <%= @split_page.title %></p>
+      <p class="notae-db-split-pane-title">
+        <%= render_notae_icon(linked_document_icon(split_record), workspace: @workspace, fallback: "📄", css_class: "notae-inline-linked-icon", label: linked_document_label(split_record)) %>
+        <%= linked_document_label(split_record) %>
+      </p>
       <div class="notae-db-split-pane-actions">
         <%= link_to "Open full",
-                    page_path(workspace_slug: @workspace.slug, id: @split_page.id),
+                    linked_document_path(split_record, workspace: @workspace),
                     class: "notae-chip-button",
                     target: "_blank",
                     rel: "noopener" %>
@@ -1199,7 +1188,7 @@
                     title: "Close side peek" %>
       </div>
     </div>
-    <iframe src="<%= page_path(workspace_slug: @workspace.slug, id: @split_page.id, embedded: 1, only_path: true) %>"
+    <iframe src="<%= linked_document_path(split_record, workspace: @workspace, embedded: true) %>"
             title="Linked page side peek"
             class="notae-db-split-frame"
             loading="lazy"></iframe>

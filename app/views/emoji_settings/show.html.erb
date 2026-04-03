@@ -1,0 +1,69 @@
+<% content_for :title, "Emoji" %>
+<% content_for :topbar_page_icon, "😀" %>
+<% content_for :topbar_privacy, "Workspace" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :emoji %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>Emoji</h2>
+      <p class="notae-pref-description">
+        Upload custom emoji for this workspace. They will appear in the icon picker for notas and grids.
+        Names are generated automatically from the file, so you do not need to type one.
+      </p>
+
+      <div class="notae-emoji-settings-layout">
+        <article class="notae-emoji-settings-card">
+          <h3>1. Upload an image</h3>
+          <p class="notae-pref-description">
+            Transparent PNG, WebP, GIF, JPEG, or SVG works best. Square artwork gives the cleanest icon result.
+          </p>
+
+          <%= form_with url: workspace_emoji_settings_path(workspace_slug: @workspace.slug),
+                        method: :post,
+                        multipart: true,
+                        class: "notae-emoji-upload-form" do |form| %>
+            <label class="notae-emoji-upload-dropzone">
+              <span class="notae-emoji-upload-dropzone-icon">🖼️</span>
+              <span class="notae-emoji-upload-dropzone-copy">
+                <strong>Select an image</strong>
+                <span>Your upload will be available in this workspace's custom emoji section.</span>
+              </span>
+              <%= form.file_field :image, accept: "image/png,image/jpeg,image/gif,image/webp,image/svg+xml", class: "notae-emoji-upload-input" %>
+            </label>
+            <%= form.submit "Upload emoji", class: "notae-chip-button" %>
+          <% end %>
+        </article>
+
+        <article class="notae-emoji-settings-card">
+          <h3>Workspace custom emoji</h3>
+          <% if @custom_emojis.any? %>
+            <div class="notae-emoji-settings-grid">
+              <% @custom_emojis.each do |emoji| %>
+                <div class="notae-emoji-settings-item">
+                  <div class="notae-emoji-settings-item-preview">
+                    <%= image_tag emoji.image, alt: emoji.display_name, class: "notae-emoji-settings-item-image" %>
+                  </div>
+                  <div class="notae-emoji-settings-item-copy">
+                    <strong><%= emoji.display_name %></strong>
+                    <span>Available in the custom tab of the emoji picker.</span>
+                  </div>
+                  <%= button_to "Remove",
+                                workspace_emoji_setting_path(workspace_slug: @workspace.slug, id: emoji.id),
+                                method: :delete,
+                                class: "notae-page-header-link-button" %>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="notae-options-empty">No custom emoji yet.</p>
+          <% end %>
+        </article>
+      </div>
+    </section>
+  </div>
+</section>

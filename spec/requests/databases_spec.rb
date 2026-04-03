@@ -2155,7 +2155,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).not_to include("Choose page")
     expect(response.body).to include(linked_page.title)
     expect(response.body).to include("Unlink")
-    expect(response.body).to include(page_path(workspace_slug: workspace.slug, id: linked_page.id, embedded: 1))
+    expect(response.body).to include(database_path(workspace_slug: workspace.slug, id: database.id, embedded: "1"))
     expect(response.body).not_to include("http://localhost:4000")
   end
 

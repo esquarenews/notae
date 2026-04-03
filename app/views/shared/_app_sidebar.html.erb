@@ -317,7 +317,10 @@
                   <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
                               class: notae_sidebar_link_classes(page_path(workspace_slug: workspace.slug, id: page.id)),
                               data: notae_shell_link_data do %>
-                    <span class="notae-sidebar-page-title"><%= page.icon.presence || "📄" %> <%= page.title %></span>
+                    <span class="notae-sidebar-page-title">
+                      <%= render_notae_icon(page.icon, workspace: workspace, fallback: "📄", css_class: "notae-sidebar-page-icon", label: page.title) %>
+                      <%= page.title %>
+                    </span>
                   <% end %>
                 </li>
               <% end %>
@@ -362,7 +365,10 @@
                   <%= link_to database_path(workspace_slug: workspace.slug, id: db.id),
                               class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: db.id)),
                               data: notae_shell_link_data do %>
-                    <span class="notae-sidebar-page-title"><%= db.icon.presence || "🗃️" %> <%= db.name %></span>
+                    <span class="notae-sidebar-page-title">
+                      <%= render_notae_icon(db.icon, workspace: workspace, fallback: "🗃️", css_class: "notae-sidebar-page-icon", label: db.name) %>
+                      <%= db.name %>
+                    </span>
                   <% end %>
                 </li>
               <% end %>
@@ -449,7 +455,11 @@
                     <%= link_to database_path(workspace_slug: workspace.slug, id: database.id),
                                 class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: database.id)),
                                 data: notae_shell_link_data do %>
-                      <span class="notae-sidebar-page-title">⭐ <%= database.icon.presence || "🗃️" %> <%= database.name %></span>
+                      <span class="notae-sidebar-page-title">
+                        ⭐
+                        <%= render_notae_icon(database.icon, workspace: workspace, fallback: "🗃️", css_class: "notae-sidebar-page-icon", label: database.name) %>
+                        <%= database.name %>
+                      </span>
                     <% end %>
                   <% end %>
                 </li>

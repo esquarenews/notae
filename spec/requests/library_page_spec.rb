@@ -148,7 +148,7 @@ RSpec.describe "Library page", type: :request do
   end
 
   def library_titles(html_body)
-    Nokogiri::HTML(html_body).css(".notae-library-row-title").map { |node| node.text.strip }
+    Nokogiri::HTML(html_body).css(".notae-library-row-title").map { |node| node.text.squish }
   end
 
   def library_headers(html_body)

@@ -94,6 +94,39 @@ export default class extends Controller {
     await this.reparentBlock("outdent")
   }
 
+  togglePicker(event) {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const form = event.currentTarget.closest(".notae-block-menu-picker-form")
+    if (!form) return
+
+    const picker = form.querySelector(".notae-block-menu-picker")
+    const select = form.querySelector(".notae-block-menu-select")
+    if (!picker || !(select instanceof HTMLSelectElement)) return
+
+    const shouldOpen = picker.hasAttribute("hidden")
+    this.closeInlinePickers(form)
+
+    if (!shouldOpen) return
+
+    form.classList.add("is-picker-open")
+    picker.hidden = false
+    select.focus()
+
+    if (typeof select.showPicker === "function") {
+      requestAnimationFrame(() => select.showPicker())
+    }
+  }
+
+  submitPicker(event) {
+    const select = event.currentTarget
+    if (!(select instanceof HTMLSelectElement)) return
+    if (!select.value) return
+
+    select.form?.requestSubmit()
+  }
+
   closeMenu(event) {
     const details = event.currentTarget.closest("details")
     if (details) this.closeDetails(details)
@@ -172,10 +205,22 @@ export default class extends Controller {
   }
 
   closeDetails(details) {
+    this.closeInlinePickers()
     this.setMenuOpenState(details, false)
     details.open = false
     this.resetPanelPosition(details)
     this.removeDismissHandlers()
+  }
+
+  closeInlinePickers(exceptForm = null) {
+    this.element.querySelectorAll(".notae-block-menu-picker-form").forEach((form) => {
+      if (exceptForm && form === exceptForm) return
+
+      form.classList.remove("is-picker-open")
+      form.querySelectorAll(".notae-block-menu-picker").forEach((picker) => {
+        picker.hidden = true
+      })
+    })
   }
 
   setMenuOpenState(details, isOpen) {

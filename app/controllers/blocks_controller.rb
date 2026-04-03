@@ -2,7 +2,7 @@ class BlocksController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_page
-  before_action :set_block, only: %i[update attach download reorder archive restore command]
+  before_action :set_block, only: %i[update attach download export_markdown reorder archive restore command]
 
   def create
     @block = @page.blocks.new(block_params)
@@ -85,6 +85,13 @@ class BlocksController < ApplicationController
               disposition: disposition
   end
 
+  def export_markdown
+    authorize @block, :show?
+
+    render plain: Blocks::MarkdownExportService.call(block: @block),
+           content_type: "text/markdown; charset=utf-8"
+  end
+
   def reorder
     authorize @block, :reorder?
     Blocks::ReorderService.call(
@@ -103,6 +110,8 @@ class BlocksController < ApplicationController
             page: @page,
             blocks_by_parent: current_page_render_context[:blocks_by_parent],
             move_target_pages: current_page_render_context[:move_target_pages],
+            linkable_note_pages: current_page_render_context[:linkable_note_pages],
+            linkable_databases: current_page_render_context[:linkable_databases],
             reader_mode: current_page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
           }
@@ -139,6 +148,11 @@ class BlocksController < ApplicationController
       target_page = policy_scope(Page).for_workspace(@workspace).find(block_command_params[:target_page_id])
     end
 
+    target_database = nil
+    if block_command_params[:target_database_id].present?
+      target_database = policy_scope(Database).for_workspace(@workspace).active.find(block_command_params[:target_database_id])
+    end
+
     result = Blocks::CommandService.call(
       block: @block,
       page: @page,
@@ -149,6 +163,7 @@ class BlocksController < ApplicationController
       color: block_command_params[:color],
       highlight: block_command_params[:highlight],
       target_page: target_page,
+      target_database: target_database,
       note: block_command_params[:note]
     )
 
@@ -161,11 +176,21 @@ class BlocksController < ApplicationController
         if inline_block_command_response?(result)
           render turbo_stream: inline_block_command_streams(result, touched_blocks)
         else
-          redirect_to page_redirect_path(redirect_page_id, anchor: result[:focus_anchor]), notice: result[:notice]
+          redirect_to page_redirect_path(
+            redirect_page_id,
+            anchor: result[:focus_anchor],
+            split_page_id: result[:split_page_id],
+            split_source: result[:split_source]
+          ), notice: result[:notice]
         end
       end
       format.html do
-        redirect_to page_redirect_path(redirect_page_id, anchor: result[:focus_anchor]),
+        redirect_to page_redirect_path(
+          redirect_page_id,
+          anchor: result[:focus_anchor],
+          split_page_id: result[:split_page_id],
+          split_source: result[:split_source]
+        ),
                     notice: result[:notice]
       end
     end
@@ -224,7 +249,7 @@ class BlocksController < ApplicationController
   end
 
   def block_command_params
-    params.require(:block_command).permit(:command, :target, :color, :highlight, :target_page_id, :note)
+    params.require(:block_command).permit(:command, :target, :color, :highlight, :target_page_id, :target_database_id, :note)
   end
 
   def broadcast_block_update(block)
@@ -296,10 +321,12 @@ class BlocksController < ApplicationController
     Block.where(id: [ sync_root.id, *copy_ids ]).to_a
   end
 
-  def page_redirect_path(page_id = @page.id, anchor: nil)
+  def page_redirect_path(page_id = @page.id, anchor: nil, split_page_id: nil, split_source: nil)
     route_params = { workspace_slug: @workspace.slug, id: page_id }
     route_params[:embedded] = "1" if embedded_page_shell?
     route_params[:options_menu] = "open" if params[:options_menu].to_s == "open"
+    route_params[:split_page_id] = split_page_id || params[:split_page_id].presence
+    route_params[:split_source] = split_source || params[:split_source].presence
     route_params[:anchor] = anchor if anchor.present?
     page_path(route_params)
   end
@@ -348,6 +375,8 @@ class BlocksController < ApplicationController
             block: page_render_context[:block_lookup].fetch(touched_block.id),
             blocks_by_parent: page_render_context[:blocks_by_parent],
             all_pages: page_render_context[:move_target_pages],
+            linkable_note_pages: page_render_context[:linkable_note_pages],
+            linkable_databases: page_render_context[:linkable_databases],
             index: page_render_context[:indexes].fetch(touched_block.id, 0),
             reader_mode: page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
@@ -366,6 +395,14 @@ class BlocksController < ApplicationController
         block_lookup: active_blocks.index_by(&:id),
         indexes: active_blocks.each_with_index.to_h { |block, index| [ block.id, index ] },
         move_target_pages: policy_scope(Page).for_workspace(@workspace).active.order(:created_at).to_a.reject { |candidate| candidate.id == @page.id },
+        linkable_note_pages: policy_scope(Page)
+                               .for_workspace(@workspace)
+                               .active
+                               .includes(:linked_database)
+                               .order(:created_at)
+                               .to_a
+                               .reject { |candidate| candidate.id == @page.id || candidate.linked_database.present? },
+        linkable_databases: policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).to_a,
         reader_mode: @page.remove_blocks? || @page.locked?
       }
     end

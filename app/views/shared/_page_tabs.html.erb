@@ -20,7 +20,9 @@
             <%= link_to destination,
                         class: [ "notae-page-tab", ("is-active" if tab.active) ].compact.join(" "),
                         aria: { current: ("page" if tab.active) } do %>
-              <span class="notae-page-tab-icon"><%= tab.icon %></span>
+              <span class="notae-page-tab-icon">
+                <%= render_notae_icon(tab.icon, workspace: workspace, fallback: "📄", css_class: "notae-inline-linked-icon", label: tab.label) %>
+              </span>
               <span class="notae-page-tab-label"><%= tab.label %></span>
             <% end %>
 

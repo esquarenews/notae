@@ -11,7 +11,7 @@
                     data: { action: "click->shell#close" } do %>
           <span class="notae-sidebar-page-link-content">
             <% if page.icon.present? %>
-              <span class="notae-sidebar-page-icon"><%= page.icon %></span>
+              <%= render_notae_icon(page.icon, workspace: workspace, fallback: "📄", css_class: "notae-sidebar-page-icon", label: page.title) %>
             <% end %>
             <span class="notae-sidebar-page-title"><%= page.title %></span>
           </span>

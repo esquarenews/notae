@@ -154,6 +154,7 @@ class LibrariesController < ApplicationController
           visibility: page.permission_mode == "private_page" ? "private" : "shared",
           favorited: favorite_lookup["Page:#{page.id}"] == true,
           workspace_name: page.workspace.name,
+          workspace: page.workspace,
           path: page_path(workspace_slug: page.workspace.slug, id: page.id)
         }
       end
@@ -176,6 +177,7 @@ class LibrariesController < ApplicationController
           visibility: database.permission_mode == "private_database" ? "private" : "shared",
           favorited: favorite_lookup["Database:#{database.id}"] == true,
           workspace_name: database.workspace.name,
+          workspace: database.workspace,
           path: database_path(workspace_slug: database.workspace.slug, id: database.id)
         }
       end

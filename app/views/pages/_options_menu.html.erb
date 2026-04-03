@@ -100,10 +100,9 @@
             <%= link_to "Markdown",
                         export_markdown_page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open"),
                         class: "notae-chip-button" %>
-            <%= button_to "Build ZIP",
-                          export_zip_page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open"),
-                          method: :post,
-                          class: "notae-chip-button" %>
+            <%= link_to "PDF",
+                        export_pdf_page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open"),
+                        class: "notae-chip-button" %>
           </div>
           <% if page_exports.any? %>
             <ul class="notae-options-list">

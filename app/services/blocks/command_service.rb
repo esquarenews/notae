@@ -5,6 +5,7 @@ module Blocks
       "heading_1" => "heading_1",
       "heading_2" => "heading_2",
       "heading_3" => "heading_3",
+      "heading_4" => "heading_4",
       "bulleted_list" => "bullet_list",
       "numbered_list" => "ordered_list",
       "todo_list" => "todo_list",
@@ -24,7 +25,7 @@ module Blocks
     COLOR_ALLOWLIST = %w[default gray brown orange yellow green blue purple pink red].freeze
     HIGHLIGHT_ALLOWLIST = %w[default peach lemon mint sky lavender rose].freeze
 
-    def self.call(block:, page:, workspace:, actor:, command:, target:, color:, highlight:, target_page:, note:)
+    def self.call(block:, page:, workspace:, actor:, command:, target:, color:, highlight:, target_page:, target_database:, note:)
       new(
         block:,
         page:,
@@ -35,11 +36,12 @@ module Blocks
         color:,
         highlight:,
         target_page:,
+        target_database:,
         note:
       ).call
     end
 
-    def initialize(block:, page:, workspace:, actor:, command:, target:, color:, highlight:, target_page:, note:)
+    def initialize(block:, page:, workspace:, actor:, command:, target:, color:, highlight:, target_page:, target_database:, note:)
       @block = block
       @page = page
       @workspace = workspace
@@ -49,9 +51,12 @@ module Blocks
       @color = color.to_s
       @highlight = highlight.to_s
       @target_page = target_page
+      @target_database = target_database
       @note = note.to_s
       @focus_anchor = "block_#{block.id}"
       @redirect_page_id = nil
+      @split_page_id = nil
+      @split_source = nil
       @notice = nil
       @synced_source_block = nil
     end
@@ -68,6 +73,14 @@ module Blocks
         duplicate!
       when "move_to"
         move_to_page!
+      when "create_linked_nota"
+        create_linked_nota!
+      when "link_existing_nota"
+        link_existing_nota!
+      when "create_linked_grid"
+        create_linked_grid!
+      when "link_existing_grid"
+        link_existing_grid!
       when "delete"
         delete_block!
       when "insert_media"
@@ -83,6 +96,8 @@ module Blocks
       {
         focus_anchor: focus_anchor,
         redirect_page_id: redirect_page_id,
+        split_page_id: split_page_id,
+        split_source: split_source,
         notice: notice || "Block updated.",
         synced_source_block: synced_source_block
       }
@@ -91,7 +106,7 @@ module Blocks
     private
 
     attr_reader :block, :page, :workspace, :actor, :command, :target, :color, :highlight, :target_page, :note,
-                :focus_anchor, :redirect_page_id, :notice, :synced_source_block
+                :target_database, :focus_anchor, :redirect_page_id, :split_page_id, :split_source, :notice, :synced_source_block
 
     def turn_into!
       case target
@@ -177,6 +192,44 @@ module Blocks
       @synced_source_block = synced_root_for(block)
     end
 
+    def create_linked_nota!
+      linked_page = workspace.pages.create!(
+        title: next_linked_page_title,
+        created_by: actor
+      )
+
+      replace_block_with_split_link!(label: linked_page.title, target_page: linked_page)
+      @notice = "Linked Nota created."
+    end
+
+    def link_existing_nota!
+      raise ArgumentError, "Select a Nota to link." if target_page.blank?
+      raise ArgumentError, "Choose a different Nota to link." if target_page.id == page.id
+
+      replace_block_with_split_link!(label: target_page.title, target_page: target_page)
+      @notice = "Linked Nota added."
+    end
+
+    def create_linked_grid!
+      database = workspace.databases.create!(
+        name: next_available_database_name(extract_text(block.content_json).presence || "Untitled grid"),
+        created_by: actor
+      )
+      linked_page = Databases::EnsureLinkedPageService.call(database:, actor:)
+
+      replace_block_with_split_link!(label: database.name, target_page: linked_page)
+      @notice = "Linked Grid created."
+    end
+
+    def link_existing_grid!
+      raise ArgumentError, "Select a Grid to link." if target_database.blank?
+
+      linked_page = Databases::EnsureLinkedPageService.call(database: target_database, actor:)
+
+      replace_block_with_split_link!(label: target_database.name, target_page: linked_page)
+      @notice = "Linked Grid added."
+    end
+
     def delete_block!
       Blocks::ArchiveService.call(block:)
       @focus_anchor = nil
@@ -260,6 +313,27 @@ module Blocks
       @synced_source_block = synced_root_for(block)
     end
 
+    def replace_block_with_split_link!(label:, target_page:)
+      payload = deep_dup_json(block.content_json).slice("notae_color", "notae_highlight")
+      payload["type"] = "doc"
+      payload["content"] = [
+        paragraph_link_node(
+          label:,
+          href: split_preview_href_for(target_page),
+          link_attrs: { "target" => "_self", "rel" => nil }
+        )
+      ]
+      payload.delete("notae_synced_source_id")
+
+      block.update!(block_type: "paragraph", content_json: payload)
+
+      @redirect_page_id = page.id
+      @split_page_id = target_page.id
+      @split_source = "block"
+      @focus_anchor = "block_#{block.id}"
+      @synced_source_block = synced_root_for(block)
+    end
+
     def create_synced_block!
       source_payload = deep_dup_json(block.content_json)
       source_payload["notae_synced_source_id"] = block.id.to_s
@@ -313,6 +387,7 @@ module Blocks
       when "heading_1" then heading_node(1, text)
       when "heading_2" then heading_node(2, text)
       when "heading_3" then heading_node(3, text)
+      when "heading_4" then heading_node(4, text)
       when "bullet_list" then list_node("bulletList", normalized_lines)
       when "ordered_list" then list_node("orderedList", normalized_lines)
       when "todo_list" then task_list_node(normalized_lines)
@@ -376,6 +451,24 @@ module Blocks
       node = { "type" => "paragraph" }
       node["content"] = segments if segments.any?
       node
+    end
+
+    def paragraph_link_node(label:, href:, link_attrs: {})
+      {
+        "type" => "paragraph",
+        "content" => [
+          {
+            "type" => "text",
+            "text" => label,
+            "marks" => [
+              {
+                "type" => "link",
+                "attrs" => { "href" => href }.merge(link_attrs)
+              }
+            ]
+          }
+        ]
+      }
     end
 
     def extract_text(node)
@@ -462,6 +555,32 @@ module Blocks
       return value.deep_dup if value.respond_to?(:deep_dup)
 
       JSON.parse(value.to_json)
+    end
+
+    def next_linked_page_title
+      extract_text(block.content_json).presence&.first(120) || "Untitled nota"
+    end
+
+    def next_available_database_name(base_name)
+      candidate = base_name.to_s.strip.presence || "Untitled grid"
+      return candidate unless workspace.databases.exists?(name: candidate)
+
+      suffix = 2
+      loop do
+        next_candidate = "#{candidate} #{suffix}"
+        return next_candidate unless workspace.databases.exists?(name: next_candidate)
+
+        suffix += 1
+      end
+    end
+
+    def split_preview_href_for(target_page)
+      Rails.application.routes.url_helpers.page_path(
+        workspace_slug: workspace.slug,
+        id: page.id,
+        split_page_id: target_page.id,
+        split_source: "block"
+      )
     end
 
     def sibling_index_for(target_block)

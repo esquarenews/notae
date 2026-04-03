@@ -84,8 +84,8 @@ RSpec.describe "Workspace home", type: :request do
     page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)
     expect(page_titles).to eq([ "Page 4 latest", "Page 3 newer", "Page 2 mid" ])
 
-    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map(&:text)
-    normalized_database_titles = database_titles.map { |title| title.gsub(/\A\S+\s+/, "") }
+    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map { |node| node.text.squish }
+    normalized_database_titles = database_titles.map { |title| title.sub(/\A\S+\s+/, "") }
     expect(normalized_database_titles).to include("DB 4 latest", "DB 3 newer", "DB 2 mid")
     expect(normalized_database_titles).not_to include("DB 1 old")
     expect(normalized_database_titles.count).to eq(3)
@@ -122,8 +122,8 @@ RSpec.describe "Workspace home", type: :request do
     expect(page_titles).to include("Standalone nota")
     expect(page_titles).not_to include("Budget tab")
 
-    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map(&:text)
-    normalized_database_titles = database_titles.map { |title| title.gsub(/\A\S+\s+/, "") }
+    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map { |node| node.text.squish }
+    normalized_database_titles = database_titles.map { |title| title.sub(/\A\S+\s+/, "") }
     expect(normalized_database_titles).to include("Standalone grid")
     expect(normalized_database_titles).not_to include("Runbook grid")
 
@@ -152,8 +152,8 @@ RSpec.describe "Workspace home", type: :request do
 
     html = Nokogiri::HTML(response.body)
     page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)
-    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map(&:text)
-    normalized_database_titles = database_titles.map { |title| title.gsub(/\A\S+\s+/, "") }
+    database_titles = html.css(".notae-auth-card .notae-workspace-home-link-grid .notae-home-workspace-item strong").map { |node| node.text.squish }
+    normalized_database_titles = database_titles.map { |title| title.sub(/\A\S+\s+/, "") }
 
     expect(page_titles).to include("Standalone nota")
     expect(page_titles).not_to include("Grid shell page")

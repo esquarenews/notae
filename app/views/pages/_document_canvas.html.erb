@@ -2,16 +2,18 @@
 <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
 
 <div class="notae-doc-canvas" id="notae_doc_canvas">
-  <%= render partial: "pages/block_tree",
-             locals: {
-               workspace: workspace,
-               page: page,
-               blocks_by_parent: blocks_by_parent,
-               parent_id: nil,
-               all_pages: move_target_pages,
-               reader_mode: reader_mode,
-               embedded_page_params: embedded_page_params
-             } %>
+<%= render partial: "pages/block_tree",
+           locals: {
+             workspace: workspace,
+             page: page,
+             blocks_by_parent: blocks_by_parent,
+             parent_id: nil,
+             all_pages: move_target_pages,
+             linkable_note_pages: local_assigns.fetch(:linkable_note_pages, []),
+             linkable_databases: local_assigns.fetch(:linkable_databases, []),
+             reader_mode: reader_mode,
+             embedded_page_params: embedded_page_params
+           } %>
 
   <% if !reader_mode && policy(Block.new(workspace: workspace, page: page, created_by: current_user)).create? %>
     <%= form_with model: Block.new,

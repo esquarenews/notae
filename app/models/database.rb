@@ -1,4 +1,6 @@
 class Database < ApplicationRecord
+  include IconTokenSupport
+
   has_paper_trail
   COVER_PRESET_KEYS = Page::COVER_PRESET_KEYS
   ICON_SUGGESTIONS = Page::ICON_SUGGESTIONS
@@ -32,7 +34,7 @@ class Database < ApplicationRecord
   validates :locked, inclusion: { in: [ true, false ] }, if: -> { self.class.has_column?(:locked) }
   validates :small_text, inclusion: { in: [ true, false ] }, if: -> { self.class.has_column?(:small_text) }
   validates :font_style, inclusion: { in: FONT_STYLES }, if: -> { self.class.has_column?(:font_style) }
-  validates :icon, length: { maximum: 8 }, allow_blank: true, if: -> { self.class.has_column?(:icon) }
+  validate :icon_must_be_short_or_custom, if: -> { self.class.has_column?(:icon) }
   validates :cover_preset_key, inclusion: { in: COVER_PRESET_KEYS }, allow_blank: true, if: -> { self.class.has_column?(:cover_preset_key) }
   validates :cover_focal_y,
             numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 },
@@ -205,8 +207,7 @@ class Database < ApplicationRecord
   def normalize_icon
     return unless self.class.has_column?(:icon)
 
-    normalized = icon.to_s.strip.presence
-    self.icon = normalized&.scan(/\X/)&.first(2)&.join
+    self.icon = normalize_icon_token(icon)
   end
 
   def linked_page_workspace_matches
@@ -215,5 +216,13 @@ class Database < ApplicationRecord
     return if linked_page.workspace_id == workspace_id
 
     errors.add(:linked_page_id, "must belong to the same workspace")
+  end
+
+  def icon_must_be_short_or_custom
+    return if icon.blank?
+    return if self.class.custom_emoji_token?(icon)
+    return if icon.to_s.scan(/\X/).size <= 2
+
+    errors.add(:icon, "must be a short emoji value")
   end
 end

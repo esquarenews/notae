@@ -32,6 +32,43 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;\n  z-index: var(--notae-layer-flash);")
   end
 
+  it "elevates shared context menu layers above page chrome while staying below flash" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("--notae-layer-popover-region: 1080;")
+    expect(stylesheet).to include("--notae-layer-popover-parent: 1100;")
+    expect(stylesheet).to include("--notae-layer-popover: 1120;")
+    expect(stylesheet).to include("--notae-layer-popover-floating: 1160;")
+    expect(stylesheet).to include("--notae-layer-modal: 1200;")
+    expect(stylesheet).to include("--notae-layer-flash: 1400;")
+  end
+
+  it "lifts open page and grid header tool menus above the title layer" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-page-header-tools:has(.notae-page-header-action[open]),\n.notae-page-header-tools:has(.notae-cover-picker[open]),\n.notae-page-header-tools:has(.notae-comments-menu[open]),\n.notae-db-header-tools:has(.notae-page-header-action[open]),\n.notae-db-header-tools:has(.notae-cover-picker[open]),\n.notae-db-header-tools:has(.notae-comments-menu[open]) {\n  position: relative;\n  z-index: var(--notae-layer-popover-parent);\n  isolation: isolate;\n}")
+  end
+
+  it "pushes overlapping title icons high into the cover area" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-page-icon-display.is-over-cover {\n  margin-top: calc(-1.18 * var(--notae-title-icon-size));")
+    expect(stylesheet).to include("@media (max-width: 760px) {\n  .notae-emoji-picker-section .notae-page-emoji-grid {\n    grid-template-columns: repeat(6, minmax(0, 1fr));\n  }\n\n  .notae-page-icon-display.is-over-cover {\n    margin-top: calc(-1 * var(--notae-title-icon-size));")
+  end
+
+  it "styles quote blocks as larger serif pull quotes with a left rule" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-doc-editor.is-blockquote .ProseMirror {\n  margin: 0 0.85rem 0 0.65rem;\n  padding: 0.14rem 0 0.14rem 0.95rem;\n  border-left: 3px solid color-mix(in srgb, #78716c 58%, #d6d3d1);\n  color: rgba(68, 64, 60, 0.7);\n  font-family: Georgia, \"Times New Roman\", serif;\n  font-size: 1.3em;\n  font-style: italic;")
+    expect(stylesheet).to include(".notae-doc-editor.is-blockquote .ProseMirror blockquote {\n  margin: 0;\n}")
+  end
+
+  it "styles heading 4 as a distinct smaller heading with muted emphasis" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-doc-editor.is-heading-4 .ProseMirror {\n  font-size: 1.08rem;\n  font-weight: 700;\n  color: rgba(68, 64, 60, 0.8);\n}")
+  end
+
   it "restores the collapsed ai rail before turbo swaps the next shell into place" do
     application_js = Rails.root.join("app/javascript/application.js").read
 
@@ -201,6 +238,21 @@ RSpec.describe "Pages", type: :request do
     expect(target_tab.reload.title).to eq("Released")
     expect(target_tab.tab_color).to eq("purple")
     expect(target_tab.parent_page_id).to eq(group_page.id)
+  end
+
+  it "shows markdown and pdf exports without the zip action in the options menu" do
+    owner = User.create!(email: "pages-export-menu-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Export menu", slug: "export-menu")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Export menu page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Markdown")
+    expect(response.body).to include("PDF")
+    expect(response.body).not_to include("Build ZIP")
   end
 
   it "archives a tab and clears any linked grid association" do
@@ -543,7 +595,15 @@ RSpec.describe "Pages", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Grids")
-    expect(response.body).to include("🧠 Campaign grid")
+
+    html = Nokogiri::HTML(response.body)
+    grid_link = html.css(".notae-sidebar-section").find do |section|
+      section.text.include?("Grids")
+    end&.at_css("a[href='#{database_path(workspace_slug: workspace.slug, id: workspace.databases.first.id)}']")
+
+    expect(grid_link).to be_present
+    expect(grid_link.at_css(".notae-sidebar-page-title")&.text&.squish).to include("Campaign grid")
+    expect(grid_link.at_css(".notae-icon-renderer-glyph")&.text&.strip).to eq("🧠")
   end
 
   it "renders collapsible sidebar sections with inline create actions where supported" do
@@ -630,6 +690,10 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Turn into")
     expect(response.body).to include("Block equation")
     expect(response.body).to include("Synced block")
+    expect(response.body).to include("Heading 4")
+    expect(response.body).not_to include("Toggle heading 1")
+    expect(response.body).not_to include("Toggle heading 2")
+    expect(response.body).not_to include("Toggle heading 3")
 
     html = Nokogiri::HTML(response.body)
     title_field = html.at_css("textarea.notae-page-title-input[name='page[title]']")
@@ -736,6 +800,18 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("notae-actions-mobile-panes")
     expect(response.body).to include("notae-actions-mobile-nav")
     expect(response.body).to include("notae-actions-mobile-back")
+    expect(response.body).to include('data-controller="actions-menu page-import"')
+    expect(response.body).to include('data-controller="page-collaboration"')
+    expect(response.body).to include("Import into this Nota")
+    expect(response.body).to include('click->page-import#open')
+    expect(response.body).to include("into Nota")
+    expect(response.body).to include("Current block as MD")
+    expect(response.body).to include('click->shell#copyCurrentBlockMarkdown')
+    expect(response.body).to include('data-block-markdown-url-template=')
+    expect(response.body).not_to include('href="/w/actions/pages/')
+    expect(response.body).not_to include("Customize page")
+    expect(response.body).not_to include("Turn into wiki")
+    expect(response.body).not_to include("Open in Mac app")
 
     patch permissions_page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open"),
           params: { page: { permission_mode: "shared_to_workspace" } }
