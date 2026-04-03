@@ -9,9 +9,7 @@ class ApplicationController < ActionController::Base
   AI_AGENT_PROPOSED_BY = %w[ai_assistant automation_agent].freeze
   AI_SUGGESTION_KINDS = [ KnowledgeSuggestion::KIND_PROACTIVE ].freeze
   PROACTIVE_KNOWLEDGE_SUGGESTION_CHECK_INTERVAL = 10.minutes
-  PROACTIVE_KNOWLEDGE_SUGGESTION_SESSION_LIMIT = 4
-  KNOWLEDGE_SUGGESTION_PENDING_SESSION_LIMIT = 6
-  LAST_PAGE_VISIT_SESSION_LIMIT = 12
+  LAST_PAGE_VISIT_SESSION_LIMIT = 6
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -55,6 +53,7 @@ class ApplicationController < ActionController::Base
 
   def store_last_workspace_slug!
     return unless response.successful?
+    return if session["notae_last_workspace_slug"].to_s == params[:workspace_slug].to_s
 
     session["notae_last_workspace_slug"] = params[:workspace_slug].to_s
   end
@@ -79,9 +78,13 @@ class ApplicationController < ActionController::Base
   end
 
   def prune_workspace_session_state
-    proactive_knowledge_suggestion_check_store
-    knowledge_suggestion_generation_pending_store
+    prune_legacy_workspace_session_state!
     last_page_visit_store
+  end
+
+  def prune_legacy_workspace_session_state!
+    session.delete(:notae_proactive_knowledge_suggestion_checks)
+    session.delete(:notae_pending_knowledge_suggestion_generations)
   end
 
   def set_unread_notifications_count
@@ -428,11 +431,12 @@ class ApplicationController < ActionController::Base
     return nil if workspace.blank? || current_user.blank?
 
     value = Rails.cache.read(proactive_knowledge_suggestion_check_cache_key(workspace)).to_s.strip
-    value = proactive_knowledge_suggestion_check_store[workspace.id.to_s].to_s.strip if value.blank?
+    value = proactive_knowledge_suggestion_check_session_value_for(workspace) if value.blank?
     return nil if value.blank?
 
     Time.iso8601(value)
   rescue ArgumentError
+    Rails.cache.delete(proactive_knowledge_suggestion_check_cache_key(workspace))
     clear_proactive_knowledge_suggestion_checked_in_session!(workspace)
     nil
   end
@@ -457,7 +461,7 @@ class ApplicationController < ActionController::Base
     session_pending = knowledge_suggestion_generation_pending_in_session?(workspace, kind: kind)
 
     if cache_pending
-      mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind: kind)
+      mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind: kind) unless session_pending
       return true
     end
 
@@ -520,98 +524,6 @@ class ApplicationController < ActionController::Base
       )
   end
 
-  def proactive_knowledge_suggestion_check_store
-    raw_store = session[:notae_proactive_knowledge_suggestion_checks]
-    normalized_store =
-      if raw_store.is_a?(Hash)
-        raw_store.to_h.stringify_keys.transform_values { |value| value.to_s }
-      else
-        {}
-      end
-    pruned_store = normalized_store.to_a.last(PROACTIVE_KNOWLEDGE_SUGGESTION_SESSION_LIMIT).to_h
-
-    session[:notae_proactive_knowledge_suggestion_checks] = pruned_store if raw_store != pruned_store
-    pruned_store
-  end
-
-  def record_proactive_knowledge_suggestion_checked_in_session!(workspace, value)
-    store = proactive_knowledge_suggestion_check_store.dup
-    workspace_key = workspace.id.to_s
-    store.delete(workspace_key)
-    store[workspace_key] = value.to_s
-    session[:notae_proactive_knowledge_suggestion_checks] =
-      store.to_a.last(PROACTIVE_KNOWLEDGE_SUGGESTION_SESSION_LIMIT).to_h
-  end
-
-  def clear_proactive_knowledge_suggestion_checked_in_session!(workspace)
-    return if workspace.blank?
-
-    store = proactive_knowledge_suggestion_check_store
-    store.delete(workspace.id.to_s)
-    session[:notae_proactive_knowledge_suggestion_checks] = store
-  end
-
-  def knowledge_suggestion_generation_pending_in_session?(workspace, kind:)
-    store = knowledge_suggestion_generation_pending_store
-    key = knowledge_suggestion_generation_pending_key(workspace, kind: kind)
-    value = store[key].to_s
-    return false if value.blank?
-
-    recorded_at = Time.zone.parse(value)
-    if recorded_at.present? && recorded_at >= knowledge_suggestion_generation_pending_ttl_for(kind).ago
-      true
-    else
-      store.delete(key)
-      session[:notae_pending_knowledge_suggestion_generations] = store
-      false
-    end
-  rescue ArgumentError
-    store.delete(key)
-    session[:notae_pending_knowledge_suggestion_generations] = store
-    false
-  end
-
-  def mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind:)
-    store = knowledge_suggestion_generation_pending_store.dup
-    key = knowledge_suggestion_generation_pending_key(workspace, kind: kind)
-    store.delete(key)
-    store[key] = Time.current.iso8601
-    session[:notae_pending_knowledge_suggestion_generations] =
-      store.to_a.last(KNOWLEDGE_SUGGESTION_PENDING_SESSION_LIMIT).to_h
-  end
-
-  def clear_knowledge_suggestion_generation_pending_in_session!(workspace, kind:)
-    store = knowledge_suggestion_generation_pending_store
-    store.delete(knowledge_suggestion_generation_pending_key(workspace, kind: kind))
-    session[:notae_pending_knowledge_suggestion_generations] = store
-  end
-
-  def knowledge_suggestion_generation_pending_store
-    raw_store = session[:notae_pending_knowledge_suggestion_generations]
-    normalized_store =
-      if raw_store.is_a?(Hash)
-        raw_store.to_h.stringify_keys.transform_values { |value| value.to_s }
-      else
-        {}
-      end
-    pruned_store = normalized_store.to_a.last(KNOWLEDGE_SUGGESTION_PENDING_SESSION_LIMIT).to_h
-
-    session[:notae_pending_knowledge_suggestion_generations] = pruned_store if raw_store != pruned_store
-    pruned_store
-  end
-
-  def knowledge_suggestion_generation_pending_key(workspace, kind:)
-    parts = [ workspace.id, kind.to_s ]
-    if kind.to_s == KnowledgeSuggestion::KIND_DAILY_SUMMARY
-      parts << Time.use_zone(current_user.time_zone.presence || Time.zone) { Date.current.iso8601 }
-    end
-    parts.join(":")
-  end
-
-  def knowledge_suggestion_generation_pending_ttl_for(kind)
-    kind.to_s == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? 45.minutes : 15.minutes
-  end
-
   def last_page_visit_store
     raw_store = session["notae_last_page_visits"]
     normalized_store =
@@ -634,6 +546,86 @@ class ApplicationController < ActionController::Base
     store.delete(workspace_key)
     store[workspace_key] = page.id.to_s
     session["notae_last_page_visits"] = store.to_a.last(LAST_PAGE_VISIT_SESSION_LIMIT).to_h
+  end
+
+  def proactive_knowledge_suggestion_check_session_value_for(workspace)
+    record = session[:notae_recent_proactive_knowledge_check]
+    return "" unless record.is_a?(Hash)
+    return "" unless record["workspace_id"].to_s == workspace.id.to_s
+
+    record["checked_at"].to_s
+  end
+
+  def record_proactive_knowledge_suggestion_checked_in_session!(workspace, value)
+    session[:notae_recent_proactive_knowledge_check] = {
+      "workspace_id" => workspace.id.to_s,
+      "checked_at" => value.to_s
+    }
+  end
+
+  def clear_proactive_knowledge_suggestion_checked_in_session!(workspace)
+    record = session[:notae_recent_proactive_knowledge_check]
+    return unless record.is_a?(Hash)
+    return unless workspace.blank? || record["workspace_id"].to_s == workspace.id.to_s
+
+    session.delete(:notae_recent_proactive_knowledge_check)
+  end
+
+  def knowledge_suggestion_generation_pending_in_session?(workspace, kind:)
+    store = knowledge_suggestion_generation_pending_store
+    record = store[kind.to_s]
+    return false unless record.is_a?(Hash)
+    return false unless record["workspace_id"].to_s == workspace.id.to_s
+    if kind.to_s == KnowledgeSuggestion::KIND_DAILY_SUMMARY
+      current_local_date = Time.use_zone(current_user.time_zone.presence || Time.zone) { Date.current.iso8601 }
+      return false unless record["local_date"].to_s == current_local_date
+    end
+
+    recorded_at = Time.zone.parse(record["recorded_at"].to_s)
+    return true if recorded_at.present? && recorded_at >= knowledge_suggestion_generation_pending_ttl_for(kind).ago
+
+    store.delete(kind.to_s)
+    session[:notae_recent_pending_knowledge_generation] = store
+    false
+  rescue ArgumentError
+    store.delete(kind.to_s)
+    session[:notae_recent_pending_knowledge_generation] = store
+    false
+  end
+
+  def mark_knowledge_suggestion_generation_pending_in_session!(workspace, kind:)
+    store = knowledge_suggestion_generation_pending_store
+    store[kind.to_s] = {
+      "workspace_id" => workspace.id.to_s,
+      "recorded_at" => Time.current.iso8601
+    }
+    if kind.to_s == KnowledgeSuggestion::KIND_DAILY_SUMMARY
+      store[kind.to_s]["local_date"] = Time.use_zone(current_user.time_zone.presence || Time.zone) { Date.current.iso8601 }
+    end
+    session[:notae_recent_pending_knowledge_generation] = store
+  end
+
+  def clear_knowledge_suggestion_generation_pending_in_session!(workspace, kind:)
+    store = knowledge_suggestion_generation_pending_store
+    record = store[kind.to_s]
+    return unless record.is_a?(Hash)
+    return unless record["workspace_id"].to_s == workspace.id.to_s
+
+    store.delete(kind.to_s)
+    session[:notae_recent_pending_knowledge_generation] = store
+  end
+
+  def knowledge_suggestion_generation_pending_store
+    raw_store = session[:notae_recent_pending_knowledge_generation]
+    return {} unless raw_store.is_a?(Hash)
+
+    raw_store.stringify_keys.transform_values do |record|
+      record.is_a?(Hash) ? record.stringify_keys.slice("workspace_id", "recorded_at", "local_date") : {}
+    end
+  end
+
+  def knowledge_suggestion_generation_pending_ttl_for(kind)
+    kind.to_s == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? 45.minutes : 15.minutes
   end
 
   def build_ai_usage_panel(user:, workspace:)

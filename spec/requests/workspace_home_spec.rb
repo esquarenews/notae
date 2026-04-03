@@ -487,7 +487,7 @@ RSpec.describe "Workspace home", type: :request do
 
   it "does not overflow the session cookie when switching across many workspaces" do
     user = User.create!(email: "home-session-overflow@example.com", password: "password123", openai_api_key: "sk-test")
-    visited_workspaces = Array.new(30) do |index|
+    visited_workspaces = Array.new(40) do |index|
       workspace = Workspace.create!(name: "Session workspace #{index}", slug: "session-workspace-#{index}")
       Membership.create!(workspace: workspace, user: user, role: :owner)
       page = create_indexed_page(
@@ -506,10 +506,17 @@ RSpec.describe "Workspace home", type: :request do
         visited_workspaces.each do |workspace, page|
           get page_path(workspace_slug: workspace.slug, id: page.id)
           expect(response).to have_http_status(:ok)
+          expect(response.headers["Set-Cookie"].to_s.bytesize).to be < 3900
 
           get workspace_path(workspace.slug)
           expect(response).to have_http_status(:ok)
+          expect(response.headers["Set-Cookie"].to_s.bytesize).to be < 3900
         end
+
+        Rails.cache.clear
+        get workspace_path(visited_workspaces.last.first.slug)
+        expect(response).to have_http_status(:ok)
+        expect(response.headers["Set-Cookie"].to_s.bytesize).to be < 3900
       end.not_to raise_error
     end
   end
