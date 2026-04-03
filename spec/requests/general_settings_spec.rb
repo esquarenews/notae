@@ -3,8 +3,8 @@ require "rails_helper"
 RSpec.describe "General settings", type: :request do
   it "renders workspace controls in general settings" do
     user = User.create!(email: "general-settings-owner@example.com", password: "password123")
-    workspace = Workspace.create!(name: "General settings", slug: "general-settings")
-    other_workspace = Workspace.create!(name: "General settings alt", slug: "general-settings-alt")
+    workspace = Workspace.create!(name: "Zulu settings", slug: "general-settings")
+    other_workspace = Workspace.create!(name: "Alpha settings", slug: "general-settings-alt")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     Membership.create!(workspace: other_workspace, user: user, role: :owner)
     sign_in user
@@ -28,6 +28,8 @@ RSpec.describe "General settings", type: :request do
     expect(workspace_picker["onchange"]).to be_nil
     expect(workspace_picker["data-action"]).to eq("change->auto-submit#navigate")
     picker_options = workspace_picker.css("option").map { |option| [ option.text.strip, option["value"] ] }
+    expect(picker_options.first.first).to eq("Alpha settings")
+    expect(picker_options.second.first).to eq("Zulu settings")
     expect(picker_options).to include(
       [ workspace.name, workspace_general_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug) ],
       [ other_workspace.name, workspace_general_settings_path(workspace_slug: other_workspace.slug, settings_workspace_slug: other_workspace.slug) ]
@@ -54,6 +56,25 @@ RSpec.describe "General settings", type: :request do
     expect(active_colour&.[]("value")).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.second.fetch(:value))
   end
 
+  it "renders the selected settings workspace even if the route workspace slug is stale" do
+    user = User.create!(email: "general-settings-stale-route@example.com", password: "password123")
+    first_workspace = Workspace.create!(name: "First Workspace", slug: "general-settings-first", workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.first.fetch(:value))
+    selected_workspace = Workspace.create!(name: "Second Workspace", slug: "general-settings-second", workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value))
+    Membership.create!(workspace: first_workspace, user: user, role: :owner)
+    Membership.create!(workspace: selected_workspace, user: user, role: :owner)
+    sign_in user
+
+    get workspace_general_settings_path(workspace_slug: first_workspace.slug, settings_workspace_slug: selected_workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    name_input = document.at_css(".notae-general-name-input")
+    active_colour = document.at_css(".notae-general-color-form .notae-workspace-color-option.is-active input[name='workspace[workspace_color]']")
+
+    expect(name_input&.[]("value")).to eq("Second Workspace")
+    expect(active_colour&.[]("value")).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value))
+  end
+
   it "updates workspace name, colour, and analytics settings" do
     user = User.create!(email: "general-settings-update@example.com", password: "password123")
     workspace = Workspace.create!(name: "Original workspace", slug: "general-settings-update")
@@ -69,7 +90,7 @@ RSpec.describe "General settings", type: :request do
             }
           }
 
-    expect(response).to redirect_to(workspace_general_settings_path(workspace_slug: workspace.slug))
+    expect(response).to redirect_to(workspace_general_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
 
     workspace.reload
     expect(workspace.name).to eq("Disco HQ")
@@ -86,7 +107,7 @@ RSpec.describe "General settings", type: :request do
     delete workspace_general_settings_path(workspace_slug: workspace.slug),
            params: { workspace: { confirm_name: "wrong name" } }
 
-    expect(response).to redirect_to(workspace_general_settings_path(workspace_slug: workspace.slug))
+    expect(response).to redirect_to(workspace_general_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
     expect(workspace.reload.archived_at).to be_nil
   end
 

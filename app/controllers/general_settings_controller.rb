@@ -10,9 +10,9 @@ class GeneralSettingsController < ApplicationController
     authorize @workspace, :update?
 
     if @workspace.update(general_settings_params)
-      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug), notice: "General settings updated."
+      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug), notice: "General settings updated."
     else
-      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug), alert: @workspace.errors.full_messages.to_sentence
+      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug), alert: @workspace.errors.full_messages.to_sentence
     end
   end
 
@@ -20,7 +20,7 @@ class GeneralSettingsController < ApplicationController
     authorize @workspace, :destroy?
 
     unless destroy_confirmation_valid?
-      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug),
+      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug),
                   alert: "Type the workspace name exactly to confirm deletion."
       return
     end
@@ -29,14 +29,15 @@ class GeneralSettingsController < ApplicationController
     if @workspace.update(archived_at: Time.current)
       redirect_to root_path, notice: "#{workspace_name} was archived."
     else
-      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug), alert: @workspace.errors.full_messages.to_sentence
+      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug), alert: @workspace.errors.full_messages.to_sentence
     end
   end
 
   private
 
   def set_workspace
-    @workspace = policy_scope(Workspace).find_by!(slug: params[:workspace_slug])
+    slug = params[:settings_workspace_slug].presence || params[:workspace_slug]
+    @workspace = policy_scope(Workspace).find_by!(slug: slug)
   end
 
   def general_settings_params
