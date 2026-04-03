@@ -15756,6 +15756,10 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   padding-top: 0;
 }
 
+.notae-db-header > .notae-page-icon-display {
+  margin-left: 20px;
+}
+
 .notae-page-header-icon-panel {
   width: min(430px, calc(100vw - 2rem));
   max-height: min(70vh, 38rem);
@@ -15765,6 +15769,14 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
 .notae-emoji-picker {
   display: grid;
   gap: 0.58rem;
+}
+
+.notae-emoji-picker-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 0.15rem;
+  background: inherit;
 }
 
 .notae-emoji-picker-current {
@@ -15869,6 +15881,34 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   color: var(--notae-text-strong, #292524);
 }
 
+.notae-emoji-settings-status {
+  display: grid;
+  gap: 0.24rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border, #d6d3d1) 88%, transparent);
+}
+
+.notae-emoji-settings-status strong {
+  font-size: 0.9rem;
+}
+
+.notae-emoji-settings-status span {
+  font-size: 0.86rem;
+  color: var(--notae-text-soft, #78716c);
+}
+
+.notae-emoji-settings-status.is-success {
+  background: color-mix(in srgb, #dcfce7 72%, var(--notae-panel-elevated, #fff));
+  border-color: color-mix(in srgb, #86efac 72%, transparent);
+}
+
+.notae-emoji-settings-status.is-error {
+  background: color-mix(in srgb, #fee2e2 72%, var(--notae-panel-elevated, #fff));
+  border-color: color-mix(in srgb, #fca5a5 72%, transparent);
+}
+
 .notae-emoji-upload-form {
   display: grid;
   gap: 0.75rem;
@@ -15918,6 +15958,31 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+
+.notae-emoji-upload-fields {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.notae-emoji-settings-item.is-highlighted {
+  border-color: color-mix(in srgb, #86efac 75%, var(--notae-border, #d6d3d1));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #bbf7d0 55%, transparent), 0 14px 34px rgba(34, 197, 94, 0.12);
+}
+
+.notae-emoji-settings-item-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #dcfce7 74%, transparent);
+  color: #166534;
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .notae-emoji-settings-grid {

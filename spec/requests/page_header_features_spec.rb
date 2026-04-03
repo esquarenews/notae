@@ -47,6 +47,7 @@ RSpec.describe "Page header features", type: :request do
       file.rewind
 
       emoji = workspace.custom_emojis.build
+      emoji.name = "Party avocado"
       emoji.image.attach(Rack::Test::UploadedFile.new(file.path, "image/png"))
       emoji.save!
       page.update!(icon: emoji.icon_token)
@@ -62,6 +63,17 @@ RSpec.describe "Page header features", type: :request do
     picker_labels = html.css(".notae-emoji-picker-section summary").map { |summary| summary.text.squish }
     expect(picker_labels).to include("Custom emoji")
     expect(picker_labels).to include("Smileys & Emotion")
+    search_field = html.at_css(".notae-emoji-picker input[type='search']")
+    expect(search_field).to be_present
+    expect(search_field["placeholder"]).to eq("Search")
+    custom_button = html.at_css(".notae-page-emoji-button.is-custom")
+    expect(custom_button["data-search-text"]).to include("Party avocado")
+  end
+
+  it "shifts grid header icons to the right for visual balance" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-db-header > .notae-page-icon-display {\n  margin-left: 20px;\n}")
   end
 
   it "supports random cover, upload cover, repositioning, and clearing" do

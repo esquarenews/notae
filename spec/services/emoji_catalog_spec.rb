@@ -9,5 +9,7 @@ RSpec.describe EmojiCatalog do
     expect(categories.first.key).to be_present
     expect(categories.first.label).to be_present
     expect(categories.first.emojis).not_to be_empty
+    expect(categories.first.search_terms).to be_present
+    expect(categories.first.search_terms[categories.first.emojis.first]).to be_present
   end
 end

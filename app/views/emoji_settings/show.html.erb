@@ -13,8 +13,20 @@
       <h2>Emoji</h2>
       <p class="notae-pref-description">
         Upload custom emoji for this workspace. They will appear in the icon picker for notas and grids.
-        Names are generated automatically from the file, so you do not need to type one.
+        Give each one a short name so it is easy to search from the icon picker.
       </p>
+
+      <% if flash[:notice].present? %>
+        <div class="notae-emoji-settings-status is-success">
+          <strong>Upload complete</strong>
+          <span><%= flash[:notice] %></span>
+        </div>
+      <% elsif flash[:alert].present? %>
+        <div class="notae-emoji-settings-status is-error">
+          <strong>Upload incomplete</strong>
+          <span><%= flash[:alert] %></span>
+        </div>
+      <% end %>
 
       <div class="notae-emoji-settings-layout">
         <article class="notae-emoji-settings-card">
@@ -23,7 +35,8 @@
             Transparent PNG, WebP, GIF, JPEG, or SVG works best. Square artwork gives the cleanest icon result.
           </p>
 
-          <%= form_with url: workspace_emoji_settings_path(workspace_slug: @workspace.slug),
+          <%= form_with model: @workspace_emoji,
+                        url: workspace_emoji_settings_path(workspace_slug: @workspace.slug),
                         method: :post,
                         multipart: true,
                         class: "notae-emoji-upload-form" do |form| %>
@@ -31,10 +44,18 @@
               <span class="notae-emoji-upload-dropzone-icon">🖼️</span>
               <span class="notae-emoji-upload-dropzone-copy">
                 <strong>Select an image</strong>
-                <span>Your upload will be available in this workspace's custom emoji section.</span>
+                <span>Your upload will appear below and in the icon picker's custom emoji section.</span>
               </span>
               <%= form.file_field :image, accept: "image/png,image/jpeg,image/gif,image/webp,image/svg+xml", class: "notae-emoji-upload-input" %>
             </label>
+            <div class="notae-emoji-upload-fields">
+              <%= form.label :name, "2. Name it", class: "notae-pref-label" %>
+              <%= form.text_field :name,
+                                  required: true,
+                                  placeholder: "Party avocado",
+                                  class: "notae-auth-input" %>
+              <p class="notae-pref-description">This is what appears in search when you add an icon to a nota or grid.</p>
+            </div>
             <%= form.submit "Upload emoji", class: "notae-chip-button" %>
           <% end %>
         </article>
@@ -44,13 +65,16 @@
           <% if @custom_emojis.any? %>
             <div class="notae-emoji-settings-grid">
               <% @custom_emojis.each do |emoji| %>
-                <div class="notae-emoji-settings-item">
+                <div class="notae-emoji-settings-item <%= "is-highlighted" if emoji.id.to_s == @highlight_emoji_id.to_s %>">
                   <div class="notae-emoji-settings-item-preview">
                     <%= image_tag emoji.image, alt: emoji.display_name, class: "notae-emoji-settings-item-image" %>
                   </div>
                   <div class="notae-emoji-settings-item-copy">
                     <strong><%= emoji.display_name %></strong>
-                    <span>Available in the custom tab of the emoji picker.</span>
+                    <span>Available in the custom emoji results of the icon picker.</span>
+                    <% if emoji.id.to_s == @highlight_emoji_id.to_s %>
+                      <em class="notae-emoji-settings-item-status">Ready to use now</em>
+                    <% end %>
                   </div>
                   <%= button_to "Remove",
                                 workspace_emoji_setting_path(workspace_slug: @workspace.slug, id: emoji.id),

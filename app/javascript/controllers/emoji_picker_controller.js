@@ -1,7 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["form", "input"]
+  static targets = ["form", "input", "searchInput", "option", "section", "emptyState"]
+
+  connect() {
+    this.filter()
+  }
 
   choose(event) {
     event.preventDefault()
@@ -11,5 +15,34 @@ export default class extends Controller {
 
     this.inputTarget.value = iconValue
     this.formTarget.requestSubmit()
+  }
+
+  filter() {
+    const query = this.hasSearchInputTarget ? this.searchInputTarget.value.trim().toLowerCase() : ""
+    let anyVisible = false
+
+    this.sectionTargets.forEach((section) => {
+      const options = section.querySelectorAll("[data-emoji-picker-target='option']")
+      let visibleOptions = 0
+
+      options.forEach((option) => {
+        const searchText = `${option.dataset.searchText || ""} ${option.dataset.iconValue || ""}`.toLowerCase()
+        const matches = query.length === 0 || searchText.includes(query)
+
+        option.hidden = !matches
+        option.setAttribute("aria-hidden", matches ? "false" : "true")
+
+        if (matches) visibleOptions += 1
+      })
+
+      const showSection = visibleOptions > 0
+      section.hidden = !showSection
+      if (query.length > 0 && showSection) section.open = true
+      if (showSection) anyVisible = true
+    })
+
+    if (this.hasEmptyStateTarget) {
+      this.emptyStateTarget.hidden = query.length === 0 || anyVisible
+    }
   }
 }

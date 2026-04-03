@@ -5,28 +5,29 @@ class EmojiSettingsController < ApplicationController
 
   def show
     authorize @workspace, :show?
+    @workspace_emoji = @workspace.custom_emojis.build
+    @highlight_emoji_id = params[:highlight_emoji].presence
     load_custom_emojis
   end
 
   def create
     authorize @workspace, :update?
 
-    upload = params.fetch(:workspace_emoji, {}).permit(:image)[:image]
+    emoji_params = params.fetch(:workspace_emoji, {}).permit(:image, :name)
+    upload = emoji_params[:image]
     if upload.blank?
-      load_custom_emojis
-      flash.now[:alert] = "Choose an emoji image to upload."
-      return render :show, status: :unprocessable_entity
+      @workspace_emoji = @workspace.custom_emojis.build(name: emoji_params[:name])
+      return render_upload_error("Choose an emoji image to upload.")
     end
 
-    @workspace_emoji = @workspace.custom_emojis.build
+    @workspace_emoji = @workspace.custom_emojis.build(name: emoji_params[:name])
     @workspace_emoji.image.attach(upload)
 
     if @workspace_emoji.save
-      redirect_to workspace_emoji_settings_path(workspace_slug: @workspace.slug), notice: "Custom emoji added."
+      redirect_to workspace_emoji_settings_path(workspace_slug: @workspace.slug, highlight_emoji: @workspace_emoji.id),
+                  notice: "#{@workspace_emoji.display_name} is ready to use in the emoji picker."
     else
-      load_custom_emojis
-      flash.now[:alert] = @workspace_emoji.errors.full_messages.to_sentence
-      render :show, status: :unprocessable_entity
+      render_upload_error(@workspace_emoji.errors.full_messages.to_sentence)
     end
   end
 
@@ -49,5 +50,12 @@ class EmojiSettingsController < ApplicationController
 
   def load_custom_emojis
     @custom_emojis = @workspace.custom_emojis.ordered.with_attached_image.to_a
+  end
+
+  def render_upload_error(message)
+    @highlight_emoji_id = nil
+    load_custom_emojis
+    flash.now[:alert] = message
+    render :show, status: :unprocessable_entity
   end
 end
