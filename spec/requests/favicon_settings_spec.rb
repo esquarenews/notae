@@ -18,7 +18,8 @@ RSpec.describe "Favicon settings", type: :request do
     expect(response.body).to include("/favicons/candidates/neon-n.svg")
     expect(response.body).to include("data-controller=\"favicon-preview\"")
     expect(response.body).to include("data-favicon-preview-default-href-value=\"/icon.svg\"")
-    expect(response.body).to include("notae-settings-nav-item active")
+    expect(response.body).to include("notae-settings-nav-item is-disabled active")
+    expect(response.body).to include("Internal")
   end
 
   it "redirects placeholder workspace slugs to a valid workspace favicon settings page" do
