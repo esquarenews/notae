@@ -22,6 +22,16 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("data-pwa-web-push-public-key-value=")
   end
 
+  it "keeps hidden PWA shell cards hidden until the controller reveals them" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-pwa-offline-banner[hidden],")
+    expect(stylesheet).to include(".notae-pwa-install-card[hidden],")
+    expect(stylesheet).to include(".notae-pwa-push-card[hidden],")
+    expect(stylesheet).to include(".notae-pwa-network-toast[hidden] {")
+    expect(stylesheet).to include("display: none !important;")
+  end
+
   it "serves a production-ready web manifest" do
     get pwa_manifest_path
 

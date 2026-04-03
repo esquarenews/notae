@@ -30,7 +30,7 @@ module Unsplash
         photos: Array(response.fetch(:body)).filter_map { |item| normalize_photo(item) },
         page: page.to_i,
         per_page: per_page.to_i,
-        total_pages: response.fetch(:headers)["x-total-pages"].to_i
+        total_pages: extract_total_pages(headers: response.fetch(:headers), body: response.fetch(:body), page:, per_page:)
       }
     end
 
@@ -40,9 +40,9 @@ module Unsplash
 
       {
         photos: Array(body["results"]).filter_map { |item| normalize_photo(item) },
-        page: body["page"].to_i,
+        page: body["page"].presence&.to_i || page.to_i,
         per_page: body["per_page"].to_i,
-        total_pages: body["total_pages"].to_i
+        total_pages: extract_total_pages(headers: {}, body:, page:, per_page:)
       }
     end
 
@@ -124,6 +124,39 @@ module Unsplash
       uri.to_s
     rescue URI::InvalidURIError
       url
+    end
+
+    def extract_total_pages(headers:, body:, page:, per_page:)
+      return body["total_pages"].to_i if body.is_a?(Hash) && body["total_pages"].present?
+
+      total_pages = headers["x-total-pages"].to_i
+      return total_pages if total_pages.positive?
+
+      total = headers["x-total"].to_i
+      response_per_page = headers["x-per-page"].to_i
+      divisor = response_per_page.positive? ? response_per_page : per_page.to_i
+      if total.positive? && divisor.positive?
+        return (total.to_f / divisor).ceil
+      end
+
+      extract_last_page_from_link(headers["link"]) || page.to_i
+    end
+
+    def extract_last_page_from_link(link_header)
+      return nil if link_header.blank?
+
+      last_link = link_header.to_s.split(",").find { |entry| entry.include?('rel="last"') }
+      return nil if last_link.blank?
+
+      matched_url = last_link[/<([^>]+)>/, 1]
+      return nil if matched_url.blank?
+
+      uri = URI.parse(matched_url)
+      params = URI.decode_www_form(String(uri.query)).to_h
+      page = params["page"].to_i
+      page.positive? ? page : nil
+    rescue URI::InvalidURIError
+      nil
     end
   end
 end

@@ -34,6 +34,15 @@
     <% end %>
 
     <% if current_icon_value.present? %>
+      <%= button_to "Remove icon",
+                    update_url,
+                    method: :patch,
+                    params: local_assigns[:return_to].present? ? { return_to: local_assigns[:return_to], param_key => { icon_action: "clear" } } : { param_key => { icon_action: "clear" } },
+                    class: "notae-page-header-link-button notae-emoji-picker-remove",
+                    form_class: "notae-emoji-picker-remove-form" %>
+    <% end %>
+
+    <% if current_icon_value.present? %>
       <div class="notae-emoji-picker-current">
         <span class="notae-options-muted">Current icon</span>
         <span class="notae-emoji-picker-current-value">
@@ -81,13 +90,5 @@
     <% end %>
 
     <p class="notae-options-empty" hidden data-emoji-picker-target="emptyState">No emoji match that search.</p>
-
-    <% if current_icon_value.present? %>
-      <%= button_to "Remove icon",
-                    update_url,
-                    method: :patch,
-                    params: local_assigns[:return_to].present? ? { return_to: local_assigns[:return_to], param_key => { icon_action: "clear" } } : { param_key => { icon_action: "clear" } },
-                    class: "notae-page-header-link-button" %>
-    <% end %>
   </div>
 </div>

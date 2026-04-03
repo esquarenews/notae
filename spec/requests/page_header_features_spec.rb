@@ -66,8 +66,20 @@ RSpec.describe "Page header features", type: :request do
     search_field = html.at_css(".notae-emoji-picker input[type='search']")
     expect(search_field).to be_present
     expect(search_field["placeholder"]).to eq("Search")
+    picker_children = html.at_css(".notae-emoji-picker").element_children.map { |element| element["class"].to_s }
+    expect(picker_children.index("notae-emoji-picker-search")).to be < picker_children.index("notae-emoji-picker-remove-form")
+    expect(picker_children.index("notae-emoji-picker-remove-form")).to be < picker_children.index("notae-emoji-picker-current")
+    expect(html.at_css(".notae-emoji-picker-remove")&.text&.squish).to eq("Remove icon")
     custom_button = html.at_css(".notae-page-emoji-button.is-custom")
     expect(custom_button["data-search-text"]).to include("Party avocado")
+  end
+
+  it "styles the remove icon action as a red destructive row near the top of the picker" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-emoji-picker-remove {\n  width: 100%;")
+    expect(stylesheet).to include("background: color-mix(in srgb, #fee2e2 80%, var(--notae-panel-elevated, #fff) 20%);")
+    expect(stylesheet).to include("color: #b91c1c;")
   end
 
   it "shifts grid header icons to the right for visual balance" do
@@ -81,6 +93,26 @@ RSpec.describe "Page header features", type: :request do
 
     expect(stylesheet).to include(".notae-cover-unsplash-modal {\n  position: fixed;\n  inset: 0;\n  width: 100vw;\n  height: 100vh;")
     expect(stylesheet).to include(".notae-cover-unsplash-modal[open] {\n  display: grid;\n  place-items: center;\n}")
+  end
+
+  it "keeps Unsplash pagination on one centered line" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    template = Rails.root.join("app/views/shared/_cover_picker_panel.html.erb").read
+
+    expect(stylesheet).to include(".notae-cover-unsplash-pagination {\n  display: grid;\n  grid-template-columns: fit-content(9.5rem) minmax(8.5rem, auto) fit-content(9.5rem);")
+    expect(stylesheet).to include(".notae-cover-unsplash-page-label {\n  grid-column: 2;")
+    expect(stylesheet).to include("min-width: 8.5rem;")
+    expect(stylesheet).to include("white-space: nowrap;")
+    expect(template).to include("Page 1 of 1")
+  end
+
+  it "renders cover attribution text and links in white for readability" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-cover-attribution {\n  position: absolute;")
+    expect(stylesheet).to include(".notae-theme .notae-cover-attribution,\n.notae-theme .notae-cover-attribution a,\n.notae-theme .notae-cover-attribution a:visited,")
+    expect(stylesheet).to include(".notae-theme .notae-cover-attribution a,\n.notae-theme .notae-cover-attribution a:visited,")
+    expect(stylesheet).to include("color: #fff;")
   end
 
   it "supports random cover, upload cover, repositioning, and clearing" do

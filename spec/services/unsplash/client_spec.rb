@@ -49,6 +49,77 @@ RSpec.describe Unsplash::Client do
     expect(result[:photos].first[:source_url]).to include("utm_medium=referral")
   end
 
+  it "derives popular-feed total pages from x-total and x-per-page headers when x-total-pages is absent" do
+    payload = [
+      {
+        "id" => "photo-321",
+        "alt_description" => "Harbor lights",
+        "urls" => {
+          "small" => "https://images.unsplash.com/photo-321-small",
+          "regular" => "https://images.unsplash.com/photo-321-regular"
+        },
+        "links" => {
+          "download_location" => "https://api.unsplash.com/photos/photo-321/download"
+        },
+        "user" => {
+          "name" => "Kai Artist",
+          "links" => {
+            "html" => "https://unsplash.com/@kaiartist"
+          }
+        }
+      }
+    ]
+
+    response = Net::HTTPOK.new("1.1", "200", "OK")
+    allow(response).to receive(:body).and_return(payload.to_json)
+    allow(response).to receive(:to_hash).and_return({
+      "x-total" => [ "316740" ],
+      "x-per-page" => [ "3" ]
+    })
+
+    expect(Net::HTTP).to receive(:start).and_yield(instance_double(Net::HTTP, request: response))
+
+    result = described_class.new(access_key: "unsplash-test").list_photos(page: 1, per_page: 3)
+
+    expect(result[:total_pages]).to eq(105580)
+  end
+
+  it "falls back to the requested search page when Unsplash omits page from the body" do
+    payload = {
+      "total_pages" => 3334,
+      "results" => [
+        {
+          "id" => "photo-222",
+          "alt_description" => "Ocean cliff",
+          "urls" => {
+            "small" => "https://images.unsplash.com/photo-222-small",
+            "regular" => "https://images.unsplash.com/photo-222-regular"
+          },
+          "links" => {
+            "download_location" => "https://api.unsplash.com/photos/photo-222/download"
+          },
+          "user" => {
+            "name" => "Mia Artist",
+            "links" => {
+              "html" => "https://unsplash.com/@miaartist"
+            }
+          }
+        }
+      ]
+    }
+
+    response = Net::HTTPOK.new("1.1", "200", "OK")
+    allow(response).to receive(:body).and_return(payload.to_json)
+    allow(response).to receive(:to_hash).and_return({})
+
+    expect(Net::HTTP).to receive(:start).and_yield(instance_double(Net::HTTP, request: response))
+
+    result = described_class.new(access_key: "unsplash-test").search_photos(query: "ocean", page: 1, per_page: 3)
+
+    expect(result[:page]).to eq(1)
+    expect(result[:total_pages]).to eq(3334)
+  end
+
   it "raises a request error for network failures" do
     allow(Net::HTTP).to receive(:start).and_raise(Net::ReadTimeout.new("timed out"))
 
