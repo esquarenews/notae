@@ -3,20 +3,46 @@ class Workspace < ApplicationRecord
 
   include PgSearch::Model
 
-  DISCO_ICON_OPTIONS = [
-    "🪩",
-    "🎵",
-    "🎶",
-    "🕺",
-    "💃",
-    "🎧",
-    "🎤",
-    "✨",
-    "🌈",
-    "💜",
-    "🌟",
-    "🛸"
+  WORKSPACE_COLOR_OPTIONS = [
+    { label: "Rose", value: "#f43f5e" },
+    { label: "Pink", value: "#ec4899" },
+    { label: "Fuchsia", value: "#d946ef" },
+    { label: "Purple", value: "#a855f7" },
+    { label: "Violet", value: "#8b5cf6" },
+    { label: "Indigo", value: "#6366f1" },
+    { label: "Blue", value: "#3b82f6" },
+    { label: "Sky", value: "#0ea5e9" },
+    { label: "Cyan", value: "#06b6d4" },
+    { label: "Teal", value: "#14b8a6" },
+    { label: "Emerald", value: "#10b981" },
+    { label: "Green", value: "#22c55e" },
+    { label: "Lime", value: "#84cc16" },
+    { label: "Spring", value: "#a3e635" },
+    { label: "Yellow", value: "#eab308" },
+    { label: "Amber", value: "#f59e0b" },
+    { label: "Orange", value: "#f97316" },
+    { label: "Red", value: "#ef4444" },
+    { label: "Coral", value: "#fb7185" },
+    { label: "Blush", value: "#f472b6" },
+    { label: "Orchid", value: "#e879f9" },
+    { label: "Plum", value: "#9333ea" },
+    { label: "Iris", value: "#7c3aed" },
+    { label: "Cobalt", value: "#2563eb" },
+    { label: "Cerulean", value: "#0284c7" },
+    { label: "Lagoon", value: "#0891b2" },
+    { label: "Aqua", value: "#0f766e" },
+    { label: "Mint", value: "#0d9488" },
+    { label: "Forest", value: "#16a34a" },
+    { label: "Olive", value: "#65a30d" },
+    { label: "Gold", value: "#ca8a04" },
+    { label: "Copper", value: "#c2410c" },
+    { label: "Terracotta", value: "#ea580c" },
+    { label: "Berry", value: "#be123c" },
+    { label: "Slate", value: "#475569" },
+    { label: "Stone", value: "#78716c" }
   ].freeze
+  WORKSPACE_COLOR_VALUES = WORKSPACE_COLOR_OPTIONS.map { |option| option.fetch(:value) }.freeze
+  DEFAULT_COLOR = WORKSPACE_COLOR_OPTIONS.first.fetch(:value)
 
   has_paper_trail
 
@@ -68,19 +94,20 @@ class Workspace < ApplicationRecord
   validates :name, length: { maximum: 65 }
   validates :slug, presence: true, uniqueness: true
   validates :slug, format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/ }
-  validates :icon, inclusion: { in: DISCO_ICON_OPTIONS }, allow_blank: true
+  validates :workspace_color, presence: true, inclusion: { in: WORKSPACE_COLOR_VALUES }
   validates :join_link_enabled, inclusion: { in: [ true, false ] }
   validates :join_link_token, uniqueness: true, allow_blank: true
 
   before_validation :default_slug_from_name
   before_validation :normalize_slug
+  before_validation :normalize_workspace_color
 
   pg_search_scope :search_by_name,
                   against: :name,
                   using: { tsearch: { prefix: true } }
 
-  def display_icon
-    icon.presence || "🏠"
+  def display_color
+    workspace_color.presence || DEFAULT_COLOR
   end
 
   def archived?
@@ -116,5 +143,11 @@ class Workspace < ApplicationRecord
     return if slug.blank?
 
     self.slug = slug.to_s.downcase.strip.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-+\z/, "")
+  end
+
+  def normalize_workspace_color
+    return if workspace_color.blank?
+
+    self.workspace_color = workspace_color.to_s.strip.downcase
   end
 end

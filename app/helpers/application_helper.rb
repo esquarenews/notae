@@ -47,7 +47,7 @@ module ApplicationHelper
     return [] unless user_signed_in?
 
     @ui_workspaces ||= workspace_scope_with_slug
-                        .select(:id, :slug, :name, :icon, :updated_at, :created_at)
+                        .select(:id, :slug, :name, :workspace_color, :updated_at, :created_at)
                         .order(:created_at)
                         .to_a
   end
@@ -142,10 +142,26 @@ module ApplicationHelper
 
     @ui_sidebar_recent_workspaces ||= {}
     @ui_sidebar_recent_workspaces[limit] ||= workspace_scope_with_slug
-                                             .select(:id, :slug, :name, :icon, :updated_at)
+                                             .select(:id, :slug, :name, :workspace_color, :updated_at)
                                              .order(updated_at: :desc)
                                              .limit(limit)
                                              .to_a
+  end
+
+  def render_workspace_color_marker(workspace, css_class: nil)
+    return "".html_safe if workspace.blank?
+
+    content_tag(
+      :span,
+      "",
+      class: [ "notae-workspace-color-dot", css_class ].compact.join(" "),
+      style: "--notae-workspace-color-swatch: #{workspace.display_color};",
+      aria: { hidden: true }
+    )
+  end
+
+  def current_workspace_color
+    ui_current_workspace&.display_color
   end
 
   def ui_sidebar_recent_favorites(limit: 6)

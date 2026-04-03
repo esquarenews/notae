@@ -37,7 +37,9 @@
         data-link-preferences-open-links-in-new-window-value="<%= user_signed_in? ? current_user.open_links_in_desktop_app? : false %>">
     <% if user_signed_in? %>
       <% embedded_shell = params[:embedded].to_s == "1" %>
-      <div class="notae-shell is-layout-hydrating <%= "notae-shell-embedded" if embedded_shell %>" data-controller="<%= embedded_shell ? "shell" : "shell global-shortcuts" %>">
+      <div class="notae-shell is-layout-hydrating <%= "notae-shell-embedded" if embedded_shell %>"
+           style="<%= "--notae-workspace-color: #{current_workspace_color};" if current_workspace_color.present? %>"
+           data-controller="<%= embedded_shell ? "shell" : "shell global-shortcuts" %>">
         <% unless embedded_shell %>
           <button type="button" class="notae-mobile-overlay" data-action="click->shell#close" aria-label="Close sidebar"></button>
           <%= render "shared/app_sidebar" %>

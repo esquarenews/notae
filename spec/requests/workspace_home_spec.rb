@@ -94,6 +94,30 @@ RSpec.describe "Workspace home", type: :request do
     expect(hero_subtle_lines).to eq([ "Workspace home" ])
   end
 
+  it "renders the workspace colour marker and top border for the active workspace" do
+    user = User.create!(email: "home-colour-owner@example.com", password: "password123")
+    workspace = Workspace.create!(
+      name: "Colour home",
+      slug: "colour-home",
+      workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.fourth.fetch(:value)
+    )
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    sign_in user
+    get workspace_path(workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    shell = document.at_css(".notae-shell")
+    marker = document.at_css(".notae-workspace-chip .notae-workspace-color-dot")
+    workspace_link = document.css(".notae-sidebar-section .notae-sidebar-page-title").find { |node| node.text.include?("Colour home") }
+
+    expect(shell&.[]("style")).to include("--notae-workspace-color: #{workspace.workspace_color}")
+    expect(marker&.[]("style")).to include("--notae-workspace-color-swatch: #{workspace.workspace_color}")
+    expect(workspace_link.to_html).to include("--notae-workspace-color-swatch: #{workspace.workspace_color}")
+  end
+
   it "does not surface child tabs as standalone Notarum or Grids on the home page" do
     user = User.create!(email: "home-tab-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Home tabs", slug: "home-tabs")
@@ -242,13 +266,16 @@ RSpec.describe "Workspace home", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Daily workspace brief")
+    expect(response.body).to include("Next brief")
     expect(response.body).to include("Review the critical blockers before noon. [1]")
+    expect(response.body).to include("Important updates")
     expect(response.body).to include("AI suggestion")
+    expect(response.body).to include("Agent draft actions")
     expect(response.body).to include("knowledge-suggestion-")
     expect(response.body).to include("Escalate the approval gap this afternoon. [1]")
     expect(response.body).to include("Choose tasks grid")
     expect(response.body).to include("Create Nota")
-    expect(response.body).to include("Create Grid")
+    expect(response.body).to include("Open Kalendārium")
     expect(response.body).to include("Dismiss")
     expect(response.body).not_to include("notae-knowledge-overlay")
 
@@ -283,6 +310,49 @@ RSpec.describe "Workspace home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Preparing daily workspace brief")
     expect(response.body).to include("The page is ready.")
+    expect(response.body).to include("Next brief")
+  end
+
+  it "shows the latest available brief while a new daily brief is pending" do
+    user = User.create!(email: "home-knowledge-latest-brief@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge latest brief", slug: "knowledge-latest-brief")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Database.create!(workspace: workspace, name: "Tasks")
+    create_indexed_page(
+      workspace: workspace,
+      user: user,
+      title: "Fresh context",
+      text: "Fresh indexed context exists so a new daily brief can be queued."
+    )
+    KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Yesterday workspace brief",
+      summary: "Yesterday still has the most useful summary available. [1]",
+      insights_json: [ "Carry forward the unfinished approvals. [1]" ],
+      sources_json: [ { "index" => 1, "title" => "Yesterday note", "url" => "/w/#{workspace.slug}/pages/yesterday" } ],
+      generated_for_date: Date.current - 1.day,
+      generated_at: 1.day.ago
+    )
+
+    sign_in user
+
+    travel_to(Time.utc(2026, 3, 21, 7, 30, 0)) do
+      expect do
+        get workspace_path(workspace.slug)
+      end.to have_enqueued_job(Search::GenerateKnowledgeSuggestionJob)
+        .with(user.id, workspace.id, KnowledgeSuggestion::KIND_DAILY_SUMMARY)
+        .on_queue("default")
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Latest available brief")
+    expect(response.body).to include("Yesterday workspace brief")
+    expect(response.body).to include("Yesterday still has the most useful summary available. [1]")
+    expect(response.body).to include("Preparing daily workspace brief")
+    expect(response.body).to include("Next brief")
   end
 
   it "renders an empty workspace home when AI suggestion enqueue fails" do
@@ -444,6 +514,7 @@ RSpec.describe "Workspace home", type: :request do
     get workspace_path(workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Important updates")
     expect(response.body).to include("Agent draft actions")
     expect(response.body).to include("Draft standup summary email")
     expect(response.body).to include("Review drafts")

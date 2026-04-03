@@ -35,36 +35,19 @@
 
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
-          <p class="notae-pref-label">Icon</p>
-          <p class="notae-pref-description">Pick an icon for your workspace sidebar and notifications.</p>
+          <p class="notae-pref-label">Workspace colour</p>
+          <p class="notae-pref-description">Shown in the sidebar next to the workspace name and as the page-top border.</p>
         </div>
         <%= form_with model: @workspace,
                       url: workspace_general_settings_path(workspace_slug: @workspace.slug),
                       method: :patch,
-                      class: "notae-pref-control-form notae-general-icon-form" do |form| %>
-          <div class="notae-general-icon-grid">
-            <% Workspace::DISCO_ICON_OPTIONS.each do |icon| %>
-              <% selected = @workspace.icon == icon %>
-              <label class="notae-general-icon-option <%= "is-active" if selected %>">
-                <%= form.radio_button :icon,
-                                      icon,
-                                      checked: selected,
-                                      class: "notae-general-icon-radio",
-                                      disabled: !can_update,
-                                      data: { action: "change->auto-submit#submit" } %>
-                <span class="notae-general-icon-glyph"><%= icon %></span>
-              </label>
-            <% end %>
-            <label class="notae-general-icon-option notae-general-icon-clear <%= "is-active" if @workspace.icon.blank? %>">
-              <%= form.radio_button :icon,
-                                    "",
-                                    checked: @workspace.icon.blank?,
-                                    class: "notae-general-icon-radio",
-                                    disabled: !can_update,
-                                    data: { action: "change->auto-submit#submit" } %>
-              <span class="notae-general-icon-glyph">None</span>
-            </label>
-          </div>
+                      class: "notae-pref-control-form notae-general-color-form" do |form| %>
+          <%= render "shared/workspace_color_picker",
+                     form: form,
+                     selected_value: @workspace.display_color,
+                     disabled: !can_update,
+                     input_data: { action: "change->auto-submit#submit" },
+                     grid_class: "notae-general-color-grid" %>
         <% end %>
       </div>
 

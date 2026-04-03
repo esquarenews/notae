@@ -12,4 +12,19 @@ RSpec.describe EmojiCatalog do
     expect(categories.first.search_terms).to be_present
     expect(categories.first.search_terms[categories.first.emojis.first]).to be_present
   end
+
+  it "indexes common plain-language aliases for obvious emoji searches" do
+    categories = described_class.categories
+    all_search_terms = categories.each_with_object({}) do |category, memo|
+      memo.merge!(category.search_terms)
+    end
+
+    dance_terms = all_search_terms.select { |emoji, _| [ "💃", "🕺", "👯", "👯‍♀️", "👯‍♂️", "🧑‍🩰" ].any? { |glyph| emoji.include?(glyph) } }
+    doctor_terms = all_search_terms.select { |emoji, _| emoji.include?("⚕") }
+
+    expect(dance_terms.values.join(" ")).to include("dance")
+    expect(dance_terms.values.join(" ")).to include("dancer")
+    expect(doctor_terms.values.join(" ")).to include("doctor")
+    expect(doctor_terms.values.join(" ")).to include("medical")
+  end
 end

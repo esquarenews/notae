@@ -73,8 +73,8 @@ RSpec.describe "Emoji settings", type: :request do
            }
     end
 
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(response.body).to include("Upload incomplete")
-    expect(response.body).to include("Name can't be blank")
+    expect(response.body).to include("Name can&#39;t be blank")
   end
 end

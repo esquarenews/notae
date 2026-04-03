@@ -78,7 +78,11 @@
   <div class="notae-sidebar-main">
   <div class="notae-sidebar-header">
     <div class="notae-user-chip notae-workspace-chip">
-      <span class="notae-user-avatar"><%= workspace ? workspace.display_icon : current_user.email.first.upcase %></span>
+      <% if workspace %>
+        <%= render_workspace_color_marker(workspace, css_class: "notae-workspace-color-dot-lg") %>
+      <% else %>
+        <span class="notae-user-avatar"><%= current_user.email.first.upcase %></span>
+      <% end %>
       <span class="notae-user-label"><%= workspace&.name || current_user.email %></span>
     </div>
     <div class="notae-sidebar-header-actions">
@@ -273,7 +277,10 @@
                   <%= link_to workspace_path(sidebar_workspace_slug),
                               class: notae_sidebar_link_classes(workspace_path(sidebar_workspace_slug)),
                               data: notae_shell_link_data do %>
-                    <span class="notae-sidebar-page-title"><%= sidebar_workspace.display_icon %> <%= sidebar_workspace.name %></span>
+                    <span class="notae-sidebar-page-title">
+                      <%= render_workspace_color_marker(sidebar_workspace) %>
+                      <%= sidebar_workspace.name %>
+                    </span>
                   <% end %>
                 </li>
               <% end %>
@@ -536,6 +543,13 @@
                               shell_target: "workspaceSlugInput",
                               action: "input->shell#markWorkspaceSlugEdited"
                             } %>
+
+        <label class="notae-workspace-modal-label">Workspace colour</label>
+        <p class="notae-pref-description">Required. This becomes the workspace marker and the page-top border.</p>
+        <%= render "shared/workspace_color_picker",
+                   form: form,
+                   selected_value: form.object.display_color,
+                   grid_class: "notae-workspace-color-grid-compact" %>
 
         <div class="notae-workspace-modal-actions">
           <button type="button" class="notae-chip-button" data-action="click->shell#closeWorkspaceDialog">Cancel</button>

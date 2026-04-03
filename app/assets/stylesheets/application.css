@@ -5398,6 +5398,81 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   gap: 0.45rem;
 }
 
+.notae-workspace-home-section-copy {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.notae-workspace-home-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.notae-workspace-home-meta-pill,
+.notae-workspace-home-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--notae-border, #d6d3d1) 88%, transparent);
+  background: color-mix(in srgb, var(--notae-surface-raised, #fff) 84%, transparent);
+  padding: 0.34rem 0.68rem;
+  font-size: 0.74rem;
+  color: var(--notae-text-soft, rgba(87, 83, 78, 0.72));
+}
+
+.notae-workspace-home-meta-pill strong,
+.notae-workspace-home-badge {
+  color: var(--notae-text-strong, rgba(41, 37, 36, 0.92));
+  font-weight: 700;
+}
+
+.notae-workspace-home-badge {
+  width: fit-content;
+}
+
+.notae-workspace-home-update-stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.notae-workspace-home-update-block {
+  display: grid;
+  gap: 0.68rem;
+}
+
+.notae-workspace-home-update-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.notae-workspace-home-update-head h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--notae-heading-ink, var(--notae-text));
+}
+
+.notae-workspace-home-empty-state {
+  display: grid;
+  gap: 0.24rem;
+  border: 1px dashed color-mix(in srgb, var(--notae-border, #d6d3d1) 82%, transparent);
+  border-radius: 0.94rem;
+  background: color-mix(in srgb, var(--notae-surface-raised, #fff) 72%, transparent);
+  padding: 0.9rem 0.96rem;
+}
+
+.notae-workspace-home-empty-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--notae-text-strong, rgba(41, 37, 36, 0.92));
+}
+
 .notae-workspace-home-list {
   list-style: none;
   margin: 0;
@@ -6110,39 +6185,48 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   width: 100%;
 }
 
-.notae-general-icon-form {
-  width: min(360px, 56vw);
+.notae-general-color-form {
+  width: min(440px, 62vw);
 }
 
-.notae-general-icon-grid {
+.notae-workspace-color-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.34rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.42rem;
 }
 
-.notae-general-icon-option {
+.notae-workspace-color-grid-compact {
+  max-width: 24rem;
+}
+
+.notae-workspace-color-option {
   position: relative;
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 2.05rem;
-  border: 1px solid #d6d3d1;
-  border-radius: 0.44rem;
+  gap: 0.18rem;
+  min-height: 2.6rem;
+  padding: 0.38rem 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 92%, transparent);
+  border-radius: 0.7rem;
   background: #fff;
   cursor: pointer;
 }
 
-.notae-general-icon-option:hover {
-  border-color: #cbd5e1;
+.notae-workspace-color-option:hover {
+  border-color: color-mix(in srgb, var(--notae-accent) 22%, var(--notae-border-muted));
   background: #f8fafc;
 }
 
-.notae-general-icon-option.is-active {
-  border-color: #3b82f6;
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22);
+.notae-workspace-color-option.is-active {
+  border-color: color-mix(in srgb, var(--notae-accent) 36%, var(--notae-border-muted));
+  box-shadow:
+    0 10px 18px rgba(43, 52, 55, 0.08),
+    inset 0 0 0 1px color-mix(in srgb, var(--notae-accent) 18%, transparent);
 }
 
-.notae-general-icon-radio {
+.notae-workspace-color-radio {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -6152,15 +6236,23 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   cursor: pointer;
 }
 
-.notae-general-icon-glyph {
-  font-size: 1.1rem;
-  line-height: 1;
+.notae-workspace-color-swatch {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  display: block;
+  background: var(--notae-workspace-color-swatch);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 0 0 1px rgba(15, 23, 42, 0.08);
 }
 
-.notae-general-icon-clear .notae-general-icon-glyph {
-  font-size: 0.74rem;
-  color: #57534e;
+.notae-workspace-color-label {
+  font-size: 0.58rem;
+  line-height: 1.15;
   font-weight: 700;
+  color: #57534e;
+  text-align: center;
 }
 
 .notae-chip-button.notae-chip-danger {
@@ -6773,6 +6865,22 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.4rem;
+}
+
+.notae-workspace-color-dot {
+  width: 0.78rem;
+  height: 0.78rem;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  background: var(--notae-workspace-color-swatch);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.56),
+    0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.notae-workspace-color-dot-lg {
+  width: 0.94rem;
+  height: 0.94rem;
 }
 
 .notae-shortcut-list {
@@ -14095,6 +14203,16 @@ body.notae-theme {
   z-index: 0;
 }
 
+.notae-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--notae-workspace-color, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
 .notae-sidebar,
 .notae-main,
 .notae-ai-rail {
@@ -14343,8 +14461,7 @@ input[type="submit"].notae-auth-submit {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
 }
 
-.notae-user-avatar,
-.notae-workspace-chip .notae-user-avatar {
+.notae-user-avatar {
   width: 2rem;
   height: 2rem;
   border-radius: 0.78rem;
@@ -14352,6 +14469,10 @@ input[type="submit"].notae-auth-submit {
   color: var(--notae-accent-strong);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   font-size: 0.82rem;
+}
+
+.notae-workspace-chip {
+  gap: 0.58rem;
 }
 
 .notae-user-label {
@@ -14400,6 +14521,12 @@ input[type="submit"].notae-auth-submit {
 .notae-sidebar-page-title,
 .notae-sidebar-link-label {
   color: inherit;
+}
+
+.notae-sidebar-page-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
 }
 
 .notae-sidebar-footer {
@@ -15298,6 +15425,15 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
 
 .notae-workspace-home-list-row {
   gap: 0.9rem;
+}
+
+.notae-workspace-home-meta {
+  gap: 0.6rem;
+}
+
+.notae-workspace-home-meta-pill,
+.notae-workspace-home-badge {
+  padding: 0.4rem 0.74rem;
 }
 
 .notae-home-workspace-item {

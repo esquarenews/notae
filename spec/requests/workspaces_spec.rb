@@ -18,6 +18,8 @@ RSpec.describe "Workspaces", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Create Workspace")
+    expect(response.body).to include("Workspace colour")
+    expect(response.body).to include("notae-workspace-color-option")
   end
 
   it "renders new workspace for a signed-in user with no existing workspaces" do
@@ -35,13 +37,21 @@ RSpec.describe "Workspaces", type: :request do
     sign_in user
 
     expect do
-      post workspaces_path, params: { workspace: { name: "Product", slug: "product-team" } }
+      post workspaces_path,
+           params: {
+             workspace: {
+               name: "Product",
+               slug: "product-team",
+               workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value)
+             }
+           }
     end.to change(Workspace, :count).by(1)
 
     workspace = Workspace.find_by!(slug: "product-team")
 
     expect(response).to redirect_to(workspace_path("product-team"))
     expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
+    expect(workspace.workspace_color).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value))
   end
 
   it "derives the workspace slug from the name when slug is omitted" do
@@ -55,6 +65,7 @@ RSpec.describe "Workspaces", type: :request do
     workspace = Workspace.find_by!(slug: "growth-team")
     expect(response).to redirect_to(workspace_path("growth-team"))
     expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
+    expect(workspace.workspace_color).to eq(Workspace::DEFAULT_COLOR)
   end
 
   it "restricts workspace access to members" do

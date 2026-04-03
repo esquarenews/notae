@@ -25,6 +25,17 @@ RSpec.describe Workspace, type: :model do
     expect(workspace.slug).to eq("marketing-team")
   end
 
+  it "requires a supported workspace colour and normalizes it" do
+    workspace = described_class.create!(
+      name: "Colour workspace",
+      slug: "colour-workspace",
+      workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.second.fetch(:value).upcase
+    )
+
+    expect(workspace.workspace_color).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.second.fetch(:value))
+    expect(described_class.new(name: "Invalid colour", slug: "invalid-colour", workspace_color: "#ffffff")).not_to be_valid
+  end
+
   it "encrypts join link token at rest" do
     workspace = described_class.create!(name: "Join link workspace", slug: "join-link-workspace")
 

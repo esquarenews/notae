@@ -23,6 +23,15 @@
       <%= form.text_field :slug, class: "w-full rounded border border-slate-300 px-3 py-2 text-sm", required: true %>
     </div>
 
+    <div class="space-y-2">
+      <%= form.label :workspace_color, "Workspace colour", class: "block text-sm font-medium text-slate-800" %>
+      <p class="text-sm text-slate-600">Required. Used for the workspace marker and the page-top border.</p>
+      <%= render "shared/workspace_color_picker",
+                 form: form,
+                 selected_value: @workspace.display_color,
+                 grid_class: "notae-workspace-color-grid-compact" %>
+    </div>
+
     <%= form.submit "Create workspace", class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
   <% end %>
 </section>

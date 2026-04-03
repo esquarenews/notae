@@ -1,0 +1,23 @@
+<% selected_value = local_assigns[:selected_value].presence || form.object&.workspace_color.presence || Workspace::DEFAULT_COLOR %>
+<% disabled = local_assigns.fetch(:disabled, false) %>
+<% input_data = local_assigns.fetch(:input_data, {}) %>
+<% grid_class = local_assigns[:grid_class] %>
+
+<div class="<%= ["notae-workspace-color-grid", grid_class].compact.join(" ") %>">
+  <% Workspace::WORKSPACE_COLOR_OPTIONS.each do |option| %>
+    <% value = option.fetch(:value) %>
+    <% selected = selected_value.to_s == value %>
+    <label class="notae-workspace-color-option <%= "is-active" if selected %>"
+           style="--notae-workspace-color-swatch: <%= value %>;"
+           title="<%= option.fetch(:label) %>">
+      <%= form.radio_button :workspace_color,
+                            value,
+                            checked: selected,
+                            class: "notae-workspace-color-radio",
+                            disabled: disabled,
+                            data: input_data %>
+      <span class="notae-workspace-color-swatch"></span>
+      <span class="notae-workspace-color-label"><%= option.fetch(:label) %></span>
+    </label>
+  <% end %>
+</div>

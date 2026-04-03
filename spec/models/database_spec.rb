@@ -16,7 +16,7 @@ RSpec.describe Database, type: :model do
       file.write("fake-png-content")
       file.rewind
 
-      emoji = workspace.custom_emojis.build
+      emoji = workspace.custom_emojis.build(name: "Spec icon")
       emoji.image.attach(Rack::Test::UploadedFile.new(file.path, "image/png"))
       emoji.save!
 

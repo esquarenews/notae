@@ -18,7 +18,8 @@ RSpec.describe "General settings", type: :request do
     expect(response.body).to include("Delete workspace")
     expect(response.body).to include("Workspace ID")
     expect(response.body).to include(workspace.id)
-    expect(response.body).to include("notae-general-icon-option")
+    expect(response.body).to include("Workspace colour")
+    expect(response.body).to include("notae-workspace-color-option")
     expect(response.body).to include("Final confirmation")
 
     document = Nokogiri::HTML(response.body)
@@ -35,10 +36,10 @@ RSpec.describe "General settings", type: :request do
     expect(selected_option&.[]("value")).to eq(workspace_general_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
   end
 
-  it "renders workspace name and icon for the selected workspace context" do
+  it "renders workspace name and colour for the selected workspace context" do
     user = User.create!(email: "general-settings-context@example.com", password: "password123")
-    primary_workspace = Workspace.create!(name: "Primary Workspace", slug: "general-settings-context-primary", icon: Workspace::DISCO_ICON_OPTIONS.first)
-    selected_workspace = Workspace.create!(name: "Selected Workspace", slug: "general-settings-context-selected", icon: Workspace::DISCO_ICON_OPTIONS.second)
+    primary_workspace = Workspace.create!(name: "Primary Workspace", slug: "general-settings-context-primary", workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.first.fetch(:value))
+    selected_workspace = Workspace.create!(name: "Selected Workspace", slug: "general-settings-context-selected", workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.second.fetch(:value))
     Membership.create!(workspace: primary_workspace, user: user, role: :owner)
     Membership.create!(workspace: selected_workspace, user: user, role: :owner)
     sign_in user
@@ -49,11 +50,11 @@ RSpec.describe "General settings", type: :request do
     document = Nokogiri::HTML(response.body)
     name_input = document.at_css(".notae-general-name-input")
     expect(name_input&.[]("value")).to eq("Selected Workspace")
-    active_icon = document.at_css(".notae-general-icon-option.is-active .notae-general-icon-glyph")
-    expect(active_icon&.text&.strip).to eq(Workspace::DISCO_ICON_OPTIONS.second)
+    active_colour = document.at_css(".notae-general-color-form .notae-workspace-color-option.is-active input[name='workspace[workspace_color]']")
+    expect(active_colour&.[]("value")).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.second.fetch(:value))
   end
 
-  it "updates workspace name, icon, and analytics settings" do
+  it "updates workspace name, colour, and analytics settings" do
     user = User.create!(email: "general-settings-update@example.com", password: "password123")
     workspace = Workspace.create!(name: "Original workspace", slug: "general-settings-update")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -63,7 +64,7 @@ RSpec.describe "General settings", type: :request do
           params: {
             workspace: {
               name: "Disco HQ",
-              icon: Workspace::DISCO_ICON_OPTIONS.first,
+              workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.last.fetch(:value),
               analytics_enabled: "0"
             }
           }
@@ -72,7 +73,7 @@ RSpec.describe "General settings", type: :request do
 
     workspace.reload
     expect(workspace.name).to eq("Disco HQ")
-    expect(workspace.icon).to eq(Workspace::DISCO_ICON_OPTIONS.first)
+    expect(workspace.workspace_color).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.last.fetch(:value))
     expect(workspace.analytics_enabled).to be(false)
   end
 

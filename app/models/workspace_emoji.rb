@@ -4,7 +4,6 @@ class WorkspaceEmoji < ApplicationRecord
   has_one_attached :image
 
   before_validation :normalize_name
-  before_validation :assign_generated_name, if: -> { name.blank? }
 
   validates :name, presence: true, uniqueness: { scope: :workspace_id, case_sensitive: false }
   validate :image_must_be_attached
@@ -24,19 +23,6 @@ class WorkspaceEmoji < ApplicationRecord
 
   def normalize_name
     self.name = name.to_s.strip.squeeze(" ").presence
-  end
-
-  def assign_generated_name
-    base_name = image&.attachment&.blob&.filename&.base.to_s.parameterize(separator: "_").presence || "custom_emoji"
-    candidate = base_name
-    suffix = 2
-
-    while workspace&.custom_emojis&.where.not(id: id).exists?(name: candidate)
-      candidate = "#{base_name}_#{suffix}"
-      suffix += 1
-    end
-
-    self.name = candidate
   end
 
   def image_must_be_attached

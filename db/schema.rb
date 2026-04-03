@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_03_182000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_03_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1007,6 +1007,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_03_182000) do
     t.string "name", null: false
     t.string "slug", null: false
     t.datetime "updated_at", null: false
+    t.string "workspace_color", default: "#f43f5e", null: false
     t.index ["archived_at"], name: "index_workspaces_on_archived_at"
     t.index ["join_link_token"], name: "index_workspaces_on_join_link_token", unique: true
     t.index ["slug"], name: "index_workspaces_on_slug", unique: true

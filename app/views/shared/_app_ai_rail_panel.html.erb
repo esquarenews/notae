@@ -1,10 +1,11 @@
 <%
   lazy = local_assigns.fetch(:lazy, false)
   workspace = local_assigns[:workspace] || @ai_rail_workspace || (defined?(@workspace) ? @workspace : nil)
+  workspace_ready = workspace&.slug.to_s.strip.present?
   current_page_id = local_assigns[:current_page_id] || @ai_rail_current_page_id
 %>
 
-<% if lazy && workspace.present? %>
+<% if lazy && workspace_ready %>
   <%= turbo_frame_tag "ai_rail_panel",
                       src: workspace_ai_assistant_panel_path(
                         workspace_slug: workspace.slug,

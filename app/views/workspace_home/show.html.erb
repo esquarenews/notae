@@ -29,74 +29,127 @@
   </div>
 
   <div class="notae-workspace-home-body">
-  <% if @daily_knowledge_suggestion.present? %>
-    <section class="notae-auth-card notae-home-card" id="knowledge-suggestion-<%= @daily_knowledge_suggestion.id %>">
+    <section class="notae-auth-card notae-home-card"<%= %( id="knowledge-suggestion-#{@display_daily_knowledge_suggestion.id}") if @display_daily_knowledge_suggestion.present? %>>
       <div class="notae-home-card-head">
-        <h2>Daily workspace brief</h2>
+        <div class="notae-workspace-home-section-copy">
+          <h2>Daily workspace brief</h2>
+          <% if @display_daily_knowledge_suggestion.present? %>
+            <% brief_generated_date = @display_daily_knowledge_suggestion.generated_for_date || @display_daily_knowledge_suggestion.generated_at&.to_date %>
+            <% if @show_latest_daily_knowledge_suggestion %>
+              <p class="notae-page-subtle">
+                Showing the latest available brief from
+                <%= brief_generated_date.present? ? l(brief_generated_date, format: :long) : time_ago_in_words(@display_daily_knowledge_suggestion.generated_at) + " ago" %>.
+              </p>
+            <% else %>
+              <p class="notae-page-subtle">Updated <%= time_ago_in_words(@display_daily_knowledge_suggestion.generated_at) %> ago.</p>
+            <% end %>
+          <% else %>
+            <p class="notae-page-subtle">Your next daily brief window is <%= @next_daily_brief_at.strftime("%a %-I:%M %p") %>.</p>
+          <% end %>
+        </div>
+        <div class="notae-workspace-home-meta">
+          <span class="notae-workspace-home-meta-pill">
+            Next brief
+            <strong><%= @next_daily_brief_at.strftime("%a %-I:%M %p") %></strong>
+          </span>
+          <% if @display_daily_knowledge_suggestion.present? %>
+            <span class="notae-workspace-home-meta-pill">
+              Last brief
+              <strong><%= (@display_daily_knowledge_suggestion.generated_for_date || @display_daily_knowledge_suggestion.generated_at&.to_date)&.strftime("%b %-d") || "Today" %></strong>
+            </span>
+          <% end %>
+        </div>
       </div>
-      <%= render "shared/knowledge_suggestion_card",
-                 suggestion: @daily_knowledge_suggestion,
-                 workspace: @workspace,
-                 task_databases: @knowledge_task_databases %>
-    </section>
-  <% elsif @daily_knowledge_suggestion_pending %>
-    <section class="notae-auth-card notae-home-card notae-home-card-pending">
-      <div class="notae-home-card-head">
-        <h2>Daily workspace brief</h2>
-      </div>
-      <%= render "shared/knowledge_suggestion_pending_card", kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY %>
-    </section>
-  <% end %>
-
-  <% if @active_proactive_knowledge_suggestion.present? %>
-    <section class="notae-auth-card notae-home-card" id="knowledge-suggestion-<%= @active_proactive_knowledge_suggestion.id %>">
-      <div class="notae-home-card-head">
-        <h2>AI suggestion</h2>
-      </div>
-      <%= render "shared/knowledge_suggestion_card",
-                 suggestion: @active_proactive_knowledge_suggestion,
-                 workspace: @workspace,
-                 task_databases: @knowledge_task_databases %>
-    </section>
-  <% elsif @active_proactive_knowledge_suggestion_pending %>
-    <section class="notae-auth-card notae-home-card notae-home-card-pending">
-      <div class="notae-home-card-head">
-        <h2>AI suggestion</h2>
-      </div>
-      <%= render "shared/knowledge_suggestion_pending_card", kind: KnowledgeSuggestion::KIND_PROACTIVE %>
-    </section>
-  <% end %>
-
-  <section class="notae-auth-card notae-home-card">
-    <div class="notae-home-card-head">
-      <h2>Agent draft actions</h2>
-      <div class="notae-utility-page-actions">
-        <%= link_to "Review drafts", agent_actions_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
-        <%= link_to "New draft", new_agent_action_path(workspace_slug: @workspace.slug), class: "notae-chip-button notae-chip-button-subtle" %>
-      </div>
-    </div>
-    <% if @pending_agent_actions.any? %>
-      <ul class="notae-workspace-home-list">
-        <% @pending_agent_actions.each do |agent_action| %>
-          <li class="notae-workspace-home-list-item">
-            <div class="notae-workspace-home-list-row">
-              <div>
-                <strong><%= agent_action.title %></strong>
-                <div class="notae-page-subtle"><%= agent_action.target_system.titleize %> · <%= agent_action.draft_type.humanize %></div>
-              </div>
-              <%= link_to "Review", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
-            </div>
-          </li>
+      <% if @daily_knowledge_suggestion_pending %>
+        <%= render "shared/knowledge_suggestion_pending_card",
+                   kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+                   compact: @display_daily_knowledge_suggestion.present? %>
+      <% end %>
+      <% if @display_daily_knowledge_suggestion.present? %>
+        <% if @show_latest_daily_knowledge_suggestion %>
+          <span class="notae-workspace-home-badge">Latest available brief</span>
         <% end %>
-      </ul>
-    <% else %>
-      <p class="notae-page-subtle">No pending draft actions.</p>
-    <% end %>
-  </section>
+        <%= render "shared/knowledge_suggestion_card",
+                   suggestion: @display_daily_knowledge_suggestion,
+                   workspace: @workspace,
+                   task_databases: @knowledge_task_databases %>
+      <% elsif !@daily_knowledge_suggestion_pending %>
+        <div class="notae-workspace-home-empty-state">
+          <p class="notae-workspace-home-empty-title">No daily brief yet.</p>
+          <p class="notae-page-subtle">Your first workspace brief appears once Notae has enough indexed activity to summarise.</p>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="notae-auth-card notae-home-card">
+      <div class="notae-home-card-head">
+        <div class="notae-workspace-home-section-copy">
+          <h2>Important updates</h2>
+          <p class="notae-page-subtle">Review AI suggestions, draft actions, and jump back into planning from here.</p>
+        </div>
+        <div class="notae-utility-page-actions">
+          <%= link_to "Create Nota", "#{workspace_path(@workspace.slug)}#workspace-home-create-nota", class: "notae-chip-button" %>
+          <%= link_to "Open Kalendārium", kalendarium_path(workspace_slug: @workspace.slug), class: "notae-chip-button notae-chip-button-subtle" %>
+          <%= link_to "Review drafts", agent_actions_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
+          <%= link_to "New draft", new_agent_action_path(workspace_slug: @workspace.slug), class: "notae-chip-button notae-chip-button-subtle" %>
+        </div>
+      </div>
+      <div class="notae-workspace-home-update-stack">
+        <% if @active_proactive_knowledge_suggestion.present? %>
+          <div class="notae-workspace-home-update-block" id="knowledge-suggestion-<%= @active_proactive_knowledge_suggestion.id %>">
+            <div class="notae-workspace-home-update-head">
+              <h3>AI suggestion</h3>
+              <span class="notae-page-subtle">Actionable now</span>
+            </div>
+            <%= render "shared/knowledge_suggestion_card",
+                       suggestion: @active_proactive_knowledge_suggestion,
+                       workspace: @workspace,
+                       task_databases: @knowledge_task_databases %>
+          </div>
+        <% elsif @active_proactive_knowledge_suggestion_pending %>
+          <div class="notae-workspace-home-update-block">
+            <div class="notae-workspace-home-update-head">
+              <h3>AI suggestion</h3>
+              <span class="notae-page-subtle">Refreshing</span>
+            </div>
+            <%= render "shared/knowledge_suggestion_pending_card",
+                       kind: KnowledgeSuggestion::KIND_PROACTIVE,
+                       compact: true %>
+          </div>
+        <% end %>
+
+        <div class="notae-workspace-home-update-block">
+          <div class="notae-workspace-home-update-head">
+            <h3>Agent draft actions</h3>
+            <span class="notae-page-subtle"><%= pluralize(@pending_agent_actions.count, "draft") %> pending</span>
+          </div>
+          <% if @pending_agent_actions.any? %>
+            <ul class="notae-workspace-home-list">
+              <% @pending_agent_actions.each do |agent_action| %>
+                <li class="notae-workspace-home-list-item">
+                  <div class="notae-workspace-home-list-row">
+                    <div>
+                      <strong><%= agent_action.title %></strong>
+                      <div class="notae-page-subtle"><%= agent_action.target_system.titleize %> · <%= agent_action.draft_type.humanize %></div>
+                    </div>
+                    <%= link_to "Review", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
+                  </div>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            <div class="notae-workspace-home-empty-state">
+              <p class="notae-workspace-home-empty-title">No pending draft actions.</p>
+              <p class="notae-page-subtle">Use draft actions for calendar holds, task tickets, and reviewable outbound work.</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </section>
 
   <section class="notae-workspace-home-grid">
     <% if policy(Page.new(workspace: @workspace)).create? %>
-      <div class="notae-auth-card notae-home-card">
+      <div class="notae-auth-card notae-home-card" id="workspace-home-create-nota">
         <div class="notae-home-card-head">
           <h2>Create Nota</h2>
         </div>

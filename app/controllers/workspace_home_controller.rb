@@ -1,6 +1,8 @@
 class WorkspaceHomeController < ApplicationController
   include RequestPerformanceInstrumentation
 
+  DAILY_BRIEF_WINDOW_HOUR = 7
+
   before_action :authenticate_user!
   before_action :set_workspace
   track_request_performance_for :show
@@ -33,6 +35,10 @@ class WorkspaceHomeController < ApplicationController
                         .to_a
     @knowledge_task_databases = knowledge_task_databases_for(@workspace)
     @daily_knowledge_suggestion = resolve_daily_knowledge_suggestion
+    @latest_daily_knowledge_suggestion = resolve_latest_daily_knowledge_suggestion
+    @display_daily_knowledge_suggestion = @daily_knowledge_suggestion || @latest_daily_knowledge_suggestion
+    @show_latest_daily_knowledge_suggestion = @display_daily_knowledge_suggestion.present? && @daily_knowledge_suggestion.blank?
+    @next_daily_brief_at = next_daily_brief_at
     @active_proactive_knowledge_suggestion = resolve_active_proactive_knowledge_suggestion
     @pending_agent_actions = resolve_pending_agent_actions
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
@@ -122,6 +128,19 @@ class WorkspaceHomeController < ApplicationController
     end
   end
 
+  def resolve_latest_daily_knowledge_suggestion
+    return unless data_source_available?("knowledge_suggestions")
+
+    scope = policy_scope(KnowledgeSuggestion)
+            .for_workspace(@workspace)
+            .daily_summaries
+            .where.not(status: KnowledgeSuggestion::STATUS_DISMISSED)
+            .recent_first
+    return scope.first if @daily_knowledge_suggestion.blank?
+
+    scope.where.not(id: @daily_knowledge_suggestion.id).first
+  end
+
   def resolve_active_proactive_knowledge_suggestion
     return unless data_source_available?("knowledge_suggestions")
 
@@ -159,5 +178,11 @@ class WorkspaceHomeController < ApplicationController
     return unless last_page
 
     redirect_to page_path(workspace_slug: @workspace.slug, id: last_page.id)
+  end
+
+  def next_daily_brief_at(reference_time = Time.zone.now)
+    next_window = reference_time.beginning_of_day + DAILY_BRIEF_WINDOW_HOUR.hours
+    next_window += 1.day if reference_time >= next_window
+    next_window
   end
 end
