@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Notae Neon N adaptive icon">
+  <defs>
+    <linearGradient id="light-bg" x1="8%" y1="6%" x2="92%" y2="94%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.58" stop-color="#eef5ff"/>
+      <stop offset="1" stop-color="#f6e9ff"/>
+    </linearGradient>
+    <linearGradient id="dark-bg" x1="8%" y1="6%" x2="92%" y2="94%">
+      <stop offset="0" stop-color="#030712"/>
+      <stop offset="0.58" stop-color="#111c3d"/>
+      <stop offset="1" stop-color="#35124a"/>
+    </linearGradient>
+    <radialGradient id="light-glow" cx="50%" cy="46%" r="48%">
+      <stop offset="0" stop-color="#dbeafe" stop-opacity="0.95"/>
+      <stop offset="0.55" stop-color="#d8b4fe" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="dark-glow" cx="50%" cy="46%" r="50%">
+      <stop offset="0" stop-color="#1d4ed8" stop-opacity="0.42"/>
+      <stop offset="0.55" stop-color="#ec4899" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="n" x1="12%" y1="8%" x2="92%" y2="90%">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="0.52" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+    <style>
+      .bg { fill: url(#light-bg); }
+      .frame { stroke: #dbe7ff; stroke-opacity: 1; }
+      .glow { fill: url(#light-glow); }
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: url(#dark-bg); }
+        .frame { stroke: #274690; stroke-opacity: 0.42; }
+        .glow { fill: url(#dark-glow); }
+      }
+    </style>
+  </defs>
+  <rect class="bg" width="512" height="512" rx="116"/>
+  <rect class="frame" x="18" y="18" width="476" height="476" rx="108" fill="none" stroke-width="8"/>
+  <circle class="glow" cx="256" cy="228" r="182"/>
+  <path d="M132 390V122h72l108 156V122h68v268h-74L200 237v153h-68z" fill="url(#n)"/>
+</svg>

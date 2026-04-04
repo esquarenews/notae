@@ -106,13 +106,18 @@ RSpec.describe "Page header features", type: :request do
     expect(template).to include("Page 1 of 1")
   end
 
-  it "renders cover attribution text and links in white for readability" do
+  it "renders cover attribution text and links in white on the right edge for readability" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include(".notae-cover-attribution {\n  position: absolute;")
+    expect(stylesheet).to include("right: 0.9rem;")
+    expect(stylesheet).to include("max-width: calc(100% - 1.8rem);")
+    expect(stylesheet).to include("text-align: right;")
     expect(stylesheet).to include(".notae-theme .notae-cover-attribution,\n.notae-theme .notae-cover-attribution a,\n.notae-theme .notae-cover-attribution a:visited,")
     expect(stylesheet).to include(".notae-theme .notae-cover-attribution a,\n.notae-theme .notae-cover-attribution a:visited,")
     expect(stylesheet).to include("color: #fff;")
+    expect(stylesheet).to include(".notae-workspace-page-card-cover-attribution {\n  position: absolute;")
+    expect(stylesheet).to include(".notae-workspace-page-card-cover-attribution a {")
   end
 
   it "supports random cover, upload cover, repositioning, and clearing" do

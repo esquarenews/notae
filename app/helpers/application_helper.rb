@@ -258,6 +258,15 @@ module ApplicationHelper
     NOTAE_PWA_BACKGROUND_COLOR
   end
 
+  def notae_auth_brand_icon_path
+    case notae_theme_body_class
+    when "notae-theme-dark"
+      "/icon-dark-v5.svg"
+    else
+      "/icon-light-v5.svg"
+    end
+  end
+
   def notae_web_push_public_key
     WebPush::Configuration.public_key.to_s
   end

@@ -306,7 +306,13 @@ RSpec.describe "Databases", type: :request do
     owner = User.create!(email: "database-new-tab-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Database new tabs", slug: "database-new-tabs")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
-    group_page = Page.create!(workspace: workspace, created_by: owner, title: "Roadmap")
+    group_page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Roadmap",
+      icon: "🚀",
+      cover_preset_key: Page::COVER_PRESET_KEYS.first
+    )
     linked_tab_page = Page.create!(workspace: workspace, parent_page: group_page, created_by: owner, title: "Current sprint")
     existing_database = Database.create!(workspace: workspace, created_by: owner, name: "Sprint grid", linked_page: linked_tab_page)
     sign_in owner
@@ -327,6 +333,8 @@ RSpec.describe "Databases", type: :request do
     expect(created_database.linked_page).to be_present
     expect(created_database.linked_page.parent_page_id).to eq(group_page.id)
     expect(created_database.linked_page.title).to eq("New tab")
+    expect(created_database.linked_page.icon).to eq(group_page.icon)
+    expect(created_database.linked_page.cover_preset_key).to eq(group_page.cover_preset_key)
     expect(created_database.name).to eq("Untitled grid")
   end
 

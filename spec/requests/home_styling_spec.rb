@@ -13,7 +13,7 @@ RSpec.describe "Home styling", type: :request do
     expect(response.body).to include("notae-home-page")
     expect(response.body).to include("notae-home-card")
     expect(response.body).to include("notae-home-workspace-item")
-    expect(response.body).to include("/icon-v3.svg")
+    expect(response.body).to include("/icon-light-v5.svg")
     expect(response.body).to include("Styled Home")
   end
 end

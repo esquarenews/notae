@@ -188,6 +188,8 @@ RSpec.describe "Pages", type: :request do
 
     created_tab = workspace.pages.find_by!(parent_page: group_page, title: "New tab")
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: created_tab.id))
+    expect(created_tab.icon).to eq(group_page.icon)
+    expect(created_tab.cover_preset_key).to eq(group_page.cover_preset_key)
 
     get page_path(workspace_slug: workspace.slug, id: created_tab.id)
 
@@ -197,6 +199,36 @@ RSpec.describe "Pages", type: :request do
     expect(html.at_css(".notae-page-icon-display")&.text&.strip).to eq(group_page.icon)
     expect(html.at_css(".notae-page-cover-preset")).to be_present
     expect(html.at_css(%(.notae-page-tab.is-active[href="#{page_path(workspace_slug: workspace.slug, id: created_tab.id)}"]))).to be_present
+  end
+
+  it "inherits an uploaded cover image and icon for a new child tab" do
+    owner = User.create!(email: "pages-new-tab-upload-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "New child tab upload", slug: "new-child-tab-upload")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    group_page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Parent shell",
+      icon: "🌅"
+    )
+
+    Tempfile.create([ "tab-parent-cover", ".png" ]) do |file|
+      file.write("fake-png-content")
+      file.rewind
+      group_page.cover_image.attach(io: file, filename: "parent-cover.png", content_type: "image/png")
+    end
+
+    sign_in owner
+
+    post pages_path(workspace_slug: workspace.slug),
+         params: { page: { title: "New tab", parent_page_id: group_page.id } }
+
+    created_tab = workspace.pages.find_by!(parent_page: group_page, title: "New tab")
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: created_tab.id))
+    expect(created_tab.icon).to eq(group_page.icon)
+    expect(created_tab.cover_image).to be_attached
+    expect(created_tab.cover_image.blob_id).to eq(group_page.cover_image.blob_id)
   end
 
   it "marks the current child page tab as active" do
@@ -270,6 +302,34 @@ RSpec.describe "Pages", type: :request do
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: group_page.id))
     expect(tab_page.reload).to be_archived
     expect(database.reload.linked_page).to be_nil
+  end
+
+  it "returns to the surviving parent grid after deleting an active child grid tab" do
+    owner = User.create!(email: "pages-delete-grid-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Delete grid tab fallback", slug: "delete-grid-tab-fallback")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    parent_database = Database.create!(workspace: workspace, created_by: owner, name: "Tasks")
+    Databases::EnsureLinkedPageService.call(database: parent_database, actor: owner)
+    child_tab_page = Page.create!(
+      workspace: workspace,
+      parent_page: parent_database.linked_page,
+      created_by: owner,
+      title: "Later sprint"
+    )
+    child_database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Later sprint grid",
+      linked_page: child_tab_page
+    )
+    sign_in owner
+
+    patch remove_tab_page_path(workspace_slug: workspace.slug, id: child_tab_page.id),
+          params: { return_to: database_path(workspace_slug: workspace.slug, id: child_database.id) }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: parent_database.id))
+    expect(child_tab_page.reload).to be_archived
+    expect(child_database.reload.linked_page).to be_nil
   end
 
   it "hides archived pages from workspace sidebar" do

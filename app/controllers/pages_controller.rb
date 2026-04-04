@@ -121,6 +121,7 @@ class PagesController < ApplicationController
   def create
     @page = @workspace.pages.new(page_params)
     @page.created_by = current_user
+    Pages::VisualDefaultsService.apply(record: @page, source: @page.parent_page)
     authorize @page
 
     if @page.save
@@ -351,8 +352,17 @@ class PagesController < ApplicationController
       return candidate
     end
 
-    return page_path(workspace_slug: @workspace.slug, id: @page.parent_page_id, embedded: "1") if embedded_page_shell?
-    return page_path(workspace_slug: @workspace.slug, id: @page.parent_page_id) if @page.parent_page_id.present?
+    if @page.parent_page_id.present?
+      parent_page = policy_scope(Page).for_workspace(@workspace).active.includes(:linked_database).find_by(id: @page.parent_page_id)
+      if parent_page.present?
+        if parent_page.linked_database.present?
+          return database_path(workspace_slug: @workspace.slug, id: parent_page.linked_database.id)
+        end
+
+        return page_path(workspace_slug: @workspace.slug, id: parent_page.id, embedded: "1") if embedded_page_shell?
+        return page_path(workspace_slug: @workspace.slug, id: parent_page.id)
+      end
+    end
 
     workspace_path(@workspace.slug)
   end

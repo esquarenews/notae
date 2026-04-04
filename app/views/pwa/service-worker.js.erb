@@ -5,15 +5,15 @@
     same_origin_importmap_urls +
     [
       asset_path("application.css"),
-      "/icon-192-v3.png",
-      "/icon-512-v3.png",
-      "/icon-maskable-512-v3.png",
+      "/icon-192-v5.png",
+      "/icon-512-v5.png",
+      "/icon-maskable-512-v5.png",
       pwa_manifest_path,
       pwa_offline_path
     ]
   ).uniq
 %>
-const CACHE_VERSION = "pwa-v3"
+const CACHE_VERSION = "pwa-v5"
 const SHELL_CACHE = `notae-shell-${CACHE_VERSION}`
 const DOCUMENT_CACHE = `notae-documents-${CACHE_VERSION}`
 const ASSET_CACHE = `notae-assets-${CACHE_VERSION}`
@@ -107,7 +107,7 @@ function isTopLevelDocumentRequest(request, url) {
 }
 
 function isSameOriginAsset(url) {
-  return url.origin === self.location.origin && (url.pathname.startsWith("/assets/") || url.pathname === "/icon-192-v3.png" || url.pathname === "/icon-512-v3.png" || url.pathname === "/icon-maskable-512-v3.png" || url.pathname === "/icon-v3.png" || url.pathname === "/icon-v3.svg" || url.pathname === "/icon-light-v3.svg" || url.pathname === "/icon-dark-v3.svg")
+  return url.origin === self.location.origin && (url.pathname.startsWith("/assets/") || url.pathname === "/icon-192-v5.png" || url.pathname === "/icon-512-v5.png" || url.pathname === "/icon-maskable-512-v5.png" || url.pathname === "/icon-v5.png" || url.pathname === "/icon-v5.svg" || url.pathname === "/icon-light-v5.svg" || url.pathname === "/icon-dark-v5.svg" || url.pathname === "/apple-touch-icon-v5.png")
 }
 
 function isImageRequest(request, url) {
@@ -218,8 +218,8 @@ async function showPushNotification(event) {
 
   await self.registration.showNotification(title, {
     body: payload.body || "",
-    icon: payload.icon || "/icon-192-v3.png",
-    badge: payload.badge || "/icon-192-v3.png",
+    icon: payload.icon || "/icon-192-v5.png",
+    badge: payload.badge || "/icon-192-v5.png",
     tag: payload.tag || "notae-notification",
     renotify: false,
     data: {

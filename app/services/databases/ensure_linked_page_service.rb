@@ -15,8 +15,10 @@ module Databases
       return database.linked_page if database.linked_page.present?
 
       ActiveRecord::Base.transaction do
-        linked_page = workspace.pages.create!(linked_page_attributes)
+        linked_page = workspace.pages.new(linked_page_attributes)
         linked_page.cover_image.attach(database.cover_image.blob) if database.cover_image.attached?
+        Pages::VisualDefaultsService.apply(record: linked_page, source: parent_page)
+        linked_page.save!
         database.update!(linked_page: linked_page)
         linked_page
       end

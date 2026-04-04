@@ -17,7 +17,7 @@ RSpec.describe "Favicon settings", type: :request do
     expect(response.body).to include("/favicons/candidates/disco-core.svg")
     expect(response.body).to include("/favicons/candidates/neon-n.svg")
     expect(response.body).to include("data-controller=\"favicon-preview\"")
-    expect(response.body).to include("data-favicon-preview-default-href-value=\"/icon-v3.svg\"")
+    expect(response.body).to include("data-favicon-preview-default-href-value=\"/icon-v5.svg\"")
     expect(response.body).to include("notae-settings-nav-item is-disabled active")
     expect(response.body).to include("Internal")
   end

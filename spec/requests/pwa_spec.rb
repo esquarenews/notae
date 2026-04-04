@@ -16,9 +16,10 @@ RSpec.describe "PWA", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("rel=\"manifest\"")
     expect(response.body).to include(pwa_manifest_path)
-    expect(response.body).to include("/icon-light-v3.svg")
-    expect(response.body).to include("/icon-dark-v3.svg")
-    expect(response.body).to include("/icon-v3.svg")
+    expect(response.body).to include("/icon-light-v5.svg")
+    expect(response.body).to include("/icon-dark-v5.svg")
+    expect(response.body).to include("/icon-v5.svg")
+    expect(response.body).to include("/apple-touch-icon-v5.png")
     expect(response.body).to include("apple-mobile-web-app-title")
     expect(response.body).to include("theme-color")
     expect(response.body).to include("data-controller=\"pwa\"")
@@ -51,9 +52,9 @@ RSpec.describe "PWA", type: :request do
       "display" => "standalone",
       "short_name" => "Notae"
     )
-    expect(icons).to include(a_hash_including("src" => "/icon-192-v3.png", "sizes" => "192x192"))
-    expect(icons).to include(a_hash_including("src" => "/icon-512-v3.png", "sizes" => "512x512"))
-    expect(icons).to include(a_hash_including("src" => "/icon-maskable-512-v3.png", "purpose" => "maskable"))
+    expect(icons).to include(a_hash_including("src" => "/icon-192-v5.png", "sizes" => "192x192"))
+    expect(icons).to include(a_hash_including("src" => "/icon-512-v5.png", "sizes" => "512x512"))
+    expect(icons).to include(a_hash_including("src" => "/icon-maskable-512-v5.png", "purpose" => "maskable"))
   end
 
   it "serves a parseable service worker with the offline fallback, private cache clearing, and push hooks" do
@@ -66,7 +67,7 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("CLEAR_PRIVATE_CACHES")
     expect(response.body).to include("/app")
     expect(response.body).to include("/app/notifications/__NOTIFICATION_ID__")
-    expect(response.body).to include("const CACHE_VERSION = \"pwa-v3\"")
+    expect(response.body).to include("const CACHE_VERSION = \"pwa-v5\"")
     expect(response.body).to include("self.addEventListener(\"push\"")
     expect(response.body).to include("self.addEventListener(\"notificationclick\"")
 

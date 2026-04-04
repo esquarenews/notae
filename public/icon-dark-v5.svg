@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Notae Neon N dark icon">
+  <defs>
+    <linearGradient id="bg" x1="8%" y1="6%" x2="92%" y2="94%">
+      <stop offset="0" stop-color="#030712"/>
+      <stop offset="0.58" stop-color="#111c3d"/>
+      <stop offset="1" stop-color="#35124a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="46%" r="50%">
+      <stop offset="0" stop-color="#1d4ed8" stop-opacity="0.42"/>
+      <stop offset="0.55" stop-color="#ec4899" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="n" x1="12%" y1="8%" x2="92%" y2="90%">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.52" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#f472b6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="108" fill="none" stroke="#274690" stroke-opacity="0.42" stroke-width="8"/>
+  <circle cx="256" cy="228" r="182" fill="url(#glow)"/>
+  <path d="M132 390V122h72l108 156V122h68v268h-74L200 237v153h-68z" fill="url(#n)"/>
+</svg>
