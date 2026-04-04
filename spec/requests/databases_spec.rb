@@ -1701,6 +1701,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('turbo-stream action="update" target="database_table_placeholders"')
     expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
     expect(response.body).to include('data-auto-submit-focus-on-connect-value="true"')
+    expect(response.body).to include('data-preserve-database-scroll="true"')
     expect(response.body).to include("is-new-row-highlight")
     expect(response.body).not_to include('autofocus="autofocus"')
   end

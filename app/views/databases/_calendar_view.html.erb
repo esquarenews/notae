@@ -58,7 +58,8 @@
             <% if policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
               <%= form_with model: @new_row,
                             url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                            class: "inline" do |form| %>
+                            class: "inline",
+                            data: { preserve_database_scroll: true } do |form| %>
                 <%= hidden_field_tag :view_id, @current_view&.id %>
                 <%= hidden_field_tag :month, @calendar_month.to_s %>
                 <%= hidden_field_tag :sort_property_id, params[:sort_property_id] %>

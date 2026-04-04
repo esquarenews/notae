@@ -36,7 +36,7 @@
             <%= button_to database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
                           params: row_params.merge(insert_after_id: row.id, db_row: { title: "Untitled row" }),
                           class: "notae-db-row-hover-control",
-                          form: { class: "notae-db-row-hover-control-form" },
+                          form: { class: "notae-db-row-hover-control-form", data: { preserve_database_scroll: true } },
                           title: "Insert row below",
                           aria: { label: "Insert row below" } do %>
               +
@@ -72,7 +72,8 @@
                             class: "notae-db-title-form notae-db-title-form-inline",
                             data: {
                               controller: "auto-submit",
-                              auto_submit_focus_on_connect_value: autofocus_title
+                              auto_submit_focus_on_connect_value: autofocus_title,
+                              preserve_database_scroll: true
                             } do |form| %>
                 <%= form.text_field :title,
                                     value: row.title,
@@ -110,7 +111,8 @@
                           class: "notae-db-title-form notae-db-title-form-inline",
                           data: {
                             controller: "auto-submit",
-                            auto_submit_focus_on_connect_value: autofocus_title
+                            auto_submit_focus_on_connect_value: autofocus_title,
+                            preserve_database_scroll: true
                           } do |form| %>
               <%= form.text_field :title,
                                   value: row.title,

@@ -102,7 +102,7 @@
 
 <section class="<%= db_layout_classes.join(" ") %>"
          data-controller="database-view-state"
-         data-action="turbo:submit-start->database-view-state#capture click->database-view-state#captureLink"
+         data-action="turbo:submit-start->database-view-state#capture turbo:submit-end->database-view-state#restoreAfterSubmit click->database-view-state#captureLink"
          data-database-view-state-storage-key-value="database-view-scroll:<%= @database.id %>">
 <section class="notae-db-canvas">
   <%= render "shared/flash_messages",
@@ -705,7 +705,8 @@
                 <% if can_edit_database %>
                   <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
                                 params: view_params.except(:workspace_slug, :id).merge(actions_menu: "open", db_row: { title: "Untitled row" }),
-                                class: "notae-actions-row-button" do %>
+                                class: "notae-actions-row-button",
+                                form: { data: { preserve_database_scroll: true } } do %>
                     <span class="notae-actions-row-icon">＋</span>
                     <span class="notae-actions-row-label">New row</span>
                   <% end %>
@@ -1093,7 +1094,8 @@
         <% if can_edit_database %>
           <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
                         params: view_params.except(:workspace_slug, :id).merge(db_row: { title: "Untitled row" }),
-                        class: "notae-db-toolbar-new" do %>
+                        class: "notae-db-toolbar-new",
+                        form: { data: { preserve_database_scroll: true } } do %>
             <span>New</span>
           <% end %>
         <% else %>

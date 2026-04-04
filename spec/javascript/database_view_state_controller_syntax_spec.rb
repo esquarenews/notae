@@ -20,7 +20,10 @@ RSpec.describe "DatabaseViewStateController JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/database_view_state_controller.js").read
 
     expect(source).to include("capture(event)")
+    expect(source).to include("restoreAfterSubmit(event)")
     expect(source).to include("captureLink(event)")
+    expect(source).to include("pendingSubmitScrollPosition")
+    expect(source).to include("restoreSubmitScrollPosition(position)")
     expect(source).to include("sessionStorage.setItem")
     expect(source).to include("restoreScrollPosition()")
     expect(source).to include("requestAnimationFrame")

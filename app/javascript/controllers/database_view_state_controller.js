@@ -8,6 +8,7 @@ export default class extends Controller {
   }
 
   connect() {
+    this.pendingSubmitScrollPosition = null
     this.restoreScrollPosition()
   }
 
@@ -16,7 +17,25 @@ export default class extends Controller {
     if (!(form instanceof HTMLFormElement)) return
     if (form.dataset.preserveDatabaseScroll !== "true") return
 
+    this.pendingSubmitScrollPosition = this.currentScrollPosition()
     this.storeScrollPosition()
+  }
+
+  restoreAfterSubmit(event) {
+    const form = event.target
+    if (!(form instanceof HTMLFormElement)) return
+    if (form.dataset.preserveDatabaseScroll !== "true") return
+
+    const position = this.pendingSubmitScrollPosition
+    this.pendingSubmitScrollPosition = null
+
+    if (!position) return
+    if (!event.detail?.success) return
+
+    const contentType = this.responseContentType(event)
+    if (contentType.present && !contentType.value.includes("turbo-stream")) return
+
+    this.restoreSubmitScrollPosition(position)
   }
 
   captureLink(event) {
@@ -49,6 +68,16 @@ export default class extends Controller {
 
   scrollContainer() {
     return this.element.closest(".notae-content-scroll") || document.querySelector(".notae-content-scroll") || document.scrollingElement
+  }
+
+  currentScrollPosition() {
+    const scrollContainer = this.scrollContainer()
+    if (!scrollContainer) return null
+
+    return {
+      top: scrollContainer.scrollTop,
+      left: scrollContainer.scrollLeft
+    }
   }
 
   storeScrollPosition() {
@@ -93,5 +122,30 @@ export default class extends Controller {
   applyScrollPosition(scrollContainer, position) {
     scrollContainer.scrollTop = position.top
     scrollContainer.scrollLeft = position.left
+  }
+
+  restoreSubmitScrollPosition(position) {
+    const apply = () => {
+      const scrollContainer = this.scrollContainer()
+      if (!scrollContainer) return
+
+      this.applyScrollPosition(scrollContainer, position)
+    }
+
+    apply()
+    window.requestAnimationFrame(() => apply())
+    window.setTimeout(() => apply(), 60)
+  }
+
+  responseContentType(event) {
+    const response = event.detail?.fetchResponse?.response
+    if (!(response instanceof Response)) {
+      return { present: false, value: "" }
+    }
+
+    return {
+      present: true,
+      value: response.headers.get("content-type") || ""
+    }
   }
 }

@@ -209,7 +209,8 @@ end %>
             <%= form_with model: @new_row,
                           url: database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
                           id: new_row_form_id,
-                          class: "notae-db-new-row-trigger-form" do |form| %>
+                          class: "notae-db-new-row-trigger-form",
+                          data: { preserve_database_scroll: true } do |form| %>
               <%= hidden_field_tag :view_id, row_params[:view_id] %>
               <%= hidden_field_tag :month, row_params[:month] %>
               <%= hidden_field_tag :sort_property_id, row_params[:sort_property_id] %>

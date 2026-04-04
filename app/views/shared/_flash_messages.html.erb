@@ -3,7 +3,7 @@ provided_flash_messages = local_assigns[:flash_messages]
 flash_dom_id = local_assigns[:flash_dom_id].presence || "notae_flash_messages"
 flash_host_class = local_assigns[:flash_host_class].to_s.strip
 flash_messages =
-  if provided_flash_messages.present?
+  if local_assigns.key?(:flash_messages)
     Array(provided_flash_messages).filter_map do |entry|
       type, raw_message = Array(entry)
       text = raw_message.to_s.strip
