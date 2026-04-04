@@ -508,9 +508,13 @@ class DbRowsController < ApplicationController
         }
       ),
       turbo_stream.replace(
-        "notae_flash_messages",
+        "database_flash_messages",
         partial: "shared/flash_messages",
-        locals: { flash_messages: [ [ "notice", "Row created." ] ] }
+        locals: {
+          flash_messages: [ [ "notice", "Row created." ] ],
+          flash_dom_id: "database_flash_messages",
+          flash_host_class: "notae-db-inline-flash-host"
+        }
       )
     ]
   end
@@ -542,9 +546,13 @@ class DbRowsController < ApplicationController
   def respond_row_create_failure(message:)
     if request.format.turbo_stream? && simple_table_render_context?
       render turbo_stream: turbo_stream.replace(
-        "notae_flash_messages",
+        "database_flash_messages",
         partial: "shared/flash_messages",
-        locals: { flash_messages: [ [ "alert", message ] ] }
+        locals: {
+          flash_messages: [ [ "alert", message ] ],
+          flash_dom_id: "database_flash_messages",
+          flash_host_class: "notae-db-inline-flash-host"
+        }
       ), status: :unprocessable_entity
     else
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: message

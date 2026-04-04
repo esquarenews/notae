@@ -1402,6 +1402,34 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   animation-delay: 4.2s;
 }
 
+.notae-db-inline-flash-host {
+  position: sticky;
+  top: 0.75rem;
+  z-index: var(--notae-layer-flash);
+  display: flex;
+  justify-content: center;
+  height: 0;
+  margin: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.notae-db-inline-flash-host .notae-flash-stack {
+  width: min(44rem, calc(100% - 1.2rem));
+  max-width: calc(100% - 1.2rem);
+  margin: 0;
+  pointer-events: auto;
+}
+
+.notae-db-inline-flash-host .notae-flash {
+  margin: 0;
+  animation: notae-flash-fade 420ms ease 3.8s forwards;
+}
+
+.notae-db-inline-flash-host .notae-flash.alert {
+  animation-delay: 4.2s;
+}
+
 @keyframes notae-flash-fade {
   from {
     opacity: 1;

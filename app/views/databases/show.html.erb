@@ -105,6 +105,10 @@
          data-action="turbo:submit-start->database-view-state#capture click->database-view-state#captureLink"
          data-database-view-state-storage-key-value="database-view-scroll:<%= @database.id %>">
 <section class="notae-db-canvas">
+  <%= render "shared/flash_messages",
+             flash_messages: [],
+             flash_dom_id: "database_flash_messages",
+             flash_host_class: "notae-db-inline-flash-host" %>
   <% if shell_page.present? ? shell_page.cover? : @database.cover? %>
     <section class="notae-page-cover">
       <div class="notae-page-cover-frame">

@@ -23,6 +23,16 @@ RSpec.describe "Databases", type: :request do
     expect(stylesheet).to include(".notae-db-board-card-modal[open] {\n  position: fixed;\n  inset: 0;\n  margin: auto;\n}")
   end
 
+  it "keeps grid row creation notices inside the grid canvas instead of the global shell top" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    template = Rails.root.join("app/views/databases/show.html.erb").read
+
+    expect(stylesheet).to include(".notae-db-inline-flash-host {\n  position: sticky;\n  top: 0.75rem;\n  z-index: var(--notae-layer-flash);")
+    expect(stylesheet).to include(".notae-db-inline-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
+    expect(template).to include('flash_dom_id: "database_flash_messages"')
+    expect(template).to include('flash_host_class: "notae-db-inline-flash-host"')
+  end
+
   it "truncates long board card detail values with ellipsis" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
@@ -1689,9 +1699,10 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('turbo-stream action="append" target="database_table_rows"')
     expect(response.body).to include('turbo-stream action="update" target="database_row_count"')
     expect(response.body).to include('turbo-stream action="update" target="database_table_placeholders"')
-    expect(response.body).to include('turbo-stream action="replace" target="notae_flash_messages"')
+    expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
     expect(response.body).to include('data-auto-submit-focus-on-connect-value="true"')
     expect(response.body).to include("is-new-row-highlight")
+    expect(response.body).not_to include('autofocus="autofocus"')
   end
 
   it "creates a new row directly below when row update requests create_next_row" do
