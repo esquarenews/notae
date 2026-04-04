@@ -15,7 +15,7 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include("Notae")
     expect(response.body).to include("Sign in")
     expect(response.body).to include("notae-auth-brand-icon")
-    expect(response.body).to include("/icon.svg")
+    expect(response.body).to include("/icon-v3.svg")
     expect(response.body).to include("notae-auth-card")
     expect(response.body).to include('data-turbo="false"')
   end

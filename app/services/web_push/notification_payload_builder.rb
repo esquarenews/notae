@@ -13,8 +13,8 @@ module WebPush
         body: body,
         url: pwa_notification_launch_path(id: notification.id),
         tag: "notae-#{notification.notification_type}-#{notification.id}",
-        icon: "/icon-192-v2.png",
-        badge: "/icon-192-v2.png"
+        icon: "/icon-192-v3.png",
+        badge: "/icon-192-v3.png"
       }
     end
 
