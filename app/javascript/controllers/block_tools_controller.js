@@ -18,6 +18,7 @@ export default class extends Controller {
     window.addEventListener("resize", this.repositionOpenMenuHandler)
     window.addEventListener("scroll", this.repositionOpenMenuHandler, true)
     window.addEventListener("notae:block-reparent", this.reparentRequestHandler)
+    this.syncShellScrollLock()
   }
 
   disconnect() {
@@ -27,6 +28,7 @@ export default class extends Controller {
     const details = this.currentOpenMenu()
     if (details) this.setMenuOpenState(details, false)
     this.removeDismissHandlers()
+    this.syncShellScrollLock()
   }
 
   async copyLink(event) {
@@ -194,9 +196,9 @@ export default class extends Controller {
   }
 
   closeDetails(details) {
+    details.open = false
     this.closeInlinePickers()
     this.setMenuOpenState(details, false)
-    details.open = false
     this.resetPanelPosition(details)
     this.removeDismissHandlers()
   }
@@ -218,9 +220,21 @@ export default class extends Controller {
 
   setMenuOpenState(details, isOpen) {
     const blockRow = details?.closest(".notae-doc-block-row")
-    if (!blockRow) return
+    if (blockRow) blockRow.classList.toggle("is-menu-open", isOpen)
+    this.syncShellScrollLock(isOpen)
+  }
 
-    blockRow.classList.toggle("is-menu-open", isOpen)
+  syncShellScrollLock(forceOpen = null) {
+    const shell = this.element.closest(".notae-shell")
+    if (!shell) return
+
+    const shouldLock = shell.classList.contains("is-mobile-viewport") &&
+      (forceOpen === true || this.anyOpenBlockMenu(shell))
+    shell.classList.toggle("is-block-menu-open", shouldLock)
+  }
+
+  anyOpenBlockMenu(scope) {
+    return Boolean(scope?.querySelector(".notae-block-menu[open]"))
   }
 
   applyPanelPosition(details) {

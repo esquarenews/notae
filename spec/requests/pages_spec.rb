@@ -503,6 +503,11 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown {\n  display: block;\n  overflow-x: clip;\n  overflow-y: auto;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-pane {\n  display: block;\n  min-width: 0;\n  max-width: 100%;\n  box-sizing: border-box;\n  overflow-x: hidden;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-pane {\n  display: block;\n  min-width: 0;\n  max-width: 100%;\n  box-sizing: border-box;\n  overflow-x: hidden;\n}")
+    expect(stylesheet).to include(".notae-block-menu-panel {\n  position: absolute;")
+    expect(stylesheet).to include("  overscroll-behavior: contain;\n  -webkit-overflow-scrolling: touch;\n")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-block-menu-panel {\n  width: min(340px, calc(100vw - 1rem));")
+    expect(stylesheet).to include("  touch-action: pan-y;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport.is-block-menu-open .notae-content-scroll {\n  overflow: hidden;\n  overscroll-behavior: none;\n}")
   end
 
   it "ships dark-theme editor overrides so focused nota text stays readable" do

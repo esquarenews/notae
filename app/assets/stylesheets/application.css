@@ -8714,6 +8714,8 @@ body.notae-theme-dark .notae-doc-block.is-focused {
   width: min(352px, calc(100vw - 1.2rem));
   max-height: calc(100vh - 1.2rem);
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: #fff;
   border: 1px solid #e7e5e4;
   border-radius: 0.7rem;
@@ -10464,6 +10466,14 @@ body.notae-theme-dark .notae-doc-muted {
 
 .notae-shell.is-mobile-viewport .notae-block-menu-panel {
   width: min(340px, calc(100vw - 1rem));
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.notae-shell.is-mobile-viewport.is-block-menu-open .notae-content-scroll {
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .notae-shell.is-mobile-viewport .notae-ai-floating-toggle {
