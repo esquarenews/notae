@@ -32,11 +32,16 @@ RSpec.describe "Workspace sidebar sections", type: :request do
     notes_section = sections_document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Notarum" }
     grids_section = sections_document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Grids" }
     favorites_section = sections_document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Favorites" }
+    workspace_section = sections_document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Workspaces" }
 
+    expect(workspace_section.css("a[data-turbo-frame='_top']")).not_to be_empty
     expect(notes_section.text).to include("Alpha note")
     expect(grids_section.text).to include("Projects")
     expect(grids_section.at_css(".notae-icon-renderer-glyph")&.text&.strip).to eq("🧠")
     expect(favorites_section.text).to include("Alpha note")
+    expect(notes_section.css("a[data-turbo-frame='_top']")).not_to be_empty
+    expect(grids_section.css("a[data-turbo-frame='_top']")).not_to be_empty
+    expect(favorites_section.css("a[data-turbo-frame='_top']")).not_to be_empty
     favorite_links = favorites_section.css("a[href]").map { |node| node["href"] }
     expect(favorite_links).to include(page_path(workspace_slug: workspace.slug, id: page.id))
     expect(favorite_links).to include(database_path(workspace_slug: workspace.slug, id: database.id))

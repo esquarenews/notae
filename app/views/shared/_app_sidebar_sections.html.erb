@@ -1,6 +1,7 @@
 <%
   workspace = local_assigns[:workspace] || (defined?(@workspace) ? @workspace : nil)
   loading = local_assigns.fetch(:loading, false)
+  sidebar_link_data = notae_shell_link_data.merge(turbo_frame: "_top")
 %>
 
 <% if workspace.present? %>
@@ -45,7 +46,7 @@
             <li>
               <%= link_to workspace_path(sidebar_workspace_slug),
                           class: notae_sidebar_link_classes(workspace_path(sidebar_workspace_slug)),
-                          data: notae_shell_link_data do %>
+                          data: sidebar_link_data do %>
                 <span class="notae-sidebar-page-title">
                   <%= render_workspace_color_marker(sidebar_workspace) %>
                   <%= sidebar_workspace.name %>
@@ -94,7 +95,7 @@
             <li>
               <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
                           class: notae_sidebar_link_classes(page_path(workspace_slug: workspace.slug, id: page.id)),
-                          data: notae_shell_link_data do %>
+                          data: sidebar_link_data do %>
                 <span class="notae-sidebar-page-title">
                   <%= render_notae_icon(page.icon, workspace: workspace, fallback: "📄", css_class: "notae-sidebar-page-icon", label: page.title) %>
                   <%= page.title %>
@@ -144,7 +145,7 @@
             <li>
               <%= link_to database_path(workspace_slug: workspace.slug, id: db.id),
                           class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: db.id)),
-                          data: notae_shell_link_data do %>
+                          data: sidebar_link_data do %>
                 <span class="notae-sidebar-page-title">
                   <%= render_notae_icon(db.icon, workspace: workspace, fallback: "🗃️", css_class: "notae-sidebar-page-icon", label: db.name) %>
                   <%= db.name %>
@@ -194,7 +195,7 @@
             <li>
               <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
                           class: notae_sidebar_link_classes(page_path(workspace_slug: workspace.slug, id: page.id)),
-                          data: notae_shell_link_data do %>
+                          data: sidebar_link_data do %>
                 <span class="notae-sidebar-page-title">🗒️ <%= page.title %></span>
               <% end %>
             </li>
@@ -231,14 +232,14 @@
                 <% page = item[:record] %>
                 <%= link_to page_path(workspace_slug: workspace.slug, id: page.id),
                             class: notae_sidebar_link_classes(page_path(workspace_slug: workspace.slug, id: page.id)),
-                            data: notae_shell_link_data do %>
+                            data: sidebar_link_data do %>
                   <span class="notae-sidebar-page-title">⭐ <%= page.title %></span>
                 <% end %>
               <% else %>
                 <% database = item[:record] %>
                 <%= link_to database_path(workspace_slug: workspace.slug, id: database.id),
                             class: notae_sidebar_link_classes(database_path(workspace_slug: workspace.slug, id: database.id)),
-                            data: notae_shell_link_data do %>
+                            data: sidebar_link_data do %>
                   <span class="notae-sidebar-page-title">
                     ⭐
                     <%= render_notae_icon(database.icon, workspace: workspace, fallback: "🗃️", css_class: "notae-sidebar-page-icon", label: database.name) %>
