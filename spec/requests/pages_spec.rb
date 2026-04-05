@@ -493,8 +493,10 @@ RSpec.describe "Pages", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-title-input {\n  height: auto;\n  min-height: calc(1.1em + 0.22rem);\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {\n  max-width: 100%;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
-    expect(stylesheet).to include(".notae-actions-mobile-nav-button-label {\n  min-width: 0;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
-    expect(stylesheet).to include(".notae-options-mobile-nav-button-label {\n  min-width: 0;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
+    expect(stylesheet).to include(".notae-actions-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
+    expect(stylesheet).to include(".notae-options-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: auto;\n  right: 0.5rem;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  width: min(19rem, calc(100vw - 1rem));")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel {\n  position: fixed;\n  left: auto;\n  right: 0.5rem;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  width: min(19rem, calc(100vw - 1rem));")
   end
 
   it "ships dark-theme editor overrides so focused nota text stays readable" do
