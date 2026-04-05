@@ -34,4 +34,14 @@ RSpec.describe "ShellController JavaScript syntax" do
     expect(source).to include("fetch(url, {")
     expect(source).to include("headers: { Accept: \"text/markdown\" }")
   end
+
+  it "keeps topbar menus mutually exclusive on compact layouts" do
+    source = Rails.root.join("app/javascript/controllers/shell_controller.js").read
+
+    expect(source).to include("syncTopbarMenus(event)")
+    expect(source).to include("this.closeActionsMenu()")
+    expect(source).to include("this.closeOptionsMenu()")
+    expect(source).to include("this.closeCommentsMenu()")
+    expect(source).to include("menu.removeAttribute(\"open\")")
+  end
 end

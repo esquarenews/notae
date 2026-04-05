@@ -1,7 +1,7 @@
 <details id="page-options-menu"
          class="notae-options-menu"
          data-controller="options-menu lazy-panel"
-         data-action="lazy-panel:loaded->options-menu#refresh"
+         data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->options-menu#refresh"
          data-shell-options-menu
          data-shell-target="optionsMenu"
          data-lazy-panel-url-value="<%= panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "options") %>"

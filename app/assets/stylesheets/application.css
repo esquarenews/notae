@@ -10238,6 +10238,14 @@ body.notae-theme-dark .notae-doc-muted {
   width: 100%;
 }
 
+.notae-shell.is-mobile-viewport .notae-page-title-input {
+  height: auto;
+  min-height: calc(1.1em + 0.22rem);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .notae-shell.is-mobile-viewport .notae-page-header-action-label,
 .notae-shell.is-mobile-viewport .notae-page-header-link-label {
   display: none !important;
@@ -10401,6 +10409,17 @@ body.notae-theme-dark .notae-doc-muted {
 
 .notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown.is-mobile-detail-open .notae-actions-section {
   animation: notae-actions-slide-in 170ms ease;
+}
+
+.notae-shell.is-mobile-viewport .notae-doc-editor {
+  min-width: 0;
+  padding-right: 0.4rem;
+}
+
+.notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .notae-shell.is-mobile-viewport .notae-block-menu-panel {

@@ -219,6 +219,28 @@ export default class extends Controller {
     this.clearMenuQuery("options_menu")
   }
 
+  syncTopbarMenus(event) {
+    const openedMenu = event.currentTarget
+    if (!(openedMenu instanceof HTMLElement)) return
+    if (!openedMenu.hasAttribute("open")) return
+
+    const commentsMenu = this.element.querySelector("[data-shell-comments-menu]")
+    const menus = [
+      this.hasActionsMenuTarget ? this.actionsMenuTarget : null,
+      this.hasOptionsMenuTarget ? this.optionsMenuTarget : null,
+      commentsMenu
+    ].filter(Boolean)
+
+    menus.forEach((menu) => {
+      if (menu === openedMenu) return
+
+      menu.removeAttribute("open")
+
+      if (menu === this.actionsMenuTarget) this.resetActionsFilter(menu)
+      if (menu === this.optionsMenuTarget) this.clearMenuQuery("options_menu")
+    })
+  }
+
   openCommentsMenu(event) {
     event.preventDefault()
     event.stopPropagation()
@@ -226,6 +248,8 @@ export default class extends Controller {
     const commentsMenu = this.element.querySelector("[data-shell-comments-menu]")
     if (!commentsMenu) return
 
+    this.closeActionsMenu()
+    this.closeOptionsMenu()
     commentsMenu.setAttribute("open", "open")
     const input = commentsMenu.querySelector("input[name='comment[body]']")
     if (input) {
@@ -256,6 +280,8 @@ export default class extends Controller {
     const optionsMenu = this.element.querySelector("[data-shell-options-menu]")
     if (!optionsMenu) return
 
+    this.closeActionsMenu()
+    this.closeCommentsMenu()
     optionsMenu.setAttribute("open", "open")
   }
 

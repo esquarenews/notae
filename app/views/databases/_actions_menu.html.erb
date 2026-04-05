@@ -1,7 +1,7 @@
 <details id="database-actions-menu"
          class="notae-actions-menu notae-db-actions-menu"
          data-controller="copy-text actions-menu lazy-panel"
-         data-action="lazy-panel:loaded->actions-menu#refresh"
+         data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->actions-menu#refresh"
          data-shell-target="actionsMenu"
          data-shell-actions-menu
          data-lazy-panel-url-value="<%= panel_database_path(view_params.merge(panel: "actions")) %>"

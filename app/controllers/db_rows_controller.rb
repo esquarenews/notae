@@ -105,7 +105,13 @@ class DbRowsController < ApplicationController
   def destroy
     authorize @db_row, :destroy?
     @db_row.update!(archived_at: Time.current)
-    redirect_to database_redirect_location, notice: "Row archived."
+
+    if turbo_destroy_row_request?
+      render turbo_stream: turbo_stream_destroy_row_response(@db_row)
+    else
+      close_row_split_for_row_switch! if deleting_current_split_row?
+      redirect_to database_redirect_location, notice: "Row archived."
+    end
   end
 
   def restore
@@ -552,6 +558,37 @@ class DbRowsController < ApplicationController
     ]
   end
 
+  def turbo_stream_destroy_row_response(row)
+    load_table_row_render_context!(rows: [])
+    active_row_count = policy_scope(DbRow).for_database(@database).active.count
+
+    [
+      turbo_stream.update(
+        "database_row_count",
+        partial: "databases/row_count_meta",
+        locals: { row_count: active_row_count }
+      ),
+      turbo_stream.remove("row_#{row.id}"),
+      turbo_stream.update(
+        "database_table_placeholders",
+        partial: "databases/table_placeholders",
+        locals: {
+          visible_properties: @visible_db_properties,
+          placeholder_count: [ 6 - active_row_count, 0 ].max
+        }
+      ),
+      turbo_stream.replace(
+        "database_flash_messages",
+        partial: "shared/flash_messages",
+        locals: {
+          flash_messages: [ [ "notice", "Row archived." ] ],
+          flash_dom_id: "database_flash_messages",
+          flash_host_class: "notae-db-inline-flash-host"
+        }
+      )
+    ]
+  end
+
   def table_row_insertion_target_for_response
     reference_id = params[:insert_after_id].to_s.presence
     return nil if reference_id.blank?
@@ -702,6 +739,18 @@ class DbRowsController < ApplicationController
 
   def table_view_response?
     (current_database_view_for_response&.view_type || "table") == "table"
+  end
+
+  def turbo_destroy_row_request?
+    return false unless request.format.turbo_stream?
+    return false unless table_view_response?
+    return false if deleting_current_split_row?
+
+    true
+  end
+
+  def deleting_current_split_row?
+    params[:split_source].to_s == "row" && params[:split_row_id].to_s == @db_row.id.to_s
   end
 
   def row_color_options

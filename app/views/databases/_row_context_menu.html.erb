@@ -64,7 +64,10 @@
                       method: :delete,
                       params: row_params,
                       class: "notae-db-row-menu-button is-danger",
-                      form: { class: "notae-db-row-menu-form" } do %>
+                      form: {
+                        class: "notae-db-row-menu-form",
+                        data: { preserve_database_scroll: true }
+                      } do %>
           <span class="notae-db-row-menu-icon">x</span>
           <span class="notae-db-row-menu-label">Delete row</span>
         <% end %>

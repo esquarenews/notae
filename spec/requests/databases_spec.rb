@@ -1236,8 +1236,12 @@ RSpec.describe "Databases", type: :request do
     title_field = html.at_css("textarea.notae-page-title-input[name='database[name]']")
     expect(title_field).to be_present
     expect(title_field["rows"]).to eq("1")
+    expect(title_field["wrap"]).not_to eq("off")
     expect(html.at_css("#database-actions-menu[data-lazy-panel-url-value*='panels/actions']")).to be_present
     expect(html.at_css("#database-options-menu[data-lazy-panel-url-value*='panels/options']")).to be_present
+    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->actions-menu#refresh"')
+    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->options-menu#refresh"')
+    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus"')
     expect(html.at_css(".notae-db-settings-menu[data-lazy-panel-url-value*='panels/view_settings']")).to be_present
     table_rows = html.css(".notae-db-grid tbody tr")
     expect(table_rows).not_to be_empty
@@ -1748,6 +1752,39 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('data-preserve-database-scroll="true"')
     expect(response.body).to include("is-new-row-highlight")
     expect(response.body).not_to include('autofocus="autofocus"')
+  end
+
+  it "archives a row with turbo streams so the table stays in place" do
+    owner = User.create!(email: "database-row-destroy-turbo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row destroy turbo tables", slug: "row-destroy-turbo-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row destroy turbo DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Archive me")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    delete_form = html.css("form[action='#{database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)}']").find do |form|
+      form.at_css("input[name='_method'][value='delete']").present?
+    end
+    expect(delete_form).to be_present
+    expect(delete_form["data-preserve-database-scroll"]).to eq("true")
+
+    delete database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+           as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(row.reload.archived_at).to be_present
+    expect(response.body).to include('turbo-stream action="remove" target="row_')
+    expect(response.body).to include("row_#{row.id}")
+    expect(response.body).to include('turbo-stream action="update" target="database_row_count"')
+    expect(response.body).to include('turbo-stream action="update" target="database_table_placeholders"')
+    expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
+    expect(response.body).to include("Row archived.")
   end
 
   it "enqueues a single row reindex job when creating a fresh row" do

@@ -471,6 +471,30 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include('class="notae-page-header-link-label"')
   end
 
+  it "keeps mobile page titles wrapping and topbar menus mutually exclusive" do
+    owner = User.create!(email: "page-mobile-title-wrap-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Mobile title wrap", slug: "mobile-title-wrap")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "A deliberately long mobile page title that should wrap cleanly")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    title_field = html.at_css("textarea.notae-page-title-input[name='page[title]']")
+
+    expect(title_field).to be_present
+    expect(title_field["wrap"]).not_to eq("off")
+    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->actions-menu#refresh"')
+    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->options-menu#refresh"')
+    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus"')
+
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-title-input {\n  height: auto;\n  min-height: calc(1.1em + 0.22rem);\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {\n  max-width: 100%;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
+  end
+
   it "ships dark-theme editor overrides so focused nota text stays readable" do
     owner = User.create!(
       email: "page-dark-editor-owner@example.com",

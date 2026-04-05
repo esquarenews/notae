@@ -1,7 +1,7 @@
 <details id="page-actions-menu"
          class="notae-actions-menu"
          data-controller="actions-menu page-import lazy-panel"
-         data-action="lazy-panel:loaded->actions-menu#refresh"
+         data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->actions-menu#refresh"
          data-shell-target="actionsMenu"
          data-shell-actions-menu
          data-page-import-default-block-id-value="<%= local_assigns[:default_import_insert_after_id] %>"

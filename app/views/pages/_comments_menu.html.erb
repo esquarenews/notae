@@ -1,6 +1,7 @@
 <details id="page-comments-menu"
          class="notae-comments-menu"
          data-controller="lazy-panel"
+         data-action="toggle->shell#syncTopbarMenus"
          data-shell-comments-menu
          data-lazy-panel-url-value="<%= panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "comments") %>"
          data-lazy-panel-loading-text-value="Loading comments…"
