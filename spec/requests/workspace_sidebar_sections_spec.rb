@@ -39,6 +39,8 @@ RSpec.describe "Workspace sidebar sections", type: :request do
     expect(grids_section.text).to include("Projects")
     expect(grids_section.at_css(".notae-icon-renderer-glyph")&.text&.strip).to eq("🧠")
     expect(favorites_section.text).to include("Alpha note")
+    expect(notes_section.css("form[data-turbo-frame='_top']")).not_to be_empty
+    expect(grids_section.css("form[data-turbo-frame='_top']")).not_to be_empty
     expect(notes_section.css("a[data-turbo-frame='_top']")).not_to be_empty
     expect(grids_section.css("a[data-turbo-frame='_top']")).not_to be_empty
     expect(favorites_section.css("a[data-turbo-frame='_top']")).not_to be_empty

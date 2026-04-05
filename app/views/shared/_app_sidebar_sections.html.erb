@@ -2,6 +2,7 @@
   workspace = local_assigns[:workspace] || (defined?(@workspace) ? @workspace : nil)
   loading = local_assigns.fetch(:loading, false)
   sidebar_link_data = notae_shell_link_data.merge(turbo_frame: "_top")
+  sidebar_form_data = { turbo_frame: "_top" }
 %>
 
 <% if workspace.present? %>
@@ -77,6 +78,7 @@
       <% if can_create_page %>
         <%= form_with model: Page.new,
                       url: pages_path(workspace_slug: workspace.slug),
+                      data: sidebar_form_data,
                       class: "notae-sidebar-section-create-form" do |form| %>
           <%= form.hidden_field :title, value: "Untitled" %>
           <button type="submit"
@@ -126,6 +128,7 @@
       <% if can_create_database %>
         <%= form_with model: Database.new,
                       url: databases_path(workspace_slug: workspace.slug),
+                      data: sidebar_form_data,
                       class: "notae-sidebar-section-create-form" do |form| %>
           <%= hidden_field_tag :quick_create, "1" %>
           <%= form.hidden_field :name, value: "Untitled grid" %>
@@ -176,6 +179,7 @@
       <% if can_create_page %>
         <%= form_with model: Page.new,
                       url: pages_path(workspace_slug: workspace.slug),
+                      data: sidebar_form_data,
                       class: "notae-sidebar-section-create-form" do |form| %>
           <%= form.hidden_field :title, value: "Meeting notes" %>
           <%= form.hidden_field :page_kind, value: "meeting_note" %>

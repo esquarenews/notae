@@ -282,9 +282,7 @@
         <div class="notae-db-split-pane-actions">
           <%= link_to "Open full",
                       linked_document_path(split_record, workspace: @workspace),
-                      class: "notae-chip-button",
-                      target: "_blank",
-                      rel: "noopener" %>
+                      class: "notae-chip-button" %>
           <%= link_to "✕",
                       page_path({ workspace_slug: @workspace.slug, id: @page.id }.merge(embedded_page_params)),
                       class: "notae-inline-icon-button",

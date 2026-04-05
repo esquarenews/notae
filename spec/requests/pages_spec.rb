@@ -840,6 +840,10 @@ RSpec.describe "Pages", type: :request do
     expect(split_actions).to be_present
     expect(split_actions.text).to include("Open full")
     expect(split_actions.at_css("a[title='Close side peek']")).to be_present
+    open_full_link = split_actions.at_css("a.notae-chip-button")
+    expect(open_full_link).to be_present
+    expect(open_full_link["href"]).to eq(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(open_full_link["target"]).to be_nil
 
     split_frame = html.at_css(".notae-db-split-frame")
     expect(split_frame).to be_present

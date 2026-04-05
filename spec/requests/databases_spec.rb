@@ -2102,6 +2102,12 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Open linked Nota")
 
     html = Nokogiri::HTML(response.body)
+    split_actions = html.at_css(".notae-db-split-pane-actions")
+    expect(split_actions).to be_present
+    open_full_link = split_actions.at_css("a.notae-chip-button")
+    expect(open_full_link).to be_present
+    expect(open_full_link["href"]).to eq(page_path(workspace_slug: workspace.slug, id: row.linked_page_id))
+    expect(open_full_link["target"]).to be_nil
     linked_row = html.at_css("#row_#{row.id}")
     expect(linked_row).to be_present
     expect(linked_row.css(".notae-db-row-link-action").size).to eq(1)

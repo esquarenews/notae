@@ -558,9 +558,7 @@
       <div class="notae-db-split-pane-actions">
         <%= link_to "Open full",
                     linked_document_path(split_record, workspace: @workspace),
-                    class: "notae-chip-button",
-                    target: "_blank",
-                    rel: "noopener" %>
+                    class: "notae-chip-button" %>
         <%= link_to "✕",
                     database_path(view_params.except(:split_page_id, :split_source, :split_row_id)),
                     class: "notae-inline-icon-button",
