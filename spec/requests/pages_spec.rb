@@ -282,6 +282,13 @@ RSpec.describe "Pages", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open")
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("data-lazy-panel-url-value")
+    expect(response.body).to include("panels/options")
+    expect(response.body).not_to include("Build ZIP")
+
+    get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "options")
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("Markdown")
     expect(response.body).to include("PDF")
     expect(response.body).not_to include("Build ZIP")
@@ -616,6 +623,8 @@ RSpec.describe "Pages", type: :request do
     get workspace_path(workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML.parse(response.body)
     meetings_section = document.css(".notae-sidebar-section").find { |section| section.at_css(".notae-sidebar-label")&.text.to_s.strip == "Meetings" }
     expect(meetings_section).to be_present
@@ -656,6 +665,8 @@ RSpec.describe "Pages", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Grids")
 
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:ok)
     html = Nokogiri::HTML(response.body)
     grid_link = html.css(".notae-sidebar-section").find do |section|
       section.text.include?("Grids")
@@ -726,7 +737,10 @@ RSpec.describe "Pages", type: :request do
     expect(meetings_section.at_css("input[name='page[title]']")["value"]).to eq("Meeting notes")
     expect(meetings_section.at_css("input[name='page[page_kind]']")["value"]).to eq("meeting_note")
 
-    favorites_section = document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Favorites" }
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:ok)
+    favorites_document = Nokogiri::HTML.parse(response.body)
+    favorites_section = favorites_document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Favorites" }
     expect(favorites_section.text).to include("Alpha note")
   end
 
@@ -769,22 +783,67 @@ RSpec.describe "Pages", type: :request do
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Embedded page")
     block = page.blocks.create!(workspace: workspace, created_by: owner, block_type: "paragraph")
+    page.update!(icon: "📘", cover_preset_key: Page::COVER_PRESET_KEYS.first)
     sign_in owner
 
     get page_path(workspace_slug: workspace.slug, id: page.id, embedded: 1)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-shell-embedded")
+    expect(response.body).not_to include("--notae-workspace-color:")
     expect(response.body).not_to include("notae-topbar")
     expect(response.body).not_to include("notae-actions-menu")
     expect(response.body).not_to include("notae-options-menu")
+    expect(response.body).not_to include("notae-page-cover")
+    expect(response.body).not_to include("notae-doc-header")
+    expect(response.body).not_to include("notae-page-title-input")
+    expect(response.body).not_to include("notae-doc-backlinks")
+    expect(response.body).not_to include("Change cover")
+    expect(response.body).not_to include("notae-doc-add-form")
+    expect(response.body).not_to include("notae-doc-handle")
+    expect(response.body).not_to include("notae-block-menu-trigger")
 
     document = Nokogiri::HTML.parse(response.body)
-    add_block_actions = document.css("form.notae-doc-add-form").map { |form| form["action"] }
-    expect(add_block_actions).not_to be_empty
-    expect(add_block_actions).to all(include("embedded=1"))
+    expect(document.css("form.notae-doc-add-form")).to be_empty
+    expect(document.css(".notae-doc-handle")).to be_empty
+    expect(document.css(".notae-block-menu-trigger")).to be_empty
     expect(response.body).to include(page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, embedded: 1))
-    expect(response.body).to include(command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, embedded: 1))
+    expect(response.body).not_to include(command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, embedded: 1))
+  end
+
+  it "truncates split pane titles and keeps split controls visible" do
+    owner = User.create!(email: "page-split-pane-title-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page split pane title", slug: "page-split-pane-title")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    host_page = Page.create!(workspace: workspace, created_by: owner, title: "Host page")
+    linked_page = Page.create!(workspace: workspace, created_by: owner, title: "Linked grid shell")
+    database_name = "This grid title should truncate after thirty characters"
+    database = Database.create!(workspace: workspace, name: database_name, linked_page: linked_page)
+    sign_in owner
+
+    get page_path(
+      workspace_slug: workspace.slug,
+      id: host_page.id,
+      split_page_id: linked_page.id,
+      split_source: "block"
+    )
+
+    expect(response).to have_http_status(:ok)
+
+    html = Nokogiri::HTML.parse(response.body)
+    split_title = html.at_css(".notae-db-split-pane-title")
+    expect(split_title).to be_present
+    expect(split_title["title"]).to eq(database_name)
+    expect(split_title.text.squish).to include(ActionController::Base.helpers.truncate(database_name, length: 30))
+
+    split_actions = html.at_css(".notae-db-split-pane-actions")
+    expect(split_actions).to be_present
+    expect(split_actions.text).to include("Open full")
+    expect(split_actions.at_css("a[title='Close side peek']")).to be_present
+
+    split_frame = html.at_css(".notae-db-split-frame")
+    expect(split_frame).to be_present
+    expect(split_frame["src"]).to eq(database_path(workspace_slug: workspace.slug, id: database.id, embedded: "1"))
   end
 
   it "keeps embedded page redirects when creating blocks from split previews" do
@@ -856,18 +915,12 @@ RSpec.describe "Pages", type: :request do
           params: { page: { small_text: "true" } }
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"))
     follow_redirect!
-    expect(response.body).to match(/id="page-actions-menu"[^>]*open/)
-    expect(response.body).to include("notae-actions-mobile-panes")
-    expect(response.body).to include("notae-actions-mobile-nav")
-    expect(response.body).to include("notae-actions-mobile-back")
-    expect(response.body).to include('data-controller="actions-menu page-import"')
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css("#page-actions-menu[open]")).to be_present
+    expect(response.body).to include('data-controller="actions-menu page-import lazy-panel"')
     expect(response.body).to include('data-controller="page-collaboration"')
-    expect(response.body).to include("Import into this Nota")
-    expect(response.body).to include('click->page-import#open')
-    expect(response.body).to include("into Nota")
-    expect(response.body).to include("Current block as MD")
-    expect(response.body).to include('click->shell#copyCurrentBlockMarkdown')
-    expect(response.body).to include('data-block-markdown-url-template=')
+    expect(response.body).to include("data-lazy-panel-url-value")
+    expect(response.body).not_to include("Current block as MD")
     expect(response.body).not_to include('href="/w/actions/pages/')
     expect(response.body).not_to include("Customize page")
     expect(response.body).not_to include("Turn into wiki")
@@ -877,11 +930,24 @@ RSpec.describe "Pages", type: :request do
           params: { page: { permission_mode: "shared_to_workspace" } }
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, options_menu: "open"))
     follow_redirect!
-    expect(response.body).to match(/id="page-options-menu"[^>]*open/)
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css("#page-options-menu[open]")).to be_present
     expect(response.body).to include("⚙")
-    expect(response.body).to include("notae-options-mobile-panes")
-    expect(response.body).to include("notae-options-mobile-nav")
-    expect(response.body).to include("notae-options-mobile-back")
+    expect(response.body).to include('data-controller="options-menu lazy-panel"')
+    expect(response.body).not_to include("Public share links")
+
+    get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "actions", current_path: page_path(workspace_slug: workspace.slug, id: page.id))
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Import")
+    expect(response.body).to include("into Nota")
+    expect(response.body).to include("Current block as MD")
+    expect(response.body).to include("Version history")
+
+    get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "options")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Permissions")
+    expect(response.body).to include("Public share links")
+    expect(response.body).to include("Templates")
   end
 
   it "updates page title from the clean page header" do

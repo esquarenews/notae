@@ -64,6 +64,7 @@ class DbCellsController < ApplicationController
       filter_property_id: params[:filter_property_id],
       filter_value: params[:filter_value],
       filter_operator: params[:filter_operator],
+      rows_page: params[:rows_page].presence,
       view_settings: params[:view_settings].presence,
       actions_menu: params[:actions_menu].presence,
       split_page_id: split_page_id,

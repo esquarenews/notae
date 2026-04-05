@@ -64,7 +64,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceHomeController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
-    expect(response.body).to include("Loading AI assistant")
+    expect(response.body).to include("Open AI assistant")
     expect(response.body).to include("notae-ai-rail-reopen")
     expect(response.body).to include("notae-ai-floating-toggle")
     expect(response.body).to include("notae-ai-loader")
@@ -79,7 +79,8 @@ RSpec.describe "Workspace home", type: :request do
 
     ai_rail_frame = html.at_css("turbo-frame#ai_rail_panel")
     expect(ai_rail_frame).to be_present
-    expect(ai_rail_frame["src"]).to eq(workspace_ai_assistant_panel_path(workspace_slug: workspace.slug))
+    expect(ai_rail_frame["data-controller"]).to include("ai-rail-loader")
+    expect(ai_rail_frame["data-ai-rail-loader-src-value"]).to eq(workspace_ai_assistant_panel_path(workspace_slug: workspace.slug))
 
     page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)
     expect(page_titles).to eq([ "Page 4 latest", "Page 3 newer", "Page 2 mid" ])
@@ -111,7 +112,10 @@ RSpec.describe "Workspace home", type: :request do
     document = Nokogiri::HTML(response.body)
     shell = document.at_css(".notae-shell")
     marker = document.at_css(".notae-workspace-chip .notae-workspace-color-dot")
-    workspace_link = document.css(".notae-sidebar-section .notae-sidebar-page-title").find { |node| node.text.include?("Colour home") }
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:ok)
+    sidebar_document = Nokogiri::HTML(response.body)
+    workspace_link = sidebar_document.css(".notae-sidebar-section .notae-sidebar-page-title").find { |node| node.text.include?("Colour home") }
 
     expect(shell&.[]("style")).to include("--notae-workspace-color: #{workspace.workspace_color}")
     expect(marker&.[]("style")).to include("--notae-workspace-color-swatch: #{workspace.workspace_color}")
@@ -151,7 +155,9 @@ RSpec.describe "Workspace home", type: :request do
     expect(normalized_database_titles).to include("Standalone grid")
     expect(normalized_database_titles).not_to include("Runbook grid")
 
-    sidebar_labels = html.css(".notae-sidebar-section .notae-sidebar-page-title").map { |node| node.text.squish }
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:ok)
+    sidebar_labels = Nokogiri::HTML(response.body).css(".notae-sidebar-section .notae-sidebar-page-title").map { |node| node.text.squish }
     expect(sidebar_labels).to include(match(/Standalone nota/))
     expect(sidebar_labels).to include(match(/Standalone grid/))
     expect(sidebar_labels).not_to include(match(/Budget tab/))
@@ -183,7 +189,9 @@ RSpec.describe "Workspace home", type: :request do
     expect(page_titles).not_to include("Grid shell page")
     expect(normalized_database_titles).to include("Ops grid")
 
-    sidebar_labels = html.css(".notae-sidebar-section .notae-sidebar-page-title").map { |node| node.text.squish }
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:ok)
+    sidebar_labels = Nokogiri::HTML(response.body).css(".notae-sidebar-section .notae-sidebar-page-title").map { |node| node.text.squish }
     expect(sidebar_labels).to include(match(/Standalone nota/))
     expect(sidebar_labels).to include(match(/Ops grid/))
     expect(sidebar_labels).not_to include(match(/Grid shell page/))
@@ -442,7 +450,7 @@ RSpec.describe "Workspace home", type: :request do
 
       get workspace_library_path(workspace_slug: workspace.slug)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(%(src="#{workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)}"))
+      expect(response.body).to include(%(data-ai-rail-loader-src-value="#{workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)}"))
 
       get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
       expect(response).to have_http_status(:ok)

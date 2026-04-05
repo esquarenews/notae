@@ -1,0 +1,9 @@
+<details class="notae-db-settings-menu"
+         data-controller="copy-text lazy-panel"
+         data-lazy-panel-url-value="<%= panel_database_path(view_params.merge(panel: "view_settings")) %>"
+         data-lazy-panel-loading-text-value="Loading view settings…"
+         data-lazy-panel-error-text-value="Could not load view settings."
+         <%= "open" if params[:view_settings].to_s == "open" %>>
+  <summary class="notae-db-toolbar-icon <%= "is-active" if params[:view_settings].to_s == "open" %>" title="View settings">⚙</summary>
+  <div class="notae-db-settings-panel <%= "is-grid-locked" if database.locked? %>" data-lazy-panel-target="container"></div>
+</details>

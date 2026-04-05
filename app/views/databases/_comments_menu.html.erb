@@ -1,56 +1,11 @@
-<details id="database-comments-menu" class="notae-comments-menu" data-shell-comments-menu>
+<details id="database-comments-menu"
+         class="notae-comments-menu"
+         data-controller="lazy-panel"
+         data-shell-comments-menu
+         data-lazy-panel-url-value="<%= panel_database_path(view_params.merge(panel: "comments")) %>"
+         data-lazy-panel-loading-text-value="Loading comments…"
+         data-lazy-panel-error-text-value="Could not load comments."
+         data-lazy-panel-focus-selector-value="input[name='comment[body]']">
   <summary class="notae-comments-trigger" aria-label="Grid comments">💬</summary>
-  <div class="notae-comments-panel">
-    <section class="notae-options-section">
-      <h3>Grid comments</h3>
-
-      <% comment_view_params = view_params.except(:workspace_slug, :id).merge(workspace_slug: workspace.slug, database_id: database.id) %>
-      <% if can_comment_on_database %>
-        <%= form_with model: new_database_comment,
-                      url: database_comments_path(comment_view_params),
-                      class: "notae-page-comment-form" do |form| %>
-          <span class="notae-page-comment-avatar"><%= current_user.email.first.upcase %></span>
-          <%= form.text_field :body,
-                              placeholder: "Add a comment...",
-                              class: "notae-page-comment-input",
-                              autocomplete: "off" %>
-          <%= form.submit "↗", class: "notae-page-comment-submit", aria: { label: "Submit comment" } %>
-        <% end %>
-      <% end %>
-
-      <% if database_comments.any? %>
-        <ul class="notae-page-comment-list">
-          <% database_comments.each do |comment| %>
-            <li class="notae-page-comment-item <%= "is-resolved" if comment.resolved? %>">
-              <div class="notae-page-comment-meta">
-                <strong><%= comment.author.email %></strong>
-                <span><%= time_ago_in_words(comment.created_at) %> ago</span>
-                <% if comment.resolved? %>
-                  <span>Resolved</span>
-                <% end %>
-              </div>
-              <p><%= comment.body %></p>
-              <% if policy(comment).resolve? %>
-                <div class="notae-page-comment-actions">
-                  <% if comment.resolved? %>
-                    <%= button_to "Reopen",
-                                  unresolve_database_comment_path(comment_view_params.merge(id: comment.id)),
-                                  method: :patch,
-                                  class: "notae-chip-button" %>
-                  <% else %>
-                    <%= button_to "Resolve",
-                                  resolve_database_comment_path(comment_view_params.merge(id: comment.id)),
-                                  method: :patch,
-                                  class: "notae-chip-button" %>
-                  <% end %>
-                </div>
-              <% end %>
-            </li>
-          <% end %>
-        </ul>
-      <% else %>
-        <p class="notae-options-empty">No comments yet.</p>
-      <% end %>
-    </section>
-  </div>
+  <div class="notae-comments-panel" data-lazy-panel-target="container"></div>
 </details>

@@ -1,0 +1,160 @@
+<div class="notae-options-mobile-panes">
+  <div class="notae-options-mobile-pane is-nav">
+    <div class="notae-options-mobile-nav" data-options-menu-target="nav" hidden>
+      <p class="notae-options-mobile-nav-title">Options</p>
+      <div class="notae-options-mobile-nav-list" data-options-menu-target="navList"></div>
+    </div>
+  </div>
+
+  <div class="notae-options-mobile-pane is-detail">
+    <div class="notae-options-mobile-detail-head" data-options-menu-target="detailHead" hidden>
+      <button type="button"
+              class="notae-chip-button notae-options-mobile-back"
+              data-action="options-menu#showList">
+        ← Back
+      </button>
+      <p class="notae-options-mobile-detail-title" data-options-menu-target="detailTitle">Options</p>
+    </div>
+
+    <% share_link_route_params = view_params.except(:id).merge(workspace_slug: workspace.slug, database_id: database.id) %>
+    <% if can_manage_database_permissions %>
+      <section class="notae-options-section"
+               data-options-menu-target="section"
+               data-options-menu-label="Permissions">
+        <h3>Permissions</h3>
+        <%= form_with model: database,
+                      url: permissions_database_path(view_params.merge(options_menu: "open")),
+                      method: :patch,
+                      class: "notae-options-form" do |form| %>
+          <div class="notae-options-field">
+            <%= form.label :permission_mode, "Visibility" %>
+            <%= form.select :permission_mode,
+                            [["Shared to workspace", "shared_to_workspace"], ["Private", "private_database"], ["Specific users", "specific_users"]],
+                            {},
+                            class: "notae-options-input" %>
+          </div>
+          <div class="notae-options-field">
+            <label>Specific users</label>
+            <div class="notae-options-user-list">
+              <% memberships.each do |membership| %>
+                <label class="notae-options-checkbox">
+                  <%= check_box_tag "database[shared_user_ids][]",
+                                    membership.user_id,
+                                    shared_user_ids.include?(membership.user_id) %>
+                  <span><%= membership.user.email %></span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+          <%= form.submit "Save", class: "notae-chip-button" %>
+        <% end %>
+        <%= form_with model: database,
+                      url: database_path(view_params.merge(options_menu: "open")),
+                      method: :patch,
+                      class: "notae-options-form-inline" do |form| %>
+          <%= form.hidden_field :locked, value: (!database.locked?).to_s %>
+          <%= form.submit(database.locked? ? "Unlock grid" : "Lock grid", class: "notae-chip-button") %>
+        <% end %>
+      </section>
+
+      <section class="notae-options-section"
+               data-options-menu-target="section"
+               data-options-menu-label="Public share links">
+        <h3>Public share links</h3>
+        <%= form_with model: DatabaseShareLink.new,
+                      url: database_share_links_path(share_link_route_params.merge(options_menu: "open")),
+                      class: "notae-options-form-inline" do |form| %>
+          <%= form.datetime_local_field :expires_at, class: "notae-options-input" %>
+          <%= form.submit "Create link", class: "notae-chip-button" %>
+        <% end %>
+        <% active_share_links = share_links.select(&:active?) %>
+        <% if active_share_links.any? %>
+          <ul class="notae-options-list">
+            <% active_share_links.each do |share_link| %>
+              <li class="notae-options-list-item">
+                <%= link_to public_database_share_url(token: share_link.token),
+                            public_database_share_path(token: share_link.token),
+                            target: "_blank",
+                            rel: "noopener" %>
+                <%= button_to "Revoke",
+                              database_share_link_path(share_link_route_params.merge(id: share_link.id, options_menu: "open")),
+                              method: :delete,
+                              class: "notae-chip-button" %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="notae-options-empty">No active links.</p>
+        <% end %>
+      </section>
+    <% end %>
+
+    <section class="notae-options-section"
+             data-options-menu-target="section"
+             data-options-menu-label="Export">
+      <h3>Export</h3>
+      <div class="notae-options-inline-actions">
+        <%= link_to "CSV",
+                    export_csv_database_path(view_params.merge(options_menu: "open")),
+                    class: "notae-chip-button" %>
+      </div>
+      <p class="notae-options-empty">CSV export is generated on demand.</p>
+    </section>
+
+    <section class="notae-options-section"
+             data-options-menu-target="section"
+             data-options-menu-label="Templates">
+      <h3>Templates</h3>
+      <% if can_create_database %>
+        <%= form_with url: duplicate_database_path(workspace_slug: workspace.slug, id: database.id, options_menu: "open"),
+                      method: :post,
+                      class: "notae-options-form-inline" do %>
+          <%= text_field_tag "database[name]", "#{database.name} copy", required: true, class: "notae-options-input", placeholder: "Template name" %>
+          <%= submit_tag "Save", class: "notae-chip-button" %>
+        <% end %>
+        <p class="notae-options-empty">Creates a duplicate grid that you can reuse as a template.</p>
+      <% else %>
+        <p class="notae-options-empty">You do not have permission to duplicate this grid.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-options-section"
+             data-options-menu-target="section"
+             data-options-menu-label="Archived rows">
+      <h3>Archived rows</h3>
+      <% if archived_rows.any? %>
+        <ul class="notae-options-list">
+          <% archived_rows.each do |archived_row| %>
+            <li class="notae-options-list-item">
+              <span><%= archived_row.title.presence || "Untitled row" %></span>
+              <%= button_to "Restore",
+                            restore_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: archived_row.id),
+                            method: :patch,
+                            params: view_params.except(:workspace_slug, :id).merge(options_menu: "open"),
+                            class: "notae-chip-button" %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="notae-options-empty">No archived rows.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-options-section"
+             data-options-menu-target="section"
+             data-options-menu-label="Links">
+      <h3>Links</h3>
+      <ul class="notae-options-list">
+        <li class="notae-options-list-item">
+          <a href="<%= view_link %>"><%= view_link %></a>
+          <button type="button"
+                  class="notae-chip-button"
+                  data-action="click->copy-text#copy"
+                  data-copy-text-value="<%= view_link %>">
+            Copy
+          </button>
+        </li>
+      </ul>
+    </section>
+  </div>
+</div>

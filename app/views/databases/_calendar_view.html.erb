@@ -15,6 +15,7 @@
                   filter_property_id: params[:filter_property_id],
                   filter_value: params[:filter_value],
                   filter_operator: params[:filter_operator],
+                  rows_page: params[:rows_page].presence,
                   view_settings: params[:view_settings]
                 ),
                 class: "notae-chip-button" %>
@@ -30,6 +31,7 @@
                   filter_property_id: params[:filter_property_id],
                   filter_value: params[:filter_value],
                   filter_operator: params[:filter_operator],
+                  rows_page: params[:rows_page].presence,
                   view_settings: params[:view_settings]
                 ),
                 class: "notae-chip-button" %>
@@ -67,6 +69,7 @@
                 <%= hidden_field_tag :filter_property_id, params[:filter_property_id] %>
                 <%= hidden_field_tag :filter_value, params[:filter_value] %>
                 <%= hidden_field_tag :filter_operator, params[:filter_operator] %>
+                <%= hidden_field_tag :rows_page, params[:rows_page].presence %>
                 <%= hidden_field_tag :view_settings, params[:view_settings] %>
                 <%= hidden_field_tag :date_property_id, @calendar_date_property.id %>
                 <%= hidden_field_tag :date_value, day.iso8601 %>

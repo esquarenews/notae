@@ -6,13 +6,12 @@
   filter_property_id: params[:filter_property_id],
   filter_value: params[:filter_value],
   filter_operator: params[:filter_operator],
+  rows_page: params[:rows_page].presence,
   highlight_row_id: params[:highlight_row_id],
   split_page_id: params[:split_page_id],
   split_source: params[:split_source],
   split_row_id: params[:split_row_id]
 }.compact %>
-<% linkable_pages = Array(@linkable_pages) %>
-<% linkable_pages_by_id = @linkable_pages_by_id || linkable_pages.index_by(&:id) %>
 <% visible_properties = @visible_db_properties || @db_properties %>
 <% can_edit_grid = policy(@database).update? && !@database.locked? %>
 <% can_persist_sort = @current_view.present? && policy(@current_view).update? && !@database.locked? %>
@@ -94,6 +93,7 @@ end %>
                                 filter_property_id: row_params[:filter_property_id],
                                 filter_value: row_params[:filter_value],
                                 filter_operator: row_params[:filter_operator],
+                                rows_page: row_params[:rows_page],
                                 split_page_id: row_params[:split_page_id],
                                 split_source: row_params[:split_source],
                                 split_row_id: row_params[:split_row_id]
@@ -122,7 +122,8 @@ end %>
                               sort_direction: next_direction,
                               filter_property_id: params[:filter_property_id],
                               filter_value: params[:filter_value],
-                              filter_operator: params[:filter_operator]
+                              filter_operator: params[:filter_operator],
+                              rows_page: row_params[:rows_page]
                             ),
                             data: { preserve_database_scroll: true },
                             class: "notae-db-grid-property-link" %>
@@ -155,6 +156,8 @@ end %>
                                 sort_direction: row_params[:sort_direction],
                                 filter_property_id: row_params[:filter_property_id],
                                 filter_value: row_params[:filter_value],
+                                filter_operator: row_params[:filter_operator],
+                                rows_page: row_params[:rows_page],
                                 split_page_id: row_params[:split_page_id],
                                 split_source: row_params[:split_source],
                                 split_row_id: row_params[:split_row_id]
@@ -185,8 +188,6 @@ end %>
                    workspace: @workspace,
                    database: @database,
                    row_params: row_params,
-                   linkable_pages: linkable_pages,
-                   linkable_pages_by_id: linkable_pages_by_id,
                    visible_properties: visible_properties,
                    cells_by_key: @cells_by_key,
                    can_create_rows: can_create_rows,
@@ -218,6 +219,7 @@ end %>
               <%= hidden_field_tag :filter_property_id, row_params[:filter_property_id] %>
               <%= hidden_field_tag :filter_value, row_params[:filter_value] %>
               <%= hidden_field_tag :filter_operator, row_params[:filter_operator] %>
+              <%= hidden_field_tag :rows_page, row_params[:rows_page] %>
               <%= hidden_field_tag :highlight_row_id, row_params[:highlight_row_id] %>
               <%= hidden_field_tag :split_page_id, row_params[:split_page_id] %>
               <%= hidden_field_tag :split_source, row_params[:split_source] %>
@@ -235,3 +237,5 @@ end %>
     </tbody>
   </table>
 </div>
+
+<%= render "databases/row_pagination", row_params: row_params if @rows_paginated %>

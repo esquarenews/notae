@@ -12,6 +12,11 @@ class DbRowsController < ApplicationController
   def create
     @db_row = @database.db_rows.new(db_row_params)
     @db_row.title = "Untitled row" if @db_row.title.blank?
+    seed_plan = build_new_row_seed_plan(
+      date_override_property_id: params[:date_property_id],
+      date_override_value: params[:date_value]
+    )
+    @db_row.data_json = build_row_data_json_from_seed_plan(seed_plan)
     authorize @db_row
     apply_linked_page_update!
     collapse_row_split_if_switching_context!(current_row_id: @db_row.id)
@@ -23,9 +28,7 @@ class DbRowsController < ApplicationController
 
     if @db_row.save
       insert_row_after_reference!(@db_row, params[:insert_after_id]) if params[:insert_after_id].present?
-      seed_cells_for_row(@db_row)
-      assign_date_value_to_row(@db_row)
-      sync_row_cache_after_seed!(@db_row)
+      seed_cells_for_row(@db_row, seed_plan: seed_plan)
       clear_row_sorting_preferences! if params[:insert_after_id].present?
       if @redirect_split_source == "row" && @redirect_split_page_id.present?
         @redirect_split_row_id ||= @db_row.id
@@ -203,12 +206,16 @@ class DbRowsController < ApplicationController
     @db_row = policy_scope(DbRow).for_database(@database).find(params[:id])
   end
 
-  def seed_cells_for_row(row)
-    db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+  def seed_cells_for_row(row, seed_plan: nil, assume_empty: false)
+    if seed_plan.present?
+      return insert_seeded_cells_for_row(row, seed_plan)
+    end
+
+    db_properties = db_properties_for_database
     return if db_properties.empty?
 
     property_ids = db_properties.map(&:id)
-    existing_property_ids = row.db_cells.where(db_property_id: property_ids).pluck(:db_property_id)
+    existing_property_ids = assume_empty ? [] : row.db_cells.where(db_property_id: property_ids).pluck(:db_property_id)
     existing_lookup = existing_property_ids.each_with_object({}) { |property_id, memo| memo[property_id] = true }
 
     now = Time.current
@@ -229,6 +236,26 @@ class DbRowsController < ApplicationController
     return if missing_cells.empty?
 
     DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
+  end
+
+  def insert_seeded_cells_for_row(row, seed_plan)
+    return if seed_plan.empty?
+
+    now = Time.current
+    DbCell.insert_all(
+      seed_plan.map do |entry|
+        {
+          id: SecureRandom.uuid,
+          workspace_id: @workspace.id,
+          db_row_id: row.id,
+          db_property_id: entry[:property].id,
+          value_text: entry[:value],
+          created_at: now,
+          updated_at: now
+        }
+      end,
+      unique_by: :index_db_cells_on_db_row_id_and_db_property_id
+    )
   end
 
   def assign_date_value_to_row(row)
@@ -279,6 +306,7 @@ class DbRowsController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      rows_page: params[:rows_page].presence,
       view_settings: params[:view_settings].presence,
       actions_menu: params[:actions_menu].presence,
       options_menu: params[:options_menu].presence,
@@ -300,6 +328,7 @@ class DbRowsController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      rows_page: params[:rows_page].presence,
       options_menu: params[:options_menu].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
@@ -414,7 +443,12 @@ class DbRowsController < ApplicationController
   end
 
   def create_row_below!(reference_row)
-    row_candidate = @database.db_rows.new(workspace: @workspace, title: "Untitled row")
+    seed_plan = build_new_row_seed_plan
+    row_candidate = @database.db_rows.new(
+      workspace: @workspace,
+      title: "Untitled row",
+      data_json: build_row_data_json_from_seed_plan(seed_plan)
+    )
     unless policy(row_candidate).create?
       @db_row.errors.add(:base, "You are not authorized to create rows in this grid.")
       return nil
@@ -426,8 +460,7 @@ class DbRowsController < ApplicationController
     end
 
     insert_row_after_reference!(row_candidate, reference_row.id)
-    seed_cells_for_row(row_candidate)
-    sync_row_cache_after_seed!(row_candidate)
+    seed_cells_for_row(row_candidate, seed_plan: seed_plan)
     clear_row_sorting_preferences!
     row_candidate
   end
@@ -573,7 +606,7 @@ class DbRowsController < ApplicationController
 
   def load_table_row_render_context!(rows:)
     @current_view = current_database_view_for_response
-    @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+    @db_properties = db_properties_for_database
     @view_config = @current_view&.config_json.to_h || {}
     visible_property_ids = Array(@view_config["visible_property_ids"]).map(&:to_s)
     @visible_db_properties = if visible_property_ids.any?
@@ -596,8 +629,6 @@ class DbRowsController < ApplicationController
         .to_a
         .index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
     end
-    @linkable_pages = policy_scope(Page).for_workspace(@workspace).active.select(:id, :title, :updated_at).order(updated_at: :desc).to_a
-    @linkable_pages_by_id = @linkable_pages.index_by(&:id)
     @select_options_by_property = build_select_options_by_property_for_rows(properties: @visible_db_properties)
   end
 
@@ -636,8 +667,6 @@ class DbRowsController < ApplicationController
       database: @database,
       current_view: @current_view,
       row_params: table_row_params,
-      linkable_pages: @linkable_pages,
-      linkable_pages_by_id: @linkable_pages_by_id,
       visible_properties: @visible_db_properties,
       cells_by_key: @cells_by_key,
       can_create_rows: policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked?,
@@ -656,6 +685,7 @@ class DbRowsController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      rows_page: params[:rows_page].presence,
       highlight_row_id: params[:highlight_row_id].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
@@ -744,12 +774,45 @@ class DbRowsController < ApplicationController
     ""
   end
 
+  def build_new_row_seed_plan(date_override_property_id: nil, date_override_value: nil)
+    default_created_date = Date.current.iso8601
+    override_id = date_override_property_id.to_s.presence
+    override_value = date_override_value.to_s.presence
+
+    db_properties_for_database.map do |property|
+      value =
+        if override_id.present? && override_value.present? && property.date? && property.id.to_s == override_id
+          override_value
+        else
+          default_cell_value_for_property(property, default_created_date:)
+        end
+
+      {
+        property: property,
+        value: value
+      }
+    end
+  end
+
+  def build_row_data_json_from_seed_plan(seed_plan, style_payload: {})
+    seed_plan.each_with_object({}) do |entry, data|
+      key = entry[:property].name.to_s.strip
+      next if key.blank?
+
+      data[key] = entry[:value].to_s
+    end.merge(style_payload)
+  end
+
   def date_created_property?(property)
     property.date? && property.name.to_s.strip.casecmp("date created").zero?
   end
 
   def sync_row_cache_after_seed!(row)
     row.sync_data_from_cells!
+  end
+
+  def db_properties_for_database
+    @db_properties_for_database ||= policy_scope(DbProperty).for_database(@database).ordered.to_a
   end
 
   def suggested_insert_position_after(reference:, next_row:)

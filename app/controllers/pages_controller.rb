@@ -1,7 +1,7 @@
 class PagesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy remove_tab import]
+  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy remove_tab import panel]
   COVER_SHIFT_STEP = 10
 
   def show
@@ -12,56 +12,15 @@ class PagesController < ApplicationController
     @page_title_page = @page.parent_page || @page
     @can_update_page_title_page = policy(@page_title_page).update?
 
-    @can_manage_permissions = policy(@page).permissions?
-    @memberships =
-      if @can_manage_permissions
-        policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
-      else
-        []
-      end
-    @pages = policy_scope(Page).for_workspace(@workspace).active.includes(:linked_database).order(:created_at).to_a
-    @move_target_pages = @pages.reject { |candidate| candidate.id == @page.id }
-    @linkable_note_pages = @pages.reject { |candidate| candidate.id == @page.id || candidate.linked_database.present? }
-    @linkable_databases = policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).to_a
-
     @active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
     if @active_blocks.empty? && policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create?
       @page.blocks.create!(workspace: @workspace, created_by: current_user, block_type: "paragraph")
       @active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
     end
     @blocks_by_parent = @active_blocks.group_by(&:parent_block_id)
-    @archived_blocks = policy_scope(Block).for_page(@page).archived.ordered.to_a
-    @can_archive_page = policy(@page).archive?
-    @shared_user_ids = @can_manage_permissions ? @page.page_shares.pluck(:user_id) : []
     @backlinks = policy_scope(PageLink).for_target(@page).includes(source_page: :linked_database).order(created_at: :desc)
     @row_backlink_databases = resolve_row_backlink_databases
-    @page_exports = policy_scope(PageExport).for_page(@page).recent_first.limit(10).to_a
-    @page_templates = policy_scope(PageTemplate).for_workspace(@workspace).recent_first.limit(20).to_a
-    @recent_audit_events = policy_scope(AuditEvent)
-                             .where(workspace_id: @workspace.id, auditable: @page)
-                             .recent_first
-                             .limit(10)
-                             .to_a
-    @new_page_template = PageTemplate.new
-    @page_versions = @page.versions.reorder(created_at: :desc).limit(10).to_a
-    @share_links =
-      if @can_manage_permissions
-        policy_scope(ShareLink).for_page(@page).recent_first.to_a
-      else
-        []
-      end
-    @can_update_page = policy(@page).update?
-    page_comment_probe = Comment.new(commentable: @page, workspace: @workspace, author: current_user, body: "draft")
-    @can_comment_on_page = policy(page_comment_probe).create?
-    @new_page_comment = Comment.new
-    @page_comments = policy_scope(Comment)
-                       .for_workspace(@workspace)
-                       .where(commentable: @page)
-                       .includes(:author, :resolved_by)
-                       .order(created_at: :desc)
-                       .to_a
-    @page_plain_text = @active_blocks.filter_map { |block| block.search_text.to_s.strip.presence }.join("\n")
-    @page_word_count = @page_plain_text.scan(/\b[\p{L}\p{N}'-]+\b/u).size
+    @can_comment_on_page = can_comment_on_page?
     @page_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @page)
     @page_reader_mode = @page.remove_blocks? || @page.locked?
     @can_create_tab_page =
@@ -70,7 +29,60 @@ class PagesController < ApplicationController
       else
         false
       end
-    @default_import_insert_after_id = @active_blocks.last&.id
+  end
+
+  def panel
+    authorize @page, :show?
+
+    case params[:panel].to_s
+    when "comments"
+      return head :forbidden if @page.locked?
+
+      prepare_page_comments_panel!
+      render partial: "pages/comments_menu_body",
+             locals: {
+               workspace: @workspace,
+               page: @page,
+               can_comment_on_page: @can_comment_on_page,
+               new_page_comment: @new_page_comment,
+               page_comments: @page_comments
+             }
+    when "actions"
+      prepare_page_actions_panel!
+      render partial: "pages/actions_menu_body",
+             locals: {
+               workspace: @workspace,
+               page: @page,
+               can_import_page: policy(@page).update?,
+               current_path: params[:current_path].presence || page_path(workspace_slug: @workspace.slug, id: @page.id),
+               move_target_pages: @move_target_pages,
+               can_manage_permissions: policy(@page).permissions?,
+               can_archive_page: policy(@page).archive?,
+               page_plain_text: @page_plain_text,
+               page_word_count: @page_word_count,
+               page_versions: @page_versions,
+               recent_audit_events: @recent_audit_events
+             }
+    when "options"
+      return head :forbidden if @page.locked?
+
+      prepare_page_options_panel!
+      render partial: "pages/options_menu_body",
+             locals: {
+               workspace: @workspace,
+               page: @page,
+               can_manage_permissions: @can_manage_permissions,
+               memberships: @memberships,
+               shared_user_ids: @shared_user_ids,
+               share_links: @share_links,
+               page_exports: @page_exports,
+               new_page_template: @new_page_template,
+               page_templates: @page_templates,
+               archived_blocks: @archived_blocks
+             }
+    else
+      head :not_found
+    end
   end
 
   def update
@@ -399,5 +411,60 @@ class PagesController < ApplicationController
       .distinct
       .order(updated_at: :desc)
       .to_a
+  end
+
+  def can_comment_on_page?
+    page_comment_probe = Comment.new(commentable: @page, workspace: @workspace, author: current_user, body: "draft")
+    policy(page_comment_probe).create?
+  end
+
+  def prepare_page_comments_panel!
+    @can_comment_on_page = can_comment_on_page?
+    @new_page_comment = Comment.new
+    @page_comments = policy_scope(Comment)
+                       .for_workspace(@workspace)
+                       .where(commentable: @page)
+                       .includes(:author, :resolved_by)
+                       .order(created_at: :desc)
+                       .to_a
+  end
+
+  def prepare_page_actions_panel!
+    @move_target_pages = policy_scope(Page)
+                           .for_workspace(@workspace)
+                           .active
+                           .includes(:linked_database)
+                           .order(:created_at)
+                           .reject { |candidate| candidate.id == @page.id }
+    active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
+    @page_plain_text = active_blocks.filter_map { |block| block.search_text.to_s.strip.presence }.join("\n")
+    @page_word_count = @page_plain_text.scan(/\b[\p{L}\p{N}'-]+\b/u).size
+    @recent_audit_events = policy_scope(AuditEvent)
+                             .where(workspace_id: @workspace.id, auditable: @page)
+                             .recent_first
+                             .limit(10)
+                             .to_a
+    @page_versions = @page.versions.reorder(created_at: :desc).limit(10).to_a
+  end
+
+  def prepare_page_options_panel!
+    @can_manage_permissions = policy(@page).permissions?
+    @memberships =
+      if @can_manage_permissions
+        policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
+      else
+        []
+      end
+    @shared_user_ids = @can_manage_permissions ? @page.page_shares.pluck(:user_id) : []
+    @page_exports = policy_scope(PageExport).for_page(@page).recent_first.limit(10).to_a
+    @page_templates = policy_scope(PageTemplate).for_workspace(@workspace).recent_first.limit(20).to_a
+    @new_page_template = PageTemplate.new
+    @share_links =
+      if @can_manage_permissions
+        policy_scope(ShareLink).for_page(@page).recent_first.to_a
+      else
+        []
+      end
+    @archived_blocks = policy_scope(Block).for_page(@page).archived.ordered.to_a
   end
 end

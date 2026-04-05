@@ -97,6 +97,7 @@ class DbPropertiesController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      rows_page: params[:rows_page].presence,
       view_settings: params[:view_settings].presence,
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,

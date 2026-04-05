@@ -31,6 +31,85 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["page_updated_at"]).to be_present
   end
 
+  it "broadcasts synced block updates to every touched page while skipping only the edited block for the same tab" do
+    owner = User.create!(email: "blocks-synced-broadcast-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Synced broadcasts", slug: "synced-broadcasts")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    source_page = Page.create!(workspace: workspace, created_by: owner, title: "Source page")
+    copy_page = Page.create!(workspace: workspace, created_by: owner, title: "Copy page")
+    source_block = Block.create!(workspace: workspace, page: source_page, created_by: owner, block_type: "paragraph")
+    source_block.update!(
+      block_type: "synced_block",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Source content" } ]
+          }
+        ],
+        "notae_synced_source_id" => source_block.id.to_s
+      }
+    )
+    synced_copy = Block.create!(
+      workspace: workspace,
+      page: copy_page,
+      created_by: owner,
+      block_type: "synced_block",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Source content" } ]
+          }
+        ],
+        "notae_synced_source_id" => source_block.id.to_s
+      }
+    )
+    sign_in owner
+    allow(ActionCable.server).to receive(:broadcast)
+
+    patch page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: source_block.id),
+          params: {
+            block: {
+              block_type: "synced_block",
+              content_json: {
+                type: "doc",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [ { type: "text", text: "Updated everywhere" } ]
+                  }
+                ]
+              }
+            }
+          },
+          headers: { "X-Notae-Client-Session" => "tab-123" },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(synced_copy.reload.content_json.dig("content", 0, "content", 0, "text")).to eq("Updated everywhere")
+    expect(ActionCable.server).to have_received(:broadcast).with(
+      "page:#{source_page.id}:collaboration",
+      hash_including(
+        type: "block_updated",
+        client_session_id: "tab-123",
+        origin_block_id: source_block.id,
+        block: hash_including(id: source_block.id)
+      )
+    )
+    expect(ActionCable.server).to have_received(:broadcast).with(
+      "page:#{copy_page.id}:collaboration",
+      hash_including(
+        type: "block_updated",
+        client_session_id: "tab-123",
+        origin_block_id: source_block.id,
+        block: hash_including(id: synced_copy.id)
+      )
+    )
+  end
+
   it "preserves block color metadata when saving heading content" do
     owner = User.create!(email: "blocks-heading-color-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Heading colors", slug: "heading-colors")
@@ -226,6 +305,48 @@ RSpec.describe "Blocks", type: :request do
     expect(sibling_positions.last).to be > sibling_positions.first
   end
 
+  it "adds a blank block above the current block from the block menu command" do
+    owner = User.create!(email: "blocks-add-above-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Add above", slug: "add-above")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Add above page")
+    first = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    second = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: second.id),
+         params: { block_command: { command: "add_block_above" } }
+
+    inserted = page.blocks.active.where.not(id: [ first.id, second.id ]).sole
+    ordered_ids = page.blocks.active.roots.ordered.pluck(:id)
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "block_#{inserted.id}"))
+    expect(ordered_ids).to eq([ first.id, inserted.id, second.id ])
+    expect(inserted.block_type).to eq("paragraph")
+    expect(inserted.content_json).to eq(Block::DEFAULT_CONTENT)
+  end
+
+  it "adds a blank block below the current block from the block menu command" do
+    owner = User.create!(email: "blocks-add-below-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Add below", slug: "add-below")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Add below page")
+    first = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    second = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: first.id),
+         params: { block_command: { command: "add_block_below" } }
+
+    inserted = page.blocks.active.where.not(id: [ first.id, second.id ]).sole
+    ordered_ids = page.blocks.active.roots.ordered.pluck(:id)
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id, anchor: "block_#{inserted.id}"))
+    expect(ordered_ids).to eq([ first.id, inserted.id, second.id ])
+    expect(inserted.block_type).to eq("paragraph")
+    expect(inserted.content_json).to eq(Block::DEFAULT_CONTENT)
+  end
+
   it "reorders blocks with a drag-drop style request" do
     owner = User.create!(email: "blocks-reorder-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Reorder", slug: "reorder")
@@ -331,10 +452,36 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("Outdent")
     expect(response.body).to include("drop->block-list#handleDrop")
     expect(response.body).to include("dragend->block-list#handleDragEnd")
+    expect(response.body).to include("pointerdown->block-list#prepareDragStart")
     expect(response.body).to include("class=\"notae-doc-handle\"")
     expect(response.body).to include("title=\"Drag block\"")
     expect(response.body).to include("draggable=\"true\"")
     expect(response.body).to include("data-turbo-stream=\"true\"")
+  end
+
+  it "renders the updated block menu actions without legacy page conversion targets" do
+    owner = User.create!(email: "blocks-menu-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Menu blocks", slug: "menu-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Menu page")
+    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include('class="notae-menu-item-label">Page</span>')
+    expect(response.body).not_to include('class="notae-menu-item-label">Page in</span>')
+    expect(response.body).to include("Add block above")
+    expect(response.body).to include("Add block below")
+
+    actions_section = response.body.match(/<section class="notae-block-menu-section">\s*<h4>Actions<\/h4>(.*?)<\/section>/m)
+    expect(actions_section).to be_present
+
+    action_markup = actions_section[1]
+    expect(action_markup.index("Add block above")).to be < action_markup.index("Add block below")
+    expect(action_markup.index("Add block below")).to be < action_markup.index("Indent")
+    expect(action_markup.index("Indent")).to be < action_markup.index("Outdent")
   end
 
   it "keeps page flash notices sticky inside the current viewport" do
@@ -963,6 +1110,58 @@ RSpec.describe "Blocks", type: :request do
     )
   end
 
+  it "shows unlink for linked block actions and removes linked nota/grid targets" do
+    owner = User.create!(email: "blocks-unlink-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Linked unlink blocks", slug: "linked-unlink-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    source_page = Page.create!(workspace: workspace, created_by: owner, title: "Source note")
+    existing_grid = Database.create!(workspace: workspace, name: "Existing grid", created_by: owner)
+    existing_grid_page = Databases::EnsureLinkedPageService.call(database: existing_grid, actor: owner)
+    block = Block.create!(workspace: workspace, page: source_page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: block.id),
+         params: { block_command: { command: "link_existing_grid", target_database_id: existing_grid.id } }
+
+    expect(response).to redirect_to(
+      page_path(
+        workspace_slug: workspace.slug,
+        id: source_page.id,
+        split_page_id: existing_grid_page.id,
+        split_source: "block",
+        anchor: "block_#{block.id}"
+      )
+    )
+
+    get page_path(workspace_slug: workspace.slug, id: source_page.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    block_node = document.at_css("#block_#{block.id}")
+    unlink_form = block_node.css("form").find do |form|
+      form.at_css('input[name="block_command[command]"][value="unlink_linked_document"]')
+    end
+
+    expect(unlink_form).to be_present
+    expect(unlink_form.at_css(".notae-menu-item-label")&.text&.strip).to eq("Unlink Grid")
+
+    post command_page_block_path(
+      workspace_slug: workspace.slug,
+      page_id: source_page.id,
+      id: block.id,
+      split_page_id: existing_grid_page.id,
+      split_source: "block"
+    ), params: { block_command: { command: "unlink_linked_document" } }
+
+    expect(response).to redirect_to(
+      page_path(workspace_slug: workspace.slug, id: source_page.id, anchor: "block_#{block.id}")
+    )
+
+    expect(block.reload.content_json.dig("content", 0, "content", 0, "text")).to eq(existing_grid.name)
+    expect(block.content_json.dig("content", 0, "content", 0, "marks")).to be_nil
+    expect(PageLink.where(source_block: block, target_page: existing_grid_page)).to be_empty
+  end
+
   it "supports color, duplicate, move, delete, and suggest edits commands" do
     owner = User.create!(email: "blocks-command-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Command blocks", slug: "command-blocks")
@@ -1035,8 +1234,11 @@ RSpec.describe "Blocks", type: :request do
     block_node = document.at_css("#block_#{block.id}")
     expect(block_node).to be_present
 
+    picker_rows = block_node.css(".notae-block-menu-picker-row")
+    expect(picker_rows.size).to eq(2)
+
     picker_forms = block_node.css("form.notae-block-menu-picker-form")
-    expect(picker_forms.size).to eq(2)
+    expect(picker_forms.size).to eq(3)
 
     note_form = picker_forms.find do |form|
       form.at_css('input[name="block_command[command]"][value="link_existing_nota"]')
@@ -1044,13 +1246,35 @@ RSpec.describe "Blocks", type: :request do
     grid_form = picker_forms.find do |form|
       form.at_css('input[name="block_command[command]"][value="link_existing_grid"]')
     end
+    move_form = picker_forms.find do |form|
+      form.at_css('input[name="block_command[command]"][value="move_to"]')
+    end
 
     expect(note_form.at_css('button[data-action="block-tools#togglePicker"]')).to be_present
-    expect(note_form.at_css('.notae-block-menu-picker[hidden]')).to be_present
-    expect(note_form.at_css('select[data-action="change->block-tools#submitPicker"]')).to be_present
+    expect(note_form["data-controller"]).to be_blank
+    expect(note_form.parent.at_css('.notae-block-menu-picker[hidden]')).to be_present
+    expect(note_form.parent["data-controller"]).to eq("document-picker")
+    expect(note_form.parent.at_css('input[data-document-picker-target="hiddenInput"]')).to be_present
+    expect(note_form.parent.at_css('input[data-document-picker-target="searchInput"]')).to be_present
+    expect(note_form.parent.at_css('.notae-block-menu-inline-form .notae-menu-item-label')&.text).to eq("Create linked Nota")
 
     expect(grid_form.at_css('button[data-action="block-tools#togglePicker"]')).to be_present
-    expect(grid_form.at_css('.notae-block-menu-picker[hidden]')).to be_present
-    expect(grid_form.at_css('select[data-action="change->block-tools#submitPicker"]')).to be_present
+    expect(grid_form["data-controller"]).to be_blank
+    expect(grid_form.parent.at_css('.notae-block-menu-picker[hidden]')).to be_present
+    expect(grid_form.parent["data-controller"]).to eq("document-picker")
+    expect(grid_form.parent.at_css('input[data-document-picker-target="hiddenInput"]')).to be_present
+    expect(grid_form.parent.at_css('input[data-document-picker-target="searchInput"]')).to be_present
+    expect(grid_form.parent.at_css('.notae-block-menu-inline-form .notae-menu-item-label')&.text).to eq("Create linked Grid")
+
+    expect(move_form["data-controller"]).to eq("document-picker")
+    expect(move_form.at_css('input[data-document-picker-target="hiddenInput"]')).to be_present
+    expect(move_form.at_css('input[data-document-picker-target="searchInput"]')).to be_present
+  end
+
+  it "keeps linked nota and grid picker rows inline while letting the chooser span the full menu width" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-block-menu-picker-row {\n  grid-column: 1 / -1;\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));")
+    expect(stylesheet).to include(".notae-block-menu-picker-row .notae-block-menu-picker {\n  grid-column: 1 / -1;")
   end
 end

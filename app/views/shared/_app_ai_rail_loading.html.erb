@@ -1,10 +1,9 @@
-<div class="notae-ai-rail-shell is-loading"
-     aria-busy="true"
+<div class="notae-ai-rail-shell is-deferred"
      aria-live="polite">
   <button type="button"
           class="notae-ai-floating-toggle"
-          aria-label="Loading AI assistant"
-          disabled>
+          data-action="click->ai-rail-loader#openOverlay"
+          aria-label="Open AI assistant">
     <%= render "shared/ai_loader_icon",
                variant: current_user.ai_loader_style,
                state: "loading",
@@ -15,8 +14,8 @@
   <aside class="notae-ai-rail is-loading">
     <button type="button"
             class="notae-ai-rail-reopen"
-            aria-label="Loading AI assistant"
-            disabled>
+            data-action="click->ai-rail-loader#openRail"
+            aria-label="Open AI assistant rail">
       <%= render "shared/ai_loader_icon",
                  variant: current_user.ai_loader_style,
                  state: "loading",
@@ -29,8 +28,8 @@
     </div>
 
     <div class="notae-ai-card notae-ai-card-loading">
-      <p class="notae-ai-title">Loading AI assistant</p>
-      <p class="notae-ai-copy">The page is ready. AI context is loading separately so it does not hold up navigation.</p>
+      <p class="notae-ai-title">Open AI assistant</p>
+      <p class="notae-ai-copy">The page is ready. AI context loads on demand so navigation stays fast.</p>
     </div>
   </aside>
 </div>

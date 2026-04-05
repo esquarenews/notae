@@ -73,11 +73,10 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
 
     expect(source).to include("togglePicker(event)")
-    expect(source).to include("submitPicker(event)")
     expect(source).to include("closest(\".notae-block-menu-picker-form\")")
+    expect(source).to include("closest(\".notae-block-menu-picker-row\")")
     expect(source).to include("closeInlinePickers(form)")
-    expect(source).to include("select.focus()")
-    expect(source).to include("typeof select.showPicker === \"function\"")
-    expect(source).to include("select.form?.requestSubmit()")
+    expect(source).to include("[data-document-picker-target='searchInput']")
+    expect(source).to include("focusTarget.focus()")
   end
 end

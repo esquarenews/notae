@@ -15,6 +15,7 @@ export default class extends Controller {
   connect() {
     this.heartbeatTimer = null
     this.lastEditingBlockId = null
+    this.clientSessionId = this.resolveClientSessionId()
     this.handleBlockEditingEvent = this.handleBlockEditingEvent.bind(this)
 
     window.addEventListener("notae:block-editing", this.handleBlockEditingEvent)
@@ -153,7 +154,18 @@ export default class extends Controller {
   }
 
   forwardRemoteBlockUpdate(payload) {
-    if (String(payload.actor_id) === String(this.currentUserIdValue)) return
+    const blockId = String(payload?.block?.id || "")
+    const originBlockId = String(payload?.origin_block_id || "")
+    const clientSessionId = String(payload?.client_session_id || "")
+
+    if (
+      clientSessionId.length > 0 &&
+      clientSessionId === this.clientSessionId &&
+      originBlockId.length > 0 &&
+      originBlockId === blockId
+    ) {
+      return
+    }
 
     window.dispatchEvent(
       new CustomEvent("notae:block-remote-update", {
@@ -169,5 +181,30 @@ export default class extends Controller {
     const stem = String(email || "").split("@")[0]
     const compact = stem.replace(/[^a-zA-Z0-9]/g, "")
     return compact.slice(0, 2).toUpperCase() || "?"
+  }
+
+  resolveClientSessionId() {
+    const storageKey = "notae-client-session-id"
+
+    try {
+      const stored = window.sessionStorage.getItem(storageKey)
+      if (stored) return stored
+
+      const generated = this.generateClientSessionId()
+      window.sessionStorage.setItem(storageKey, generated)
+      return generated
+    } catch (_error) {
+      if (!window.__notaeClientSessionId) {
+        window.__notaeClientSessionId = this.generateClientSessionId()
+      }
+
+      return window.__notaeClientSessionId
+    }
+  }
+
+  generateClientSessionId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+
+    return `notae-${Date.now()}-${Math.random().toString(16).slice(2)}`
   }
 }

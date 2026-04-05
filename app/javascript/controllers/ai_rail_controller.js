@@ -34,7 +34,10 @@ export default class extends Controller {
     this.visualViewport = window.visualViewport || null
     this.onRailViewportChange = () => this.handleRailViewportChange()
     this.prefillEventHandler = (event) => this.applyPrefill(event.detail || {})
-    this.visibilityChangeHandler = () => this.refreshAgentToastState()
+    this.visibilityChangeHandler = () => {
+      this.refreshAgentToastState()
+      this.syncAgentUpdatePolling({ immediate: this.railActive() })
+    }
     this.agentUpdateIds = new Set()
     this.agentToastTimer = null
     this.agentUpdatePollTimer = null
@@ -56,6 +59,8 @@ export default class extends Controller {
     this.handleRailViewportChange()
     this.restoreUsageState()
     this.syncFloatingControls()
+    this.applyPendingPrefill()
+    this.applyPendingRailOpen()
     this.queueThreadScroll()
     this.applyInsertPayload()
     this.captureExistingAgentUpdates()
@@ -81,7 +86,7 @@ export default class extends Controller {
 
     if (this.agentToastTimer) window.clearTimeout(this.agentToastTimer)
     if (this.agentUpdateFocusTimer) window.clearTimeout(this.agentUpdateFocusTimer)
-    if (this.agentUpdatePollTimer) window.clearInterval(this.agentUpdatePollTimer)
+    this.stopAgentUpdatePolling()
     if (this.shellElement) {
       this.shellElement.classList.remove("is-ai-compact-viewport")
       this.shellElement.classList.remove("is-layout-hydrating")
@@ -287,6 +292,7 @@ export default class extends Controller {
     this.setPreference("notae-ai-rail-collapsed", collapsed)
     this.notifyLayoutChange()
     this.refreshAgentToastState()
+    this.syncAgentUpdatePolling({ immediate: !collapsed && !this.compactViewport() })
   }
 
   setOverlayOpen(open) {
@@ -296,6 +302,7 @@ export default class extends Controller {
     this.syncFloatingControls()
     this.notifyLayoutChange()
     this.refreshAgentToastState()
+    this.syncAgentUpdatePolling({ immediate: open })
   }
 
   restoreRailState() {
@@ -377,6 +384,30 @@ export default class extends Controller {
     }
   }
 
+  applyPendingPrefill() {
+    const detail = window.notaeAiRailPendingPrefill
+    if (!detail) return
+
+    delete window.notaeAiRailPendingPrefill
+    this.applyPrefill(detail)
+  }
+
+  applyPendingRailOpen() {
+    if (window.notaeAiRailPendingPrefill) return
+
+    const pendingMode = window.notaeAiRailPendingOpen
+    if (!pendingMode) return
+
+    delete window.notaeAiRailPendingOpen
+
+    if (this.compactViewport() || pendingMode === "overlay") {
+      this.setOverlayOpen(true)
+      return
+    }
+
+    this.setRailCollapsed(false)
+  }
+
   capturePendingInsertion() {
     const sourceInsertion = window.notaeAiInsertionPoint
     const insertionPoint = sourceInsertion ? { ...sourceInsertion } : null
@@ -429,6 +460,7 @@ export default class extends Controller {
 
     this.syncFloatingControls()
     this.refreshAgentToastState()
+    this.syncAgentUpdatePolling({ immediate: this.railActive() })
   }
 
   compactViewport() {
@@ -614,15 +646,12 @@ export default class extends Controller {
 
   startAgentUpdatePolling() {
     if (!this.hasAgentUpdatesPathValue || !this.agentUpdatesPathValue) return
-
-    this.pollAgentUpdates()
-    this.agentUpdatePollTimer = window.setInterval(() => {
-      this.pollAgentUpdates()
-    }, AGENT_UPDATE_POLL_INTERVAL_MS)
+    this.syncAgentUpdatePolling({ immediate: this.railActive() })
   }
 
   async pollAgentUpdates() {
     if (!this.hasAgentUpdatesPathValue || !this.agentUpdatesPathValue) return
+    if (!this.railActive()) return
 
     try {
       const requestUrl = new URL(this.agentUpdatesPathValue, window.location.origin)
@@ -650,6 +679,33 @@ export default class extends Controller {
     } catch (_error) {
       // silent polling failure
     }
+  }
+
+  syncAgentUpdatePolling({ immediate = false } = {}) {
+    if (!this.hasAgentUpdatesPathValue || !this.agentUpdatesPathValue) {
+      this.stopAgentUpdatePolling()
+      return
+    }
+
+    if (!this.railActive()) {
+      this.stopAgentUpdatePolling()
+      return
+    }
+
+    if (!this.agentUpdatePollTimer) {
+      this.agentUpdatePollTimer = window.setInterval(() => {
+        this.pollAgentUpdates()
+      }, AGENT_UPDATE_POLL_INTERVAL_MS)
+    }
+
+    if (immediate) this.pollAgentUpdates()
+  }
+
+  stopAgentUpdatePolling() {
+    if (!this.agentUpdatePollTimer) return
+
+    window.clearInterval(this.agentUpdatePollTimer)
+    this.agentUpdatePollTimer = null
   }
 
   insertAgentUpdateHtml(html) {

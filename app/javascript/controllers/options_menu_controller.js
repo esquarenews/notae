@@ -43,6 +43,30 @@ export default class extends Controller {
     this.element.removeEventListener("toggle", this.onMenuToggle)
   }
 
+  refresh() {
+    this.queueRefresh()
+  }
+
+  navTargetConnected() {
+    this.queueRefresh()
+  }
+
+  navListTargetConnected() {
+    this.queueRefresh()
+  }
+
+  detailHeadTargetConnected() {
+    this.queueRefresh()
+  }
+
+  detailTitleTargetConnected() {
+    this.queueRefresh()
+  }
+
+  sectionTargetConnected() {
+    this.queueRefresh()
+  }
+
   showList(event) {
     event?.preventDefault()
     event?.stopPropagation()
@@ -178,5 +202,16 @@ export default class extends Controller {
 
     if (this.viewportQuery) return this.viewportQuery.matches
     return window.innerWidth <= 960
+  }
+
+  queueRefresh() {
+    if (this.refreshQueued) return
+
+    this.refreshQueued = true
+    window.requestAnimationFrame(() => {
+      this.refreshQueued = false
+      this.buildMobileNavigation()
+      this.syncViewportMode()
+    })
   }
 }

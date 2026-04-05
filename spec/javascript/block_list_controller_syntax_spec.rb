@@ -23,4 +23,14 @@ RSpec.describe "BlockListController JavaScript syntax" do
     expect(source).not_to include('setData("text/plain"')
     expect(source).to include('getData(BLOCK_DRAG_MIME)')
   end
+
+  it "flushes pending block saves and waits until drop before moving the DOM" do
+    source = Rails.root.join("app/javascript/controllers/block_list_controller.js").read
+
+    expect(source).to include("prepareDragStart(event)")
+    expect(source).to include('window.dispatchEvent(new CustomEvent("notae:block-flush-save"')
+    expect(source).to include("await this.flushDraggedBlockSave()")
+    expect(source).to include("resolveDropPlacement(event, draggedId)")
+    expect(source).to include("applyDropPlacement(placement)")
+  end
 end

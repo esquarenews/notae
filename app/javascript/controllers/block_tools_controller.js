@@ -101,9 +101,10 @@ export default class extends Controller {
     const form = event.currentTarget.closest(".notae-block-menu-picker-form")
     if (!form) return
 
-    const picker = form.querySelector(".notae-block-menu-picker")
-    const select = form.querySelector(".notae-block-menu-select")
-    if (!picker || !(select instanceof HTMLSelectElement)) return
+    const pickerRegion = this.pickerRegionForForm(form)
+    const picker = pickerRegion?.querySelector(".notae-block-menu-picker")
+    const focusTarget = picker?.querySelector("[data-document-picker-target='searchInput'], .notae-block-menu-select")
+    if (!picker || !(focusTarget instanceof HTMLElement)) return
 
     const shouldOpen = picker.hasAttribute("hidden")
     this.closeInlinePickers(form)
@@ -112,19 +113,7 @@ export default class extends Controller {
 
     form.classList.add("is-picker-open")
     picker.hidden = false
-    select.focus()
-
-    if (typeof select.showPicker === "function") {
-      requestAnimationFrame(() => select.showPicker())
-    }
-  }
-
-  submitPicker(event) {
-    const select = event.currentTarget
-    if (!(select instanceof HTMLSelectElement)) return
-    if (!select.value) return
-
-    select.form?.requestSubmit()
+    focusTarget.focus()
   }
 
   closeMenu(event) {
@@ -217,10 +206,14 @@ export default class extends Controller {
       if (exceptForm && form === exceptForm) return
 
       form.classList.remove("is-picker-open")
-      form.querySelectorAll(".notae-block-menu-picker").forEach((picker) => {
+      this.pickerRegionForForm(form)?.querySelectorAll(".notae-block-menu-picker").forEach((picker) => {
         picker.hidden = true
       })
     })
+  }
+
+  pickerRegionForForm(form) {
+    return form.closest(".notae-block-menu-picker-row") || form
   }
 
   setMenuOpenState(details, isOpen) {

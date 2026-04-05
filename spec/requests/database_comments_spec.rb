@@ -58,18 +58,27 @@ RSpec.describe "Database comments", type: :request do
 
     expect(main_shell_html).to include('id="database-comments-menu"')
     expect(main_shell_html).to include('id="database-options-menu"')
-    expect(main_shell_html).to include('data-controller="copy-text actions-menu"')
-    expect(main_shell_html).to include('data-actions-menu-target="nav"')
-    expect(main_shell_html).to include('data-actions-menu-target="section"')
-    expect(main_shell_html).to include("notae-actions-mobile-panes")
-    expect(main_shell_html).to include('data-controller="copy-text options-menu"')
-    expect(main_shell_html).to include('data-options-menu-target="nav"')
-    expect(main_shell_html).to include('data-options-menu-target="section"')
-    expect(main_shell_html).to include("notae-options-mobile-panes")
+    expect(main_shell_html).to include('data-controller="lazy-panel"')
+    expect(main_shell_html).to include('data-controller="copy-text options-menu lazy-panel"')
+    expect(main_shell_html).to include("panels/comments")
+    expect(main_shell_html).to include("panels/options")
     expect(main_shell_html).to include('aria-label="Options"')
     expect(main_shell_html).to include("notae-actions-trigger-label")
     expect(main_shell_html).not_to include('title="Quick menu"')
     expect(main_shell_html).not_to include('title="Sort"')
     expect(main_shell_html).not_to include('title="Search"')
+    expect(main_shell_html).not_to include("Add a comment...")
+    expect(main_shell_html).not_to include("Permissions")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "comments", view_id: "table")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Add a comment...")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "options", view_id: "table")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Permissions")
+    expect(response.body).to include("Public share links")
   end
 end

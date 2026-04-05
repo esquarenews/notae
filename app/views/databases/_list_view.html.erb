@@ -13,6 +13,7 @@
         filter_property_id: params[:filter_property_id],
         filter_value: params[:filter_value],
         filter_operator: params[:filter_operator],
+        rows_page: params[:rows_page].presence,
         view_settings: params[:view_settings]
       }.compact %>
       <article id="row_<%= row.id %>" class="notae-db-list-card">
@@ -65,3 +66,16 @@
     <% end %>
   <% end %>
 </section>
+
+<%= render "databases/row_pagination",
+           row_params: {
+             view_id: @current_view&.id,
+             month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+             sort_property_id: params[:sort_property_id],
+             sort_direction: params[:sort_direction],
+             filter_property_id: params[:filter_property_id],
+             filter_value: params[:filter_value],
+             filter_operator: params[:filter_operator],
+             rows_page: params[:rows_page].presence,
+             view_settings: params[:view_settings]
+           }.compact if @rows_paginated %>

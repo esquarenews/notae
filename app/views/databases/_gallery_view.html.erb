@@ -13,6 +13,7 @@
         filter_property_id: params[:filter_property_id],
         filter_value: params[:filter_value],
         filter_operator: params[:filter_operator],
+        rows_page: params[:rows_page].presence,
         view_settings: params[:view_settings]
       }.compact %>
       <article id="row_<%= row.id %>" class="notae-db-gallery-card">

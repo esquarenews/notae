@@ -1,6 +1,6 @@
 <% autofocus_title = local_assigns.fetch(:autofocus_title, false) %>
 <% highlight_row_id = local_assigns[:highlight_row_id].presence %>
-<% linked_page = linkable_pages_by_id[row.linked_page_id] %>
+<% linked_page = row.linked_page %>
 <% row_can_update = policy(row).update? && !database.locked? %>
 <% row_can_destroy = policy(row).destroy? && !database.locked? %>
 <% row_style_classes = [] %>
@@ -9,6 +9,7 @@
 <% row_style_classes << "is-row-italic" if row.row_italic? %>
 <% row_color_class = row.row_text_color %>
 <% row_style_classes << "is-row-color-#{row_color_class}" unless row_color_class == "default" %>
+<% page_search_url = workspace_document_targets_path(workspace_slug: workspace.slug, kind: "page") %>
 <% row_split_params = row_params.merge(
   workspace_slug: workspace.slug,
   id: database.id,
@@ -149,12 +150,25 @@
                 <%= form_with model: row,
                               url: row_update_path,
                               method: :patch,
-                              class: "notae-db-inline-form" do |form| %>
-                  <%= form.select :linked_page_id,
-                                  options_for_select(linkable_pages.map { |page| [page.title, page.id] }, linked_page&.id),
-                                  { include_blank: "No linked page" },
-                                  class: "notae-options-input" %>
-                  <%= form.submit "Save", class: "notae-chip-button" %>
+                              class: "notae-db-inline-form",
+                              data: {
+                                controller: "document-picker",
+                                document_picker_search_url_value: page_search_url,
+                                document_picker_empty_text_value: "No matching notas."
+                              } do |form| %>
+                  <%= form.hidden_field :linked_page_id, value: linked_page&.id, data: { document_picker_target: "hiddenInput" } %>
+                  <%= search_field_tag "db_row_link_page_search_#{row.id}",
+                                       "",
+                                       placeholder: "Search notas",
+                                       autocomplete: "off",
+                                       class: "notae-options-input",
+                                       data: {
+                                         document_picker_target: "searchInput",
+                                         action: "focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch"
+                                       } %>
+                  <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching…</p>
+                  <div class="notae-document-picker-results" data-document-picker-target="results"></div>
+                  <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching notas.</p>
                 <% end %>
               </div>
             </details>

@@ -201,6 +201,7 @@ class DatabaseViewsController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      rows_page: params[:rows_page].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence,

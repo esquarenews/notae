@@ -1,4 +1,4 @@
-<% mobile_workspace = ui_current_workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
+<% mobile_workspace = (defined?(@workspace) ? @workspace : nil) || ui_current_workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
 <% if mobile_workspace.present? %>
   <nav class="notae-mobile-tabbar" aria-label="Primary mobile navigation">
     <% mobile_nav_items = [

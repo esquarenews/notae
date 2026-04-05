@@ -20,8 +20,6 @@ class ApplicationController < ActionController::Base
   before_action :ensure_active_record_encryption_keys
   before_action :prune_workspace_session_state
   before_action :set_paper_trail_whodunnit
-  before_action :set_unread_notifications_count
-  before_action :set_ai_rail_context, if: :load_shell_context?
   before_action :ensure_realtime_channel_loaded
   around_action :use_user_time_zone
   after_action :verify_pundit_authorization, unless: :devise_controller?
@@ -35,10 +33,6 @@ class ApplicationController < ActionController::Base
 
   def verify_pundit_authorization
     action_name == "index" ? verify_policy_scoped : verify_authorized
-  end
-
-  def load_shell_context?
-    request.get? && request.format.html? && params[:embedded].to_s != "1"
   end
 
   def should_store_last_workspace_slug?
@@ -85,36 +79,6 @@ class ApplicationController < ActionController::Base
   def prune_legacy_workspace_session_state!
     session.delete(:notae_proactive_knowledge_suggestion_checks)
     session.delete(:notae_pending_knowledge_suggestion_generations)
-  end
-
-  def set_unread_notifications_count
-    unless load_shell_context?
-      @unread_notifications_count = 0
-      return
-    end
-
-    @unread_notifications_count =
-      if user_signed_in?
-        with_optional_schema_fallback(default: 0, feature: "unread notifications") do
-          policy_scope(Notification).unread.count
-        end
-      else
-        0
-      end
-  end
-
-  def set_ai_rail_context
-    return unless user_signed_in?
-
-    @ai_rail_workspace = with_optional_schema_fallback(default: nil, feature: "AI rail workspace context") do
-      if params[:workspace_slug].present?
-        policy_scope(Workspace).find_by(slug: params[:workspace_slug])
-      end
-    end
-    @ai_rail_workspace = with_optional_schema_fallback(default: @ai_rail_workspace, feature: "AI rail workspace fallback") do
-      @ai_rail_workspace || policy_scope(Workspace).order(updated_at: :desc).first
-    end
-    @ai_rail_current_page_id = params[:controller] == "pages" && params[:action] == "show" ? params[:id] : nil
   end
 
   def set_ai_rail_usage_panel

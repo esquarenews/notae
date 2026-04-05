@@ -20,11 +20,19 @@ class BlocksController < ApplicationController
   def update
     source_block = source_block_for_update(@block)
     authorize source_block
+    client_session_id = client_session_id_from_request
 
     if source_block.update(block_update_params)
       touched_blocks = sync_synced_group(source_block)
       touched_at = touch_pages_for_blocks!(touched_blocks)
-      touched_blocks.each { |touched_block| broadcast_block_update(touched_block) }
+      touched_blocks.each do |touched_block|
+        broadcast_block_update(
+          touched_block,
+          page_updated_at: touched_at,
+          client_session_id: client_session_id,
+          origin_block_id: @block.id
+        )
+      end
       respond_to do |format|
         format.json { render json: serialized_block(@block.reload, page_updated_at: touched_at), status: :ok }
         format.html { redirect_to page_redirect_path, notice: "Block updated." }
@@ -109,9 +117,6 @@ class BlocksController < ApplicationController
             workspace: @workspace,
             page: @page,
             blocks_by_parent: current_page_render_context[:blocks_by_parent],
-            move_target_pages: current_page_render_context[:move_target_pages],
-            linkable_note_pages: current_page_render_context[:linkable_note_pages],
-            linkable_databases: current_page_render_context[:linkable_databases],
             reader_mode: current_page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
           }
@@ -168,7 +173,13 @@ class BlocksController < ApplicationController
     )
 
     touched_blocks = sync_synced_group(result[:synced_source_block])
-    touched_blocks.each { |touched_block| broadcast_block_update(touched_block) }
+    touched_blocks.each do |touched_block|
+      broadcast_block_update(
+        touched_block,
+        client_session_id: client_session_id_from_request,
+        origin_block_id: @block.id
+      )
+    end
 
     redirect_page_id = result[:redirect_page_id] || @page.id
     respond_to do |format|
@@ -180,7 +191,8 @@ class BlocksController < ApplicationController
             redirect_page_id,
             anchor: result[:focus_anchor],
             split_page_id: result[:split_page_id],
-            split_source: result[:split_source]
+            split_source: result[:split_source],
+            clear_split: result[:clear_split]
           ), notice: result[:notice]
         end
       end
@@ -189,7 +201,8 @@ class BlocksController < ApplicationController
           redirect_page_id,
           anchor: result[:focus_anchor],
           split_page_id: result[:split_page_id],
-          split_source: result[:split_source]
+          split_source: result[:split_source],
+          clear_split: result[:clear_split]
         ),
                     notice: result[:notice]
       end
@@ -252,13 +265,17 @@ class BlocksController < ApplicationController
     params.require(:block_command).permit(:command, :target, :color, :highlight, :target_page_id, :target_database_id, :note)
   end
 
-  def broadcast_block_update(block)
+  def broadcast_block_update(block, page_updated_at: nil, client_session_id: nil, origin_block_id: nil)
+    return if block.page_id.blank?
+
     ActionCable.server.broadcast(
-      "page:#{@page.id}:collaboration",
+      "page:#{block.page_id}:collaboration",
       {
         type: "block_updated",
         actor_id: current_user.id,
-        block: serialized_block(block)
+        client_session_id: client_session_id,
+        origin_block_id: origin_block_id,
+        block: serialized_block(block, page_updated_at: page_updated_at)
       }
     )
   end
@@ -286,6 +303,10 @@ class BlocksController < ApplicationController
     return block if source_id.blank? || source_id.to_s == block.id.to_s
 
     policy_scope(Block).for_workspace(@workspace).find_by(id: source_id) || block
+  end
+
+  def client_session_id_from_request
+    request.headers["X-Notae-Client-Session"].to_s.presence
   end
 
   def sync_synced_group(source_block)
@@ -321,12 +342,14 @@ class BlocksController < ApplicationController
     Block.where(id: [ sync_root.id, *copy_ids ]).to_a
   end
 
-  def page_redirect_path(page_id = @page.id, anchor: nil, split_page_id: nil, split_source: nil)
+  def page_redirect_path(page_id = @page.id, anchor: nil, split_page_id: nil, split_source: nil, clear_split: false)
     route_params = { workspace_slug: @workspace.slug, id: page_id }
     route_params[:embedded] = "1" if embedded_page_shell?
     route_params[:options_menu] = "open" if params[:options_menu].to_s == "open"
-    route_params[:split_page_id] = split_page_id || params[:split_page_id].presence
-    route_params[:split_source] = split_source || params[:split_source].presence
+    unless clear_split
+      route_params[:split_page_id] = split_page_id || params[:split_page_id].presence
+      route_params[:split_source] = split_source || params[:split_source].presence
+    end
     route_params[:anchor] = anchor if anchor.present?
     page_path(route_params)
   end
@@ -374,9 +397,6 @@ class BlocksController < ApplicationController
             page: @page,
             block: page_render_context[:block_lookup].fetch(touched_block.id),
             blocks_by_parent: page_render_context[:blocks_by_parent],
-            all_pages: page_render_context[:move_target_pages],
-            linkable_note_pages: page_render_context[:linkable_note_pages],
-            linkable_databases: page_render_context[:linkable_databases],
             index: page_render_context[:indexes].fetch(touched_block.id, 0),
             reader_mode: page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
@@ -394,15 +414,6 @@ class BlocksController < ApplicationController
         blocks_by_parent: active_blocks.group_by(&:parent_block_id),
         block_lookup: active_blocks.index_by(&:id),
         indexes: active_blocks.each_with_index.to_h { |block, index| [ block.id, index ] },
-        move_target_pages: policy_scope(Page).for_workspace(@workspace).active.order(:created_at).to_a.reject { |candidate| candidate.id == @page.id },
-        linkable_note_pages: policy_scope(Page)
-                               .for_workspace(@workspace)
-                               .active
-                               .includes(:linked_database)
-                               .order(:created_at)
-                               .to_a
-                               .reject { |candidate| candidate.id == @page.id || candidate.linked_database.present? },
-        linkable_databases: policy_scope(Database).for_workspace(@workspace).active.order(updated_at: :desc).to_a,
         reader_mode: @page.remove_blocks? || @page.locked?
       }
     end

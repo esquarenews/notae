@@ -54,6 +54,7 @@ module ApplicationHelper
 
   def ui_current_workspace
     return nil unless user_signed_in?
+    return @workspace if defined?(@workspace) && @workspace.present?
     return @ui_current_workspace if defined?(@ui_current_workspace)
 
     requested_slug = params[:workspace_slug].presence
@@ -161,6 +162,8 @@ module ApplicationHelper
   end
 
   def current_workspace_color
+    return @workspace.display_color if defined?(@workspace) && @workspace.present?
+
     ui_current_workspace&.display_color
   end
 

@@ -4,7 +4,7 @@ class DatabasesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv permissions taskify kanbanize]
+  before_action :set_database, only: %i[show update duplicate archive export_csv permissions taskify kanbanize panel]
   before_action :set_archived_database, only: %i[restore destroy]
   track_request_performance_for :show, :update
 
@@ -34,30 +34,26 @@ class DatabasesController < ApplicationController
         false
       end
 
-    can_manage_permissions = policy(@database).permissions?
-    @memberships =
-      if can_manage_permissions
-        policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
-      else
-        []
-      end
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @can_apply_tasks_template = tasks_template_convertible?(properties: @db_properties)
     @tasks_template_ready = tasks_template_ready?(properties: @db_properties)
-    @rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
-    @archived_rows = policy_scope(DbRow).for_database(@database).where.not(archived_at: nil).ordered.to_a
     @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
     @current_view = resolve_current_view
     @view_type = @current_view&.view_type || "table"
     @view_config = @current_view&.config_json.to_h || {}
     resolve_filter_and_sort_settings!
+    row_query = resolve_row_query
+    @rows = row_query.rows
+    @row_count = row_query.total_count
+    @rows_page = row_query.page
+    @rows_per_page = row_query.per_page
+    @rows_total_pages = row_query.total_pages
+    @rows_paginated = row_query.paginated?
     required_property_ids = required_property_ids_for_cell_load
-    ensure_cells_for_rendered_rows!(property_ids: required_property_ids)
     @cells = load_cells_for_rows_and_properties(property_ids: required_property_ids)
     @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
+    schedule_missing_cells_backfill(property_ids: required_property_ids, loaded_cell_count: @cells.size)
     @select_options_by_property = build_select_options_by_property
-    @linkable_pages = policy_scope(Page).for_workspace(@workspace).active.select(:id, :title, :updated_at).order(updated_at: :desc).to_a
-    @linkable_pages_by_id = @linkable_pages.index_by(&:id)
     @split_page = resolve_split_page
     @backlinks =
       if @database.linked_page.present?
@@ -76,30 +72,76 @@ class DatabasesController < ApplicationController
     @new_row = DbRow.new
     @new_database_view = DatabaseView.new
     @database_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @database)
-    @can_archive_database = policy(@database).archive?
-    @recent_database_audit_events = policy_scope(AuditEvent)
-                                      .where(workspace_id: @workspace.id, auditable: @database)
-                                      .recent_first
-                                      .limit(10)
-                                      .to_a
-    @database_versions = @database.versions.reorder(created_at: :desc).limit(10).to_a
-    @database_plain_text = build_database_plain_text
-    @database_share_links =
-      if policy(@database).permissions?
-        policy_scope(DatabaseShareLink).for_database(@database).recent_first.to_a
-      else
-        []
-      end
-    @shared_user_ids = can_manage_permissions ? @database.database_shares.pluck(:user_id) : []
-    database_comment_probe = Comment.new(commentable: @database, workspace: @workspace, author: current_user, body: "draft")
-    @can_comment_on_database = policy(database_comment_probe).create?
-    @new_database_comment = Comment.new
-    @database_comments = policy_scope(Comment)
-                           .for_workspace(@workspace)
-                           .where(commentable: @database)
-                           .includes(:author, :resolved_by)
-                           .order(created_at: :desc)
-                           .to_a
+  end
+
+  def panel
+    authorize @database, :show?
+
+    case params[:panel].to_s
+    when "comments"
+      return head :forbidden if @database.locked?
+
+      prepare_database_comments_panel!
+      render partial: "databases/comments_menu_body",
+             locals: {
+               workspace: @workspace,
+               database: @database,
+               can_comment_on_database: @can_comment_on_database,
+               new_database_comment: @new_database_comment,
+               database_comments: @database_comments,
+               view_params: database_panel_view_params
+             }
+    when "options"
+      prepare_database_options_panel!
+      render partial: "databases/options_menu_body",
+             locals: {
+               workspace: @workspace,
+               database: @database,
+               can_manage_database_permissions: policy(@database).permissions?,
+               memberships: @memberships,
+               shared_user_ids: @shared_user_ids,
+               view_params: database_panel_view_params,
+               view_link: database_panel_view_link,
+               archived_rows: @archived_rows,
+               can_create_database: policy(Database.new(workspace: @workspace, name: "Untitled grid")).create?,
+               share_links: @database_share_links
+             }
+    when "actions"
+      prepare_database_actions_panel!
+      return head :not_found if @current_view.blank?
+
+      render partial: "databases/actions_menu_body",
+             locals: {
+               workspace: @workspace,
+               database: @database,
+               current_view: @current_view,
+               new_database_view: @new_database_view,
+               view_params: database_panel_view_params,
+               view_link: database_panel_view_link,
+               can_manage_database_permissions: policy(@database).permissions?,
+               can_edit_database: policy(@database).update? && !@database.locked?,
+               can_update_view: policy(@current_view).update? && !@database.locked?,
+               can_create_database: policy(Database.new(workspace: @workspace, name: "Untitled grid")).create?,
+               can_archive_database: policy(@database).archive?,
+               page_search_url: workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page")
+             }
+    when "view_settings"
+      prepare_database_view_settings_panel!
+      return head :not_found if @current_view.blank?
+
+      render partial: "databases/view_settings_menu_body",
+             locals: {
+               workspace: @workspace,
+               database: @database,
+               current_view: @current_view,
+               view_params: database_panel_view_params,
+               can_manage_database_permissions: policy(@database).permissions?,
+               can_edit_database: policy(@database).update? && !@database.locked?,
+               can_update_view: policy(@current_view).update? && !@database.locked?
+             }
+    else
+      head :not_found
+    end
   end
 
   def create
@@ -468,14 +510,7 @@ class DatabasesController < ApplicationController
   end
 
   def sort_rows!
-    return unless @sort_property
-
-    @rows.sort! do |left_row, right_row|
-      compare_sort_values(
-        sort_value_for_row(left_row, @sort_property),
-        sort_value_for_row(right_row, @sort_property)
-      ).nonzero? || left_row.title.to_s.downcase <=> right_row.title.to_s.downcase
-    end
+    @rows
   end
 
   def resolve_current_view
@@ -522,15 +557,7 @@ class DatabasesController < ApplicationController
   end
 
   def apply_row_filter!
-    return if @filter_property.blank? || @filter_value.blank?
-
-    normalized_filter = cast_value_for_property(@filter_property, @filter_value)
-    return if normalized_filter.nil?
-
-    @rows.select! do |row|
-      row_value = cast_value_for_property(@filter_property, cell_value_for(row, @filter_property))
-      filter_match?(row_value, normalized_filter)
-    end
+    @rows
   end
 
   def prepare_board_view_data!
@@ -551,7 +578,7 @@ class DatabasesController < ApplicationController
 
     @board_columns << { value: nil, label: "Unassigned", rows: grouped_rows[nil] }
     ordered_values.each do |value|
-      @board_columns << { value: value, label: value, rows: grouped_rows[value] }
+      @board_columns << { value: value, label: board_group_label_for(value), rows: grouped_rows[value] }
     end
   end
 
@@ -604,8 +631,15 @@ class DatabasesController < ApplicationController
         end
       end
 
-      @rows.each do |row|
-        value = cell_value_for(row, property).to_s.strip
+      policy_scope(DbCell)
+        .for_database(@database)
+        .where(db_property_id: property.id)
+        .where.not(value_text: [ nil, "" ])
+        .distinct
+        .order(:value_text)
+        .pluck(:value_text)
+        .each do |value|
+          value = value.to_s.strip
         next if value.blank?
 
         normalized = task_status_property?(property) ? normalize_task_status_value(value) : value
@@ -630,6 +664,12 @@ class DatabasesController < ApplicationController
     return nil if raw_value.blank?
 
     task_status_property?(@board_group_property) ? normalize_task_status_value(raw_value) : raw_value
+  end
+
+  def board_group_label_for(value)
+    return value unless task_status_property?(@board_group_property)
+
+    value.to_s.split.map(&:capitalize).join(" ")
   end
 
   def compare_sort_values(left_value, right_value)
@@ -743,6 +783,7 @@ class DatabasesController < ApplicationController
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
+      rows_page: params[:rows_page].presence,
       view_settings: params[:view_settings].presence,
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
@@ -770,44 +811,6 @@ class DatabasesController < ApplicationController
     ).call
   end
 
-  def ensure_cells_for_rendered_rows!(property_ids: nil)
-    return if @rows.empty? || @db_properties.empty?
-
-    row_ids = @rows.map(&:id)
-    property_ids = Array(property_ids).presence || @db_properties.map(&:id)
-    return if property_ids.empty?
-
-    existing_scope = policy_scope(DbCell).for_database(@database).where(db_row_id: row_ids, db_property_id: property_ids)
-    expected_count = row_ids.length * property_ids.length
-    return if expected_count <= 0
-    return if existing_scope.count >= expected_count
-
-    existing_keys = existing_scope.pluck(:db_row_id, :db_property_id).to_set
-
-    now = Time.current
-    missing_cells = []
-
-    row_ids.each do |row_id|
-      property_ids.each do |property_id|
-        next if existing_keys.include?([ row_id, property_id ])
-
-        missing_cells << {
-          id: SecureRandom.uuid,
-          workspace_id: @workspace.id,
-          db_row_id: row_id,
-          db_property_id: property_id,
-          value_text: "",
-          created_at: now,
-          updated_at: now
-        }
-      end
-    end
-
-    return if missing_cells.empty?
-
-    DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
-  end
-
   def load_cells_for_rows_and_properties(property_ids:)
     row_ids = @rows.map(&:id)
     return [] if row_ids.empty? || property_ids.empty?
@@ -828,6 +831,146 @@ class DatabasesController < ApplicationController
     required_ids << @board_group_property&.id if @view_type == "board"
     required_ids << @calendar_date_property&.id if @view_type == "calendar"
     required_ids.compact.uniq
+  end
+
+  def resolve_row_query
+    Databases::RowWindowQueryService.new(
+      scope: policy_scope(DbRow).for_database(@database).active,
+      sort_property: @sort_property,
+      sort_direction: @sort_direction,
+      filter_property: @filter_property,
+      filter_value: @filter_value,
+      filter_operator: @filter_operator,
+      view_type: @view_type,
+      page: rows_page_param
+    ).call
+  end
+
+  def rows_page_param
+    value = params[:rows_page].to_i
+    value.positive? ? value : 1
+  end
+
+  def schedule_missing_cells_backfill(property_ids:, loaded_cell_count:)
+    row_ids = @rows.map(&:id)
+    property_ids = Array(property_ids).compact
+    return if row_ids.empty? || property_ids.empty?
+
+    expected_count = row_ids.length * property_ids.length
+    return if expected_count <= loaded_cell_count
+    return if expected_count > 5_000
+
+    DbCells::BackfillWindowJob.perform_later(@database.id, row_ids, property_ids)
+  rescue StandardError => error
+    raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+
+    DbCells::BackfillService.call(
+      database: @database,
+      workspace: @workspace,
+      row_ids: row_ids,
+      property_ids: property_ids
+    )
+  end
+
+  def database_panel_view_params
+    {
+      workspace_slug: @workspace.slug,
+      id: @database.id,
+      view_id: params[:view_id].presence,
+      month: params[:month].presence,
+      sort_property_id: params[:sort_property_id].presence,
+      sort_direction: params[:sort_direction].presence,
+      filter_property_id: params[:filter_property_id].presence,
+      filter_value: params[:filter_value].presence,
+      filter_operator: params[:filter_operator].presence,
+      rows_page: params[:rows_page].presence,
+      view_settings: params[:view_settings].presence,
+      view_settings_section: params[:view_settings_section].presence,
+      actions_menu: params[:actions_menu].presence,
+      options_menu: params[:options_menu].presence,
+      split_page_id: params[:split_page_id].presence,
+      split_source: params[:split_source].presence,
+      split_row_id: params[:split_row_id].presence
+    }.compact
+  end
+
+  def database_panel_view_link
+    database_url(
+      database_panel_view_params.except(
+        :view_settings,
+        :actions_menu,
+        :options_menu,
+        :split_page_id,
+        :split_source,
+        :split_row_id
+      )
+    )
+  end
+
+  def can_comment_on_database?
+    database_comment_probe = Comment.new(commentable: @database, workspace: @workspace, author: current_user, body: "draft")
+    policy(database_comment_probe).create?
+  end
+
+  def prepare_database_comments_panel!
+    @can_comment_on_database = can_comment_on_database?
+    @new_database_comment = Comment.new
+    @database_comments = policy_scope(Comment)
+                           .for_workspace(@workspace)
+                           .where(commentable: @database)
+                           .includes(:author, :resolved_by)
+                           .order(created_at: :desc)
+                           .to_a
+  end
+
+  def prepare_database_options_panel!
+    can_manage_permissions = policy(@database).permissions?
+    @memberships =
+      if can_manage_permissions
+        policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
+      else
+        []
+      end
+    @archived_rows = policy_scope(DbRow).for_database(@database).where.not(archived_at: nil).ordered.to_a
+    @database_share_links =
+      if can_manage_permissions
+        policy_scope(DatabaseShareLink).for_database(@database).recent_first.to_a
+      else
+        []
+      end
+    @shared_user_ids = can_manage_permissions ? @database.database_shares.pluck(:user_id) : []
+  end
+
+  def prepare_database_actions_panel!
+    prepare_database_view_context!
+    row_query = resolve_row_query
+    @rows = row_query.rows
+    visible_property_ids = Array(@visible_db_properties).map(&:id)
+    @cells = load_cells_for_rows_and_properties(property_ids: visible_property_ids)
+    @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
+    @database_plain_text = build_database_plain_text
+    @recent_database_audit_events = policy_scope(AuditEvent)
+                                      .where(workspace_id: @workspace.id, auditable: @database)
+                                      .recent_first
+                                      .limit(10)
+                                      .to_a
+    @database_versions = @database.versions.reorder(created_at: :desc).limit(10).to_a
+    @new_database_view = DatabaseView.new
+  end
+
+  def prepare_database_view_settings_panel!
+    prepare_database_view_context!
+  end
+
+  def prepare_database_view_context!
+    ensure_tab_shell_page!
+    ensure_default_view!
+    @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+    @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
+    @current_view = resolve_current_view
+    @view_type = @current_view&.view_type || "table"
+    @view_config = @current_view&.config_json.to_h || {}
+    resolve_filter_and_sort_settings!
   end
 
   def normalize_template(raw_template)

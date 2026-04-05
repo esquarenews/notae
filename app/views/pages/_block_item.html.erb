@@ -1,13 +1,12 @@
 <% reader_mode = local_assigns.fetch(:reader_mode, false) %>
 <% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
+<% embedded_preview = embedded_page_params[:embedded].to_s == "1" || params[:embedded].to_s == "1" %>
 <% turn_into_items = [
   ["T", "Text", "text"],
   ["H1", "Heading 1", "heading_1"],
   ["H2", "Heading 2", "heading_2"],
   ["H3", "Heading 3", "heading_3"],
   ["H4", "Heading 4", "heading_4"],
-  ["Pg", "Page", "page"],
-  ["P+", "Page in", "page_in"],
   ["ul", "Bulleted list", "bulleted_list"],
   ["1.", "Numbered list", "numbered_list"],
   ["[]", "To-do list", "todo_list"],
@@ -71,8 +70,18 @@
 <% layout_columns_count = block.layout_columns_count %>
 <% block_route_params = { workspace_slug: workspace.slug, page_id: page.id, id: block.id }.merge(embedded_page_params) %>
 <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
-<% linkable_note_pages = local_assigns.fetch(:linkable_note_pages, []) %>
-<% linkable_databases = local_assigns.fetch(:linkable_databases, []) %>
+<% move_page_search_url = workspace_document_targets_path(workspace_slug: workspace.slug, kind: "move_page", exclude_page_id: page.id) %>
+<% note_search_url = workspace_document_targets_path(workspace_slug: workspace.slug, kind: "note", exclude_page_id: page.id) %>
+<% grid_search_url = workspace_document_targets_path(workspace_slug: workspace.slug, kind: "grid") %>
+<% linked_target_page = Blocks::SplitLinkResolver.target_page(content_json: block.content_json, workspace: workspace) %>
+<% linked_target_kind = if linked_target_page.present?
+                          linked_target_page.linked_database.present? ? "Grid" : "Nota"
+                        end %>
+<% primary_link_command = linked_target_kind.present? ? "unlink_linked_document" : "create_linked_nota" %>
+<% primary_link_label = linked_target_kind.present? ? "Unlink #{linked_target_kind}" : "Create linked Nota" %>
+<% primary_link_icon = linked_target_kind.present? ? "⨯" : "↗" %>
+<% primary_link_classes = [ "notae-block-menu-item" ] %>
+<% primary_link_classes << "is-danger" if linked_target_kind.present? %>
 
 <article id="block_<%= block.id %>"
          class="notae-doc-block is-type-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-highlight-#{block_highlight}" if block_highlight.present? %> <%= "is-columns" if block.block_type.start_with?("columns_") %> <%= "is-layout-columns-#{layout_columns_count}" if layout_columns_count.present? %>"
@@ -84,12 +93,12 @@
          data-block-tools-block-id-value="<%= block.id %>"
          data-block-tools-page-title-value="<%= page.title %>"
          data-block-tools-block-text-value="<%= block.search_text %>">
-  <% unless reader_mode %>
+  <% unless reader_mode || embedded_preview %>
     <div class="notae-doc-block-row">
       <span class="notae-doc-handle"
             title="Drag block"
             draggable="true"
-            data-action="dragstart->block-list#handleDragStart dragend->block-list#handleDragEnd">
+            data-action="pointerdown->block-list#prepareDragStart dragstart->block-list#handleDragStart dragend->block-list#handleDragEnd">
         ⋮⋮
       </span>
       <p class="hidden pb-1 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>
@@ -153,10 +162,22 @@
         <section class="notae-block-menu-section">
           <h4>Actions</h4>
           <div class="notae-block-menu-grid">
-            <button type="button" class="notae-block-menu-item" data-action="block-tools#copyLink">
-              <span class="notae-menu-item-icon">#</span>
-              <span class="notae-menu-item-label">Copy link to block</span>
-            </button>
+            <%= button_to command_page_block_path(block_route_params),
+                          method: :post,
+                          params: { block_command: { command: "add_block_above" } },
+                          form_class: "notae-block-menu-inline-form",
+                          class: "notae-block-menu-item" do %>
+              <span class="notae-menu-item-icon">↑</span>
+              <span class="notae-menu-item-label">Add block above</span>
+            <% end %>
+            <%= button_to command_page_block_path(block_route_params),
+                          method: :post,
+                          params: { block_command: { command: "add_block_below" } },
+                          form_class: "notae-block-menu-inline-form",
+                          class: "notae-block-menu-item" do %>
+              <span class="notae-menu-item-icon">↓</span>
+              <span class="notae-menu-item-label">Add block below</span>
+            <% end %>
             <button type="button" class="notae-block-menu-item" data-action="block-tools#indent">
               <span class="notae-menu-item-icon">→</span>
               <span class="notae-menu-item-label">Indent</span>
@@ -164,6 +185,10 @@
             <button type="button" class="notae-block-menu-item" data-action="block-tools#outdent">
               <span class="notae-menu-item-icon">←</span>
               <span class="notae-menu-item-label">Outdent</span>
+            </button>
+            <button type="button" class="notae-block-menu-item" data-action="block-tools#copyLink">
+              <span class="notae-menu-item-icon">#</span>
+              <span class="notae-menu-item-label">Copy link to block</span>
             </button>
             <%= button_to command_page_block_path(block_route_params),
                           method: :post,
@@ -175,71 +200,117 @@
             <% end %>
             <%= form_with url: command_page_block_path(block_route_params),
                           method: :post,
-                          class: "notae-block-menu-move-form" do %>
+                          class: "notae-block-menu-picker-form notae-block-menu-picker-form-full-width",
+                          data: {
+                            controller: "document-picker",
+                            document_picker_search_url_value: move_page_search_url,
+                            document_picker_empty_text_value: "No matching pages."
+                          } do %>
               <%= hidden_field_tag "block_command[command]", "move_to" %>
-              <%= select_tag "block_command[target_page_id]",
-                             options_from_collection_for_select(all_pages, :id, :title),
-                             include_blank: "Move to page...",
-                             class: "notae-block-menu-select" %>
-              <%= button_tag type: "submit", class: "notae-block-menu-item" do %>
+              <%= hidden_field_tag "block_command[target_page_id]", "", data: { document_picker_target: "hiddenInput" } %>
+              <%= button_tag type: "button",
+                             class: "notae-block-menu-item",
+                             data: { action: "block-tools#togglePicker" } do %>
                 <span class="notae-menu-item-icon">></span>
                 <span class="notae-menu-item-label">Move to</span>
               <% end %>
-            <% end %>
-            <%= button_to command_page_block_path(block_route_params),
-                          method: :post,
-                          params: { block_command: { command: "create_linked_nota" } },
-                          form_class: "notae-block-menu-inline-form",
-                          class: "notae-block-menu-item" do %>
-              <span class="notae-menu-item-icon">↗</span>
-              <span class="notae-menu-item-label">Create linked Nota</span>
-            <% end %>
-            <%= form_with url: command_page_block_path(block_route_params),
-                          method: :post,
-                          class: "notae-block-menu-picker-form" do %>
-              <%= hidden_field_tag "block_command[command]", "link_existing_nota" %>
-              <%= button_tag type: "button",
-                             class: "notae-block-menu-item",
-                             disabled: linkable_note_pages.empty?,
-                             data: { action: "block-tools#togglePicker" } do %>
-                <span class="notae-menu-item-icon">🔗</span>
-                <span class="notae-menu-item-label">Link existing Nota</span>
-              <% end %>
               <div class="notae-block-menu-picker" hidden>
-                <%= select_tag "block_command[target_page_id]",
-                               options_from_collection_for_select(linkable_note_pages, :id, :title),
-                               include_blank: "Choose a Nota...",
-                               class: "notae-block-menu-select",
-                               data: { action: "change->block-tools#submitPicker" } %>
+                <%= search_field_tag :block_move_page_search,
+                                     "",
+                                     placeholder: "Search pages",
+                                     autocomplete: "off",
+                                     class: "notae-block-menu-select",
+                                     data: {
+                                       document_picker_target: "searchInput",
+                                       action: "focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch"
+                                     } %>
+                <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching…</p>
+                <div class="notae-document-picker-results" data-document-picker-target="results"></div>
+                <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching pages.</p>
               </div>
             <% end %>
-            <%= button_to command_page_block_path(block_route_params),
-                          method: :post,
-                          params: { block_command: { command: "create_linked_grid" } },
-                          form_class: "notae-block-menu-inline-form",
-                          class: "notae-block-menu-item" do %>
-              <span class="notae-menu-item-icon">⊞</span>
-              <span class="notae-menu-item-label">Create linked Grid</span>
-            <% end %>
-            <%= form_with url: command_page_block_path(block_route_params),
-                          method: :post,
-                          class: "notae-block-menu-picker-form" do %>
-              <%= hidden_field_tag "block_command[command]", "link_existing_grid" %>
-              <%= button_tag type: "button",
-                             class: "notae-block-menu-item",
-                             disabled: linkable_databases.empty?,
-                             data: { action: "block-tools#togglePicker" } do %>
-                <span class="notae-menu-item-icon">⊡</span>
-                <span class="notae-menu-item-label">Link existing Grid</span>
+            <% note_picker_form_id = "block-link-existing-nota-#{block.id}" %>
+            <% grid_picker_form_id = "block-link-existing-grid-#{block.id}" %>
+            <div class="notae-block-menu-picker-row"
+                 data-controller="document-picker"
+                 data-document-picker-search-url-value="<%= note_search_url %>"
+                 data-document-picker-empty-text-value="No matching notas.">
+              <%= button_to command_page_block_path(block_route_params),
+                            method: :post,
+                            params: { block_command: { command: primary_link_command } },
+                            form_class: "notae-block-menu-inline-form",
+                            class: primary_link_classes.join(" ") do %>
+                <span class="notae-menu-item-icon"><%= primary_link_icon %></span>
+                <span class="notae-menu-item-label"><%= primary_link_label %></span>
+              <% end %>
+              <%= form_with url: command_page_block_path(block_route_params),
+                            method: :post,
+                            id: note_picker_form_id,
+                            class: "notae-block-menu-picker-form" do %>
+                <%= hidden_field_tag "block_command[command]", "link_existing_nota" %>
+                <%= hidden_field_tag "block_command[target_page_id]", "", data: { document_picker_target: "hiddenInput" } %>
+                <%= button_tag type: "button",
+                               class: "notae-block-menu-item",
+                               data: { action: "block-tools#togglePicker" } do %>
+                  <span class="notae-menu-item-icon">🔗</span>
+                  <span class="notae-menu-item-label">Link existing Nota</span>
+                <% end %>
               <% end %>
               <div class="notae-block-menu-picker" hidden>
-                <%= select_tag "block_command[target_database_id]",
-                               options_from_collection_for_select(linkable_databases, :id, :name),
-                               include_blank: "Choose a Grid...",
-                               class: "notae-block-menu-select",
-                               data: { action: "change->block-tools#submitPicker" } %>
+                <%= search_field_tag :block_link_note_search,
+                                     "",
+                                     placeholder: "Search notas",
+                                     autocomplete: "off",
+                                     class: "notae-block-menu-select",
+                                     data: {
+                                       document_picker_target: "searchInput",
+                                       action: "focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch"
+                                     } %>
+                <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching…</p>
+                <div class="notae-document-picker-results" data-document-picker-target="results"></div>
+                <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching notas.</p>
               </div>
-            <% end %>
+            </div>
+            <div class="notae-block-menu-picker-row"
+                 data-controller="document-picker"
+                 data-document-picker-search-url-value="<%= grid_search_url %>"
+                 data-document-picker-empty-text-value="No matching grids.">
+              <%= button_to command_page_block_path(block_route_params),
+                            method: :post,
+                            params: { block_command: { command: "create_linked_grid" } },
+                            form_class: "notae-block-menu-inline-form",
+                            class: "notae-block-menu-item" do %>
+                <span class="notae-menu-item-icon">⊞</span>
+                <span class="notae-menu-item-label">Create linked Grid</span>
+              <% end %>
+              <%= form_with url: command_page_block_path(block_route_params),
+                            method: :post,
+                            id: grid_picker_form_id,
+                            class: "notae-block-menu-picker-form" do %>
+                <%= hidden_field_tag "block_command[command]", "link_existing_grid" %>
+                <%= hidden_field_tag "block_command[target_database_id]", "", data: { document_picker_target: "hiddenInput" } %>
+                <%= button_tag type: "button",
+                               class: "notae-block-menu-item",
+                               data: { action: "block-tools#togglePicker" } do %>
+                  <span class="notae-menu-item-icon">⊡</span>
+                  <span class="notae-menu-item-label">Link existing Grid</span>
+                <% end %>
+              <% end %>
+              <div class="notae-block-menu-picker" hidden>
+                <%= search_field_tag :block_link_grid_search,
+                                     "",
+                                     placeholder: "Search grids",
+                                     autocomplete: "off",
+                                     class: "notae-block-menu-select",
+                                     data: {
+                                       document_picker_target: "searchInput",
+                                       action: "focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch"
+                                     } %>
+                <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching…</p>
+                <div class="notae-document-picker-results" data-document-picker-target="results"></div>
+                <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching grids.</p>
+              </div>
+            </div>
             <%= button_to command_page_block_path(block_route_params),
                           method: :post,
                           params: { block_command: { command: "delete" } },
@@ -316,7 +387,6 @@
                  page: page,
                  blocks_by_parent: blocks_by_parent,
                  parent_id: block.id,
-                 all_pages: all_pages,
                  reader_mode: reader_mode,
                  embedded_page_params: embedded_page_params
                } %>

@@ -44,6 +44,17 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("if (!this.hasPendingChanges) return true")
   end
 
+  it "keeps the serialized block JSON in sync after saves and remote updates" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("syncStoredBlockState(content, blockType = this.currentBlockType)")
+    expect(source).to include("this.initialJsonValue = JSON.stringify(content)")
+    expect(source).to include("this.syncStoredBlockState(content, this.currentBlockType)")
+    expect(source).to include("this.syncStoredBlockState(data.content_json || payload.block.content_json, data.block_type || this.currentBlockType)")
+    expect(source).to include('"X-Notae-Client-Session": this.clientSessionId')
+    expect(source).to include('const storageKey = "notae-client-session-id"')
+  end
+
   it "loads the Tiptap link extension for block-linked split previews" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 

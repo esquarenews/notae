@@ -1,0 +1,21 @@
+<%
+  workspace = local_assigns[:workspace] || (defined?(@workspace) ? @workspace : nil)
+  lazy = local_assigns.fetch(:lazy, false)
+  sections_src = workspace.present? ? workspace_sidebar_sections_path(workspace_slug: workspace.slug) : nil
+%>
+
+<% if lazy && sections_src.present? %>
+  <%= turbo_frame_tag "notae_sidebar_sections",
+                      src: sections_src,
+                      loading: :lazy do %>
+    <%= render "shared/app_sidebar_sections",
+               workspace: workspace,
+               loading: true %>
+  <% end %>
+<% else %>
+  <%= turbo_frame_tag "notae_sidebar_sections" do %>
+    <%= render "shared/app_sidebar_sections",
+               workspace: workspace,
+               loading: false %>
+  <% end %>
+<% end %>

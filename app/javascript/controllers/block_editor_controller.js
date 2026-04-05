@@ -145,6 +145,7 @@ export default class extends Controller {
 
   connect() {
     this.currentBlockType = this.blockTypeValue || "paragraph"
+    this.clientSessionId = this.resolveClientSessionId()
     this.saveTimeout = null
     this.pendingSavePromise = null
     this.hasPendingChanges = false
@@ -162,6 +163,8 @@ export default class extends Controller {
     window.addEventListener("notae:block-remote-update", this.remoteUpdateHandler)
     window.addEventListener("notae:ai-insert", this.aiInsertHandler)
     window.addEventListener("notae:block-flush-save", this.flushSaveHandler)
+    const initialContent = this.parseContent()
+    this.syncStoredBlockState(initialContent, this.currentBlockType)
 
     this.editor = new Editor({
       element: this.editorTarget,
@@ -177,7 +180,7 @@ export default class extends Controller {
           nested: true
         })
       ],
-      content: this.parseContent(),
+      content: initialContent,
       editorProps: {
         handleKeyDown: (_view, event) => this.handleEditorKeydown(event),
         handleDOMEvents: {
@@ -284,8 +287,10 @@ export default class extends Controller {
 
     this.suppressUpdateCycle = true
     this.currentBlockType = block.block_type || this.currentBlockType
-    this.editor.commands.setContent(block.content_json || { type: "doc", content: [{ type: "paragraph" }] })
+    const content = block.content_json || { type: "doc", content: [{ type: "paragraph" }] }
+    this.editor.commands.setContent(content)
     this.hasPendingChanges = false
+    this.syncStoredBlockState(content, this.currentBlockType)
 
     if (Number.isFinite(incomingUpdatedAtMs)) {
       this.lastKnownUpdatedAtMs = incomingUpdatedAtMs
@@ -796,6 +801,16 @@ export default class extends Controller {
     return this.save()
   }
 
+  syncStoredBlockState(content, blockType = this.currentBlockType) {
+    if (content) {
+      this.initialJsonValue = JSON.stringify(content)
+    }
+
+    if (blockType) {
+      this.blockTypeValue = blockType
+    }
+  }
+
   async save() {
     if (this.pendingSavePromise) return this.pendingSavePromise
     if (!this.hasPendingChanges) return true
@@ -813,7 +828,8 @@ export default class extends Controller {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content,
+          "X-Notae-Client-Session": this.clientSessionId
         },
         body: JSON.stringify(payload)
       })
@@ -826,6 +842,7 @@ export default class extends Controller {
         this.lastKnownUpdatedAtMs = updatedAtMs
       }
 
+      this.syncStoredBlockState(data.content_json || payload.block.content_json, data.block_type || this.currentBlockType)
       this.hasPendingChanges = false
       this.updatePageTopbarEditedAt(data.page_updated_at || data.updated_at)
       return true
@@ -865,5 +882,30 @@ export default class extends Controller {
     if (deltaSeconds < 545 * 24 * 60 * 60) return "about 1 year"
 
     return `${Math.round(deltaSeconds / (365 * 24 * 60 * 60))} years`
+  }
+
+  resolveClientSessionId() {
+    const storageKey = "notae-client-session-id"
+
+    try {
+      const stored = window.sessionStorage.getItem(storageKey)
+      if (stored) return stored
+
+      const generated = this.generateClientSessionId()
+      window.sessionStorage.setItem(storageKey, generated)
+      return generated
+    } catch (_error) {
+      if (!window.__notaeClientSessionId) {
+        window.__notaeClientSessionId = this.generateClientSessionId()
+      }
+
+      return window.__notaeClientSessionId
+    }
+  }
+
+  generateClientSessionId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+
+    return `notae-${Date.now()}-${Math.random().toString(16).slice(2)}`
   }
 }

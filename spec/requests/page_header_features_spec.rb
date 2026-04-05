@@ -251,17 +251,21 @@ RSpec.describe "Page header features", type: :request do
     expect(response.body).to include("aria-label=\"Actions\"")
     expect(response.body).to include("aria-label=\"Options\"")
     html = Nokogiri::HTML(response.body)
-    actions_menu = html.at_css("[data-controller*='actions-menu']")
+    actions_menu = html.at_css("#page-actions-menu")
     expect(actions_menu).to be_present
-    expect(actions_menu.at_css("[data-actions-menu-target='nav']")).to be_present
-    expect(actions_menu.at_css("[data-actions-menu-target='section']")).to be_present
-    expect(response.body).to include("notae-actions-mobile-panes")
-    options_menu = html.at_css("[data-controller*='options-menu']")
+    expect(actions_menu["data-controller"]).to include("lazy-panel")
+    expect(actions_menu["data-lazy-panel-url-value"]).to eq(panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "actions", current_path: page_path(workspace_slug: workspace.slug, id: page.id)))
+    options_menu = html.at_css("#page-options-menu")
     expect(options_menu).to be_present
-    expect(options_menu.at_css("[data-options-menu-target='nav']")).to be_present
-    expect(options_menu.at_css("[data-options-menu-target='section']")).to be_present
-    expect(response.body).to include("notae-options-mobile-panes")
+    expect(options_menu["data-controller"]).to include("lazy-panel")
+    expect(options_menu["data-lazy-panel-url-value"]).to eq(panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "options"))
     expect(response.body).to include("notae-actions-trigger-label")
+    expect(response.body).not_to include("First page comment")
+    expect(response.body).not_to include("Add a comment...")
+
+    get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "comments")
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("First page comment")
     expect(response.body).to include("Add a comment...")
   end

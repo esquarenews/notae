@@ -1,5 +1,6 @@
 <% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
 <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
+<% embedded_preview = embedded_page_params[:embedded].to_s == "1" || params[:embedded].to_s == "1" %>
 
 <div class="notae-doc-canvas" id="notae_doc_canvas">
 <%= render partial: "pages/block_tree",
@@ -8,14 +9,11 @@
              page: page,
              blocks_by_parent: blocks_by_parent,
              parent_id: nil,
-             all_pages: move_target_pages,
-             linkable_note_pages: local_assigns.fetch(:linkable_note_pages, []),
-             linkable_databases: local_assigns.fetch(:linkable_databases, []),
              reader_mode: reader_mode,
              embedded_page_params: embedded_page_params
            } %>
 
-  <% if !reader_mode && policy(Block.new(workspace: workspace, page: page, created_by: current_user)).create? %>
+  <% if !reader_mode && !embedded_preview && policy(Block.new(workspace: workspace, page: page, created_by: current_user)).create? %>
     <%= form_with model: Block.new,
                   url: page_blocks_path(page_blocks_route_params),
                   class: "notae-doc-add-form" do |form| %>

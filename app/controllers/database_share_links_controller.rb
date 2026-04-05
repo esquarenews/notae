@@ -76,6 +76,7 @@ class DatabaseShareLinksController < ApplicationController
     route_params[:filter_property_id] = params[:filter_property_id] if params[:filter_property_id].present?
     route_params[:filter_value] = params[:filter_value] if params[:filter_value].present?
     route_params[:filter_operator] = params[:filter_operator] if params[:filter_operator].present?
+    route_params[:rows_page] = params[:rows_page] if params[:rows_page].present?
     route_params[:split_page_id] = params[:split_page_id] if params[:split_page_id].present?
     route_params[:split_source] = params[:split_source] if params[:split_source].present?
     route_params[:split_row_id] = params[:split_row_id] if params[:split_row_id].present?

@@ -18,6 +18,7 @@ RSpec.describe "Favorites", type: :request do
 
     get workspace_path(workspace.slug)
     expect(response).to have_http_status(:ok)
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
     favorites_links = favorites_section_links(response.body)
     expect(favorites_links).to include(page_path(workspace_slug: workspace.slug, id: page.id))
     expect(favorites_links).to include(database_path(workspace_slug: workspace.slug, id: database.id))
@@ -44,6 +45,7 @@ RSpec.describe "Favorites", type: :request do
 
     sign_in member
     get workspace_path(workspace.slug)
+    get workspace_sidebar_sections_path(workspace_slug: workspace.slug)
 
     links = favorites_section_links(response.body)
     expect(links).to include(page_path(workspace_slug: workspace.slug, id: visible_page.id))

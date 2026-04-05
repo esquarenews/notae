@@ -1,0 +1,32 @@
+<% return unless @rows_paginated && @rows_total_pages.to_i > 1 %>
+
+<% pagination_params = row_params.except(:rows_page).merge(workspace_slug: @workspace.slug, id: @database.id).compact %>
+<% previous_page = @rows_page.to_i - 1 %>
+<% next_page = @rows_page.to_i + 1 %>
+
+<section class="notae-db-pagination" aria-label="Grid row pagination">
+  <p class="notae-db-pagination-meta">
+    Showing <%= @rows.size %> of <%= @row_count %> rows
+  </p>
+  <div class="notae-db-pagination-actions">
+    <% if previous_page >= 1 %>
+      <%= link_to "Previous",
+                  database_path(pagination_params.merge(rows_page: previous_page)),
+                  class: "notae-chip-button notae-db-pagination-button",
+                  data: { preserve_database_scroll: true } %>
+    <% else %>
+      <span class="notae-chip-button notae-db-pagination-button is-disabled" aria-disabled="true">Previous</span>
+    <% end %>
+
+    <span class="notae-db-pagination-page">Page <%= @rows_page %> of <%= @rows_total_pages %></span>
+
+    <% if next_page <= @rows_total_pages %>
+      <%= link_to "Next",
+                  database_path(pagination_params.merge(rows_page: next_page)),
+                  class: "notae-chip-button notae-db-pagination-button",
+                  data: { preserve_database_scroll: true } %>
+    <% else %>
+      <span class="notae-chip-button notae-db-pagination-button is-disabled" aria-disabled="true">Next</span>
+    <% end %>
+  </div>
+</section>

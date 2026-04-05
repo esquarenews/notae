@@ -11,6 +11,7 @@
     filter_property_id: params[:filter_property_id],
     filter_value: params[:filter_value],
     filter_operator: params[:filter_operator],
+    rows_page: params[:rows_page].presence,
     highlight_row_id: params[:highlight_row_id],
     split_page_id: params[:split_page_id],
     split_source: params[:split_source],
@@ -18,7 +19,6 @@
   }.compact %>
   <% board_card_properties = @db_properties.reject { |property| property.id == @board_group_property.id } %>
   <% editor_properties = @db_properties %>
-  <% linkable_pages_by_id = @linkable_pages_by_id || Array(@linkable_pages).index_by(&:id) %>
   <% row_color_options = [
     ["Default", "default"],
     ["Gray", "gray"],
@@ -63,7 +63,6 @@
                        board_card_properties: board_card_properties,
                        editor_properties: editor_properties,
                        cells_by_key: @cells_by_key,
-                       linkable_pages_by_id: linkable_pages_by_id,
                        row_color_options: row_color_options %>
           <% end %>
         </div>

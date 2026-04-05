@@ -1,6 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
 
-const DRAG_MOVE_THRESHOLD_PX = 2
 const BLOCK_DRAG_MIME = "application/x-notae-block-id"
 
 export default class extends Controller {
@@ -14,10 +13,20 @@ export default class extends Controller {
   connect() {
     this.draggedItem = null
     this.activeDropItem = null
+    this.activeDropPosition = null
+    this.pendingDragFlush = null
   }
 
   disconnect() {
+    this.pendingDragFlush = null
     this.clearDropState()
+  }
+
+  prepareDragStart(event) {
+    const sourceItem = event.currentTarget.closest("[data-block-id]")
+    if (!sourceItem) return
+
+    this.pendingDragFlush = this.requestBlockFlush(sourceItem)
   }
 
   handleDragStart(event) {
@@ -26,6 +35,9 @@ export default class extends Controller {
     if (!sourceItem) return
 
     this.draggedItem = sourceItem
+    if (!this.pendingDragFlush) {
+      this.pendingDragFlush = this.requestBlockFlush(sourceItem)
+    }
     this.element.classList.add("is-drag-active")
     this.draggedItem.classList.add("is-dragging")
     event.dataTransfer.effectAllowed = "move"
@@ -41,29 +53,7 @@ export default class extends Controller {
     const targetItem = event.currentTarget
     if (!targetItem || targetItem === this.draggedItem) return
 
-    const beforeRects = this.captureRects()
-    const insertBefore = this.shouldInsertBefore(event, targetItem)
-
-    if (insertBefore) {
-      if (targetItem.previousElementSibling === this.draggedItem) {
-        this.setDropCandidate(targetItem, "before")
-        return
-      }
-
-      this.element.insertBefore(this.draggedItem, targetItem)
-      this.animateFromRects(beforeRects)
-      this.setDropCandidate(targetItem, "before")
-      return
-    }
-
-    if (targetItem.nextElementSibling === this.draggedItem) {
-      this.setDropCandidate(targetItem, "after")
-      return
-    }
-
-    this.element.insertBefore(this.draggedItem, targetItem.nextElementSibling)
-    this.animateFromRects(beforeRects)
-    this.setDropCandidate(targetItem, "after")
+    this.setDropCandidate(targetItem, this.shouldInsertBefore(event, targetItem) ? "before" : "after")
   }
 
   handleDragEnter(event) {
@@ -89,10 +79,9 @@ export default class extends Controller {
     event.stopPropagation()
 
     const draggedId = event.dataTransfer.getData(BLOCK_DRAG_MIME) || this.draggedItem?.dataset.blockId
-    const siblings = this.directSiblingItems()
-    const targetIndex = siblings.findIndex((item) => item.dataset.blockId === draggedId)
+    const placement = this.resolveDropPlacement(event, draggedId)
 
-    if (!draggedId || targetIndex < 0) {
+    if (!draggedId || !placement) {
       this.handleDragEnd()
       return
     }
@@ -100,11 +89,17 @@ export default class extends Controller {
     const url = `/w/${this.workspaceSlugValue}/pages/${this.pageIdValue}/blocks/${draggedId}/reorder`
     const payload = {
       target_parent_id: this.parentIdValue || null,
-      target_index: targetIndex
+      target_index: placement.targetIndex
     }
     const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
 
     try {
+      const saved = await this.flushDraggedBlockSave()
+      if (!saved) {
+        window.location.reload()
+        return
+      }
+
       const response = await fetch(url, {
         method: "PATCH",
         headers: {
@@ -118,7 +113,10 @@ export default class extends Controller {
 
       if (!response.ok) {
         window.location.reload()
+        return
       }
+
+      this.applyDropPlacement(placement)
     } catch (_error) {
       window.location.reload()
     } finally {
@@ -132,6 +130,7 @@ export default class extends Controller {
       this.draggedItem = null
     }
 
+    this.pendingDragFlush = null
     this.clearDropState()
   }
 
@@ -146,31 +145,48 @@ export default class extends Controller {
     return event.clientY < midpoint
   }
 
-  captureRects() {
-    const rects = new Map()
-    this.directSiblingItems().forEach((item) => {
-      rects.set(item.dataset.blockId, item.getBoundingClientRect())
-    })
-    return rects
+  requestBlockFlush(item) {
+    const blockId = item?.dataset.blockId
+    if (!blockId) return Promise.resolve(true)
+
+    const detail = { blockId }
+    window.dispatchEvent(new CustomEvent("notae:block-flush-save", { detail }))
+    return Promise.resolve(detail.promise || true)
   }
 
-  animateFromRects(beforeRects) {
-    this.directSiblingItems().forEach((item) => {
-      const before = beforeRects.get(item.dataset.blockId)
-      if (!before) return
+  flushDraggedBlockSave() {
+    if (this.pendingDragFlush) return this.pendingDragFlush
+    if (!this.draggedItem) return Promise.resolve(true)
 
-      const after = item.getBoundingClientRect()
-      const deltaY = before.top - after.top
-      if (Math.abs(deltaY) < DRAG_MOVE_THRESHOLD_PX) return
+    this.pendingDragFlush = this.requestBlockFlush(this.draggedItem)
+    return this.pendingDragFlush
+  }
 
-      item.style.transition = "none"
-      item.style.transform = `translateY(${deltaY}px)`
+  resolveDropPlacement(event, draggedId) {
+    const dropItem = this.activeDropItem || event.currentTarget
+    if (!dropItem || dropItem === this.draggedItem) return null
 
-      requestAnimationFrame(() => {
-        item.style.transition = "transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1)"
-        item.style.transform = ""
-      })
-    })
+    const dropPosition = this.activeDropPosition || (this.shouldInsertBefore(event, dropItem) ? "before" : "after")
+    const siblings = this.directSiblingItems().filter((item) => item.dataset.blockId !== draggedId)
+    const targetSiblingIndex = siblings.findIndex((item) => item === dropItem)
+    if (targetSiblingIndex < 0) return null
+
+    return {
+      dropItem,
+      dropPosition,
+      targetIndex: targetSiblingIndex + (dropPosition === "after" ? 1 : 0)
+    }
+  }
+
+  applyDropPlacement(placement) {
+    if (!this.draggedItem || !placement?.dropItem || placement.dropItem === this.draggedItem) return
+
+    if (placement.dropPosition === "before") {
+      this.element.insertBefore(this.draggedItem, placement.dropItem)
+      return
+    }
+
+    this.element.insertBefore(this.draggedItem, placement.dropItem.nextElementSibling)
   }
 
   setDropCandidate(targetItem, position) {
@@ -182,6 +198,7 @@ export default class extends Controller {
     targetItem.classList.toggle("is-drop-candidate-before", position === "before")
     targetItem.classList.toggle("is-drop-candidate-after", position === "after")
     this.activeDropItem = targetItem
+    this.activeDropPosition = position
   }
 
   clearDropState() {
@@ -191,6 +208,8 @@ export default class extends Controller {
       this.activeDropItem.classList.remove("is-drop-candidate", "is-drop-candidate-before", "is-drop-candidate-after")
       this.activeDropItem = null
     }
+
+    this.activeDropPosition = null
 
     this.directSiblingItems().forEach((item) => {
       item.classList.remove("is-drop-candidate", "is-drop-candidate-before", "is-drop-candidate-after")

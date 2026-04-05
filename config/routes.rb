@@ -123,6 +123,7 @@ Rails.application.routes.draw do
         patch :restore
         patch :permissions
         get :export_csv
+        get "panels/:panel", action: :panel, as: :panel
       end
       resource :favorite, only: %i[create destroy], controller: "database_favorites"
       resources :database_views, only: %i[create update]
@@ -145,6 +146,8 @@ Rails.application.routes.draw do
       resources :db_cells, only: :update
     end
 
+    get "document-targets", to: "workspace_document_targets#index", as: :workspace_document_targets
+    get "sidebar/sections", to: "workspace_sidebar_sections#show", as: :workspace_sidebar_sections
     get "cover-browser/unsplash", to: "workspace_cover_browser#unsplash", as: :workspace_cover_unsplash
 
     resources :pages, only: %i[show create update destroy] do
@@ -169,6 +172,7 @@ Rails.application.routes.draw do
         get :export_pdf, to: "page_exports#pdf"
         post :export_zip, to: "page_exports#create"
         post :save_as_template, to: "page_templates#create"
+        get "panels/:panel", action: :panel, as: :panel
       end
 
       resources :blocks, only: %i[create update] do

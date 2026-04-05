@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Databases", type: :request do
+  include ActiveJob::TestHelper
+
   it "keeps an open tab menu above grid surfaces" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
@@ -697,7 +699,7 @@ RSpec.describe "Databases", type: :request do
     )
     sign_in owner
 
-    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id, view_settings: "open")
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "view_settings", view_id: view.id, view_settings: "open")
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Does not equal")
@@ -844,8 +846,8 @@ RSpec.describe "Databases", type: :request do
     started_column = document.at_css(".notae-db-board-column-title.is-status-started")
     done_column = document.at_css(".notae-db-board-column-title.is-status-done")
 
-    expect(started_column&.text.to_s).to include("started")
-    expect(done_column&.text.to_s).to include("done")
+    expect(started_column&.text.to_s).to include("Started")
+    expect(done_column&.text.to_s).to include("Done")
   end
 
   it "renders non-grouped property values inside board cards" do
@@ -1205,34 +1207,11 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('aria-label="Add description"')
     expect(response.body).to include('class="notae-page-header-action-label"')
     expect(response.body).to include("View settings")
-    expect(response.body).to include("Layout")
-    expect(response.body).to include("Property visibility")
-    expect(response.body).to include("Conditional color")
-    expect(response.body).to include("Lock grid")
-    expect(response.body).to include("notae-actions-font-grid")
-    expect(response.body).to include("Default")
-    expect(response.body).to include("Serif")
-    expect(response.body).to include("Mono")
-    expect(response.body).to include("Copy link to view")
-    expect(response.body).to include("Copy page contents")
-    expect(response.body).to include("Duplicate")
-    expect(response.body).to include("Move to")
-    expect(response.body).to include("Move to Trash")
     expect(response.body).to include("Options")
-    expect(response.body).to include("Permissions")
-    expect(response.body).to include("Public share links")
-    expect(response.body).to include("Archived rows")
-    expect(response.body).to include("Small text")
-    expect(response.body).to include("Undo")
-    expect(response.body).to include("Export")
-    expect(response.body).to include("Updates &amp; analytics")
-    expect(response.body).to include("Version history")
     expect(response.body).to include("notae-db-actions-menu")
-    expect(response.body).to include("data-copy-text-feedback")
-    expect(response.body).to include("http://www.example.com/w/#{workspace.slug}/databases/#{database.id}")
-    expect(response.body).to include("Timeline")
-    expect(response.body).to include("Kanban board")
-    expect(response.body).to include("Map")
+    expect(response.body).to include("panels/actions")
+    expect(response.body).to include("panels/options")
+    expect(response.body).to include("panels/view_settings")
     expect(response.body).not_to include("Open linked page")
     expect(response.body).to include("notae-page-header-cover-panel")
     expect(response.body).to include("notae-cover-picker-panel is-embedded")
@@ -1243,6 +1222,11 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("🧠")
     expect(response.body).to include("name=\"database[name]\"")
     expect(response.body).to include("notae-page-title-input")
+    expect(response.body).not_to include("Property visibility")
+    expect(response.body).not_to include("Conditional color")
+    expect(response.body).not_to include("Public share links")
+    expect(response.body).not_to include("Archived rows")
+    expect(response.body).not_to include("Version history")
     expect(response.headers["X-Notae-Perf-Action"]).to eq("DatabasesController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     expect(response.body).not_to include("db-edit-view-panel")
@@ -1252,14 +1236,35 @@ RSpec.describe "Databases", type: :request do
     title_field = html.at_css("textarea.notae-page-title-input[name='database[name]']")
     expect(title_field).to be_present
     expect(title_field["rows"]).to eq("1")
-    permissions_form = html.at_css("form[action*='/permissions']")
-    expect(permissions_form).to be_present
-    expect(permissions_form.at_css("select[name='database[permission_mode]']")).to be_present
-    expect(permissions_form.at_css("input[type='checkbox'][name='database[shared_user_ids][]']")).to be_present
+    expect(html.at_css("#database-actions-menu[data-lazy-panel-url-value*='panels/actions']")).to be_present
+    expect(html.at_css("#database-options-menu[data-lazy-panel-url-value*='panels/options']")).to be_present
+    expect(html.at_css(".notae-db-settings-menu[data-lazy-panel-url-value*='panels/view_settings']")).to be_present
     table_rows = html.css(".notae-db-grid tbody tr")
     expect(table_rows).not_to be_empty
     expect(table_rows.last["class"]).to include("notae-db-grid-add-row-control")
     expect(table_rows.map { |row| row["class"] }.join(" ")).not_to include("notae-db-grid-new-row")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "actions")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-actions-font-grid")
+    expect(response.body).to include("Copy link to view")
+    expect(response.body).to include("Move to Trash")
+    expect(response.body).to include("Version history")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "options")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Permissions")
+    expect(response.body).to include("Public share links")
+    expect(response.body).to include("Archived rows")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "view_settings")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Layout")
+    expect(response.body).to include("Timeline")
+    expect(response.body).to include("Kanban board")
+    expect(response.body).to include("Map")
+    expect(response.body).to include("Property visibility")
+    expect(response.body).to include("Conditional color")
   end
 
   it "applies property visibility from view config to table columns" do
@@ -1429,7 +1434,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).not_to include("Open property visibility")
   end
 
-  it "backfills missing cells so new columns remain editable on existing rows" do
+  it "enqueues a backfill job for missing cells and renders them after the async repair runs" do
     owner = User.create!(email: "database-backfill-cell-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Backfill cells tables", slug: "backfill-cells-tables")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -1440,11 +1445,20 @@ RSpec.describe "Databases", type: :request do
     cell.destroy!
     sign_in owner
 
+    expect do
+      get database_path(workspace_slug: workspace.slug, id: database.id)
+    end.to have_enqueued_job(DbCells::BackfillWindowJob).with(database.id, [ row.id ], [ property.id ])
+
+    expect(response).to have_http_status(:ok)
+    expect(DbCell.find_by(workspace: workspace, db_row: row, db_property: property)).to be_nil
+
+    perform_enqueued_jobs
+
+    recreated_cell = DbCell.find_by!(workspace: workspace, db_row: row, db_property: property)
+
     get database_path(workspace_slug: workspace.slug, id: database.id)
 
     expect(response).to have_http_status(:ok)
-    recreated_cell = DbCell.find_by(workspace: workspace, db_row: row, db_property: property)
-    expect(recreated_cell).to be_present
     html = Nokogiri::HTML(response.body)
     expect(html.css("input#db_cell_#{recreated_cell.id}_value_text")).not_to be_empty
   end
@@ -1463,9 +1477,8 @@ RSpec.describe "Databases", type: :request do
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
     expect(database.reload.locked).to eq(true)
 
-    get database_path(workspace_slug: workspace.slug, id: database.id, view_settings: "open")
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "view_settings", view_settings: "open")
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("notae-db-settings-panel is-grid-locked")
     expect(response.body).to include("Grid is locked. Unlock to edit settings.")
 
     patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
@@ -1679,6 +1692,37 @@ RSpec.describe "Databases", type: :request do
     expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])
   end
 
+  it "paginates table rows while keeping the total row count visible" do
+    owner = User.create!(email: "database-pagination-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Pagination tables", slug: "pagination-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Paginated grid")
+    65.times do |index|
+      DbRow.create!(workspace: workspace, database: database, title: format("Row %02d", index + 1))
+    end
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
+    expect(rendered_row_ids.length).to eq(50)
+    expect(response.body).to include("Page 1 of 2")
+    expect(document.at_css("#database_row_count")&.text).to include("65 rows")
+    expect(response.body).to include("Row 01")
+    expect(response.body).not_to include("Row 65")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, rows_page: 2)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
+    expect(rendered_row_ids.length).to eq(15)
+    expect(response.body).to include("Page 2 of 2")
+    expect(response.body).to include("Row 65")
+  end
+
   it "creates a new row with turbo streams instead of redirecting the full grid for the simple table path" do
     owner = User.create!(email: "database-row-create-turbo-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row create turbo tables", slug: "row-create-turbo-tables")
@@ -1704,6 +1748,24 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('data-preserve-database-scroll="true"')
     expect(response.body).to include("is-new-row-highlight")
     expect(response.body).not_to include('autofocus="autofocus"')
+  end
+
+  it "enqueues a single row reindex job when creating a fresh row" do
+    clear_enqueued_jobs
+
+    owner = User.create!(email: "database-row-create-job-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row create jobs", slug: "row-create-jobs")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row create jobs DB")
+    DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select, position: 1024)
+    DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text, position: 2048)
+    sign_in owner
+
+    expect do
+      post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+           params: { db_row: { title: "Untitled row" } },
+           as: :turbo_stream
+    end.to have_enqueued_job(Search::IndexDbRowJob).exactly(:once)
   end
 
   it "creates a new row directly below when row update requests create_next_row" do
@@ -2257,6 +2319,35 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).not_to include("notae-ai-rail")
     expect(response.body).not_to include("notae-topbar-title")
     expect(response.headers["Content-Security-Policy"]).to include("frame-ancestors 'self'")
+  end
+
+  it "renders embedded databases without the full header chrome" do
+    owner = User.create!(email: "database-embedded-grid-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Embedded grid preview", slug: "embedded-grid-preview")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(
+      workspace: workspace,
+      name: "Embedded grid",
+      icon: "🧪",
+      cover_preset_key: Database::COVER_PRESET_KEYS.first,
+      description: "This description should stay out of the embedded preview."
+    )
+    DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    DbRow.create!(workspace: workspace, database: database, title: "First row")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, embedded: 1)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-shell-embedded")
+    expect(response.body).not_to include("--notae-workspace-color:")
+    expect(response.body).not_to include("notae-page-cover")
+    expect(response.body).not_to include("notae-db-header")
+    expect(response.body).not_to include("notae-db-viewbar")
+    expect(response.body).not_to include("notae-doc-backlinks")
+    expect(response.body).not_to include("Change cover")
+    expect(response.body).not_to include("Add description")
+    expect(response.body).to include("notae-db-grid")
   end
 
   it "archives rows and excludes them from active database views" do

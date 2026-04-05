@@ -57,6 +57,7 @@ module Blocks
       @redirect_page_id = nil
       @split_page_id = nil
       @split_source = nil
+      @clear_split = false
       @notice = nil
       @synced_source_block = nil
     end
@@ -71,6 +72,10 @@ module Blocks
         update_highlight!
       when "duplicate"
         duplicate!
+      when "add_block_above"
+        insert_blank_block!(target_index: sibling_index_for(block))
+      when "add_block_below"
+        insert_blank_block!(target_index: sibling_index_for(block) + 1)
       when "move_to"
         move_to_page!
       when "create_linked_nota"
@@ -81,6 +86,8 @@ module Blocks
         create_linked_grid!
       when "link_existing_grid"
         link_existing_grid!
+      when "unlink_linked_document"
+        unlink_linked_document!
       when "delete"
         delete_block!
       when "insert_media"
@@ -98,6 +105,7 @@ module Blocks
         redirect_page_id: redirect_page_id,
         split_page_id: split_page_id,
         split_source: split_source,
+        clear_split: clear_split,
         notice: notice || "Block updated.",
         synced_source_block: synced_source_block
       }
@@ -107,6 +115,7 @@ module Blocks
 
     attr_reader :block, :page, :workspace, :actor, :command, :target, :color, :highlight, :target_page, :note,
                 :target_database, :focus_anchor, :redirect_page_id, :split_page_id, :split_source, :notice, :synced_source_block
+    attr_reader :clear_split
 
     def turn_into!
       case target
@@ -160,6 +169,25 @@ module Blocks
       duplicate_root = Blocks::DuplicateService.call(block:, actor:)
       @focus_anchor = "block_#{duplicate_root.id}"
       @notice = "Block duplicated."
+    end
+
+    def insert_blank_block!(target_index:)
+      inserted_block = block.page.blocks.create!(
+        workspace: block.workspace,
+        page: block.page,
+        parent_block: block.parent_block,
+        created_by: actor,
+        block_type: "paragraph"
+      )
+
+      Blocks::ReorderService.call(
+        block: inserted_block,
+        target_parent_id: block.parent_block_id,
+        target_index: target_index
+      )
+
+      @focus_anchor = "block_#{inserted_block.id}"
+      @notice = "Block added."
     end
 
     def move_to_page!
@@ -228,6 +256,20 @@ module Blocks
 
       replace_block_with_split_link!(label: target_database.name, target_page: linked_page)
       @notice = "Linked Grid added."
+    end
+
+    def unlink_linked_document!
+      linked_page = Blocks::SplitLinkResolver.target_page(content_json: block.content_json, workspace: workspace)
+      raise ArgumentError, "Block is not linked to a Nota or Grid." if linked_page.blank?
+
+      block.update!(content_json: Blocks::SplitLinkResolver.unlink(content_json: block.content_json))
+
+      linked_kind = linked_page.linked_database.present? ? "Grid" : "Nota"
+      @redirect_page_id = page.id
+      @clear_split = true
+      @focus_anchor = "block_#{block.id}"
+      @notice = "#{linked_kind} unlinked."
+      @synced_source_block = synced_root_for(block)
     end
 
     def delete_block!

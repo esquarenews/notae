@@ -1,5 +1,5 @@
 <% row_update_path = database_db_row_path({ workspace_slug: workspace.slug, database_id: database.id, id: row.id }.merge(row_params)) %>
-<% linked_page = linkable_pages_by_id[row.linked_page_id] %>
+<% linked_page = row.linked_page %>
 <% row_can_update = policy(row).update? && !database.locked? %>
 
 <dialog class="notae-db-board-card-modal"

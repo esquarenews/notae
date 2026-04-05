@@ -1,4 +1,5 @@
 <% display_title = @page_title_page&.title.presence || @database.name %>
+<% embedded_preview = params[:embedded].to_s == "1" %>
 <% content_for :title, display_title %>
 <% content_for :topbar_page_icon do %>
   <%= render_notae_icon(@page_title_page&.icon.presence || @database.icon.presence, workspace: @workspace, fallback: "🗃️", css_class: "notae-topbar-page-icon-inner", label: "Grid icon") %>
@@ -13,15 +14,10 @@
        "Shared to workspace"
      end %>
 <% content_for :topbar_privacy, database_privacy_label %>
-<% content_for :content_class, "notae-content-page" %>
+<% content_for :content_class, [ "notae-content-page", ("is-embedded-preview" if embedded_preview) ].compact.join(" ") %>
 <% can_update_database = policy(@database).update? %>
 <% can_edit_database = can_update_database && !@database.locked? %>
-<% can_manage_database_permissions = policy(@database).permissions? %>
-<% can_update_view = @current_view.present? && policy(@current_view).update? && !@database.locked? %>
 <% can_create_database = policy(Database.new(workspace: @workspace, name: "Untitled grid")).create? %>
-<% can_archive_database = @can_archive_database %>
-<% supported_layout_types = %w[table board timeline calendar list gallery chart feed map] %>
-<% enabled_layout_types = %w[table board calendar list gallery] %>
 <% shell_page = @page_title_page %>
 <% shell_page_route_params = shell_page.present? ? { workspace_slug: @workspace.slug, id: shell_page.id } : nil %>
 <% can_edit_shell_page = shell_page.present? && @can_update_page_title_page && !shell_page.locked? %>
@@ -29,6 +25,7 @@
 <% header_icon_value = shell_page&.icon.presence || @database.icon.presence %>
 <% has_display_cover = shell_page.present? ? shell_page.cover? : @database.cover? %>
 <% icon_over_cover = has_display_cover && header_icon_value.present? %>
+<% page_search_url = workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page") %>
 <% topbar_view_params = {
   workspace_slug: @workspace.slug,
   id: @database.id,
@@ -39,6 +36,7 @@
   filter_property_id: params[:filter_property_id],
   filter_value: params[:filter_value],
   filter_operator: params[:filter_operator],
+  rows_page: params[:rows_page].presence,
   view_settings: params[:view_settings],
   view_settings_section: params[:view_settings_section],
   actions_menu: params[:actions_menu],
@@ -47,58 +45,49 @@
   split_source: params[:split_source],
   split_row_id: params[:split_row_id]
 }.compact %>
-<% content_for :topbar_actions do %>
-  <span id="database_topbar_edited_at">
-    <%= render "databases/topbar_edited_meta", database: @database %>
-  </span>
-  <% if @database_favorite.present? %>
-    <%= button_to database_favorite_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                  method: :delete,
-                  class: "notae-inline-icon-button notae-favorite-toggle is-favorited",
-                  title: "Remove from favorites",
-                  aria: { label: "Remove from favorites" } do %>
-      ★
+<% unless embedded_preview %>
+  <% content_for :topbar_actions do %>
+    <span id="database_topbar_edited_at">
+      <%= render "databases/topbar_edited_meta", database: @database %>
+    </span>
+    <% if @database_favorite.present? %>
+      <%= button_to database_favorite_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                    method: :delete,
+                    class: "notae-inline-icon-button notae-favorite-toggle is-favorited",
+                    title: "Remove from favorites",
+                    aria: { label: "Remove from favorites" } do %>
+        ★
+      <% end %>
+    <% else %>
+      <%= button_to database_favorite_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                    method: :post,
+                    class: "notae-inline-icon-button notae-favorite-toggle",
+                    title: "Add to favorites",
+                    aria: { label: "Add to favorites" } do %>
+        ☆
+      <% end %>
     <% end %>
-  <% else %>
-    <%= button_to database_favorite_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                  method: :post,
-                  class: "notae-inline-icon-button notae-favorite-toggle",
-                  title: "Add to favorites",
-                  aria: { label: "Add to favorites" } do %>
-      ☆
+    <% unless @database.locked? %>
+      <%= render "databases/comments_menu",
+                 workspace: @workspace,
+                 database: @database,
+                 view_params: topbar_view_params %>
     <% end %>
-  <% end %>
-  <% unless @database.locked? %>
-    <%= render "databases/comments_menu",
+
+    <%= render "databases/options_menu",
                workspace: @workspace,
                database: @database,
-               can_comment_on_database: @can_comment_on_database,
-               new_database_comment: @new_database_comment,
-               database_comments: @database_comments,
                view_params: topbar_view_params %>
   <% end %>
-
-  <%= render "databases/options_menu",
-             workspace: @workspace,
-             database: @database,
-             can_manage_database_permissions: can_manage_database_permissions,
-             memberships: @memberships,
-             shared_user_ids: @shared_user_ids,
-             view_params: topbar_view_params,
-             view_link: database_url(topbar_view_params.except(:view_settings, :actions_menu, :options_menu, :split_page_id, :split_source, :split_row_id)),
-             archived_rows: @archived_rows,
-             can_create_database: can_create_database,
-             share_links: @database_share_links %>
 <% end %>
 
 <% view_params = topbar_view_params %>
-<% view_link_params = view_params.except(:view_settings, :actions_menu, :options_menu, :split_page_id, :split_source, :split_row_id) %>
-<% view_link = database_url(view_link_params) %>
 <% db_layout_classes = [ "notae-db-split-layout" ] %>
 <% db_layout_classes << "has-side-peek" if @split_page.present? %>
 <% db_layout_classes << "is-small-text" if @database.small_text? %>
 <% db_layout_classes << "is-font-serif" if @database.font_style == "serif" %>
 <% db_layout_classes << "is-font-mono" if @database.font_style == "mono" %>
+<% db_layout_classes << "is-embedded-preview" if embedded_preview %>
 
 <section class="<%= db_layout_classes.join(" ") %>"
          data-controller="database-view-state"
@@ -109,7 +98,7 @@
              flash_messages: [],
              flash_dom_id: "database_flash_messages",
              flash_host_class: "notae-db-inline-flash-host" %>
-  <% if shell_page.present? ? shell_page.cover? : @database.cover? %>
+  <% if (shell_page.present? ? shell_page.cover? : @database.cover?) && !embedded_preview %>
     <section class="notae-page-cover">
       <div class="notae-page-cover-frame">
         <% if shell_page.present? && (cover_image = cover_display_image(shell_page)).present? %>
@@ -193,6 +182,7 @@
     </section>
   <% end %>
 
+  <% unless embedded_preview %>
   <header class="notae-db-header <%= "has-overlapping-icon" if icon_over_cover %>">
     <% if header_icon_value.present? %>
       <div class="notae-page-icon-display <%= "is-over-cover" if icon_over_cover %>">
@@ -430,664 +420,18 @@
         <% end %>
       </div>
       <% if @current_view.present? %>
-        <details id="database-actions-menu"
-                 class="notae-actions-menu notae-db-actions-menu"
-                 data-controller="copy-text actions-menu"
-                 data-shell-target="actionsMenu"
-                 data-shell-actions-menu
-                 <%= "open" if params[:actions_menu].to_s == "open" %>>
-          <summary class="notae-db-toolbar-icon <%= "is-active" if params[:actions_menu].to_s == "open" %>" title="Actions">⚡</summary>
-          <div class="notae-actions-panel <%= "is-page-locked" if @database.locked? %>"
-               data-shell-actions-panel
-               data-actions-menu-target="panel">
-            <div class="notae-actions-mobile-panes">
-              <div class="notae-actions-mobile-pane is-nav">
-                <div class="notae-actions-mobile-nav" data-actions-menu-target="nav" hidden>
-                  <p class="notae-actions-mobile-nav-title">Actions</p>
-                  <div class="notae-actions-mobile-nav-list" data-actions-menu-target="navList"></div>
-                </div>
-              </div>
-
-              <div class="notae-actions-mobile-pane is-detail">
-                <div class="notae-actions-mobile-detail-head" data-actions-menu-target="detailHead" hidden>
-                  <button type="button"
-                          class="notae-chip-button notae-actions-mobile-back"
-                          data-action="actions-menu#showList">
-                    ← Back
-                  </button>
-                  <p class="notae-actions-mobile-detail-title" data-actions-menu-target="detailTitle">Actions</p>
-                </div>
-
-                <input type="search"
-                       class="notae-options-input notae-actions-search"
-                       placeholder="Search actions..."
-                       autocomplete="off"
-                       data-actions-menu-target="search"
-                       data-action="input->shell#filterActionsMenu">
-                <textarea class="notae-actions-copy-buffer" data-shell-page-content><%= @database_plain_text %></textarea>
-
-                <section class="notae-actions-section is-lock-controls"
-                         data-actions-menu-target="section"
-                         data-actions-menu-label="Access">
-              <% if @database.locked? %>
-                <p class="notae-actions-locked-note">Grid is locked. Other actions are unavailable.</p>
-              <% end %>
-              <div class="notae-actions-row <%= "is-disabled" unless can_manage_database_permissions %>"
-                   data-shell-action-item
-                   data-shell-action-terms="lock grid unlock">
-                <% if can_manage_database_permissions %>
-                  <%= form_with model: @database,
-                                url: database_path(view_params.merge(actions_menu: "open")),
-                                method: :patch,
-                                class: "notae-actions-inline-form" do |form| %>
-                    <%= form.hidden_field :locked, value: (!@database.locked?).to_s %>
-                    <button type="submit" class="notae-actions-row-button">
-                      <span class="notae-actions-row-icon"><%= @database.locked? ? "🔓" : "🔒" %></span>
-                      <span class="notae-actions-row-label"><%= @database.locked? ? "Unlock grid" : "Lock grid" %></span>
-                      <span class="notae-actions-switch <%= "is-on" if @database.locked? %>"><span></span></span>
-                    </button>
-                  <% end %>
-                <% else %>
-                  <button type="button" class="notae-actions-row-button" disabled>
-                    <span class="notae-actions-row-icon"><%= @database.locked? ? "🔓" : "🔒" %></span>
-                    <span class="notae-actions-row-label"><%= @database.locked? ? "Unlock grid" : "Lock grid" %></span>
-                    <span class="notae-actions-switch <%= "is-on" if @database.locked? %>"><span></span></span>
-                  </button>
-                <% end %>
-              </div>
-                </section>
-
-                <section class="notae-actions-section"
-                         data-shell-actions-section
-                         data-actions-menu-target="section"
-                         data-actions-menu-label="Style">
-              <div class="notae-actions-font-grid">
-                <% [
-                  [ "default", "Default", "Ag" ],
-                  [ "serif", "Serif", "Ag" ],
-                  [ "mono", "Mono", "Ag" ]
-                ].each do |key, label, preview| %>
-                  <% active_font = @database.font_style == key %>
-                  <% if can_edit_database %>
-                    <%= form_with model: @database,
-                                  url: database_path(view_params.merge(actions_menu: "open")),
-                                  method: :patch,
-                                  class: "notae-actions-inline-form",
-                                  data: { shell_action_item: true, shell_action_terms: "font #{label.downcase}" } do |form| %>
-                      <%= form.hidden_field :font_style, value: key %>
-                      <button type="submit"
-                              class="notae-actions-font-button <%= "is-active" if active_font %>"
-                              aria-pressed="<%= active_font %>">
-                        <span class="notae-actions-font-preview"><%= preview %></span>
-                        <span class="notae-actions-font-label"><%= label %></span>
-                      </button>
-                    <% end %>
-                  <% else %>
-                    <button type="button"
-                            class="notae-actions-font-button <%= "is-active" if active_font %>"
-                            disabled
-                            aria-pressed="<%= active_font %>">
-                      <span class="notae-actions-font-preview"><%= preview %></span>
-                      <span class="notae-actions-font-label"><%= label %></span>
-                    </button>
-                  <% end %>
-                <% end %>
-              </div>
-                </section>
-
-                <section class="notae-actions-section"
-                         data-shell-actions-section
-                         data-actions-menu-target="section"
-                         data-actions-menu-label="Grid actions">
-              <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="copy link view">
-                <button type="button"
-                        class="notae-actions-row-button"
-                        data-action="click->copy-text#copy"
-                        data-copy-text-value="<%= view_link %>">
-                  <span class="notae-actions-row-icon">🔗</span>
-                  <span class="notae-actions-row-label">Copy link to view</span>
-                  <span class="notae-actions-row-meta" data-copy-text-feedback>Copy</span>
-                </button>
-              </div>
-
-              <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="copy page contents text">
-                <button type="button" class="notae-actions-row-button" data-action="click->shell#copyPageContents">
-                  <span class="notae-actions-row-icon">📋</span>
-                  <span class="notae-actions-row-label">Copy page contents</span>
-                </button>
-              </div>
-
-              <div class="notae-actions-row <%= "is-disabled" unless can_create_database %>"
-                   data-shell-action-item
-                   data-shell-action-terms="duplicate grid">
-                <% if can_create_database %>
-                  <%= form_with url: duplicate_database_path(workspace_slug: @workspace.slug, id: @database.id),
-                                method: :post,
-                                class: "notae-actions-inline-form" do %>
-                    <button type="submit" class="notae-actions-row-button">
-                      <span class="notae-actions-row-icon">⧉</span>
-                      <span class="notae-actions-row-label">Duplicate</span>
-                      <span class="notae-actions-row-meta">⌘D</span>
-                    </button>
-                  <% end %>
-                <% else %>
-                  <button type="button" class="notae-actions-row-button" disabled>
-                    <span class="notae-actions-row-icon">⧉</span>
-                    <span class="notae-actions-row-label">Duplicate</span>
-                    <span class="notae-actions-row-meta">⌘D</span>
-                  </button>
-                <% end %>
-              </div>
-
-              <div class="notae-actions-row <%= "is-disabled" unless can_edit_database %>"
-                   data-shell-action-item
-                   data-shell-action-terms="kanban board status">
-                <% if can_edit_database %>
-                  <%= form_with url: kanbanize_database_path(workspace_slug: @workspace.slug, id: @database.id),
-                                method: :post,
-                                class: "notae-actions-inline-form" do %>
-                    <button type="submit" class="notae-actions-row-button">
-                      <span class="notae-actions-row-icon">☷</span>
-                      <span class="notae-actions-row-label">Open as Kanban</span>
-                    </button>
-                  <% end %>
-                <% else %>
-                  <button type="button" class="notae-actions-row-button" disabled>
-                    <span class="notae-actions-row-icon">☷</span>
-                    <span class="notae-actions-row-label">Open as Kanban</span>
-                  </button>
-                <% end %>
-              </div>
-
-              <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="move to page">
-                <% if @linkable_pages.any? && can_edit_database %>
-                  <%= form_with model: @database,
-                                url: database_path(view_params.merge(actions_menu: "open")),
-                                method: :patch,
-                                class: "notae-actions-move-form" do |form| %>
-                    <%= form.select :linked_page_id,
-                                    options_for_select([ [ "Move to...", "" ] ] + @linkable_pages.map { |candidate| [ candidate.title, candidate.id ] }, @database.linked_page_id),
-                                    {},
-                                    class: "notae-options-input notae-actions-move-select" %>
-                    <%= form.submit "Move", class: "notae-chip-button" %>
-                  <% end %>
-                <% elsif @linkable_pages.any? %>
-                  <button type="button" class="notae-actions-row-button" disabled>
-                    <span class="notae-actions-row-icon">↗</span>
-                    <span class="notae-actions-row-label">Move to</span>
-                    <span class="notae-actions-row-meta">Read only</span>
-                  </button>
-                <% else %>
-                  <button type="button" class="notae-actions-row-button" disabled>
-                    <span class="notae-actions-row-icon">↗</span>
-                    <span class="notae-actions-row-label">Move to</span>
-                    <span class="notae-actions-row-meta">No Notarum</span>
-                  </button>
-                <% end %>
-              </div>
-
-              <div class="notae-actions-row <%= "is-disabled" unless can_archive_database %>"
-                   data-shell-action-item
-                   data-shell-action-terms="trash archive delete">
-                <% if can_archive_database %>
-                  <%= button_to archive_database_path(workspace_slug: @workspace.slug, id: @database.id),
-                                method: :patch,
-                                class: "notae-actions-row-button is-danger",
-                                form: { data: { turbo_confirm: "Move this grid to Trash?" } } do %>
-                    <span class="notae-actions-row-icon">🗑</span>
-                    <span class="notae-actions-row-label">Move to Trash</span>
-                  <% end %>
-                <% else %>
-                  <button type="button" class="notae-actions-row-button is-danger" disabled>
-                    <span class="notae-actions-row-icon">🗑</span>
-                    <span class="notae-actions-row-label">Move to Trash</span>
-                  </button>
-                <% end %>
-              </div>
-
-              <% if @current_view.present? && can_update_view %>
-                <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="duplicate view copy">
-                  <%= form_with model: @new_database_view,
-                                url: database_database_views_path(workspace_slug: @workspace.slug, database_id: @database.id, actions_menu: "open"),
-                                class: "notae-actions-inline-form" do |form| %>
-                    <%= form.hidden_field :name, value: "#{@current_view.name} copy" %>
-                    <%= form.hidden_field :view_type, value: @current_view.view_type %>
-                    <%= form.hidden_field :sort_property_id, value: @view_config["sort_property_id"] %>
-                    <%= form.hidden_field :sort_direction, value: @view_config["sort_direction"] %>
-                    <%= form.hidden_field :filter_property_id, value: @view_config["filter_property_id"] %>
-                    <%= form.hidden_field :filter_value, value: @view_config["filter_value"] %>
-                    <%= form.hidden_field :filter_operator, value: @view_config["filter_operator"] %>
-                    <%= form.hidden_field :group_property_id, value: @view_config["group_property_id"] %>
-                    <%= form.hidden_field :date_property_id, value: @view_config["date_property_id"] %>
-                    <% Array(@view_config["visible_property_ids"]).each do |property_id| %>
-                      <%= hidden_field_tag "database_view[visible_property_ids][]", property_id %>
-                    <% end %>
-                    <%= form.hidden_field :conditional_color_mode, value: @view_config["conditional_color_mode"] %>
-                    <%= form.hidden_field :conditional_color_property_id, value: @view_config["conditional_color_property_id"] %>
-                    <button type="submit" class="notae-actions-row-button">
-                      <span class="notae-actions-row-icon">⧉</span>
-                      <span class="notae-actions-row-label">Duplicate view</span>
-                    </button>
-                  <% end %>
-                </div>
-              <% end %>
-                </section>
-
-                <section class="notae-actions-section"
-                         data-shell-actions-section
-                         data-actions-menu-target="section"
-                         data-actions-menu-label="Tools">
-              <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="small text">
-                <%= form_with model: @database,
-                              url: database_path(view_params.merge(actions_menu: "open")),
-                              method: :patch,
-                              class: "notae-actions-inline-form" do |form| %>
-                  <%= form.hidden_field :small_text, value: (!@database.small_text?).to_s %>
-                  <button type="submit" class="notae-actions-row-button">
-                    <span class="notae-actions-row-icon">A</span>
-                    <span class="notae-actions-row-label">Small text</span>
-                    <span class="notae-actions-switch <%= "is-on" if @database.small_text? %>"><span></span></span>
-                  </button>
-                <% end %>
-              </div>
-
-              <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="undo">
-                <button type="button" class="notae-actions-row-button" data-action="click->shell#undo">
-                  <span class="notae-actions-row-icon">↶</span>
-                  <span class="notae-actions-row-label">Undo</span>
-                  <span class="notae-actions-row-meta">⌘Z</span>
-                </button>
-              </div>
-
-              <div class="notae-actions-row <%= "is-disabled" unless can_edit_database %>"
-                   data-shell-action-item
-                   data-shell-action-terms="new row add row">
-                <% if can_edit_database %>
-                  <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
-                                params: view_params.except(:workspace_slug, :id).merge(actions_menu: "open", db_row: { title: "Untitled row" }),
-                                class: "notae-actions-row-button",
-                                form: { data: { preserve_database_scroll: true } } do %>
-                    <span class="notae-actions-row-icon">＋</span>
-                    <span class="notae-actions-row-label">New row</span>
-                  <% end %>
-                <% else %>
-                  <button type="button" class="notae-actions-row-button" disabled>
-                    <span class="notae-actions-row-icon">＋</span>
-                    <span class="notae-actions-row-label">New row</span>
-                  </button>
-                <% end %>
-              </div>
-
-              <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="export csv">
-                <a class="notae-actions-row-link" href="<%= export_csv_database_path(workspace_slug: @workspace.slug, id: @database.id) %>">
-                  <span class="notae-actions-row-icon">↑</span>
-                  <span class="notae-actions-row-label">Export</span>
-                  <span class="notae-actions-row-meta">CSV</span>
-                </a>
-              </div>
-
-              <div class="notae-actions-row" data-shell-action-item data-shell-action-terms="view settings customize">
-                <%= link_to database_path(view_params.merge(view_settings: "open")),
-                            class: "notae-actions-row-link" do %>
-                  <span class="notae-actions-row-icon">⚙</span>
-                  <span class="notae-actions-row-label">Open view settings</span>
-                <% end %>
-              </div>
-
-              <details class="notae-actions-submenu" data-shell-action-item data-shell-action-terms="updates analytics audit">
-                <summary class="notae-actions-row-button">
-                  <span class="notae-actions-row-icon">◷</span>
-                  <span class="notae-actions-row-label">Updates &amp; analytics</span>
-                </summary>
-                <ul class="notae-actions-version-list">
-                  <% if @recent_database_audit_events.any? %>
-                    <% @recent_database_audit_events.each do |audit_event| %>
-                      <li><strong><%= audit_event.action.humanize %></strong> · <%= time_ago_in_words(audit_event.created_at) %> ago</li>
-                    <% end %>
-                  <% else %>
-                    <li>No audit events yet.</li>
-                  <% end %>
-                </ul>
-              </details>
-
-              <details class="notae-actions-submenu" data-shell-action-item data-shell-action-terms="version history">
-                <summary class="notae-actions-row-button">
-                  <span class="notae-actions-row-icon">🕘</span>
-                  <span class="notae-actions-row-label">Version history</span>
-                </summary>
-                <ul class="notae-actions-version-list">
-                  <% if @database_versions.any? %>
-                    <% @database_versions.each do |version| %>
-                      <li><strong><%= version.event.to_s.titleize %></strong> · <%= time_ago_in_words(version.created_at) %> ago</li>
-                    <% end %>
-                  <% else %>
-                    <li>No previous versions yet.</li>
-                  <% end %>
-                </ul>
-              </details>
-                </section>
-              </div>
-            </div>
-          </div>
-        </details>
+        <%= render "databases/actions_menu",
+                   workspace: @workspace,
+                   database: @database,
+                   view_params: view_params %>
       <% else %>
         <button type="button" class="notae-db-toolbar-icon is-muted" disabled title="Actions">⚡</button>
       <% end %>
 
       <% if @current_view.present? %>
-        <details class="notae-db-settings-menu" data-controller="copy-text" <%= "open" if params[:view_settings].to_s == "open" %>>
-          <summary class="notae-db-toolbar-icon <%= "is-active" if params[:view_settings].to_s == "open" %>" title="View settings">⚙</summary>
-          <div class="notae-db-settings-panel <%= "is-grid-locked" if @database.locked? %>">
-            <% if @database.locked? %>
-              <p class="notae-actions-locked-note notae-db-settings-locked-note">Grid is locked. Unlock to edit settings.</p>
-            <% end %>
-
-            <section class="notae-db-settings-section" data-grid-settings-section>
-              <p class="notae-db-settings-title">View settings</p>
-
-              <div class="notae-db-settings-view-name-row">
-                <% if can_edit_database %>
-                  <%= form_with model: @database,
-                                url: database_path(view_params.merge(view_settings: "open")),
-                                method: :patch,
-                                class: "notae-db-settings-inline-form" do |form| %>
-                    <span class="notae-db-settings-icon">⊞</span>
-                    <%= form.text_field :name,
-                                        value: @database.name,
-                                        class: "notae-options-input",
-                                        required: true,
-                                        aria: { label: "Grid name" } %>
-                    <%= form.submit "Save", class: "notae-chip-button" %>
-                  <% end %>
-                <% else %>
-                  <div class="notae-db-settings-readonly-line">
-                    <span class="notae-db-settings-icon">⊞</span>
-                    <span><%= @database.name %></span>
-                  </div>
-                <% end %>
-
-                <details class="notae-db-settings-mini-details">
-                  <summary class="notae-db-settings-mini-trigger" title="Edit grid description">i</summary>
-                  <div class="notae-db-settings-mini-panel">
-                    <% if can_edit_database %>
-                      <%= form_with model: @database,
-                                    url: database_path(view_params.merge(view_settings: "open")),
-                                    method: :patch,
-                                    class: "notae-db-settings-description-form" do |form| %>
-                        <%= hidden_field_tag "database[description_action]", "set" %>
-                        <%= form.text_area :description,
-                                           value: @database.description,
-                                           rows: 3,
-                                           class: "notae-options-input",
-                                           placeholder: "Short description..." %>
-                        <div class="notae-db-settings-description-actions">
-                          <%= form.submit "Save", class: "notae-chip-button" %>
-                        </div>
-                      <% end %>
-                    <% else %>
-                      <p class="notae-db-settings-muted"><%= @database.description.presence || "No description set." %></p>
-                    <% end %>
-                  </div>
-                </details>
-              </div>
-
-              <details class="notae-db-settings-submenu">
-                <summary class="notae-db-settings-row-button">
-                  <span><span class="notae-db-settings-icon">⊞</span> Layout</span>
-                  <span class="notae-db-settings-meta"><%= @current_view.view_type.titleize %></span>
-                </summary>
-                <div class="notae-db-settings-subpanel">
-                  <% layout_labels = {
-                    "table" => "Table",
-                    "board" => "Kanban board",
-                    "timeline" => "Timeline",
-                    "calendar" => "Calendar",
-                    "list" => "List",
-                    "gallery" => "Gallery",
-                    "chart" => "Chart",
-                    "feed" => "Feed",
-                    "map" => "Map"
-                  } %>
-                  <% supported_layout_types.each do |layout_type| %>
-                    <% label = layout_labels.fetch(layout_type, layout_type.titleize) %>
-                    <% enabled_layout = enabled_layout_types.include?(layout_type) %>
-                    <% active_layout = @current_view.view_type == layout_type %>
-                    <% if enabled_layout && can_update_view %>
-                      <%= form_with model: @current_view,
-                                    url: database_database_view_path(
-                                      workspace_slug: @workspace.slug,
-                                      database_id: @database.id,
-                                      id: @current_view.id,
-                                      view_settings: "open"
-                                    ),
-                                    method: :patch,
-                                    data: { preserve_database_scroll: true },
-                                    class: "notae-db-settings-layout-form" do |form| %>
-                        <%= form.hidden_field :view_type, value: layout_type %>
-                        <button type="submit"
-                                class="notae-db-settings-layout-option <%= "is-active" if active_layout %>">
-                          <span><%= label %></span>
-                          <% if active_layout %>
-                            <span class="notae-db-settings-meta">Current</span>
-                          <% end %>
-                        </button>
-                      <% end %>
-                    <% else %>
-                      <div class="notae-db-settings-layout-option is-disabled">
-                        <span><%= label %></span>
-                        <span class="notae-db-settings-meta"><%= enabled_layout ? "Read only" : "Coming soon" %></span>
-                      </div>
-                    <% end %>
-                  <% end %>
-                </div>
-              </details>
-
-              <details class="notae-db-settings-submenu" <%= "open" if params[:view_settings_section].to_s == "visibility" %>>
-                <summary class="notae-db-settings-row-button">
-                  <span><span class="notae-db-settings-icon">◌</span> Property visibility</span>
-                  <span class="notae-db-settings-meta"><%= @visible_db_properties.size %></span>
-                </summary>
-                <div class="notae-db-settings-subpanel">
-                  <% if can_update_view %>
-                    <% filter_operator_options = [
-                      ["Equals", "eq"],
-                      ["Does not equal", "neq"],
-                      ["Before / less than", "before"],
-                      ["After / greater than", "after"]
-                    ] %>
-                    <%= form_with model: @current_view,
-                                  url: database_database_view_path(
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @database.id,
-                                    id: @current_view.id,
-                                    view_settings: "open"
-                                  ),
-                                  method: :patch,
-                                  data: { preserve_database_scroll: true },
-                                  class: "notae-db-settings-checkbox-list" do |form| %>
-                      <%= hidden_field_tag "database_view[visible_property_ids][]", "" %>
-                      <% @db_properties.each do |property| %>
-                        <% checked = @visible_property_ids.blank? || @visible_property_ids.include?(property.id.to_s) %>
-                        <label class="notae-options-checkbox">
-                          <%= check_box_tag "database_view[visible_property_ids][]", property.id, checked %>
-                          <span><%= property.name %></span>
-                        </label>
-                      <% end %>
-                      <%= form.submit "Apply", class: "notae-chip-button" %>
-                    <% end %>
-                  <% else %>
-                    <p class="notae-db-settings-muted">Property visibility is read-only while this grid is locked.</p>
-                  <% end %>
-                </div>
-              </details>
-
-              <details class="notae-db-settings-submenu">
-                <summary class="notae-db-settings-row-button">
-                  <span><span class="notae-db-settings-icon">⌕</span> Filter</span>
-                  <span class="notae-db-settings-meta"><%= @filter_property.present? ? @filter_property.name : "None" %></span>
-                </summary>
-                <div class="notae-db-settings-subpanel">
-                  <% if can_update_view %>
-                    <%= form_with model: @current_view,
-                                  url: database_database_view_path(
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @database.id,
-                                    id: @current_view.id,
-                                    view_settings: "open"
-                                  ),
-                                  method: :patch,
-                                  data: { preserve_database_scroll: true },
-                                  class: "notae-db-view-submenu-form" do |form| %>
-                      <%= form.select :filter_property_id,
-                                      @db_properties.map { |property| [property.name, property.id] },
-                                      { include_blank: "No filter", selected: @view_config["filter_property_id"] },
-                                      class: "notae-options-input" %>
-                      <%= form.select :filter_operator,
-                                      filter_operator_options,
-                                      { selected: @view_config["filter_operator"].presence || "eq" },
-                                      class: "notae-options-input" %>
-                      <%= form.text_field :filter_value,
-                                          value: @view_config["filter_value"],
-                                          placeholder: "Value",
-                                          class: "notae-options-input" %>
-                      <p class="notae-db-settings-muted">For dates, before/after means earlier or later. For numbers, it means less than or greater than.</p>
-                      <%= form.submit "Apply", class: "notae-chip-button" %>
-                    <% end %>
-                  <% else %>
-                    <p class="notae-db-settings-muted">Filtering is read-only while this grid is locked.</p>
-                  <% end %>
-                </div>
-              </details>
-
-              <details class="notae-db-settings-submenu">
-                <summary class="notae-db-settings-row-button">
-                  <span><span class="notae-db-settings-icon">↕</span> Sort</span>
-                  <span class="notae-db-settings-meta"><%= @sort_property.present? ? @sort_property.name : "None" %></span>
-                </summary>
-                <div class="notae-db-settings-subpanel">
-                  <% if can_update_view %>
-                    <%= form_with model: @current_view,
-                                  url: database_database_view_path(
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @database.id,
-                                    id: @current_view.id,
-                                    view_settings: "open"
-                                  ),
-                                  method: :patch,
-                                  data: { preserve_database_scroll: true },
-                                  class: "notae-db-view-submenu-form" do |form| %>
-                      <%= form.select :sort_property_id,
-                                      @db_properties.map { |property| [property.name, property.id] },
-                                      { include_blank: "No sort", selected: @view_config["sort_property_id"] },
-                                      class: "notae-options-input" %>
-                      <%= form.select :sort_direction,
-                                      [["Ascending", "asc"], ["Descending", "desc"]],
-                                      { selected: @view_config["sort_direction"].presence || "asc" },
-                                      class: "notae-options-input" %>
-                      <%= form.submit "Apply", class: "notae-chip-button" %>
-                    <% end %>
-                  <% else %>
-                    <p class="notae-db-settings-muted">Sorting is read-only while this grid is locked.</p>
-                  <% end %>
-                </div>
-              </details>
-
-              <div class="notae-db-settings-row-button is-disabled">
-                <span><span class="notae-db-settings-icon">☷</span> Group</span>
-              </div>
-
-              <details class="notae-db-settings-submenu">
-                <summary class="notae-db-settings-row-button">
-                  <span><span class="notae-db-settings-icon">◍</span> Conditional color</span>
-                  <span class="notae-db-settings-meta"><%= @conditional_color_mode == "overdue" ? "Overdue" : "Off" %></span>
-                </summary>
-                <div class="notae-db-settings-subpanel">
-                  <p class="notae-db-settings-muted">
-                    Customize page colors to easily distinguish categories, highlight overdue events, and bring clarity to your work.
-                  </p>
-                  <% if can_update_view %>
-                    <%= form_with model: @current_view,
-                                  url: database_database_view_path(
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @database.id,
-                                    id: @current_view.id,
-                                    view_settings: "open"
-                                  ),
-                                  method: :patch,
-                                  data: { preserve_database_scroll: true },
-                                  class: "notae-db-view-submenu-form" do |form| %>
-                      <%= form.select :conditional_color_mode,
-                                      [["Off", ""], ["Highlight overdue", "overdue"]],
-                                      { selected: @view_config["conditional_color_mode"] },
-                                      class: "notae-options-input" %>
-                      <%= form.select :conditional_color_property_id,
-                                      @db_properties.select(&:date?).map { |property| [property.name, property.id] },
-                                      { include_blank: "Choose date column", selected: @view_config["conditional_color_property_id"] },
-                                      class: "notae-options-input" %>
-                      <%= form.submit "Apply", class: "notae-chip-button" %>
-                    <% end %>
-                  <% else %>
-                    <p class="notae-db-settings-muted">Conditional color is read-only while this grid is locked.</p>
-                  <% end %>
-                </div>
-              </details>
-
-              <button type="button"
-                      class="notae-db-settings-row-button"
-                      data-action="click->copy-text#copy"
-                      data-copy-text-value="<%= view_link %>">
-                <span><span class="notae-db-settings-icon">🔗</span> Copy link to view</span>
-                <span class="notae-db-settings-meta" data-copy-text-feedback>Copy</span>
-              </button>
-            </section>
-
-            <section class="notae-db-settings-section" data-grid-settings-section>
-              <p class="notae-db-settings-title">Data source settings</p>
-
-              <div class="notae-db-settings-row-button is-disabled">
-                <span><span class="notae-db-settings-icon">⇄</span> Source</span>
-                <span class="notae-db-settings-meta">Coming soon</span>
-              </div>
-
-              <div class="notae-db-settings-row-button is-disabled">
-                <span><span class="notae-db-settings-icon">☷</span> Edit properties</span>
-                <span class="notae-db-settings-meta">Coming soon</span>
-              </div>
-
-              <div class="notae-db-settings-row-button is-disabled">
-                <span><span class="notae-db-settings-icon">…</span> More settings</span>
-                <span class="notae-db-settings-meta">Coming soon</span>
-              </div>
-
-              <div class="notae-db-settings-row-button is-disabled">
-                <span><span class="notae-db-settings-icon">⎘</span> Manage data sources</span>
-                <span class="notae-db-settings-meta">Coming soon</span>
-              </div>
-            </section>
-
-            <section class="notae-db-settings-section">
-              <p class="notae-db-settings-title">Access</p>
-              <div class="notae-db-settings-lock-row <%= "is-disabled" unless can_manage_database_permissions %>">
-                <% if can_manage_database_permissions %>
-                  <%= form_with model: @database,
-                                url: database_path(view_params.merge(view_settings: "open")),
-                                method: :patch,
-                                class: "notae-db-settings-inline-form" do |form| %>
-                    <%= form.hidden_field :locked, value: (!@database.locked?).to_s %>
-                    <button type="submit" class="notae-db-settings-row-button">
-                      <span><span class="notae-db-settings-icon"><%= @database.locked? ? "🔓" : "🔒" %></span> <%= @database.locked? ? "Unlock grid" : "Lock grid" %></span>
-                      <span class="notae-actions-switch <%= "is-on" if @database.locked? %>"><span></span></span>
-                    </button>
-                  <% end %>
-                <% else %>
-                  <button type="button" class="notae-db-settings-row-button" disabled>
-                    <span><span class="notae-db-settings-icon">🔒</span> Lock grid</span>
-                  </button>
-                <% end %>
-              </div>
-            </section>
-          </div>
-        </details>
+        <%= render "databases/view_settings_menu",
+                   database: @database,
+                   view_params: view_params %>
       <% end %>
 
       <% unless @view_type == "table" %>
@@ -1105,8 +449,8 @@
     </div>
   </div>
 
-  <% linked_page = @linkable_pages_by_id[@database.linked_page_id] %>
-  <p id="database_row_count" class="notae-db-meta"><%= render "databases/row_count_meta", row_count: @rows.size %></p>
+  <% linked_page = @database.linked_page %>
+  <p id="database_row_count" class="notae-db-meta"><%= render "databases/row_count_meta", row_count: @row_count %></p>
   <div class="notae-db-linked-page-controls">
     <% if linked_page.present? %>
       <%= link_to linked_page.title,
@@ -1139,17 +483,31 @@
           <%= form_with model: @database,
                         url: database_path(view_params),
                         method: :patch,
-                        class: "notae-db-inline-form" do |form| %>
-            <%= form.select :linked_page_id,
-                            options_for_select(@linkable_pages.map { |page| [page.title, page.id] }, linked_page&.id),
-                            { include_blank: "No linked page" },
-                            class: "notae-options-input" %>
-            <%= form.submit "Save", class: "notae-chip-button" %>
+                        class: "notae-db-inline-form",
+                        data: {
+                          controller: "document-picker",
+                          document_picker_search_url_value: page_search_url,
+                          document_picker_empty_text_value: "No matching notas."
+                        } do |form| %>
+            <%= form.hidden_field :linked_page_id, value: linked_page&.id, data: { document_picker_target: "hiddenInput" } %>
+            <%= search_field_tag :database_link_page_search,
+                                 "",
+                                 placeholder: "Search notas",
+                                 autocomplete: "off",
+                                 class: "notae-options-input",
+                                 data: {
+                                   document_picker_target: "searchInput",
+                                   action: "focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch"
+                                 } %>
+            <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching…</p>
+            <div class="notae-document-picker-results" data-document-picker-target="results"></div>
+            <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching notas.</p>
           <% end %>
         </div>
       </details>
     <% end %>
   </div>
+  <% end %>
 
   <% if @view_type == "board" %>
     <%= render "databases/board_view" %>
@@ -1163,36 +521,39 @@
     <%= render "databases/table_view" %>
   <% end %>
 
-  <section class="notae-doc-backlinks">
-    <h2>Backlinks</h2>
-    <% backlink_pages = @backlinks.map(&:source_page).compact.uniq { |source_page| source_page.id } %>
-    <% if backlink_pages.any? %>
-      <ul>
-        <% backlink_pages.each do |source_page| %>
-          <li>
-            <%= link_to linked_document_label(source_page),
-                        linked_document_path(
-                          source_page,
-                          workspace: @workspace,
-                          embedded: params[:embedded].to_s == "1"
-                        ),
-                        data: { backlink_source: source_page.id } %>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p>No backlinks yet.</p>
-    <% end %>
-  </section>
+  <% unless embedded_preview %>
+    <section class="notae-doc-backlinks">
+      <h2>Backlinks</h2>
+      <% backlink_pages = @backlinks.map(&:source_page).compact.uniq { |source_page| source_page.id } %>
+      <% if backlink_pages.any? %>
+        <ul>
+          <% backlink_pages.each do |source_page| %>
+            <li>
+              <%= link_to linked_document_label(source_page),
+                          linked_document_path(
+                            source_page,
+                            workspace: @workspace,
+                            embedded: embedded_preview
+                          ),
+                          data: { backlink_source: source_page.id } %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p>No backlinks yet.</p>
+      <% end %>
+    </section>
+  <% end %>
 </section>
 
 <% if @split_page.present? %>
   <% split_record = @split_page.linked_database || @split_page %>
+  <% split_label = linked_document_label(split_record) %>
   <aside class="notae-db-split-pane">
     <div class="notae-db-split-pane-head">
-      <p class="notae-db-split-pane-title">
-        <%= render_notae_icon(linked_document_icon(split_record), workspace: @workspace, fallback: "📄", css_class: "notae-inline-linked-icon", label: linked_document_label(split_record)) %>
-        <%= linked_document_label(split_record) %>
+      <p class="notae-db-split-pane-title" title="<%= split_label %>">
+        <%= render_notae_icon(linked_document_icon(split_record), workspace: @workspace, fallback: "📄", css_class: "notae-inline-linked-icon", label: split_label) %>
+        <%= truncate(split_label, length: 30) %>
       </p>
       <div class="notae-db-split-pane-actions">
         <%= link_to "Open full",

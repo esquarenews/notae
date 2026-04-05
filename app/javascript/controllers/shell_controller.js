@@ -228,7 +228,18 @@ export default class extends Controller {
 
     commentsMenu.setAttribute("open", "open")
     const input = commentsMenu.querySelector("input[name='comment[body]']")
-    if (input) input.focus()
+    if (input) {
+      input.focus()
+      return
+    }
+
+    const handleLoaded = () => {
+      const lazyInput = commentsMenu.querySelector("input[name='comment[body]']")
+      if (lazyInput) lazyInput.focus({ preventScroll: true })
+      commentsMenu.removeEventListener("lazy-panel:loaded", handleLoaded)
+    }
+
+    commentsMenu.addEventListener("lazy-panel:loaded", handleLoaded)
   }
 
   closeCommentsMenu() {

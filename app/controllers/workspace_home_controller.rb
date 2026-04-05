@@ -16,6 +16,7 @@ class WorkspaceHomeController < ApplicationController
     @invitation = Invitation.new
     @new_page = Page.new
     @new_database = Database.new
+    @unread_notifications_count = resolve_unread_notifications_count
     @memberships = policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
     @recent_pages = policy_scope(Page)
                     .for_workspace(@workspace)
@@ -184,5 +185,13 @@ class WorkspaceHomeController < ApplicationController
     next_window = reference_time.beginning_of_day + DAILY_BRIEF_WINDOW_HOUR.hours
     next_window += 1.day if reference_time >= next_window
     next_window
+  end
+
+  def resolve_unread_notifications_count
+    return 0 unless user_signed_in?
+
+    with_optional_schema_fallback(default: 0, feature: "unread notifications") do
+      policy_scope(Notification).unread.count
+    end
   end
 end
