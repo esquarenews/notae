@@ -493,6 +493,8 @@ RSpec.describe "Pages", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-title-input {\n  height: auto;\n  min-height: calc(1.1em + 0.22rem);\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {\n  max-width: 100%;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
+    expect(stylesheet).to include(".notae-actions-mobile-nav-button-label {\n  min-width: 0;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
+    expect(stylesheet).to include(".notae-options-mobile-nav-button-label {\n  min-width: 0;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
   end
 
   it "ships dark-theme editor overrides so focused nota text stays readable" do

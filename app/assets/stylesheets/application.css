@@ -7200,6 +7200,7 @@ turbo-frame#notae_sidebar_sections {
   justify-content: space-between;
   cursor: pointer;
   text-align: left;
+  -webkit-text-fill-color: currentColor;
 }
 
 .notae-actions-mobile-nav-button.is-active {
@@ -7207,8 +7208,14 @@ turbo-frame#notae_sidebar_sections {
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 
-.notae-actions-mobile-nav-button::after {
-  content: "›";
+.notae-actions-mobile-nav-button-label {
+  min-width: 0;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+}
+
+.notae-actions-mobile-nav-button-caret {
+  flex: 0 0 auto;
   font-size: 0.92rem;
   color: #78716c;
 }
@@ -7501,6 +7508,7 @@ turbo-frame#notae_sidebar_sections {
   justify-content: space-between;
   cursor: pointer;
   text-align: left;
+  -webkit-text-fill-color: currentColor;
 }
 
 .notae-options-mobile-nav-button.is-active {
@@ -7508,8 +7516,14 @@ turbo-frame#notae_sidebar_sections {
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 
-.notae-options-mobile-nav-button::after {
-  content: "›";
+.notae-options-mobile-nav-button-label {
+  min-width: 0;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+}
+
+.notae-options-mobile-nav-button-caret {
+  flex: 0 0 auto;
   font-size: 0.92rem;
   color: #78716c;
 }
@@ -11246,7 +11260,7 @@ body.notae-theme-dark .notae-actions-mobile-nav-button {
   color: var(--notae-text);
 }
 
-body.notae-theme-dark .notae-actions-mobile-nav-button::after,
+body.notae-theme-dark .notae-actions-mobile-nav-button-caret,
 body.notae-theme-dark .notae-actions-mobile-nav-title,
 body.notae-theme-dark .notae-actions-mobile-detail-title {
   color: var(--notae-muted);
@@ -11263,7 +11277,7 @@ body.notae-theme-dark .notae-options-mobile-nav-button {
   color: var(--notae-text);
 }
 
-body.notae-theme-dark .notae-options-mobile-nav-button::after,
+body.notae-theme-dark .notae-options-mobile-nav-button-caret,
 body.notae-theme-dark .notae-options-mobile-nav-title,
 body.notae-theme-dark .notae-options-mobile-detail-title {
   color: var(--notae-muted);
@@ -11394,7 +11408,7 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
     color: var(--notae-text);
   }
 
-  body.notae-theme-system .notae-actions-mobile-nav-button::after,
+  body.notae-theme-system .notae-actions-mobile-nav-button-caret,
   body.notae-theme-system .notae-actions-mobile-nav-title,
   body.notae-theme-system .notae-actions-mobile-detail-title {
     color: var(--notae-muted);
@@ -11411,7 +11425,7 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
     color: var(--notae-text);
   }
 
-  body.notae-theme-system .notae-options-mobile-nav-button::after,
+  body.notae-theme-system .notae-options-mobile-nav-button-caret,
   body.notae-theme-system .notae-options-mobile-nav-title,
   body.notae-theme-system .notae-options-mobile-detail-title {
     color: var(--notae-muted);

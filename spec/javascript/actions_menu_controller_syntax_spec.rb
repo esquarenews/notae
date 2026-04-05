@@ -23,5 +23,7 @@ RSpec.describe "ActionsMenuController JavaScript syntax" do
     expect(source).to include("is-mobile-detail-open")
     expect(source).to include("showList")
     expect(source).to include("openSection")
+    expect(source).to include("notae-actions-mobile-nav-button-label")
+    expect(source).to include("notae-actions-mobile-nav-button-caret")
   end
 end

@@ -130,10 +130,18 @@ export default class extends Controller {
       if (this.sectionUnavailable(section)) return
 
       const button = document.createElement("button")
+      const label = document.createElement("span")
+      const caret = document.createElement("span")
+
       button.type = "button"
       button.className = "notae-actions-mobile-nav-button"
       button.dataset.actionsMenuIndex = index.toString()
-      button.textContent = this.sectionLabel(section)
+      label.className = "notae-actions-mobile-nav-button-label"
+      label.textContent = this.sectionLabel(section)
+      caret.className = "notae-actions-mobile-nav-button-caret"
+      caret.setAttribute("aria-hidden", "true")
+      caret.textContent = "›"
+      button.append(label, caret)
       button.addEventListener("click", (event) => this.openSection(index, event))
       this.navListTarget.appendChild(button)
       this.navButtons.push(button)

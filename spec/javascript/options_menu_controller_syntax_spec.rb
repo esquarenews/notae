@@ -23,5 +23,7 @@ RSpec.describe "OptionsMenuController JavaScript syntax" do
     expect(source).to include("is-mobile-detail-open")
     expect(source).to include("showList")
     expect(source).to include("openSection")
+    expect(source).to include("notae-options-mobile-nav-button-label")
+    expect(source).to include("notae-options-mobile-nav-button-caret")
   end
 end
