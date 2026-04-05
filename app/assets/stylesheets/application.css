@@ -10288,8 +10288,8 @@ body.notae-theme-dark .notae-doc-muted {
   left: auto;
   right: 0.5rem;
   top: calc(env(safe-area-inset-top, 0px) + 3.05rem);
-  width: min(19rem, calc(100vw - 1rem));
-  max-width: calc(100vw - 1rem);
+  width: min(17rem, calc(100vw - 1.5rem));
+  max-width: calc(100vw - 1.5rem);
   max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);
   overflow-x: hidden;
   z-index: 120;
@@ -10305,12 +10305,13 @@ body.notae-theme-dark .notae-doc-muted {
 
 .notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown {
   display: block;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: auto;
 }
 
 .notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-panes {
   display: grid;
-  grid-template-columns: 100% 100%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   width: 200%;
   min-height: 100%;
   transform: translateX(0);
@@ -10322,8 +10323,11 @@ body.notae-theme-dark .notae-doc-muted {
 }
 
 .notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-pane {
-  width: 100%;
+  display: block;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-pane.is-nav {
@@ -10368,8 +10372,8 @@ body.notae-theme-dark .notae-doc-muted {
   left: auto;
   right: 0.5rem;
   top: calc(env(safe-area-inset-top, 0px) + 3.05rem);
-  width: min(19rem, calc(100vw - 1rem));
-  max-width: calc(100vw - 1rem);
+  width: min(17rem, calc(100vw - 1.5rem));
+  max-width: calc(100vw - 1.5rem);
   max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);
   z-index: 124;
 }
@@ -10380,12 +10384,13 @@ body.notae-theme-dark .notae-doc-muted {
 
 .notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown {
   display: block;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: auto;
 }
 
 .notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-panes {
   display: grid;
-  grid-template-columns: 100% 100%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   width: 200%;
   min-height: 100%;
   transform: translateX(0);
@@ -10397,8 +10402,11 @@ body.notae-theme-dark .notae-doc-muted {
 }
 
 .notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-pane {
-  width: 100%;
+  display: block;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-pane.is-nav {

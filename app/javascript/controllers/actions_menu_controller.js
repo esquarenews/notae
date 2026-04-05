@@ -170,6 +170,7 @@ export default class extends Controller {
 
     const focusTarget = section.querySelector("input:not([type='hidden']), select, textarea, button, a[href]")
     if (focusTarget) focusTarget.focus({ preventScroll: true })
+    this.queuePanelScrollReset()
   }
 
   renderMobileState() {
@@ -202,6 +203,7 @@ export default class extends Controller {
       this.detailTitleTarget.textContent = this.sectionLabel(this.sectionTargets[this.activeSectionIndex])
     }
 
+    this.resetPanelScroll()
     this.updateNavSelection()
   }
 
@@ -262,5 +264,14 @@ export default class extends Controller {
       this.buildMobileNavigation()
       this.syncViewportMode()
     })
+  }
+
+  queuePanelScrollReset() {
+    window.requestAnimationFrame(() => this.resetPanelScroll())
+  }
+
+  resetPanelScroll() {
+    if (!this.hasPanelTarget) return
+    this.panelTarget.scrollLeft = 0
   }
 }

@@ -495,8 +495,14 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {\n  max-width: 100%;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
     expect(stylesheet).to include(".notae-actions-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
     expect(stylesheet).to include(".notae-options-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: auto;\n  right: 0.5rem;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  width: min(19rem, calc(100vw - 1rem));")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel {\n  position: fixed;\n  left: auto;\n  right: 0.5rem;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  width: min(19rem, calc(100vw - 1rem));")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: auto;\n  right: 0.5rem;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  width: min(17rem, calc(100vw - 1.5rem));")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel {\n  position: fixed;\n  left: auto;\n  right: 0.5rem;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  width: min(17rem, calc(100vw - 1.5rem));")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-panes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  width: 200%;")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-panes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  width: 200%;")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown {\n  display: block;\n  overflow-x: clip;\n  overflow-y: auto;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown {\n  display: block;\n  overflow-x: clip;\n  overflow-y: auto;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-pane {\n  display: block;\n  min-width: 0;\n  max-width: 100%;\n  box-sizing: border-box;\n  overflow-x: hidden;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-pane {\n  display: block;\n  min-width: 0;\n  max-width: 100%;\n  box-sizing: border-box;\n  overflow-x: hidden;\n}")
   end
 
   it "ships dark-theme editor overrides so focused nota text stays readable" do
