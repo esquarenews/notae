@@ -34,9 +34,6 @@ export default class extends Controller {
     if (!state) return
     if (!event.detail?.success) return
 
-    const contentType = this.responseContentType(event)
-    if (contentType.present && !contentType.value.includes("turbo-stream")) return
-
     this.clearStoredPosition()
     this.restoreSubmitScrollPosition(state)
   }
@@ -153,18 +150,6 @@ export default class extends Controller {
     if (!scrollContainer) return
 
     this.restoreStoredPosition(scrollContainer, state)
-  }
-
-  responseContentType(event) {
-    const response = event.detail?.fetchResponse?.response
-    if (!(response instanceof Response)) {
-      return { present: false, value: "" }
-    }
-
-    return {
-      present: true,
-      value: response.headers.get("content-type") || ""
-    }
   }
 
   shouldCaptureLink(link) {

@@ -47,5 +47,6 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include("document.addEventListener(\"turbo:submit-end\", (event) => {")
     expect(source).to include("document.addEventListener(\"turbo:render\", () => {")
     expect(source).to include("restoreStoredSaveScroll()")
+    expect(source).not_to include('if (!contentType.includes("turbo-stream")) return')
   end
 end

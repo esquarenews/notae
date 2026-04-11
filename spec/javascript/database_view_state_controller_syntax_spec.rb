@@ -34,5 +34,6 @@ RSpec.describe "DatabaseViewStateController JavaScript syntax" do
     expect(source).to include("requestAnimationFrame")
     expect(source).to include("preserveScroll")
     expect(source).to include("scrollContainer()")
+    expect(source).not_to include('if (contentType.present && !contentType.value.includes("turbo-stream")) return')
   end
 end

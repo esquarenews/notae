@@ -226,9 +226,6 @@ document.addEventListener("turbo:submit-end", (event) => {
   if (!shouldPreserveSaveScroll(form)) return
   if (!event.detail?.success) return
 
-  const contentType = responseContentType(event)
-  if (!contentType.includes("turbo-stream")) return
-
   restoreStoredSaveScroll()
 }, true)
 
