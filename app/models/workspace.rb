@@ -43,6 +43,20 @@ class Workspace < ApplicationRecord
   ].freeze
   WORKSPACE_COLOR_VALUES = WORKSPACE_COLOR_OPTIONS.map { |option| option.fetch(:value) }.freeze
   DEFAULT_COLOR = WORKSPACE_COLOR_OPTIONS.first.fetch(:value)
+  SHELL_STATUS_BAR_MODE_ALL = "all".freeze
+  SHELL_STATUS_BAR_MODE_OFF = "off".freeze
+  SHELL_STATUS_BAR_MODE_TIME_ONLY = "time_only".freeze
+  SHELL_STATUS_BAR_MODE_ALERTS_ONLY = "alerts_only".freeze
+  SHELL_STATUS_BAR_MODE_OPTIONS = [
+    { label: "Date/time + alerts", value: SHELL_STATUS_BAR_MODE_ALL },
+    { label: "Date/time only", value: SHELL_STATUS_BAR_MODE_TIME_ONLY },
+    { label: "Alerts only", value: SHELL_STATUS_BAR_MODE_ALERTS_ONLY },
+    { label: "Off", value: SHELL_STATUS_BAR_MODE_OFF }
+  ].freeze
+  SHELL_STATUS_BAR_MODES = SHELL_STATUS_BAR_MODE_OPTIONS.map { |option| option.fetch(:value) }.freeze
+  SHELL_STATUS_BAR_MODES_WITH_CLOCK = [ SHELL_STATUS_BAR_MODE_ALL, SHELL_STATUS_BAR_MODE_TIME_ONLY ].freeze
+  SHELL_STATUS_BAR_MODES_WITH_ALERTS = [ SHELL_STATUS_BAR_MODE_ALL, SHELL_STATUS_BAR_MODE_ALERTS_ONLY ].freeze
+  DEFAULT_SHELL_STATUS_BAR_MODE = SHELL_STATUS_BAR_MODE_ALL
 
   has_paper_trail
 
@@ -96,12 +110,14 @@ class Workspace < ApplicationRecord
   validates :slug, presence: true, uniqueness: true
   validates :slug, format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/ }
   validates :workspace_color, presence: true, inclusion: { in: WORKSPACE_COLOR_VALUES }
+  validates :shell_status_bar_mode, presence: true, inclusion: { in: SHELL_STATUS_BAR_MODES }
   validates :join_link_enabled, inclusion: { in: [ true, false ] }
   validates :join_link_token, uniqueness: true, allow_blank: true
 
   before_validation :default_slug_from_name
   before_validation :normalize_slug
   before_validation :normalize_workspace_color
+  before_validation :normalize_shell_status_bar_mode
 
   pg_search_scope :search_by_name,
                   against: :name,
@@ -109,6 +125,10 @@ class Workspace < ApplicationRecord
 
   def display_color
     workspace_color.presence || DEFAULT_COLOR
+  end
+
+  def display_shell_status_bar_mode
+    shell_status_bar_mode.presence || DEFAULT_SHELL_STATUS_BAR_MODE
   end
 
   def archived?
@@ -150,5 +170,9 @@ class Workspace < ApplicationRecord
     return if workspace_color.blank?
 
     self.workspace_color = workspace_color.to_s.strip.downcase
+  end
+
+  def normalize_shell_status_bar_mode
+    self.shell_status_bar_mode = shell_status_bar_mode.to_s.strip.downcase.presence || DEFAULT_SHELL_STATUS_BAR_MODE
   end
 end

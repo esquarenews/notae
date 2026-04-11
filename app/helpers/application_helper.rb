@@ -167,6 +167,20 @@ module ApplicationHelper
     ui_current_workspace&.display_color
   end
 
+  def workspace_notification_bar_presenter
+    return nil unless user_signed_in?
+
+    workspace = workspace_notification_bar_workspace
+    return nil if workspace.blank?
+
+    @workspace_notification_bar_presenters ||= {}
+    @workspace_notification_bar_presenters[workspace.id] ||= WorkspaceNotificationBarPresenter.new(
+      workspace: workspace,
+      user: current_user,
+      reference_time: Time.zone.now
+    )
+  end
+
   def ui_sidebar_recent_favorites(limit: 6)
     workspace = ui_current_workspace
     return [] unless workspace
@@ -561,5 +575,12 @@ module ApplicationHelper
 
   def workspace_scope_with_slug
     policy_scope(Workspace).where.not(slug: [ nil, "" ])
+  end
+
+  def workspace_notification_bar_workspace
+    return @workspace if defined?(@workspace) && @workspace.present?
+    return nil if params[:workspace_slug].blank?
+
+    ui_current_workspace
   end
 end

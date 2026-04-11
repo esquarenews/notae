@@ -15,6 +15,7 @@ RSpec.describe "General settings", type: :request do
     expect(response.body).to include("Workspace settings")
     expect(response.body).to include("Workspace name")
     expect(response.body).to include("Save and display page view analytics")
+    expect(response.body).to include("Desktop notification bar")
     expect(response.body).to include("Delete workspace")
     expect(response.body).to include("Workspace ID")
     expect(response.body).to include(workspace.id)
@@ -78,7 +79,7 @@ RSpec.describe "General settings", type: :request do
     expect(active_colour&.[]("value")).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value))
   end
 
-  it "updates workspace name, colour, and analytics settings" do
+  it "updates workspace name, colour, analytics settings, and notification bar mode" do
     user = User.create!(email: "general-settings-update@example.com", password: "password123")
     workspace = Workspace.create!(name: "Original workspace", slug: "general-settings-update")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -89,7 +90,8 @@ RSpec.describe "General settings", type: :request do
             workspace: {
               name: "Disco HQ",
               workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.last.fetch(:value),
-              analytics_enabled: "0"
+              analytics_enabled: "0",
+              shell_status_bar_mode: "alerts_only"
             }
           }
 
@@ -99,6 +101,7 @@ RSpec.describe "General settings", type: :request do
     expect(workspace.name).to eq("Disco HQ")
     expect(workspace.workspace_color).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.last.fetch(:value))
     expect(workspace.analytics_enabled).to be(false)
+    expect(workspace.shell_status_bar_mode).to eq("alerts_only")
   end
 
   it "requires exact name to archive workspace" do

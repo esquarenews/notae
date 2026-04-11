@@ -1,0 +1,44 @@
+<aside class="notae-shell-status-bar"
+       aria-label="Workspace notification bar"
+       data-controller="notification-bar"
+       data-notification-bar-time-zone-value="<%= presenter.time_zone_name %>">
+  <% if presenter.show_clock? %>
+    <div class="notae-shell-status-bar-clock"
+         data-notification-bar-target="clock"><%= presenter.initial_clock_label %></div>
+  <% end %>
+
+  <% if presenter.show_alerts? %>
+    <div class="notae-shell-status-bar-alerts">
+      <% if presenter.event_alert.present? %>
+        <%= link_to kalendarium_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-item" do %>
+          <span class="notae-shell-status-bar-item-kind">Calendar</span>
+          <strong><%= truncate(presenter.event_alert.title.presence || "Untitled event", length: 56) %></strong>
+          <span><%= presenter.event_timing_label %></span>
+        <% end %>
+      <% end %>
+
+      <% if presenter.unread_email_count.positive? %>
+        <%= link_to workspace_epistularium_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-item" do %>
+          <span class="notae-shell-status-bar-item-kind">Mail</span>
+          <strong><%= pluralize(presenter.unread_email_count, "new email") %></strong>
+          <span>Unread inbox messages</span>
+        <% end %>
+      <% end %>
+
+      <% if presenter.unread_update_count.positive? %>
+        <%= link_to workspace_notifications_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-item" do %>
+          <span class="notae-shell-status-bar-item-kind">Updates</span>
+          <strong><%= pluralize(presenter.unread_update_count, "workspace update") %></strong>
+          <span>Notifications and future integrations</span>
+        <% end %>
+      <% end %>
+
+      <% unless presenter.has_alerts? %>
+        <div class="notae-shell-status-bar-item is-empty">
+          <span class="notae-shell-status-bar-item-kind">Alerts</span>
+          <strong><%= presenter.empty_alerts_message %></strong>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</aside>

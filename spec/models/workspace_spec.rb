@@ -36,6 +36,17 @@ RSpec.describe Workspace, type: :model do
     expect(described_class.new(name: "Invalid colour", slug: "invalid-colour", workspace_color: "#ffffff")).not_to be_valid
   end
 
+  it "normalizes and validates the shell status bar mode" do
+    workspace = described_class.create!(
+      name: "Shell bar workspace",
+      slug: "shell-bar-workspace",
+      shell_status_bar_mode: " TIME_ONLY "
+    )
+
+    expect(workspace.shell_status_bar_mode).to eq("time_only")
+    expect(described_class.new(name: "Invalid bar mode", slug: "invalid-bar-mode", shell_status_bar_mode: "nope")).not_to be_valid
+  end
+
   it "encrypts join link token at rest" do
     workspace = described_class.create!(name: "Join link workspace", slug: "join-link-workspace")
 

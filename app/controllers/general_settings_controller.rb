@@ -41,7 +41,7 @@ class GeneralSettingsController < ApplicationController
   end
 
   def general_settings_params
-    params.fetch(:workspace, {}).permit(:name, :workspace_color, :analytics_enabled)
+    params.fetch(:workspace, {}).permit(:name, :workspace_color, :analytics_enabled, :shell_status_bar_mode)
   end
 
   def destroy_confirmation_valid?

@@ -77,6 +77,9 @@
         </div>
 
         <% unless embedded_shell %>
+          <% if (notification_bar = workspace_notification_bar_presenter)&.render? %>
+            <%= render "shared/workspace_notification_bar", presenter: notification_bar, workspace: notification_bar.workspace %>
+          <% end %>
           <%= render "shared/app_mobile_tabbar" %>
           <%= render "shared/app_ai_rail_panel",
                      lazy: true,

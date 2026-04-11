@@ -73,6 +73,24 @@
           </label>
         <% end %>
       </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Desktop notification bar</p>
+          <p class="notae-pref-description">Controls the bottom-right workspace bar for date/time and live alerts such as calendar, email, and other updates.</p>
+        </div>
+        <%= form_with model: @workspace,
+                      url: workspace_general_settings_path(workspace_slug: @workspace.slug),
+                      method: :patch,
+                      class: "notae-pref-control-form" do |form| %>
+          <%= form.select :shell_status_bar_mode,
+                          options_for_select(Workspace::SHELL_STATUS_BAR_MODE_OPTIONS.map { |option| [ option.fetch(:label), option.fetch(:value) ] }, @workspace.display_shell_status_bar_mode),
+                          {},
+                          class: "notae-pref-select",
+                          disabled: !can_update,
+                          data: { action: "change->auto-submit#submit" } %>
+        <% end %>
+      </div>
     </section>
 
     <section class="notae-settings-section">
