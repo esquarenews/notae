@@ -735,3 +735,24 @@
 [11676463ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
 [11691404ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
 [11706399ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11721457ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11736384ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11751411ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11766405ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11781424ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11796398ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11811410ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11826384ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11841390ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11856423ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11871406ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11886409ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11901394ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11916381ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11931387ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11946418ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/playwright-scroll/ai-assistant/updates:0
+[11956333ms] [INFO] Autofocus processing was blocked because a document already has a focused element. @ http://127.0.0.1:4000/users/sign_in:0
+[11959353ms] [WARNING] The resource http://127.0.0.1:4000/assets/application-b7a21024.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://127.0.0.1:4000/users/sign_in:0
+[12141187ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[12141970ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[12144369ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
