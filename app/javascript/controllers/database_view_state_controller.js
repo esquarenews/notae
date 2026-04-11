@@ -172,7 +172,16 @@ export default class extends Controller {
   trackedElementFor(sourceElement) {
     if (!(sourceElement instanceof Element)) return null
 
-    return sourceElement.closest("[data-scroll-preserve-key], [id]")
+    const keyedAncestor = sourceElement.closest("[data-scroll-preserve-key]")
+    if (keyedAncestor instanceof Element) return keyedAncestor
+
+    let current = sourceElement
+    while (current instanceof Element) {
+      if (this.uniqueIdSelectorFor(current)) return current
+      current = current.parentElement
+    }
+
+    return null
   }
 
   selectorForTrackedElement(element) {
@@ -183,11 +192,7 @@ export default class extends Controller {
       return `[data-scroll-preserve-key="${this.escapeSelectorValue(customKey)}"]`
     }
 
-    if (element.id) {
-      return `#${this.escapeSelectorValue(element.id)}`
-    }
-
-    return null
+    return this.uniqueIdSelectorFor(element)
   }
 
   restoreTrackedElementPosition(scrollContainer, state) {
@@ -210,5 +215,14 @@ export default class extends Controller {
     }
 
     return String(value).replace(/["\\]/g, "\\$&")
+  }
+
+  uniqueIdSelectorFor(element) {
+    if (!(element instanceof Element) || !element.id) return null
+
+    const selector = `#${this.escapeSelectorValue(element.id)}`
+    if (document.querySelectorAll(selector).length !== 1) return null
+
+    return selector
   }
 }

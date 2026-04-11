@@ -36,4 +36,12 @@ RSpec.describe "DatabaseViewStateController JavaScript syntax" do
     expect(source).to include("scrollContainer()")
     expect(source).not_to include('if (contentType.present && !contentType.value.includes("turbo-stream")) return')
   end
+
+  it "tracks rows with preserve keys instead of duplicate field ids" do
+    source = Rails.root.join("app/javascript/controllers/database_view_state_controller.js").read
+
+    expect(source).to include("sourceElement.closest(\"[data-scroll-preserve-key]\")")
+    expect(source).to include("uniqueIdSelectorFor(element)")
+    expect(source).to include("document.querySelectorAll(selector).length !== 1")
+  end
 end

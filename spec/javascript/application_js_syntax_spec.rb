@@ -49,4 +49,12 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include("restoreStoredSaveScroll()")
     expect(source).not_to include('if (!contentType.includes("turbo-stream")) return')
   end
+
+  it "prefers explicit preserve keys and skips duplicate ids when tracking restore targets" do
+    source = Rails.root.join("app/javascript/application.js").read
+
+    expect(source).to include("sourceElement.closest(\"[data-scroll-preserve-key]\")")
+    expect(source).to include("function uniqueIdSelectorFor(element)")
+    expect(source).to include("document.querySelectorAll(selector).length !== 1")
+  end
 end

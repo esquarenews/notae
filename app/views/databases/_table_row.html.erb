@@ -19,6 +19,7 @@
 ) %>
 <tr id="row_<%= row.id %>"
     class="notae-db-grid-data-row <%= conditional_color_class_for_row(row) %> <%= row_style_classes.join(" ") %>"
+    data-scroll-preserve-key="row_<%= row.id %>"
     data-db-table-reorder-target="row"
     data-db-table-reorder-row-id="<%= row.id %>"
     data-action="dragover->db-table-reorder#dragover drop->db-table-reorder#drop dragleave->db-table-reorder#dragleave">

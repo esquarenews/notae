@@ -24,7 +24,16 @@ function escapeSelectorValue(value) {
 function trackedElementFor(sourceElement) {
   if (!(sourceElement instanceof Element)) return null
 
-  return sourceElement.closest("[data-scroll-preserve-key], [id]")
+  const keyedAncestor = sourceElement.closest("[data-scroll-preserve-key]")
+  if (keyedAncestor instanceof Element) return keyedAncestor
+
+  let current = sourceElement
+  while (current instanceof Element) {
+    if (uniqueIdSelectorFor(current)) return current
+    current = current.parentElement
+  }
+
+  return null
 }
 
 function selectorForTrackedElement(element) {
@@ -35,11 +44,16 @@ function selectorForTrackedElement(element) {
     return `[data-scroll-preserve-key="${escapeSelectorValue(customKey)}"]`
   }
 
-  if (element.id) {
-    return `#${escapeSelectorValue(element.id)}`
-  }
+  return uniqueIdSelectorFor(element)
+}
 
-  return null
+function uniqueIdSelectorFor(element) {
+  if (!(element instanceof Element) || !element.id) return null
+
+  const selector = `#${escapeSelectorValue(element.id)}`
+  if (document.querySelectorAll(selector).length !== 1) return null
+
+  return selector
 }
 
 function currentPreservedSaveScrollState(sourceElement = null) {

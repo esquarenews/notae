@@ -629,6 +629,8 @@ RSpec.describe "Databases", type: :request do
     expect(database_shell["data-action"]).to include("turbo:submit-start->database-view-state#capture")
     expect(database_shell["data-action"]).to include("click->database-view-state#captureLink")
     expect(database_shell["data-database-view-state-storage-key-value"]).to eq("database-view-scroll:#{database.id}")
+    expect(html.at_css("tr#row_#{alpha_row.id}")["data-scroll-preserve-key"]).to eq("row_#{alpha_row.id}")
+    expect(html.at_css("tr#row_#{bravo_row.id}")["data-scroll-preserve-key"]).to eq("row_#{bravo_row.id}")
     sort_form = html.at_css("form.notae-db-grid-property-sort-form[action='#{database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id)}']")
     expect(sort_form).to be_present
     expect(sort_form["data-preserve-database-scroll"]).to eq("true")
