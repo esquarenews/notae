@@ -226,6 +226,11 @@
       </header>
     <% end %>
 
+    <%= render "shared/flash_messages",
+               flash_messages: [],
+               flash_dom_id: "page_flash_messages",
+               flash_host_class: "notae-page-inline-flash-host" %>
+
     <%= render partial: "pages/document_canvas",
                locals: {
                  workspace: @workspace,

@@ -16,6 +16,9 @@
                end %>
           <% can_rename_tab = policy(tab.page).update? %>
           <% can_delete_tab = policy(tab.page).archive? %>
+          <% root_tab = navigation.group_page.present? && tab.page.id == navigation.group_page.id %>
+          <% rename_attribute = root_tab ? :root_tab_title : :title %>
+          <% rename_value = root_tab ? tab.page.effective_tab_title : tab.page.title %>
           <div class="notae-page-tab-shell <%= "is-active" if tab.active %> is-color-<%= tab.color_key %>">
             <%= link_to destination,
                         class: [ "notae-page-tab", ("is-active" if tab.active) ].compact.join(" "),
@@ -36,10 +39,10 @@
                                   method: :patch,
                                   class: "notae-page-tab-menu-form is-rename" do |form| %>
                       <%= hidden_field_tag :return_to, current_path %>
-                      <%= form.label :title, "Rename tab", class: "notae-page-tab-menu-label" %>
+                    <%= form.label rename_attribute, "Rename tab", class: "notae-page-tab-menu-label" %>
                       <div class="notae-page-tab-menu-inline-fields">
-                        <%= form.text_field :title,
-                                            value: tab.page.title,
+                        <%= form.text_field rename_attribute,
+                                            value: rename_value,
                                             class: "notae-page-tab-menu-input",
                                             required: true,
                                             maxlength: 255 %>

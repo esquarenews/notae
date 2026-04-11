@@ -2,7 +2,8 @@
 <% reader_mode = local_assigns.fetch(:reader_mode, false) %>
 <% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
 
-<div class="notae-doc-tree <%= "is-reader-mode" if reader_mode %>"
+<div id="<%= parent_id.present? ? "notae_doc_tree_#{parent_id}" : "notae_doc_tree_root" %>"
+     class="notae-doc-tree <%= "is-reader-mode" if reader_mode %>"
      data-controller="block-list"
      data-block-list-workspace-slug-value="<%= workspace.slug %>"
      data-block-list-page-id-value="<%= page.id %>"

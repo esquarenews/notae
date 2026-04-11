@@ -45,13 +45,14 @@ module PageTabs
     def build_tab(tab_page, linked_database)
       is_active_page = @current_page.present? && @current_page.id == tab_page.id
       is_active_database = @current_database.present? && @current_database.linked_page_id == tab_page.id
+      label = tab_label_for(tab_page)
 
       if @current_database.present? && @current_database.linked_page_id == tab_page.id
         Tab.new(
           page: tab_page,
           database: @current_database,
           active: true,
-          label: tab_page.title,
+          label: label,
           icon: @current_database.icon.presence || tab_page.icon.presence || "🗃️",
           color_key: tab_page.tab_color.presence || "default"
         )
@@ -59,7 +60,7 @@ module PageTabs
         Tab.new(
           page: tab_page,
           active: true,
-          label: tab_page.title,
+          label: label,
           icon: @current_page.icon.presence || "📄",
           color_key: tab_page.tab_color.presence || "default"
         )
@@ -68,7 +69,7 @@ module PageTabs
           page: tab_page,
           database: linked_database,
           active: is_active_database,
-          label: tab_page.title,
+          label: label,
           icon: linked_database.icon.presence || tab_page.icon.presence || "🗃️",
           color_key: tab_page.tab_color.presence || "default"
         )
@@ -76,11 +77,17 @@ module PageTabs
         Tab.new(
           page: tab_page,
           active: is_active_page,
-          label: tab_page.title,
+          label: label,
           icon: tab_page.icon.presence || "📄",
           color_key: tab_page.tab_color.presence || "default"
         )
       end
+    end
+
+    def tab_label_for(tab_page)
+      return tab_page.title unless @group_page.present? && tab_page.id == @group_page.id
+
+      tab_page.effective_tab_title
     end
   end
 end

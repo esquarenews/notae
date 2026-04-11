@@ -43,6 +43,9 @@ module Databases
       )
       duplicate.cover_image.attach(database.cover_image.blob) if database.cover_image.attached?
       Databases::EnsureLinkedPageService.call(database: duplicate, actor: created_by)
+      if database.linked_page.present?
+        duplicate.linked_page.update!(root_tab_title: database.linked_page.root_tab_title)
+      end
       duplicate
     end
 

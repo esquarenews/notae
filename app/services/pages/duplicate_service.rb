@@ -8,6 +8,7 @@ module Pages
             created_by: created_by,
             parent_page_id: page.parent_page_id,
             title: duplicate_title(page, title),
+            root_tab_title: page.root_tab_title,
             permission_mode: page.permission_mode,
             icon: page.icon,
             cover_preset_key: page.cover_preset_key,

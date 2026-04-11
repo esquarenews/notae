@@ -225,7 +225,7 @@ RSpec.describe "Databases", type: :request do
     active_link = html.at_css(".notae-page-tabs .notae-page-tab.is-active .notae-page-tab-label")
     title_input = html.at_css(".notae-page-title-input")
 
-    expect(labels).to eq([ group_page.title, note_tab.title, grid_tab_page.title ])
+    expect(labels).to eq([ "Tab 1", note_tab.title, grid_tab_page.title ])
     expect(active_link).to be_present
     expect(active_link.text.strip).to eq(grid_tab_page.title)
     expect(title_input.text.strip).to eq(group_page.title)
@@ -252,11 +252,36 @@ RSpec.describe "Databases", type: :request do
     labels = html.css(".notae-page-tabs .notae-page-tab-label").map(&:text).map(&:strip)
     active_link = html.at_css(%(.notae-page-tab.is-active[href="#{database_path(workspace_slug: workspace.slug, id: database.id)}"]))
 
-    expect(labels).to eq([ database.linked_page.title ])
+    expect(labels).to eq([ "Tab 1" ])
     expect(active_link).to be_present
     expect(html.at_css(".notae-page-tab-create-form input[name='quick_create']")["value"]).to eq("1")
     expect(html.at_css(".notae-page-tab-create-form input[name='database[parent_page_id]']")["value"]).to eq(database.linked_page.id)
     expect(html.at_css(".notae-page-tab-create-form input[name='database[tab_title]']")["value"]).to eq("New tab")
+  end
+
+  it "renames the first grid tab without changing the document title" do
+    owner = User.create!(email: "database-root-tab-rename-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database root tab rename", slug: "database-root-tab-rename")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Planning grid")
+    Databases::EnsureLinkedPageService.call(database: database, actor: owner)
+    sign_in owner
+
+    patch page_path(workspace_slug: workspace.slug, id: database.linked_page.id),
+          params: {
+            return_to: database_path(workspace_slug: workspace.slug, id: database.id),
+            page: { root_tab_title: "Execution" }
+          }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.linked_page.reload.title).to eq("Planning grid")
+    expect(database.linked_page.root_tab_title).to eq("Execution")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    html = Nokogiri::HTML(response.body)
+    expect(html.css(".notae-page-tab-label").map(&:text).map(&:strip)).to eq([ "Execution" ])
+    expect(html.at_css(".notae-page-title-input")&.text&.strip).to eq("Planning grid")
   end
 
   it "keeps the parent shell visible for a tabbed grid while shifting the content context" do
@@ -289,7 +314,7 @@ RSpec.describe "Databases", type: :request do
     expect(html.at_css(".notae-page-icon-display")&.text&.strip).to eq(group_page.icon)
     expect(html.at_css(".notae-page-cover-preset")).to be_present
     expect(html.at_css(".notae-db-description")).to be_nil
-    expect(html.css(".notae-page-tab-label").map(&:text).map(&:strip)).to eq([ group_page.title, "Notes", grid_tab_page.title ])
+    expect(html.css(".notae-page-tab-label").map(&:text).map(&:strip)).to eq([ "Tab 1", "Notes", grid_tab_page.title ])
     expect(html.at_css(%(.notae-page-tab.is-active[href="#{database_path(workspace_slug: workspace.slug, id: database.id)}"]))).to be_present
   end
 
@@ -2423,6 +2448,7 @@ RSpec.describe "Databases", type: :request do
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     database = Database.create!(workspace: workspace, name: "Ops grid")
     Databases::EnsureLinkedPageService.call(database: database, actor: owner)
+    database.linked_page.update!(root_tab_title: "Overview")
     status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
     row = DbRow.create!(workspace: workspace, database: database, title: "Ship launch")
     DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "Done")
@@ -2439,6 +2465,7 @@ RSpec.describe "Databases", type: :request do
     expect(duplicate.linked_page).to be_present
     expect(duplicate.linked_page).not_to eq(database.linked_page)
     expect(duplicate.linked_page.title).to eq(duplicate.name)
+    expect(duplicate.linked_page.root_tab_title).to eq("Overview")
 
     copied_property = duplicate.db_properties.find_by!(name: "Status")
     copied_row = duplicate.db_rows.find_by!(title: "Ship launch")

@@ -11,9 +11,18 @@ class BlocksController < ApplicationController
     authorize @block
 
     if @block.save
-      redirect_to page_redirect_path, notice: "Block created."
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: create_block_streams(@block, "Block created.") }
+        format.html { redirect_to page_redirect_path, notice: "Block created." }
+      end
     else
-      redirect_to page_redirect_path, alert: @block.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: page_flash_stream("alert", @block.errors.full_messages.to_sentence),
+                 status: :unprocessable_entity
+        end
+        format.html { redirect_to page_redirect_path, alert: @block.errors.full_messages.to_sentence }
+      end
     end
   end
 
@@ -211,9 +220,13 @@ class BlocksController < ApplicationController
     respond_to do |format|
       format.turbo_stream do
         render turbo_stream: turbo_stream.replace(
-          "notae_flash_messages",
+          "page_flash_messages",
           partial: "shared/flash_messages",
-          locals: { flash_messages: [ [ "alert", error.message ] ] }
+          locals: {
+            flash_messages: [ [ "alert", error.message ] ],
+            flash_dom_id: "page_flash_messages",
+            flash_host_class: "notae-page-inline-flash-host"
+          }
         ), status: :unprocessable_entity
       end
       format.html { redirect_to page_redirect_path, alert: error.message }
@@ -379,11 +392,7 @@ class BlocksController < ApplicationController
   def inline_block_command_streams(result, touched_blocks)
     page_render_context = current_page_render_context
     streams = [
-      turbo_stream.replace(
-        "notae_flash_messages",
-        partial: "shared/flash_messages",
-        locals: { flash_messages: [ [ "notice", result[:notice] || "Block updated." ] ] }
-      )
+      page_flash_stream("notice", result[:notice] || "Block updated.")
     ]
 
     touched_blocks
@@ -405,6 +414,46 @@ class BlocksController < ApplicationController
       end
 
     streams
+  end
+
+  def create_block_streams(block, notice)
+    page_render_context = current_page_render_context
+    [
+      page_flash_stream("notice", notice),
+      turbo_stream.append(
+        block_tree_dom_id(block.parent_block_id),
+        partial: "pages/block_item",
+        locals: {
+          workspace: @workspace,
+          page: @page,
+          block: page_render_context[:block_lookup].fetch(block.id),
+          blocks_by_parent: page_render_context[:blocks_by_parent],
+          index: sibling_index_for_render(page_render_context, block),
+          reader_mode: page_render_context[:reader_mode],
+          embedded_page_params: current_embedded_page_params
+        }
+      )
+    ]
+  end
+
+  def page_flash_stream(type, message)
+    turbo_stream.replace(
+      "page_flash_messages",
+      partial: "shared/flash_messages",
+      locals: {
+        flash_messages: [ [ type, message ] ],
+        flash_dom_id: "page_flash_messages",
+        flash_host_class: "notae-page-inline-flash-host"
+      }
+    )
+  end
+
+  def sibling_index_for_render(page_render_context, block)
+    Array(page_render_context[:blocks_by_parent][block.parent_block_id]).index { |candidate| candidate.id == block.id } || 0
+  end
+
+  def block_tree_dom_id(parent_id)
+    parent_id.present? ? "notae_doc_tree_#{parent_id}" : "notae_doc_tree_root"
   end
 
   def current_page_render_context

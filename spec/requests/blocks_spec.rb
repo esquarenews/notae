@@ -305,6 +305,30 @@ RSpec.describe "Blocks", type: :request do
     expect(sibling_positions.last).to be > sibling_positions.first
   end
 
+  it "creates a new top-level block inline over turbo stream without jumping to the page shell" do
+    owner = User.create!(email: "blocks-inline-create-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Inline create", slug: "inline-create")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Inline create page")
+    sign_in owner
+
+    expect do
+      post page_blocks_path(workspace_slug: workspace.slug, page_id: page.id),
+           params: { block: { block_type: "paragraph" } },
+           as: :turbo_stream
+    end.to change { page.blocks.count }.by(1)
+
+    created_block = page.blocks.order(:created_at).last
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="replace" target="page_flash_messages"')
+    expect(response.body).to include("Block created.")
+    expect(response.body).to include('turbo-stream action="append" target="notae_doc_tree_root"')
+    expect(response.body).to include(%(id="block_#{created_block.id}"))
+  end
+
   it "adds a blank block above the current block from the block menu command" do
     owner = User.create!(email: "blocks-add-above-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Add above", slug: "add-above")
@@ -490,6 +514,8 @@ RSpec.describe "Blocks", type: :request do
     expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;")
     expect(stylesheet).to include("  height: 0;\n  margin: 0;\n  overflow: visible;")
     expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack,\n.notae-content.notae-content-home > #notae_flash_messages .notae-flash-stack {\n  width: min(50%, 760px);")
+    expect(stylesheet).to include(".notae-page-inline-flash-host,\n.notae-db-inline-flash-host {\n  position: sticky;\n  top: 0.75rem;")
+    expect(stylesheet).to include(".notae-page-inline-flash-host .notae-flash-stack,\n.notae-db-inline-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
   end
 
   it "archives and restores blocks while preserving original position priority" do
@@ -896,7 +922,7 @@ RSpec.describe "Blocks", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response).not_to be_redirect
     expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
-    expect(response.body).to include('turbo-stream action="replace" target="notae_flash_messages"')
+    expect(response.body).to include('turbo-stream action="replace" target="page_flash_messages"')
     expect(response.body).to include("Color updated.")
     expect(response.body).to include(%(turbo-stream action="replace" target="block_#{block.id}"))
     expect(block.reload.content_json["notae_color"]).to eq("blue")

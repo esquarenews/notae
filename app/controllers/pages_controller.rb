@@ -288,7 +288,7 @@ class PagesController < ApplicationController
 
   def page_update_params
     permitted = params.fetch(:page, ActionController::Parameters.new)
-                      .permit(:title, :parent_page_id, :font_style, :small_text, :full_width, :remove_blocks, :locked, :suggest_edits, :tab_color)
+                      .permit(:title, :root_tab_title, :parent_page_id, :font_style, :small_text, :full_width, :remove_blocks, :locked, :suggest_edits, :tab_color)
 
     if permitted.key?(:parent_page_id)
       permitted[:parent_page_id] = nil if permitted[:parent_page_id].blank?

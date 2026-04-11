@@ -15,6 +15,15 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-page-tab-create-form {\n  margin: 0 0 0 auto;\n  flex: 0 0 auto;")
   end
 
+  it "renders the shared topbar as a translucent blurred surface" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-topbar {\n  min-height: 4rem;")
+    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 72%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 64%, transparent)\n    );")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(16px) saturate(1.08);")
+    expect(stylesheet).to include("  backdrop-filter: blur(16px) saturate(1.08);")
+  end
+
   it "keeps the title save status above the cover controls without lifting the closed picker" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
@@ -107,9 +116,33 @@ RSpec.describe "Pages", type: :request do
     labels = html.css(".notae-page-tabs .notae-page-tab-label").map(&:text).map(&:strip)
     active_link = html.at_css(%(.notae-page-tab.is-active[href="#{page_path(workspace_slug: workspace.slug, id: page.id)}"]))
 
-    expect(labels).to eq([ page.title ])
+    expect(labels).to eq([ "Tab 1" ])
     expect(active_link).to be_present
     expect(html.at_css(".notae-page-tab-create-form input[name='page[parent_page_id]']")["value"]).to eq(page.id)
+  end
+
+  it "renames the first nota tab without changing the document title" do
+    owner = User.create!(email: "pages-root-tab-rename-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Root tab rename", slug: "root-tab-rename")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Client brief")
+    sign_in owner
+
+    patch page_path(workspace_slug: workspace.slug, id: page.id),
+          params: {
+            return_to: page_path(workspace_slug: workspace.slug, id: page.id),
+            page: { root_tab_title: "Overview" }
+          }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    expect(page.reload.title).to eq("Client brief")
+    expect(page.root_tab_title).to eq("Overview")
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    html = Nokogiri::HTML(response.body)
+    expect(html.css(".notae-page-tab-label").map(&:text).map(&:strip)).to eq([ "Overview" ])
+    expect(html.at_css(".notae-page-title-input")&.text&.strip).to eq("Client brief")
   end
 
   it "renders top-of-page tabs under the parent title for sibling notes and linked grids" do
@@ -129,7 +162,7 @@ RSpec.describe "Pages", type: :request do
     labels = html.css(".notae-page-tabs .notae-page-tab-label").map(&:text).map(&:strip)
     title_input = html.at_css(".notae-page-title-input")
 
-    expect(labels).to eq([ group_page.title, note_tab.title, grid_tab_page.title ])
+    expect(labels).to eq([ "Tab 1", note_tab.title, grid_tab_page.title ])
     expect(title_input["aria-label"]).to eq("Page title")
     expect(title_input.text.strip).to eq(group_page.title)
     expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: group_page.id)}"]))).to be_present
@@ -164,7 +197,7 @@ RSpec.describe "Pages", type: :request do
     expect(shell_titles).to include(group_page.title)
     expect(html.at_css(".notae-page-icon-display")&.text&.strip).to eq(group_page.icon)
     expect(html.at_css(".notae-page-cover-preset")).to be_present
-    expect(tab_labels).to eq([ group_page.title, child_tab.title, sibling_tab.title ])
+    expect(tab_labels).to eq([ "Tab 1", child_tab.title, sibling_tab.title ])
     expect(tab_shells).not_to be_empty
     expect(tab_shells.all? { |node| node.at_css(".notae-page-tab-menu-trigger").present? }).to be(true)
     expect(html.at_css(%(.notae-page-tab.is-active[href="#{page_path(workspace_slug: workspace.slug, id: child_tab.id)}"]))).to be_present
@@ -929,6 +962,7 @@ RSpec.describe "Pages", type: :request do
     expect(page.full_width).to be(true)
     expect(page.suggest_edits).to be(true)
     expect(page.locked).to be(true)
+    page.update!(root_tab_title: "Overview")
 
     expect do
       post duplicate_page_path(workspace_slug: workspace.slug, id: page.id)
@@ -940,6 +974,7 @@ RSpec.describe "Pages", type: :request do
     duplicated_page = Page.order(:created_at).last
     expect(duplicated_page.title).to eq("Action page (copy)")
     expect(duplicated_page.font_style).to eq("mono")
+    expect(duplicated_page.root_tab_title).to eq("Overview")
     expect(duplicated_page.small_text).to be(true)
     expect(duplicated_page.full_width).to be(true)
     expect(duplicated_page.suggest_edits).to be(true)

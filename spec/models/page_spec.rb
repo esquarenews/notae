@@ -21,6 +21,20 @@ RSpec.describe Page, type: :model do
     expect(child.tab_reference_title).to eq("Project / Notes")
   end
 
+  it "defaults the root tab title without coupling it to the document title" do
+    owner = User.create!(email: "page-root-tab-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Root tabs", slug: "root-tabs")
+    root_page = described_class.create!(workspace: workspace, created_by: owner, title: "Project brief")
+    child_page = described_class.create!(workspace: workspace, parent_page: root_page, created_by: owner, title: "Notes")
+
+    expect(root_page.effective_tab_title).to eq("Tab 1")
+    expect(child_page.effective_tab_title).to eq("Notes")
+
+    root_page.update!(root_tab_title: "Overview")
+    expect(root_page.reload.effective_tab_title).to eq("Overview")
+    expect(root_page.title).to eq("Project brief")
+  end
+
   it "archives and restores pages" do
     owner = User.create!(email: "page-archive-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Roadmap", slug: "roadmap")

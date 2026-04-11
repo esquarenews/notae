@@ -98,6 +98,7 @@ class Page < ApplicationRecord
     [ "Purple", "purple" ]
   ].freeze
   TAB_COLOR_KEYS = TAB_COLOR_OPTIONS.map(&:last).freeze
+  DEFAULT_ROOT_TAB_TITLE = "Tab 1".freeze
 
   attribute :permission_mode, :integer, default: 0
   enum :permission_mode, { shared_to_workspace: 0, private_page: 1, specific_users: 2 }, default: :shared_to_workspace
@@ -127,6 +128,7 @@ class Page < ApplicationRecord
   has_one :linked_database, class_name: "Database", foreign_key: :linked_page_id, inverse_of: :linked_page
 
   validates :title, presence: true
+  validates :root_tab_title, length: { maximum: 255 }, allow_blank: true
   validates :page_kind, inclusion: { in: PAGE_KINDS }
   validates :font_style, inclusion: { in: FONT_STYLES }
   validates :tab_color, inclusion: { in: TAB_COLOR_KEYS }
@@ -158,6 +160,7 @@ class Page < ApplicationRecord
                   }
 
   before_validation :set_workspace_from_parent, if: -> { workspace_id.nil? && parent_page.present? }
+  before_validation :normalize_root_tab_title
   before_validation :normalize_icon
   after_commit :enqueue_search_chunk_reindex, on: %i[create update]
   after_commit :remove_search_chunks, on: :destroy
@@ -187,6 +190,16 @@ class Page < ApplicationRecord
 
   def tab_child?
     parent_page_id.present?
+  end
+
+  def root_tab?
+    parent_page_id.blank?
+  end
+
+  def effective_tab_title
+    return title if tab_child?
+
+    root_tab_title.presence || DEFAULT_ROOT_TAB_TITLE
   end
 
   def tab_reference_title
@@ -228,6 +241,10 @@ class Page < ApplicationRecord
 
   def set_workspace_from_parent
     self.workspace = parent_page.workspace
+  end
+
+  def normalize_root_tab_title
+    self.root_tab_title = root_tab_title.to_s.strip.presence
   end
 
   def normalize_icon
