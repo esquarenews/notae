@@ -11,7 +11,7 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     travel_back
   end
 
-  it "surfaces the clock, live calendar alert, unread mail, and unread updates" do
+  it "surfaces the clock, live calendar alert, and recent activity alerts without counting stale unread items" do
     user = User.create!(email: "notification-bar@example.com", password: "password123", time_zone: "Australia/Melbourne")
     workspace = Workspace.create!(name: "Status workspace", slug: "status-workspace", shell_status_bar_mode: "all")
 
@@ -50,6 +50,15 @@ RSpec.describe WorkspaceNotificationBarPresenter do
       subject: "New message",
       received_at: 2.minutes.ago
     )
+    EpistulariumMessage.create!(
+      workspace: workspace,
+      epistularium_account: account,
+      provider_message_id: "msg-old",
+      mailbox: "inbox",
+      unread: true,
+      subject: "Old unread message",
+      received_at: 3.days.ago
+    )
 
     Notification.create!(
       workspace: workspace,
@@ -57,6 +66,15 @@ RSpec.describe WorkspaceNotificationBarPresenter do
       actor: user,
       notification_type: Notification::TYPE_MENTION,
       metadata: {}
+    )
+    Notification.create!(
+      workspace: workspace,
+      recipient: user,
+      actor: user,
+      notification_type: Notification::TYPE_MENTION,
+      metadata: {},
+      created_at: 2.days.ago,
+      updated_at: 2.days.ago
     )
 
     presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
@@ -67,8 +85,11 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.initial_clock_label).to include("Sat 11 Apr")
     expect(presenter.event_alert&.title).to eq("Stand-up")
     expect(presenter.event_timing_label).to eq("Starts in 10 min")
-    expect(presenter.unread_email_count).to eq(1)
-    expect(presenter.unread_update_count).to eq(1)
+    expect(presenter.recent_email_count).to eq(1)
+    expect(presenter.recent_email_headline).to eq("1 email just came in")
+    expect(presenter.recent_email_detail).to include("New message")
+    expect(presenter.recent_update_count).to eq(1)
+    expect(presenter.recent_update_headline).to eq("1 new workspace update")
     expect(presenter.has_alerts?).to be(true)
   end
 
@@ -84,5 +105,14 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(time_only_presenter.show_clock?).to be(true)
     expect(time_only_presenter.show_alerts?).to be(false)
     expect(off_presenter.render?).to be(false)
+  end
+
+  it "does not render for alerts-only mode when nothing recent has arrived" do
+    user = User.create!(email: "notification-bar-empty@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Alerts only", slug: "alerts-only", shell_status_bar_mode: "alerts_only")
+
+    presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
+
+    expect(presenter.render?).to be(false)
   end
 end

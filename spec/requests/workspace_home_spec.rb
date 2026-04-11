@@ -122,7 +122,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(workspace_link.to_html).to include("--notae-workspace-color-swatch: #{workspace.workspace_color}")
   end
 
-  it "renders the bottom-right notification bar with calendar, mail, and update alerts" do
+  it "renders the bottom-right notification bar with recent-only mail and update alerts plus dismiss controls" do
     travel_to Time.zone.parse("2026-04-11 10:00:00") do
       user = User.create!(email: "home-status-bar-owner@example.com", password: "password123", time_zone: "Australia/Melbourne")
       workspace = Workspace.create!(name: "Status home", slug: "status-home", shell_status_bar_mode: "all")
@@ -163,6 +163,15 @@ RSpec.describe "Workspace home", type: :request do
         subject: "Unread message",
         received_at: 1.minute.ago
       )
+      EpistulariumMessage.create!(
+        workspace: workspace,
+        epistularium_account: account,
+        provider_message_id: "status-msg-old",
+        mailbox: "inbox",
+        unread: true,
+        subject: "Old unread message",
+        received_at: 2.days.ago
+      )
 
       Notification.create!(
         workspace: workspace,
@@ -170,6 +179,15 @@ RSpec.describe "Workspace home", type: :request do
         actor: user,
         notification_type: Notification::TYPE_MENTION,
         metadata: {}
+      )
+      Notification.create!(
+        workspace: workspace,
+        recipient: user,
+        actor: user,
+        notification_type: Notification::TYPE_MENTION,
+        metadata: {},
+        created_at: 2.days.ago,
+        updated_at: 2.days.ago
       )
 
       sign_in user
@@ -179,19 +197,35 @@ RSpec.describe "Workspace home", type: :request do
 
       document = Nokogiri::HTML(response.body)
       bar = document.at_css(".notae-shell-status-bar")
-      links = document.css(".notae-shell-status-bar-item").map { |node| [ node.text.squish, node["href"] ] }
+      links = document.css(".notae-shell-status-bar-link").map { |node| [ node.text.squish, node["href"] ] }
+      controls = document.css(".notae-shell-status-bar-control")
 
       expect(bar).to be_present
       expect(bar["data-controller"]).to include("notification-bar")
       expect(bar["data-notification-bar-time-zone-value"]).to eq("Australia/Melbourne")
+      expect(bar["data-notification-bar-workspace-key-value"]).to eq(workspace.slug)
       expect(document.text).to include("Client review")
       expect(document.text).to include("Starts in 10 min")
-      expect(document.text).to include("1 new email")
-      expect(document.text).to include("1 workspace update")
+      expect(document.text).to include("1 email just came in")
+      expect(document.text).to include("1 new workspace update")
+      expect(document.text).not_to include("Unread inbox messages")
+      expect(controls.count).to eq(6)
       expect(links).to include([ a_string_including("Client review"), kalendarium_path(workspace_slug: workspace.slug) ])
-      expect(links).to include([ a_string_including("1 new email"), workspace_epistularium_path(workspace_slug: workspace.slug) ])
-      expect(links).to include([ a_string_including("1 workspace update"), workspace_notifications_path(workspace_slug: workspace.slug) ])
+      expect(links).to include([ a_string_including("1 email just came in"), workspace_epistularium_path(workspace_slug: workspace.slug) ])
+      expect(links).to include([ a_string_including("1 new workspace update"), workspace_notifications_path(workspace_slug: workspace.slug) ])
     end
+  end
+
+  it "styles the notification bar and alert cards with the same exaggerated glass treatment" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-shell-status-bar {\n  position: fixed;")
+    expect(stylesheet).to include("  background-color: color-mix(in srgb, var(--notae-panel-bg) 12%, transparent);")
+    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 26%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 14%, transparent)\n    );")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(30px) saturate(1.16);")
+    expect(stylesheet).to include(".notae-shell-status-bar-item {\n  display: grid;")
+    expect(stylesheet).to include("  background-color: color-mix(in srgb, var(--notae-panel-bg) 12%, transparent);")
+    expect(stylesheet).to include(".notae-shell-status-bar-control {\n  width: 1.8rem;")
   end
 
   it "does not surface child tabs as standalone Notarum or Grids on the home page" do

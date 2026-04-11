@@ -1,6 +1,7 @@
 class WorkspaceNotificationBarPresenter
   EVENT_LOOKAHEAD = 15.minutes
   EVENT_GRACE_PERIOD = 5.minutes
+  RECENT_ACTIVITY_WINDOW = 1.hour
 
   attr_reader :workspace, :user, :reference_time
 
@@ -11,7 +12,9 @@ class WorkspaceNotificationBarPresenter
   end
 
   def render?
-    workspace.present? && mode != Workspace::SHELL_STATUS_BAR_MODE_OFF
+    return false if workspace.blank? || mode == Workspace::SHELL_STATUS_BAR_MODE_OFF
+
+    show_clock? || has_alerts?
   end
 
   def show_clock?
@@ -59,35 +62,83 @@ class WorkspaceNotificationBarPresenter
     seconds_until_start.positive? ? "Starts in #{minutes} min" : "Started #{minutes} min ago"
   end
 
-  def unread_email_count
+  def event_alert_key
+    event = event_alert
+    return "" if event.blank?
+
+    "event:#{event.id}:#{event.starts_at_utc.to_i}"
+  end
+
+  def recent_email_count
     return 0 unless show_alerts?
     return 0 unless data_source_available?("epistularium_messages")
 
-    @unread_email_count ||= workspace
-      .epistularium_messages
-      .for_mailbox("inbox")
-      .where(unread: true)
-      .count
+    @recent_email_count ||= recent_email_scope.count
   end
 
-  def unread_update_count
+  def recent_email_present?
+    recent_email_count.positive?
+  end
+
+  def recent_email_headline
+    return "" unless recent_email_present?
+
+    recent_email_count == 1 ? "1 email just came in" : "#{recent_email_count} emails came in recently"
+  end
+
+  def recent_email_detail
+    latest_message = recent_email_latest_message
+    return "" if latest_message.blank?
+
+    sender = [ latest_message.from_name.to_s.strip.presence, latest_message.from_email.to_s.strip.presence ].compact.join(" ").strip.presence
+    subject = latest_message.display_subject
+    [ sender.presence, subject.presence ].compact.join(" · ")
+  end
+
+  def recent_email_alert_key
+    latest_message = recent_email_latest_message
+    return "" if latest_message.blank?
+
+    "mail:#{latest_message.id}:#{recent_email_count}"
+  end
+
+  def recent_update_count
     return 0 unless show_alerts?
     return 0 unless data_source_available?("notifications")
     return 0 if user.blank?
 
-    @unread_update_count ||= workspace
-      .notifications
-      .for_recipient(user)
-      .unread
-      .count
+    @recent_update_count ||= recent_update_scope.count
+  end
+
+  def recent_update_present?
+    recent_update_count.positive?
+  end
+
+  def recent_update_headline
+    return "" unless recent_update_present?
+
+    recent_update_count == 1 ? "1 new workspace update" : "#{recent_update_count} new workspace updates"
+  end
+
+  def recent_update_detail
+    latest_notification = recent_update_latest_notification
+    return "" if latest_notification.blank?
+
+    return "New mention or comment" if latest_notification.notification_type == Notification::TYPE_MENTION
+    return "Calendar reminder" if latest_notification.notification_type == Notification::TYPE_CALENDAR_REMINDER
+
+    "Arrived in the last hour"
+  end
+
+  def recent_update_alert_key
+    latest_notification = recent_update_latest_notification
+    return "" if latest_notification.blank?
+
+    "update:#{latest_notification.id}:#{recent_update_count}"
   end
 
   def has_alerts?
-    event_alert.present? || unread_email_count.positive? || unread_update_count.positive?
-  end
-
-  def empty_alerts_message
-    "No live alerts right now."
+    event_alert.present? || recent_email_present? || recent_update_present?
   end
 
   private
@@ -115,5 +166,43 @@ class WorkspaceNotificationBarPresenter
       text.include?("no such table") ||
       text.include?("no such column") ||
       (text.include?("relation") && text.include?("does not exist"))
+  end
+
+  def recent_email_latest_message
+    return nil unless recent_email_present?
+
+    @recent_email_latest_message ||= recent_email_scope
+      .select(:id, :subject, :from_name, :from_email, :received_at, :created_at)
+      .order(Arel.sql("COALESCE(epistularium_messages.received_at, epistularium_messages.created_at) DESC"))
+      .first
+  end
+
+  def recent_update_latest_notification
+    return nil unless recent_update_present?
+
+    @recent_update_latest_notification ||= recent_update_scope
+      .select(:id, :notification_type, :created_at)
+      .order(created_at: :desc)
+      .first
+  end
+
+  def recent_email_scope
+    workspace
+      .epistularium_messages
+      .for_mailbox("inbox")
+      .where(unread: true)
+      .where("COALESCE(epistularium_messages.received_at, epistularium_messages.created_at) >= ?", recent_cutoff)
+  end
+
+  def recent_update_scope
+    workspace
+      .notifications
+      .for_recipient(user)
+      .unread
+      .where("notifications.created_at >= ?", recent_cutoff)
+  end
+
+  def recent_cutoff
+    reference_time - RECENT_ACTIVITY_WINDOW
   end
 end

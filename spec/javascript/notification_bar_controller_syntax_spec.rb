@@ -16,7 +16,7 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
     skip "node is not available in this environment"
   end
 
-  it "updates the shell clock with Intl date formatting" do
+  it "updates the shell clock and persists dismiss and snooze state for alerts" do
     source = Rails.root.join("app/javascript/controllers/notification_bar_controller.js").read
 
     expect(source).to include("renderClock()")
@@ -24,5 +24,10 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
     expect(source).to include("weekday: \"short\"")
     expect(source).to include("minute: \"2-digit\"")
     expect(source).to include("timeZone")
+    expect(source).to include("dismissAlert(event)")
+    expect(source).to include("snoozeAlert(event)")
+    expect(source).to include("window.sessionStorage.setItem")
+    expect(source).to include("window.localStorage.setItem")
+    expect(source).to include("refreshVisibility()")
   end
 end

@@ -1,43 +1,103 @@
 <aside class="notae-shell-status-bar"
        aria-label="Workspace notification bar"
        data-controller="notification-bar"
-       data-notification-bar-time-zone-value="<%= presenter.time_zone_name %>">
+       data-notification-bar-time-zone-value="<%= presenter.time_zone_name %>"
+       data-notification-bar-workspace-key-value="<%= workspace.slug %>">
   <% if presenter.show_clock? %>
     <div class="notae-shell-status-bar-clock"
          data-notification-bar-target="clock"><%= presenter.initial_clock_label %></div>
   <% end %>
 
   <% if presenter.show_alerts? %>
-    <div class="notae-shell-status-bar-alerts">
+    <div class="notae-shell-status-bar-alerts" data-notification-bar-target="alerts">
       <% if presenter.event_alert.present? %>
-        <%= link_to kalendarium_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-item" do %>
-          <span class="notae-shell-status-bar-item-kind">Calendar</span>
-          <strong><%= truncate(presenter.event_alert.title.presence || "Untitled event", length: 56) %></strong>
-          <span><%= presenter.event_timing_label %></span>
-        <% end %>
+        <article class="notae-shell-status-bar-item"
+                 data-notification-bar-target="alert"
+                 data-notification-bar-alert-key="<%= presenter.event_alert_key %>">
+          <div class="notae-shell-status-bar-item-top">
+            <span class="notae-shell-status-bar-item-kind">Calendar</span>
+            <div class="notae-shell-status-bar-item-controls">
+              <button type="button"
+                      class="notae-shell-status-bar-control"
+                      aria-label="Snooze this alert for one hour"
+                      title="Snooze for one hour"
+                      data-action="notification-bar#snoozeAlert">
+                <%= notae_icon_svg(:clock, css_class: "notae-shell-status-bar-control-icon") %>
+              </button>
+              <button type="button"
+                      class="notae-shell-status-bar-control"
+                      aria-label="Dismiss this alert"
+                      title="Dismiss"
+                      data-action="notification-bar#dismissAlert">
+                <%= notae_icon_svg(:close_small, css_class: "notae-shell-status-bar-control-icon") %>
+              </button>
+            </div>
+          </div>
+          <%= link_to kalendarium_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-link" do %>
+            <strong><%= truncate(presenter.event_alert.title.presence || "Untitled event", length: 56) %></strong>
+            <span><%= presenter.event_timing_label %></span>
+          <% end %>
+        </article>
       <% end %>
 
-      <% if presenter.unread_email_count.positive? %>
-        <%= link_to workspace_epistularium_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-item" do %>
-          <span class="notae-shell-status-bar-item-kind">Mail</span>
-          <strong><%= pluralize(presenter.unread_email_count, "new email") %></strong>
-          <span>Unread inbox messages</span>
-        <% end %>
+      <% if presenter.recent_email_present? %>
+        <article class="notae-shell-status-bar-item"
+                 data-notification-bar-target="alert"
+                 data-notification-bar-alert-key="<%= presenter.recent_email_alert_key %>">
+          <div class="notae-shell-status-bar-item-top">
+            <span class="notae-shell-status-bar-item-kind">Mail</span>
+            <div class="notae-shell-status-bar-item-controls">
+              <button type="button"
+                      class="notae-shell-status-bar-control"
+                      aria-label="Snooze this alert for one hour"
+                      title="Snooze for one hour"
+                      data-action="notification-bar#snoozeAlert">
+                <%= notae_icon_svg(:clock, css_class: "notae-shell-status-bar-control-icon") %>
+              </button>
+              <button type="button"
+                      class="notae-shell-status-bar-control"
+                      aria-label="Dismiss this alert"
+                      title="Dismiss"
+                      data-action="notification-bar#dismissAlert">
+                <%= notae_icon_svg(:close_small, css_class: "notae-shell-status-bar-control-icon") %>
+              </button>
+            </div>
+          </div>
+          <%= link_to workspace_epistularium_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-link" do %>
+            <strong><%= presenter.recent_email_headline %></strong>
+            <span><%= presenter.recent_email_detail %></span>
+          <% end %>
+        </article>
       <% end %>
 
-      <% if presenter.unread_update_count.positive? %>
-        <%= link_to workspace_notifications_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-item" do %>
-          <span class="notae-shell-status-bar-item-kind">Updates</span>
-          <strong><%= pluralize(presenter.unread_update_count, "workspace update") %></strong>
-          <span>Notifications and future integrations</span>
-        <% end %>
-      <% end %>
-
-      <% unless presenter.has_alerts? %>
-        <div class="notae-shell-status-bar-item is-empty">
-          <span class="notae-shell-status-bar-item-kind">Alerts</span>
-          <strong><%= presenter.empty_alerts_message %></strong>
-        </div>
+      <% if presenter.recent_update_present? %>
+        <article class="notae-shell-status-bar-item"
+                 data-notification-bar-target="alert"
+                 data-notification-bar-alert-key="<%= presenter.recent_update_alert_key %>">
+          <div class="notae-shell-status-bar-item-top">
+            <span class="notae-shell-status-bar-item-kind">Updates</span>
+            <div class="notae-shell-status-bar-item-controls">
+              <button type="button"
+                      class="notae-shell-status-bar-control"
+                      aria-label="Snooze this alert for one hour"
+                      title="Snooze for one hour"
+                      data-action="notification-bar#snoozeAlert">
+                <%= notae_icon_svg(:clock, css_class: "notae-shell-status-bar-control-icon") %>
+              </button>
+              <button type="button"
+                      class="notae-shell-status-bar-control"
+                      aria-label="Dismiss this alert"
+                      title="Dismiss"
+                      data-action="notification-bar#dismissAlert">
+                <%= notae_icon_svg(:close_small, css_class: "notae-shell-status-bar-control-icon") %>
+              </button>
+            </div>
+          </div>
+          <%= link_to workspace_notifications_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-link" do %>
+            <strong><%= presenter.recent_update_headline %></strong>
+            <span><%= presenter.recent_update_detail %></span>
+          <% end %>
+        </article>
       <% end %>
     </div>
   <% end %>

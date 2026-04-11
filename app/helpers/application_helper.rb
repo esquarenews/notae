@@ -310,6 +310,10 @@ module ApplicationHelper
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.3" y="2.6" width="3" height="10.8" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="6.6" y="2.6" width="3" height="10.8" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10.9" y="2.6" width="2.8" height="10.8" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>'
       when :kalendarium
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.2" y="3.2" width="11.6" height="10.6" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.8v2.7M11 1.8v2.7M2.2 6h11.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>'
+      when :clock
+        '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="5.2" stroke="currentColor" stroke-width="1.2"/><path d="M8 5.1v3.2l2 1.3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      when :close_small
+        '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="m4.2 4.2 7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>'
       when :epistularium
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.2 4.2h11.6v7.6H2.2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="m2.7 4.8 5.3 4 5.3-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       when :ai_history

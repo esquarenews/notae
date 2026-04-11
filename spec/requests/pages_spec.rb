@@ -20,10 +20,10 @@ RSpec.describe "Pages", type: :request do
 
     expect(stylesheet).to include(".notae-topbar {\n  min-height: 4rem;")
     expect(stylesheet).to include("  position: relative;\n  z-index: 140;\n  isolation: isolate;")
-    expect(stylesheet).to include("  background-color: color-mix(in srgb, var(--notae-panel-bg) 24%, transparent);")
-    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 42%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 26%, transparent)\n    );")
-    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(24px) saturate(1.18);")
-    expect(stylesheet).to include("  backdrop-filter: blur(24px) saturate(1.18);")
+    expect(stylesheet).to include("  background-color: color-mix(in srgb, var(--notae-panel-bg) 12%, transparent);")
+    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 26%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 14%, transparent)\n    );")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(30px) saturate(1.16);")
+    expect(stylesheet).to include("  backdrop-filter: blur(30px) saturate(1.16);")
     expect(stylesheet).to include(".notae-page-cover {\n  padding-top: 0.4rem;\n}")
     expect(stylesheet).to include(".notae-page-cover-frame {\n  margin: 0 clamp(0.9rem, 3vw, 1.4rem);\n  height: clamp(230px, 31vw, 360px);")
   end
