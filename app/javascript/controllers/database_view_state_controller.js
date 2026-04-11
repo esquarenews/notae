@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
+const RESTORE_SCROLL_DELAYS_MS = [ 60, 180, 360, 720, 1200, 1800 ]
+
 export default class extends Controller {
   static maxAgeMs = 30_000
 
@@ -141,10 +143,9 @@ export default class extends Controller {
 
     apply()
     window.requestAnimationFrame(() => apply())
-    window.setTimeout(() => apply(), 60)
-    window.setTimeout(() => apply(), 180)
-    window.setTimeout(() => apply(), 360)
-    window.setTimeout(() => apply(), 720)
+    RESTORE_SCROLL_DELAYS_MS.forEach((delay) => {
+      window.setTimeout(() => apply(), delay)
+    })
   }
 
   restoreSubmitScrollPosition(state) {

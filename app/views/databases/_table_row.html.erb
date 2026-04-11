@@ -192,7 +192,11 @@
                         }.merge(row_params)
                       ),
                       method: :patch,
-                      data: { controller: "auto-submit" } do |form| %>
+                      data: {
+                        controller: "auto-submit",
+                        turbo_stream: true,
+                        preserve_database_scroll: true
+                      } do |form| %>
           <% field_classes = db_property.select? ? select_input_classes_for(db_property, db_cell.value_text) : "notae-db-cell-input" %>
           <% if db_property.checkbox? %>
             <label class="notae-db-checkbox-wrap">

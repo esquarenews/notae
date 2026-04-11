@@ -7,6 +7,7 @@ const AI_RAIL_COLLAPSED_CLASS = "is-ai-rail-collapsed"
 const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"
 const PRESERVED_SAVE_SCROLL_KEY = "notae-preserved-save-scroll"
 const PRESERVED_SAVE_SCROLL_MAX_AGE_MS = 30_000
+const PRESERVED_SAVE_SCROLL_RESTORE_DELAYS_MS = [ 60, 180, 360, 720, 1200, 1800 ]
 
 function primaryScrollContainer() {
   return document.querySelector(".notae-content-scroll") || document.scrollingElement || document.documentElement
@@ -152,11 +153,9 @@ function restorePreservedSaveScroll(state, { clear = true } = {}) {
     scrollContainer.scrollLeft = Number(state.scrollLeft || 0)
     restoreTrackedElementPosition(scrollContainer, state)
   }
-  const restoreDelays = [ 60, 180, 360, 720 ]
-
   apply()
   window.requestAnimationFrame(() => apply())
-  restoreDelays.forEach((delay) => {
+  PRESERVED_SAVE_SCROLL_RESTORE_DELAYS_MS.forEach((delay) => {
     window.setTimeout(() => apply(), delay)
   })
 

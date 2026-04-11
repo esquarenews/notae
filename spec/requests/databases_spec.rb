@@ -526,26 +526,37 @@ RSpec.describe "Databases", type: :request do
     workspace = Workspace.create!(name: "Tables Inline", slug: "tables-inline")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     database = Database.create!(workspace: workspace, name: "Tasks Inline")
-    db_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
+    db_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
     db_row = DbRow.create!(workspace: workspace, database: database, title: "Inline row")
-    db_cell = DbCell.create!(workspace: workspace, db_row: db_row, db_property: db_property, value_text: "Todo")
+    db_cell = DbCell.create!(workspace: workspace, db_row: db_row, db_property: db_property, value_text: "started")
     database.update_column(:updated_at, 2.days.ago)
     previous_database_updated_at = database.reload.updated_at
     sign_in owner
 
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("/db_cells/#{db_cell.id}")
+    expect(response.body).to include('data-turbo-stream="true"')
+    expect(response.body).to include('data-preserve-database-scroll="true"')
+
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: db_cell.id),
-          params: { db_cell: { value_text: "Done" } },
+          params: { db_cell: { value_text: "done" } },
           as: :turbo_stream
 
     expect(response).to have_http_status(:ok)
     expect(response).not_to be_redirect
     expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
     expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(response.body).to include(%(turbo-stream action="replace" target="row_#{db_row.id}"))
     expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
     expect(response.body).to include("Cell updated.")
     expect(response.body).to include("Edited")
-    expect(db_cell.reload.value_text).to eq("Done")
-    expect(db_row.reload.data_json["Status"]).to eq("Done")
+    expect(response.body).to include("is-row-color-gray")
+    expect(response.body).to include("is-status-done")
+    expect(db_cell.reload.value_text).to eq("done")
+    expect(db_row.reload.data_json["Status"]).to eq("done")
+    expect(db_row.reload.row_text_color).to eq("gray")
     expect(database.reload.updated_at).to be > previous_database_updated_at
   end
 

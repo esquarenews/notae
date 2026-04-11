@@ -80,6 +80,8 @@
                               method: :patch,
                               data: {
                                 controller: "auto-submit",
+                                turbo_stream: true,
+                                preserve_database_scroll: true,
                                 action: "turbo:submit-end->database-drag#refreshBoardOnSubmit"
                               },
                               class: "notae-db-board-card-modal-field-form" do |form| %>
