@@ -14721,12 +14721,12 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
   --notae-accent: #4e6073;
   --notae-accent-strong: #384857;
   --notae-accent-soft: rgba(78, 96, 115, 0.14);
-  --notae-glass-surface: rgba(255, 255, 255, 0.024);
-  --notae-glass-surface-soft: rgba(255, 255, 255, 0.01);
-  --notae-glass-surface-control: rgba(255, 255, 255, 0.016);
-  --notae-glass-border: rgba(78, 96, 115, 0.11);
-  --notae-glass-border-soft: rgba(78, 96, 115, 0.08);
-  --notae-glass-highlight: rgba(255, 255, 255, 0.34);
+  --notae-glass-surface: rgba(255, 255, 255, 0.012);
+  --notae-glass-surface-soft: rgba(255, 255, 255, 0.006);
+  --notae-glass-surface-control: rgba(255, 255, 255, 0.008);
+  --notae-glass-border: rgba(78, 96, 115, 0.09);
+  --notae-glass-border-soft: rgba(78, 96, 115, 0.06);
+  --notae-glass-highlight: rgba(255, 255, 255, 0.22);
   --notae-shadow-soft: 0 16px 36px rgba(44, 57, 68, 0.08);
   --notae-shadow-card: 0 22px 48px rgba(43, 52, 55, 0.1);
   --notae-shadow-float: 0 32px 72px rgba(36, 47, 58, 0.16);
@@ -14757,12 +14757,12 @@ body.notae-theme-dark {
   --notae-accent: #9fb5c7;
   --notae-accent-strong: #d6e2eb;
   --notae-accent-soft: rgba(159, 181, 199, 0.16);
-  --notae-glass-surface: rgba(16, 23, 29, 0.16);
-  --notae-glass-surface-soft: rgba(16, 23, 29, 0.09);
-  --notae-glass-surface-control: rgba(16, 23, 29, 0.11);
-  --notae-glass-border: rgba(170, 190, 205, 0.18);
-  --notae-glass-border-soft: rgba(170, 190, 205, 0.13);
-  --notae-glass-highlight: rgba(255, 255, 255, 0.12);
+  --notae-glass-surface: rgba(16, 23, 29, 0.08);
+  --notae-glass-surface-soft: rgba(16, 23, 29, 0.045);
+  --notae-glass-surface-control: rgba(16, 23, 29, 0.058);
+  --notae-glass-border: rgba(170, 190, 205, 0.16);
+  --notae-glass-border-soft: rgba(170, 190, 205, 0.11);
+  --notae-glass-highlight: rgba(255, 255, 255, 0.09);
     --notae-shadow-soft: 0 18px 42px rgba(4, 8, 12, 0.28);
   --notae-shadow-card: 0 24px 56px rgba(2, 6, 10, 0.36);
   --notae-shadow-float: 0 36px 80px rgba(2, 6, 10, 0.44);
@@ -14791,12 +14791,12 @@ body.notae-theme-dark {
     --notae-accent: #9fb5c7;
     --notae-accent-strong: #d6e2eb;
     --notae-accent-soft: rgba(159, 181, 199, 0.16);
-    --notae-glass-surface: rgba(16, 23, 29, 0.16);
-    --notae-glass-surface-soft: rgba(16, 23, 29, 0.09);
-    --notae-glass-surface-control: rgba(16, 23, 29, 0.11);
-    --notae-glass-border: rgba(170, 190, 205, 0.18);
-    --notae-glass-border-soft: rgba(170, 190, 205, 0.13);
-    --notae-glass-highlight: rgba(255, 255, 255, 0.12);
+    --notae-glass-surface: rgba(16, 23, 29, 0.08);
+    --notae-glass-surface-soft: rgba(16, 23, 29, 0.045);
+    --notae-glass-surface-control: rgba(16, 23, 29, 0.058);
+    --notae-glass-border: rgba(170, 190, 205, 0.16);
+    --notae-glass-border-soft: rgba(170, 190, 205, 0.11);
+    --notae-glass-highlight: rgba(255, 255, 255, 0.09);
   --notae-shadow-soft: 0 18px 42px rgba(4, 8, 12, 0.28);
     --notae-shadow-card: 0 24px 56px rgba(2, 6, 10, 0.36);
     --notae-shadow-float: 0 36px 80px rgba(2, 6, 10, 0.44);
@@ -15172,10 +15172,10 @@ body.notae-theme-dark .notae-auth-submit {
   isolation: isolate;
   background: var(--notae-glass-surface);
   box-shadow:
-    0 14px 28px rgba(15, 23, 42, 0.04),
+    0 10px 22px rgba(15, 23, 42, 0.025),
     inset 0 1px 0 var(--notae-glass-highlight);
-  -webkit-backdrop-filter: blur(44px) saturate(1.12);
-  backdrop-filter: blur(44px) saturate(1.12);
+  -webkit-backdrop-filter: blur(28px) saturate(1.18);
+  backdrop-filter: blur(28px) saturate(1.18);
 }
 
 .notae-topbar-title {
@@ -15234,10 +15234,10 @@ body.notae-theme-dark .notae-auth-submit {
   border-radius: 1.2rem;
   background: var(--notae-glass-surface);
   box-shadow:
-    0 14px 28px rgba(15, 23, 42, 0.04),
+    0 10px 22px rgba(15, 23, 42, 0.025),
     inset 0 1px 0 var(--notae-glass-highlight);
-  -webkit-backdrop-filter: blur(44px) saturate(1.12);
-  backdrop-filter: blur(44px) saturate(1.12);
+  -webkit-backdrop-filter: blur(28px) saturate(1.18);
+  backdrop-filter: blur(28px) saturate(1.18);
   z-index: 135;
 }
 

@@ -1,0 +1,25 @@
+- main [ref=e13]:
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - img "Notae icon" [ref=e16]
+      - generic [ref=e17]:
+        - heading "Notae" [level=1] [ref=e18]
+        - paragraph [ref=e19]: Sign in to continue to your workspace.
+    - generic [ref=e20]:
+      - heading "Sign in" [level=2] [ref=e21]
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: Email
+          - textbox "Email" [active] [ref=e25]
+        - generic [ref=e26]:
+          - generic [ref=e27]: Password
+          - textbox "Password" [ref=e28]
+        - generic [ref=e29]:
+          - checkbox "Remember me" [ref=e30]
+          - generic [ref=e31]: Remember me
+        - button "Sign in" [ref=e32] [cursor=pointer]
+      - generic [ref=e33]:
+        - link "Forgot your password?" [ref=e34] [cursor=pointer]:
+          - /url: /users/password/new
+        - link "Create account" [ref=e35] [cursor=pointer]:
+          - /url: /users/sign_up

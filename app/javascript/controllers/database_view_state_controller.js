@@ -143,6 +143,8 @@ export default class extends Controller {
     window.requestAnimationFrame(() => apply())
     window.setTimeout(() => apply(), 60)
     window.setTimeout(() => apply(), 180)
+    window.setTimeout(() => apply(), 360)
+    window.setTimeout(() => apply(), 720)
   }
 
   restoreSubmitScrollPosition(state) {

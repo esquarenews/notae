@@ -219,10 +219,11 @@ RSpec.describe "Workspace home", type: :request do
   it "styles the notification bar and alert cards with the same exaggerated glass treatment" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
+    expect(stylesheet).to include("--notae-glass-surface: rgba(255, 255, 255, 0.012);")
     expect(stylesheet).to include(".notae-shell-status-bar {\n  position: fixed;")
     expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")
     expect(stylesheet).to include("  background: var(--notae-glass-surface);")
-    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(44px) saturate(1.12);")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(28px) saturate(1.18);")
     expect(stylesheet).to include(".notae-shell-status-bar-item {\n  display: grid;")
     expect(stylesheet).to include("  background: var(--notae-glass-surface-soft);")
     expect(stylesheet).to include(".notae-shell-status-bar-control {\n  width: 1.8rem;")

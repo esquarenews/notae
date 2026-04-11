@@ -18,12 +18,14 @@ RSpec.describe "Pages", type: :request do
   it "renders the shared topbar as a translucent blurred surface" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
+    expect(stylesheet).to include("--notae-glass-surface: rgba(255, 255, 255, 0.012);")
+    expect(stylesheet).to include("--notae-glass-surface-soft: rgba(255, 255, 255, 0.006);")
     expect(stylesheet).to include(".notae-topbar {\n  min-height: 4rem;")
     expect(stylesheet).to include("  position: relative;\n  z-index: 140;\n  isolation: isolate;")
     expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")
     expect(stylesheet).to include("  background: var(--notae-glass-surface);")
-    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(44px) saturate(1.12);")
-    expect(stylesheet).to include("  backdrop-filter: blur(44px) saturate(1.12);")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(28px) saturate(1.18);")
+    expect(stylesheet).to include("  backdrop-filter: blur(28px) saturate(1.18);")
     expect(stylesheet).not_to include("body.notae-theme-dark .notae-topbar,")
     expect(stylesheet).not_to include("body.notae-theme-system .notae-topbar,")
     expect(stylesheet).to include(".notae-sidebar,\n.notae-ai-rail,\n.notae-mobile-tabbar {\n  background: color-mix(in srgb, var(--notae-panel-elevated) 82%, transparent);\n}")

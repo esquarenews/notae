@@ -33,4 +33,19 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include("[\"localhost\", \"127.0.0.1\", \"[::1]\"]")
     expect(source).to include("document.addEventListener(\"turbo:load\"")
   end
+
+  it "preserves the current scroll position across save submits and turbo renders" do
+    source = Rails.root.join("app/javascript/application.js").read
+
+    expect(source).to include('const PRESERVED_SAVE_SCROLL_KEY = "notae-preserved-save-scroll"')
+    expect(source).to include("function primaryScrollContainer()")
+    expect(source).to include("document.querySelector(\".notae-content-scroll\")")
+    expect(source).to include("window.sessionStorage.setItem(PRESERVED_SAVE_SCROLL_KEY")
+    expect(source).to include("trackedViewportTop")
+    expect(source).to include("document.addEventListener(\"submit\", (event) => {")
+    expect(source).to include("document.addEventListener(\"turbo:submit-start\", (event) => {")
+    expect(source).to include("document.addEventListener(\"turbo:submit-end\", (event) => {")
+    expect(source).to include("document.addEventListener(\"turbo:render\", () => {")
+    expect(source).to include("restoreStoredSaveScroll()")
+  end
 end

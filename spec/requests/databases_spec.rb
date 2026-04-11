@@ -1718,6 +1718,28 @@ RSpec.describe "Databases", type: :request do
     expect(database.reload.updated_at).to be > previous_database_updated_at
   end
 
+  it "updates row colors with turbo streams instead of redirecting the whole grid" do
+    owner = User.create!(email: "database-row-color-turbo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Row color turbo tables", slug: "row-color-turbo-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Row color turbo DB")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Color me")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { style_action: "set_color", text_color: "green" } },
+          as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(response.body).to include(%(turbo-stream action="replace" target="row_#{row.id}"))
+    expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
+    expect(response.body).to include("Row updated.")
+    expect(row.reload.row_text_color).to eq("green")
+  end
+
   it "creates the next row with turbo streams instead of redirecting the full grid for the simple table path" do
     owner = User.create!(email: "database-row-create-next-turbo-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row create next turbo tables", slug: "row-create-next-turbo-tables")

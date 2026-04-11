@@ -79,6 +79,8 @@ class DbRowsController < ApplicationController
             locals: { database: @database }
           )
         }, status: :ok
+      elsif turbo_inline_row_update_request?(next_row:)
+        render turbo_stream: turbo_stream_update_row_response(@db_row)
       elsif turbo_title_autosave_request?(next_row:)
         @database.reload
         render turbo_stream: [
@@ -191,6 +193,16 @@ class DbRowsController < ApplicationController
 
   def turbo_title_autosave_request?(next_row:)
     title_autosave_requested? && request.format.turbo_stream? && next_row.blank?
+  end
+
+  def turbo_inline_row_update_request?(next_row:)
+    return false unless request.format.turbo_stream?
+    return false unless next_row.blank?
+    return false unless simple_table_render_context?
+    return false if params[:split_source].to_s == "row"
+    return false if title_autosave_requested?
+
+    true
   end
 
   def turbo_create_next_row_request?(next_row)
@@ -590,6 +602,24 @@ class DbRowsController < ApplicationController
           flash_host_class: "notae-db-inline-flash-host"
         }
       )
+    ]
+  end
+
+  def turbo_stream_update_row_response(row)
+    load_table_row_render_context!(rows: [ row ])
+
+    [
+      turbo_stream.update(
+        "database_topbar_edited_at",
+        partial: "databases/topbar_edited_meta",
+        locals: { database: @database.reload }
+      ),
+      turbo_stream.replace(
+        "row_#{row.id}",
+        partial: "databases/table_row",
+        locals: table_row_locals(row: row)
+      ),
+      database_flash_stream("notice", "Row updated.")
     ]
   end
 

@@ -1,0 +1,1095 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e8]: Scroll Check
+          - generic [ref=e9]:
+            - button "＋" [ref=e11]
+            - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+        - generic [ref=e13]:
+          - navigation [ref=e14]:
+            - link "Home" [ref=e15] [cursor=pointer]:
+              - /url: /w/scroll-check
+              - generic [ref=e16]:
+                - img [ref=e18]
+                - generic [ref=e21]: Home
+            - link "Search" [ref=e22] [cursor=pointer]:
+              - /url: /w/scroll-check/search
+              - generic [ref=e23]:
+                - img [ref=e25]
+                - generic [ref=e28]: Search
+            - link "Notifications" [ref=e29] [cursor=pointer]:
+              - /url: /w/scroll-check/notifications
+              - generic [ref=e30]:
+                - img [ref=e32]
+                - generic [ref=e35]: Notifications
+            - link "Library" [ref=e36] [cursor=pointer]:
+              - /url: /w/scroll-check/library
+              - generic [ref=e37]:
+                - img [ref=e39]
+                - generic [ref=e43]: Library
+            - link "Kalendārium" [ref=e44] [cursor=pointer]:
+              - /url: /w/scroll-check/kalendarium
+              - generic [ref=e45]:
+                - img [ref=e47]
+                - generic [ref=e50]: Kalendārium
+            - link "Epistularium" [ref=e51] [cursor=pointer]:
+              - /url: /w/scroll-check/epistularium
+              - generic [ref=e52]:
+                - img [ref=e54]
+                - generic [ref=e57]: Epistularium
+            - link "Meetings" [ref=e58] [cursor=pointer]:
+              - /url: /w/scroll-check/meetings
+              - generic [ref=e59]:
+                - img [ref=e61]
+                - generic [ref=e64]: Meetings
+            - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+              - /url: /w/scroll-check/ai-conversation-history
+              - generic [ref=e66]:
+                - img [ref=e68]
+                - generic [ref=e71]: AI Conversation History
+          - generic [ref=e72]:
+            - generic [ref=e910]:
+              - generic [ref=e911]:
+                - button "Workspaces" [expanded] [ref=e912] [cursor=pointer]:
+                  - generic [ref=e913]: ▾
+                  - generic [ref=e914]: Workspaces
+                - button "Create new Workspace" [ref=e915] [cursor=pointer]: "[+]"
+              - list [ref=e917]:
+                - listitem [ref=e918]:
+                  - link "Scroll Check" [ref=e919] [cursor=pointer]:
+                    - /url: /w/scroll-check
+                    - generic [ref=e920]: Scroll Check
+            - generic [ref=e922]:
+              - generic [ref=e923]:
+                - button "Notarum" [expanded] [ref=e924] [cursor=pointer]:
+                  - generic [ref=e925]: ▾
+                  - generic [ref=e926]: Notarum
+                - button "Create new Nota" [ref=e928] [cursor=pointer]: "[+]"
+              - paragraph [ref=e930]: No Notarum yet.
+            - generic [ref=e931]:
+              - generic [ref=e932]:
+                - button "Grids" [expanded] [ref=e933] [cursor=pointer]:
+                  - generic [ref=e934]: ▾
+                  - generic [ref=e935]: Grids
+                - button "Create new Grid" [ref=e937] [cursor=pointer]: "[+]"
+              - list [ref=e939]:
+                - listitem [ref=e940]:
+                  - link "Scroll Check Grid Scroll Check Grid" [ref=e941] [cursor=pointer]:
+                    - /url: /w/scroll-check/databases/4390662f-5a2f-426e-a113-bbc04213aafb
+                    - generic [ref=e942]:
+                      - generic "Scroll Check Grid" [ref=e943]:
+                        - generic [ref=e944]: 🗃️
+                      - text: Scroll Check Grid
+            - generic [ref=e945]:
+              - generic [ref=e946]:
+                - button "Meetings" [expanded] [ref=e947] [cursor=pointer]:
+                  - generic [ref=e948]: ▾
+                  - generic [ref=e949]: Meetings
+                - button "Create new Meeting" [ref=e951] [cursor=pointer]: "[+]"
+              - paragraph [ref=e953]: No meetings yet.
+            - generic [ref=e954]:
+              - button "Favorites" [expanded] [ref=e956] [cursor=pointer]:
+                - generic [ref=e957]: ▾
+                - generic [ref=e958]: Favorites
+              - paragraph [ref=e960]: No favorites yet.
+        - generic [ref=e125]:
+          - link "Settings" [ref=e126] [cursor=pointer]:
+            - /url: /w/scroll-check/settings/preferences
+            - generic [ref=e127]:
+              - img [ref=e129]
+              - generic [ref=e132]: Settings
+          - link "Trash" [ref=e133] [cursor=pointer]:
+            - /url: /w/scroll-check/trash
+            - generic [ref=e134]:
+              - img [ref=e136]
+              - generic [ref=e139]: Trash
+          - button "Sign out" [ref=e141] [cursor=pointer]:
+            - generic [ref=e142]:
+              - img [ref=e144]
+              - generic [ref=e147]: Sign out
+    - generic [ref=e148]:
+      - banner [ref=e149]:
+        - generic [ref=e151]:
+          - generic "Grid icon" [ref=e153]:
+            - generic [ref=e154]: 🗃️
+          - generic [ref=e155]: Scroll Check Grid
+          - generic [ref=e156]: Shared to workspace
+        - generic [ref=e157]:
+          - generic [ref=e158]: Edited less than a minute ago
+          - button "Add to favorites" [ref=e160] [cursor=pointer]: ☆
+          - group [ref=e161]:
+            - generic "Grid comments" [ref=e162] [cursor=pointer]: 💬
+          - group [ref=e163]:
+            - generic "Options" [ref=e164] [cursor=pointer]:
+              - generic [ref=e165]: ⚙
+              - generic [ref=e166]: Options
+      - main [ref=e167]:
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - generic [ref=e171]:
+              - group [ref=e172]:
+                - generic "Add icon" [ref=e173] [cursor=pointer]:
+                  - generic [ref=e174]: ◌
+                  - generic [ref=e175]: Add icon
+              - group [ref=e176]:
+                - generic "Add cover" [ref=e177] [cursor=pointer]:
+                  - generic [ref=e178]: ▭
+                  - generic [ref=e179]: Add cover
+              - group [ref=e180]:
+                - generic "Add description" [ref=e181] [cursor=pointer]:
+                  - generic [ref=e182]: ℹ
+                  - generic [ref=e183]: Add description
+            - generic [ref=e184]:
+              - textbox "Grid title" [ref=e185]: Scroll Check Grid
+              - text: Saved
+            - region "Linked tabs" [ref=e186]:
+              - navigation [ref=e187]:
+                - generic [ref=e188]:
+                  - link "Tab 1 Tab 1" [ref=e189] [cursor=pointer]:
+                    - /url: /w/scroll-check/databases/4390662f-5a2f-426e-a113-bbc04213aafb
+                    - generic "Tab 1" [ref=e191]:
+                      - generic [ref=e192]: 🗃️
+                    - generic [ref=e193]: Tab 1
+                  - group [ref=e194]:
+                    - generic "Tab options" [ref=e195] [cursor=pointer]: ⋯
+              - button "+ New tab" [ref=e197]
+          - generic [ref=e198]:
+            - link "⊞ Table" [ref=e200] [cursor=pointer]:
+              - /url: /w/scroll-check/databases/4390662f-5a2f-426e-a113-bbc04213aafb?view_id=76bc1c67-2761-4a79-91af-de4a4cba525e
+              - generic [ref=e201]: ⊞
+              - text: Table
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - button "Grid" [ref=e205] [cursor=pointer]
+                - button "Tasks" [ref=e207] [cursor=pointer]
+                - button "Kanban" [ref=e209] [cursor=pointer]
+              - group [ref=e210]:
+                - generic "⚡" [ref=e211] [cursor=pointer]
+              - group [ref=e212]:
+                - generic "⚙" [ref=e213] [cursor=pointer]
+          - paragraph [ref=e214]: 60 rows
+          - generic [ref=e215]:
+            - link "Scroll Check Grid" [ref=e216] [cursor=pointer]:
+              - /url: /w/scroll-check/databases/4390662f-5a2f-426e-a113-bbc04213aafb?split_page_id=940bd71a-8725-458c-9436-20bf5c026b1e&split_source=database&view_id=76bc1c67-2761-4a79-91af-de4a4cba525e
+            - button "Unlink" [ref=e218]
+          - table [ref=e220]:
+            - rowgroup [ref=e224]:
+              - row "Aa Name Resize Name column" [ref=e225]:
+                - columnheader "Aa Name Resize Name column" [ref=e226]:
+                  - generic [ref=e227]:
+                    - generic [ref=e228]: Aa
+                    - text: Name
+                  - button "Resize Name column" [ref=e229]
+                - columnheader [ref=e230]:
+                  - group [ref=e231]:
+                    - generic "+ Add property" [ref=e232] [cursor=pointer]
+                    - option "Text" [selected]
+                    - option "Number"
+                    - option "Date"
+                    - option "Checkbox"
+                    - option "Select"
+            - rowgroup [ref=e233]:
+              - row "Insert row below Drag to reorder Row options Scroll Row 1 Create linked Nota" [ref=e234]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 1 Create linked Nota" [ref=e235]:
+                  - generic [ref=e236]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e238]:
+                      - generic [ref=e239]:
+                        - textbox "Enter name" [ref=e240]: Scroll Row 1
+                        - button [ref=e241]
+                      - button "Create linked Nota" [ref=e243] [cursor=pointer]: +
+                      - group [ref=e244]:
+                        - generic "Choose linked Nota" [ref=e245] [cursor=pointer]: 🔗
+                - cell [ref=e246]
+              - row "Insert row below Drag to reorder Row options Scroll Row 2 Create linked Nota" [ref=e247]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 2 Create linked Nota" [ref=e248]:
+                  - generic [ref=e249]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e257]:
+                      - generic [ref=e258]:
+                        - textbox "Enter name" [ref=e259]: Scroll Row 2
+                        - button [ref=e260]
+                      - button "Create linked Nota" [ref=e262] [cursor=pointer]: +
+                      - group [ref=e263]:
+                        - generic "Choose linked Nota" [ref=e264] [cursor=pointer]: 🔗
+                - cell [ref=e265]
+              - row "Insert row below Drag to reorder Row options Scroll Row 3 Create linked Nota" [ref=e266]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 3 Create linked Nota" [ref=e267]:
+                  - generic [ref=e268]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e270]:
+                      - generic [ref=e271]:
+                        - textbox "Enter name" [ref=e272]: Scroll Row 3
+                        - button [ref=e273]
+                      - button "Create linked Nota" [ref=e275] [cursor=pointer]: +
+                      - group [ref=e276]:
+                        - generic "Choose linked Nota" [ref=e277] [cursor=pointer]: 🔗
+                - cell [ref=e278]
+              - row "Insert row below Drag to reorder Row options Scroll Row 4 Create linked Nota" [ref=e279]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 4 Create linked Nota" [ref=e280]:
+                  - generic [ref=e281]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e283]:
+                      - generic [ref=e284]:
+                        - textbox "Enter name" [ref=e285]: Scroll Row 4
+                        - button [ref=e286]
+                      - button "Create linked Nota" [ref=e288] [cursor=pointer]: +
+                      - group [ref=e289]:
+                        - generic "Choose linked Nota" [ref=e290] [cursor=pointer]: 🔗
+                - cell [ref=e291]
+              - row "Insert row below Drag to reorder Row options Scroll Row 5 Create linked Nota" [ref=e292]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 5 Create linked Nota" [ref=e293]:
+                  - generic [ref=e294]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e296]:
+                      - generic [ref=e297]:
+                        - textbox "Enter name" [ref=e298]: Scroll Row 5
+                        - button [ref=e299]
+                      - button "Create linked Nota" [ref=e301] [cursor=pointer]: +
+                      - group [ref=e302]:
+                        - generic "Choose linked Nota" [ref=e303] [cursor=pointer]: 🔗
+                - cell [ref=e304]
+              - row "Insert row below Drag to reorder Row options Scroll Row 6 Create linked Nota" [ref=e305]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 6 Create linked Nota" [ref=e306]:
+                  - generic [ref=e307]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e309]:
+                      - generic [ref=e310]:
+                        - textbox "Enter name" [ref=e311]: Scroll Row 6
+                        - button [ref=e312]
+                      - button "Create linked Nota" [ref=e314] [cursor=pointer]: +
+                      - group [ref=e315]:
+                        - generic "Choose linked Nota" [ref=e316] [cursor=pointer]: 🔗
+                - cell [ref=e317]
+              - row "Insert row below Drag to reorder Row options Scroll Row 7 Create linked Nota" [ref=e318]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 7 Create linked Nota" [ref=e319]:
+                  - generic [ref=e320]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e322]:
+                      - generic [ref=e323]:
+                        - textbox "Enter name" [ref=e324]: Scroll Row 7
+                        - button [ref=e325]
+                      - button "Create linked Nota" [ref=e327] [cursor=pointer]: +
+                      - group [ref=e328]:
+                        - generic "Choose linked Nota" [ref=e329] [cursor=pointer]: 🔗
+                - cell [ref=e330]
+              - row "Insert row below Drag to reorder Row options Scroll Row 8 Create linked Nota" [ref=e331]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 8 Create linked Nota" [ref=e332]:
+                  - generic [ref=e333]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e335]:
+                      - generic [ref=e336]:
+                        - textbox "Enter name" [ref=e337]: Scroll Row 8
+                        - button [ref=e338]
+                      - button "Create linked Nota" [ref=e340] [cursor=pointer]: +
+                      - group [ref=e341]:
+                        - generic "Choose linked Nota" [ref=e342] [cursor=pointer]: 🔗
+                - cell [ref=e343]
+              - row "Insert row below Drag to reorder Row options Scroll Row 9 Create linked Nota" [ref=e344]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 9 Create linked Nota" [ref=e345]:
+                  - generic [ref=e346]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e348]:
+                      - generic [ref=e349]:
+                        - textbox "Enter name" [ref=e350]: Scroll Row 9
+                        - button [ref=e351]
+                      - button "Create linked Nota" [ref=e353] [cursor=pointer]: +
+                      - group [ref=e354]:
+                        - generic "Choose linked Nota" [ref=e355] [cursor=pointer]: 🔗
+                - cell [ref=e356]
+              - row "Insert row below Drag to reorder Row options Scroll Row 10 Create linked Nota" [ref=e357]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 10 Create linked Nota" [ref=e358]:
+                  - generic [ref=e359]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e361]:
+                      - generic [ref=e362]:
+                        - textbox "Enter name" [ref=e363]: Scroll Row 10
+                        - button [ref=e364]
+                      - button "Create linked Nota" [ref=e366] [cursor=pointer]: +
+                      - group [ref=e367]:
+                        - generic "Choose linked Nota" [ref=e368] [cursor=pointer]: 🔗
+                - cell [ref=e369]
+              - row "Insert row below Drag to reorder Row options Scroll Row 11 Create linked Nota" [ref=e370]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 11 Create linked Nota" [ref=e371]:
+                  - generic [ref=e372]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e374]:
+                      - generic [ref=e375]:
+                        - textbox "Enter name" [ref=e376]: Scroll Row 11
+                        - button [ref=e377]
+                      - button "Create linked Nota" [ref=e379] [cursor=pointer]: +
+                      - group [ref=e380]:
+                        - generic "Choose linked Nota" [ref=e381] [cursor=pointer]: 🔗
+                - cell [ref=e382]
+              - row "Insert row below Drag to reorder Row options Scroll Row 12 Create linked Nota" [ref=e383]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 12 Create linked Nota" [ref=e384]:
+                  - generic [ref=e385]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e387]:
+                      - generic [ref=e388]:
+                        - textbox "Enter name" [ref=e389]: Scroll Row 12
+                        - button [ref=e390]
+                      - button "Create linked Nota" [ref=e392] [cursor=pointer]: +
+                      - group [ref=e393]:
+                        - generic "Choose linked Nota" [ref=e394] [cursor=pointer]: 🔗
+                - cell [ref=e395]
+              - row "Insert row below Drag to reorder Row options Scroll Row 13 Create linked Nota" [ref=e396]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 13 Create linked Nota" [ref=e397]:
+                  - generic [ref=e398]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e400]:
+                      - generic [ref=e401]:
+                        - textbox "Enter name" [ref=e402]: Scroll Row 13
+                        - button [ref=e403]
+                      - button "Create linked Nota" [ref=e405] [cursor=pointer]: +
+                      - group [ref=e406]:
+                        - generic "Choose linked Nota" [ref=e407] [cursor=pointer]: 🔗
+                - cell [ref=e408]
+              - row "Insert row below Drag to reorder Row options Scroll Row 14 Create linked Nota" [ref=e409]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 14 Create linked Nota" [ref=e410]:
+                  - generic [ref=e411]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e413]:
+                      - generic [ref=e414]:
+                        - textbox "Enter name" [ref=e415]: Scroll Row 14
+                        - button [ref=e416]
+                      - button "Create linked Nota" [ref=e418] [cursor=pointer]: +
+                      - group [ref=e419]:
+                        - generic "Choose linked Nota" [ref=e420] [cursor=pointer]: 🔗
+                - cell [ref=e421]
+              - row "Insert row below Drag to reorder Row options Scroll Row 15 Create linked Nota" [ref=e422]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 15 Create linked Nota" [ref=e423]:
+                  - generic [ref=e424]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e426]:
+                      - generic [ref=e427]:
+                        - textbox "Enter name" [ref=e428]: Scroll Row 15
+                        - button [ref=e429]
+                      - button "Create linked Nota" [ref=e431] [cursor=pointer]: +
+                      - group [ref=e432]:
+                        - generic "Choose linked Nota" [ref=e433] [cursor=pointer]: 🔗
+                - cell [ref=e434]
+              - row "Insert row below Drag to reorder Row options Scroll Row 16 Create linked Nota" [ref=e435]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 16 Create linked Nota" [ref=e436]:
+                  - generic [ref=e437]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e439]:
+                      - generic [ref=e440]:
+                        - textbox "Enter name" [ref=e441]: Scroll Row 16
+                        - button [ref=e442]
+                      - button "Create linked Nota" [ref=e444] [cursor=pointer]: +
+                      - group [ref=e445]:
+                        - generic "Choose linked Nota" [ref=e446] [cursor=pointer]: 🔗
+                - cell [ref=e447]
+              - row "Insert row below Drag to reorder Row options Scroll Row 17 Create linked Nota" [ref=e448]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 17 Create linked Nota" [ref=e449]:
+                  - generic [ref=e450]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e452]:
+                      - generic [ref=e453]:
+                        - textbox "Enter name" [ref=e454]: Scroll Row 17
+                        - button [ref=e455]
+                      - button "Create linked Nota" [ref=e457] [cursor=pointer]: +
+                      - group [ref=e458]:
+                        - generic "Choose linked Nota" [ref=e459] [cursor=pointer]: 🔗
+                - cell [ref=e460]
+              - row "Insert row below Drag to reorder Row options Scroll Row 18 Create linked Nota" [ref=e461]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 18 Create linked Nota" [ref=e462]:
+                  - generic [ref=e463]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e465]:
+                      - generic [ref=e466]:
+                        - textbox "Enter name" [ref=e467]: Scroll Row 18
+                        - button [ref=e468]
+                      - button "Create linked Nota" [ref=e470] [cursor=pointer]: +
+                      - group [ref=e471]:
+                        - generic "Choose linked Nota" [ref=e472] [cursor=pointer]: 🔗
+                - cell [ref=e473]
+              - row "Insert row below Drag to reorder Row options Scroll Row 19 Create linked Nota" [ref=e474]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 19 Create linked Nota" [ref=e475]:
+                  - generic [ref=e476]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e478]:
+                      - generic [ref=e479]:
+                        - textbox "Enter name" [ref=e480]: Scroll Row 19
+                        - button [ref=e481]
+                      - button "Create linked Nota" [ref=e483] [cursor=pointer]: +
+                      - group [ref=e484]:
+                        - generic "Choose linked Nota" [ref=e485] [cursor=pointer]: 🔗
+                - cell [ref=e486]
+              - row "Insert row below Drag to reorder Row options Scroll Row 20 Create linked Nota" [ref=e487]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 20 Create linked Nota" [ref=e488]:
+                  - generic [ref=e489]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e491]:
+                      - generic [ref=e492]:
+                        - textbox "Enter name" [ref=e493]: Scroll Row 20
+                        - button [ref=e494]
+                      - button "Create linked Nota" [ref=e496] [cursor=pointer]: +
+                      - group [ref=e497]:
+                        - generic "Choose linked Nota" [ref=e498] [cursor=pointer]: 🔗
+                - cell [ref=e499]
+              - row "Insert row below Drag to reorder Row options Scroll Row 21 Create linked Nota" [ref=e500]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 21 Create linked Nota" [ref=e501]:
+                  - generic [ref=e502]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e504]:
+                      - generic [ref=e505]:
+                        - textbox "Enter name" [ref=e506]: Scroll Row 21
+                        - button [ref=e507]
+                      - button "Create linked Nota" [ref=e509] [cursor=pointer]: +
+                      - group [ref=e510]:
+                        - generic "Choose linked Nota" [ref=e511] [cursor=pointer]: 🔗
+                - cell [ref=e512]
+              - row "Insert row below Drag to reorder Row options Scroll Row 22 Create linked Nota" [ref=e513]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 22 Create linked Nota" [ref=e514]:
+                  - generic [ref=e515]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e517]:
+                      - generic [ref=e518]:
+                        - textbox "Enter name" [ref=e519]: Scroll Row 22
+                        - button [ref=e520]
+                      - button "Create linked Nota" [ref=e522] [cursor=pointer]: +
+                      - group [ref=e523]:
+                        - generic "Choose linked Nota" [ref=e524] [cursor=pointer]: 🔗
+                - cell [ref=e525]
+              - row "Insert row below Drag to reorder Row options Scroll Row 23 Create linked Nota" [ref=e526]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 23 Create linked Nota" [ref=e527]:
+                  - generic [ref=e528]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e530]:
+                      - generic [ref=e531]:
+                        - textbox "Enter name" [ref=e532]: Scroll Row 23
+                        - button [ref=e533]
+                      - button "Create linked Nota" [ref=e535] [cursor=pointer]: +
+                      - group [ref=e536]:
+                        - generic "Choose linked Nota" [ref=e537] [cursor=pointer]: 🔗
+                - cell [ref=e538]
+              - row "Insert row below Drag to reorder Row options Scroll Row 24 Create linked Nota" [ref=e539]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 24 Create linked Nota" [ref=e540]:
+                  - generic [ref=e541]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e543]:
+                      - generic [ref=e544]:
+                        - textbox "Enter name" [ref=e545]: Scroll Row 24
+                        - button [ref=e546]
+                      - button "Create linked Nota" [ref=e548] [cursor=pointer]: +
+                      - group [ref=e549]:
+                        - generic "Choose linked Nota" [ref=e550] [cursor=pointer]: 🔗
+                - cell [ref=e551]
+              - row "Insert row below Drag to reorder Row options Scroll Row 25 Create linked Nota" [ref=e552]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 25 Create linked Nota" [ref=e553]:
+                  - generic [ref=e554]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e556]:
+                      - generic [ref=e557]:
+                        - textbox "Enter name" [ref=e558]: Scroll Row 25
+                        - button [ref=e559]
+                      - button "Create linked Nota" [ref=e561] [cursor=pointer]: +
+                      - group [ref=e562]:
+                        - generic "Choose linked Nota" [ref=e563] [cursor=pointer]: 🔗
+                - cell [ref=e564]
+              - row "Insert row below Drag to reorder Row options Scroll Row 26 Create linked Nota" [ref=e565]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 26 Create linked Nota" [ref=e566]:
+                  - generic [ref=e567]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e569]:
+                      - generic [ref=e570]:
+                        - textbox "Enter name" [ref=e571]: Scroll Row 26
+                        - button [ref=e572]
+                      - button "Create linked Nota" [ref=e574] [cursor=pointer]: +
+                      - group [ref=e575]:
+                        - generic "Choose linked Nota" [ref=e576] [cursor=pointer]: 🔗
+                - cell [ref=e577]
+              - row "Insert row below Drag to reorder Row options Scroll Row 27 Create linked Nota" [ref=e578]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 27 Create linked Nota" [ref=e579]:
+                  - generic [ref=e580]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e582]:
+                      - generic [ref=e583]:
+                        - textbox "Enter name" [ref=e584]: Scroll Row 27
+                        - button [ref=e585]
+                      - button "Create linked Nota" [ref=e587] [cursor=pointer]: +
+                      - group [ref=e588]:
+                        - generic "Choose linked Nota" [ref=e589] [cursor=pointer]: 🔗
+                - cell [ref=e590]
+              - row "Insert row below Drag to reorder Row options Scroll Row 28 Create linked Nota" [ref=e591]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 28 Create linked Nota" [ref=e592]:
+                  - generic [ref=e593]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e595]:
+                      - generic [ref=e596]:
+                        - textbox "Enter name" [ref=e597]: Scroll Row 28
+                        - button [ref=e598]
+                      - button "Create linked Nota" [ref=e600] [cursor=pointer]: +
+                      - group [ref=e601]:
+                        - generic "Choose linked Nota" [ref=e602] [cursor=pointer]: 🔗
+                - cell [ref=e603]
+              - row "Insert row below Drag to reorder Row options Scroll Row 29 Create linked Nota" [ref=e604]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 29 Create linked Nota" [ref=e605]:
+                  - generic [ref=e606]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e608]:
+                      - generic [ref=e609]:
+                        - textbox "Enter name" [ref=e610]: Scroll Row 29
+                        - button [ref=e611]
+                      - button "Create linked Nota" [ref=e613] [cursor=pointer]: +
+                      - group [ref=e614]:
+                        - generic "Choose linked Nota" [ref=e615] [cursor=pointer]: 🔗
+                - cell [ref=e616]
+              - row "Insert row below Drag to reorder Row options Scroll Row 30 Create linked Nota" [ref=e617]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 30 Create linked Nota" [ref=e618]:
+                  - generic [ref=e619]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e621]:
+                      - generic [ref=e622]:
+                        - textbox "Enter name" [ref=e623]: Scroll Row 30
+                        - button [ref=e624]
+                      - button "Create linked Nota" [ref=e626] [cursor=pointer]: +
+                      - group [ref=e627]:
+                        - generic "Choose linked Nota" [ref=e628] [cursor=pointer]: 🔗
+                - cell [ref=e629]
+              - row "Insert row below Drag to reorder Row options Scroll Row 31 Create linked Nota" [ref=e630]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 31 Create linked Nota" [ref=e631]:
+                  - generic [ref=e632]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e634]:
+                      - generic [ref=e635]:
+                        - textbox "Enter name" [ref=e636]: Scroll Row 31
+                        - button [ref=e637]
+                      - button "Create linked Nota" [ref=e639] [cursor=pointer]: +
+                      - group [ref=e640]:
+                        - generic "Choose linked Nota" [ref=e641] [cursor=pointer]: 🔗
+                - cell [ref=e642]
+              - row "Insert row below Drag to reorder Row options Scroll Row 32 Create linked Nota" [ref=e643]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 32 Create linked Nota" [ref=e644]:
+                  - generic [ref=e645]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e647]:
+                      - generic [ref=e648]:
+                        - textbox "Enter name" [ref=e649]: Scroll Row 32
+                        - button [ref=e650]
+                      - button "Create linked Nota" [ref=e652] [cursor=pointer]: +
+                      - group [ref=e653]:
+                        - generic "Choose linked Nota" [ref=e654] [cursor=pointer]: 🔗
+                - cell [ref=e655]
+              - row "Insert row below Drag to reorder Row options Scroll Row 33 Create linked Nota" [ref=e656]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 33 Create linked Nota" [ref=e657]:
+                  - generic [ref=e658]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e660]:
+                      - generic [ref=e661]:
+                        - textbox "Enter name" [ref=e662]: Scroll Row 33
+                        - button [ref=e663]
+                      - button "Create linked Nota" [ref=e665] [cursor=pointer]: +
+                      - group [ref=e666]:
+                        - generic "Choose linked Nota" [ref=e667] [cursor=pointer]: 🔗
+                - cell [ref=e668]
+              - row "Insert row below Drag to reorder Row options Scroll Row 34 Create linked Nota" [ref=e669]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 34 Create linked Nota" [ref=e670]:
+                  - generic [ref=e671]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e673]:
+                      - generic [ref=e674]:
+                        - textbox "Enter name" [ref=e675]: Scroll Row 34
+                        - button [ref=e676]
+                      - button "Create linked Nota" [ref=e678] [cursor=pointer]: +
+                      - group [ref=e679]:
+                        - generic "Choose linked Nota" [ref=e680] [cursor=pointer]: 🔗
+                - cell [ref=e681]
+              - row "Insert row below Drag to reorder Row options Scroll Row 35 Create linked Nota" [ref=e682]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 35 Create linked Nota" [ref=e683]:
+                  - generic [ref=e684]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e686]:
+                      - generic [ref=e687]:
+                        - textbox "Enter name" [ref=e688]: Scroll Row 35
+                        - button [ref=e689]
+                      - button "Create linked Nota" [ref=e691] [cursor=pointer]: +
+                      - group [ref=e692]:
+                        - generic "Choose linked Nota" [ref=e693] [cursor=pointer]: 🔗
+                - cell [ref=e694]
+              - row "Insert row below Drag to reorder Row options Scroll Row 36 Create linked Nota" [ref=e695]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 36 Create linked Nota" [ref=e696]:
+                  - generic [ref=e697]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e699]:
+                      - generic [ref=e700]:
+                        - textbox "Enter name" [ref=e701]: Scroll Row 36
+                        - button [ref=e702]
+                      - button "Create linked Nota" [ref=e704] [cursor=pointer]: +
+                      - group [ref=e705]:
+                        - generic "Choose linked Nota" [ref=e706] [cursor=pointer]: 🔗
+                - cell [ref=e707]
+              - row "Insert row below Drag to reorder Row options Scroll Row 37 Create linked Nota" [ref=e708]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 37 Create linked Nota" [ref=e709]:
+                  - generic [ref=e710]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e712]:
+                      - generic [ref=e713]:
+                        - textbox "Enter name" [ref=e714]: Scroll Row 37
+                        - button [ref=e715]
+                      - button "Create linked Nota" [ref=e717] [cursor=pointer]: +
+                      - group [ref=e718]:
+                        - generic "Choose linked Nota" [ref=e719] [cursor=pointer]: 🔗
+                - cell [ref=e720]
+              - row "Insert row below Drag to reorder Row options Scroll Row 38 Create linked Nota" [ref=e721]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 38 Create linked Nota" [ref=e722]:
+                  - generic [ref=e723]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e725]:
+                      - generic [ref=e726]:
+                        - textbox "Enter name" [ref=e727]: Scroll Row 38
+                        - button [ref=e728]
+                      - button "Create linked Nota" [ref=e730] [cursor=pointer]: +
+                      - group [ref=e731]:
+                        - generic "Choose linked Nota" [ref=e732] [cursor=pointer]: 🔗
+                - cell [ref=e733]
+              - row "Insert row below Drag to reorder Row options Scroll Row 39 Create linked Nota" [ref=e734]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 39 Create linked Nota" [ref=e735]:
+                  - generic [ref=e736]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e738]:
+                      - generic [ref=e739]:
+                        - textbox "Enter name" [ref=e740]: Scroll Row 39
+                        - button [ref=e741]
+                      - button "Create linked Nota" [ref=e743] [cursor=pointer]: +
+                      - group [ref=e744]:
+                        - generic "Choose linked Nota" [ref=e745] [cursor=pointer]: 🔗
+                - cell [ref=e746]
+              - row "Insert row below Drag to reorder Row options Scroll Row 40 Create linked Nota" [ref=e747]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 40 Create linked Nota" [ref=e748]:
+                  - generic [ref=e749]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e751]:
+                      - generic [ref=e752]:
+                        - textbox "Enter name" [ref=e753]: Scroll Row 40
+                        - button [ref=e754]
+                      - button "Create linked Nota" [ref=e756] [cursor=pointer]: +
+                      - group [ref=e757]:
+                        - generic "Choose linked Nota" [ref=e758] [cursor=pointer]: 🔗
+                - cell [ref=e759]
+              - row "Insert row below Drag to reorder Row options Scroll Row 41 Create linked Nota" [ref=e760]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 41 Create linked Nota" [ref=e761]:
+                  - generic [ref=e762]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e764]:
+                      - generic [ref=e765]:
+                        - textbox "Enter name" [ref=e766]: Scroll Row 41
+                        - button [ref=e767]
+                      - button "Create linked Nota" [ref=e769] [cursor=pointer]: +
+                      - group [ref=e770]:
+                        - generic "Choose linked Nota" [ref=e771] [cursor=pointer]: 🔗
+                - cell [ref=e772]
+              - row "Insert row below Drag to reorder Row options Scroll Row 42 Create linked Nota" [ref=e773]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 42 Create linked Nota" [ref=e774]:
+                  - generic [ref=e775]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e777]:
+                      - generic [ref=e778]:
+                        - textbox "Enter name" [ref=e779]: Scroll Row 42
+                        - button [ref=e780]
+                      - button "Create linked Nota" [ref=e782] [cursor=pointer]: +
+                      - group [ref=e783]:
+                        - generic "Choose linked Nota" [ref=e784] [cursor=pointer]: 🔗
+                - cell [ref=e785]
+              - row "Insert row below Drag to reorder Row options Scroll Row 43 Create linked Nota" [ref=e786]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 43 Create linked Nota" [ref=e787]:
+                  - generic [ref=e788]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e790]:
+                      - generic [ref=e791]:
+                        - textbox "Enter name" [ref=e792]: Scroll Row 43
+                        - button [ref=e793]
+                      - button "Create linked Nota" [ref=e795] [cursor=pointer]: +
+                      - group [ref=e796]:
+                        - generic "Choose linked Nota" [ref=e797] [cursor=pointer]: 🔗
+                - cell [ref=e798]
+              - row "Insert row below Drag to reorder Row options Scroll Row 44 Create linked Nota" [ref=e799]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 44 Create linked Nota" [ref=e800]:
+                  - generic [ref=e801]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e803]:
+                      - generic [ref=e804]:
+                        - textbox "Enter name" [ref=e805]: Scroll Row 44
+                        - button [ref=e806]
+                      - button "Create linked Nota" [ref=e808] [cursor=pointer]: +
+                      - group [ref=e809]:
+                        - generic "Choose linked Nota" [ref=e810] [cursor=pointer]: 🔗
+                - cell [ref=e811]
+              - row "Insert row below Drag to reorder Row options Scroll Row 45 Create linked Nota" [ref=e812]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 45 Create linked Nota" [ref=e813]:
+                  - generic [ref=e814]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e816]:
+                      - generic [ref=e817]:
+                        - textbox "Enter name" [ref=e818]: Scroll Row 45
+                        - button [ref=e819]
+                      - button "Create linked Nota" [ref=e821] [cursor=pointer]: +
+                      - group [ref=e822]:
+                        - generic "Choose linked Nota" [ref=e823] [cursor=pointer]: 🔗
+                - cell [ref=e824]
+              - row "Insert row below Drag to reorder Row options Scroll Row 46 Create linked Nota" [ref=e825]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 46 Create linked Nota" [ref=e826]:
+                  - generic [ref=e827]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e829]:
+                      - generic [ref=e830]:
+                        - textbox "Enter name" [ref=e831]: Scroll Row 46
+                        - button [ref=e832]
+                      - button "Create linked Nota" [ref=e834] [cursor=pointer]: +
+                      - group [ref=e835]:
+                        - generic "Choose linked Nota" [ref=e836] [cursor=pointer]: 🔗
+                - cell [ref=e837]
+              - row "Insert row below Drag to reorder Row options Scroll Row 47 Create linked Nota" [ref=e838]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 47 Create linked Nota" [ref=e839]:
+                  - generic [ref=e840]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e842]:
+                      - generic [ref=e843]:
+                        - textbox "Enter name" [ref=e844]: Scroll Row 47
+                        - button [ref=e845]
+                      - button "Create linked Nota" [ref=e847] [cursor=pointer]: +
+                      - group [ref=e848]:
+                        - generic "Choose linked Nota" [ref=e849] [cursor=pointer]: 🔗
+                - cell [ref=e850]
+              - row "Insert row below Drag to reorder Row options Scroll Row 48 Create linked Nota" [ref=e851]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 48 Create linked Nota" [ref=e852]:
+                  - generic [ref=e853]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e855]:
+                      - generic [ref=e856]:
+                        - textbox "Enter name" [ref=e857]: Scroll Row 48
+                        - button [ref=e858]
+                      - button "Create linked Nota" [ref=e860] [cursor=pointer]: +
+                      - group [ref=e861]:
+                        - generic "Choose linked Nota" [ref=e862] [cursor=pointer]: 🔗
+                - cell [ref=e863]
+              - row "Insert row below Drag to reorder Row options Scroll Row 49 Create linked Nota" [ref=e864]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 49 Create linked Nota" [ref=e865]:
+                  - generic [ref=e866]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e868]:
+                      - generic [ref=e869]:
+                        - textbox "Enter name" [ref=e870]: Scroll Row 49
+                        - button [ref=e871]
+                      - button "Create linked Nota" [ref=e873] [cursor=pointer]: +
+                      - group [ref=e874]:
+                        - generic "Choose linked Nota" [ref=e875] [cursor=pointer]: 🔗
+                - cell [ref=e876]
+              - row "Insert row below Drag to reorder Row options Scroll Row 50 Create linked Nota" [ref=e877]:
+                - cell "Insert row below Drag to reorder Row options Scroll Row 50 Create linked Nota" [ref=e878]:
+                  - generic [ref=e879]:
+                    - generic [ref=e961]:
+                      - button "Insert row below" [ref=e963] [cursor=pointer]: +
+                      - button "Drag to reorder" [ref=e964] [cursor=pointer]: ⠿
+                      - button "Row options" [expanded] [active] [ref=e966] [cursor=pointer]: ⋯
+                    - generic [ref=e881]:
+                      - generic [ref=e882]:
+                        - textbox "Enter name" [ref=e883]: Scroll Row 50
+                        - button [ref=e884]
+                      - button "Create linked Nota" [ref=e886] [cursor=pointer]: +
+                      - group [ref=e887]:
+                        - generic "Choose linked Nota" [ref=e888] [cursor=pointer]: 🔗
+                - cell [ref=e889]
+            - rowgroup
+            - rowgroup [ref=e890]:
+              - row "+ New row" [ref=e891]:
+                - cell "+ New row" [ref=e892]:
+                  - button "+ New row" [ref=e894] [cursor=pointer]
+                - cell [ref=e895]
+          - region "Grid row pagination" [ref=e896]:
+            - paragraph [ref=e897]: Showing 50 of 60 rows
+            - generic [ref=e898]:
+              - generic: Previous
+              - generic [ref=e899]: Page 1 of 2
+              - link "Next" [ref=e900] [cursor=pointer]:
+                - /url: /w/scroll-check/databases/4390662f-5a2f-426e-a113-bbc04213aafb?rows_page=2&view_id=76bc1c67-2761-4a79-91af-de4a4cba525e
+          - generic [ref=e901]:
+            - heading "Backlinks" [level=2] [ref=e902]
+            - paragraph [ref=e903]: No backlinks yet.
+    - complementary "Workspace notification bar" [ref=e904]:
+      - generic [ref=e905]: Sat 11 Apr · 5:26
+    - complementary [ref=e908]:
+      - button "Open AI assistant rail" [ref=e909] [cursor=pointer]
+  - generic [ref=e968]:
+    - button "⧉ Duplicate row" [ref=e970] [cursor=pointer]:
+      - generic [ref=e971]: ⧉
+      - generic [ref=e972]: Duplicate row
+    - button "B Bold row" [ref=e974] [cursor=pointer]:
+      - generic [ref=e975]: B
+      - generic [ref=e976]: Bold row
+    - button "I Italic row" [ref=e978] [cursor=pointer]:
+      - generic [ref=e979]: I
+      - generic [ref=e980]: Italic row
+    - generic [ref=e981]:
+      - button "Default" [ref=e983] [cursor=pointer]:
+        - generic [ref=e985]: Default
+      - button "Gray" [ref=e987] [cursor=pointer]:
+        - generic [ref=e989]: Gray
+      - button "Brown" [ref=e991] [cursor=pointer]:
+        - generic [ref=e993]: Brown
+      - button "Orange" [ref=e995] [cursor=pointer]:
+        - generic [ref=e997]: Orange
+      - button "Yellow" [ref=e999] [cursor=pointer]:
+        - generic [ref=e1001]: Yellow
+      - button "Green" [ref=e1003] [cursor=pointer]:
+        - generic [ref=e1005]: Green
+      - button "Blue" [ref=e1007] [cursor=pointer]:
+        - generic [ref=e1009]: Blue
+      - button "Purple" [ref=e1011] [cursor=pointer]:
+        - generic [ref=e1013]: Purple
+      - button "Pink" [ref=e1015] [cursor=pointer]:
+        - generic [ref=e1017]: Pink
+      - button "Red" [ref=e1019] [cursor=pointer]:
+        - generic [ref=e1021]: Red
+    - button "x Delete row" [ref=e1023] [cursor=pointer]:
+      - generic [ref=e1024]: x
+      - generic [ref=e1025]: Delete row

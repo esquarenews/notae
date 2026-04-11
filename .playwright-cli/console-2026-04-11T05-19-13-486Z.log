@@ -1,0 +1,8 @@
+[      99ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[     450ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[     451ms] [ERROR] Failed to register controller: document-picker (controllers/document_picker_controller) SyntaxError: Unexpected end of input @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[   48172ms] [INFO] Autofocus processing was blocked because a document already has a focused element. @ http://127.0.0.1:4000/users/sign_in:0
+[   51193ms] [WARNING] The resource http://127.0.0.1:4000/assets/application-dd49fc75.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://127.0.0.1:4000/users/sign_in:0
+[   91268ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[   91558ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[   91558ms] [ERROR] Failed to register controller: document-picker (controllers/document_picker_controller) SyntaxError: Unexpected end of input @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
