@@ -15145,21 +15145,23 @@ body.notae-theme-dark .notae-auth-submit {
   height: auto;
   margin: 0.9rem 1.1rem 0;
   padding: 0.88rem 1.18rem;
-  border: 1px solid var(--notae-border-muted);
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 54%, transparent);
   border-radius: 1.2rem;
+  position: relative;
+  z-index: 140;
+  isolation: isolate;
+  background-color: color-mix(in srgb, var(--notae-panel-bg) 24%, transparent);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--notae-panel-elevated) 58%, transparent),
-      color-mix(in srgb, var(--notae-panel-bg) 46%, transparent)
+      color-mix(in srgb, var(--notae-panel-elevated) 42%, transparent),
+      color-mix(in srgb, var(--notae-panel-bg) 26%, transparent)
     );
-  box-shadow: var(--notae-shadow-soft);
-  -webkit-backdrop-filter: blur(18px) saturate(1.12);
-  backdrop-filter: blur(18px) saturate(1.12);
-}
-
-.notae-main:has(.notae-page-cover) .notae-topbar {
-  margin-bottom: -5.35rem;
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(24px) saturate(1.18);
+  backdrop-filter: blur(24px) saturate(1.18);
 }
 
 .notae-topbar-title {
