@@ -93,7 +93,6 @@ body.notae-theme-system {
 }
 
 body.notae-theme-dark .notae-sidebar,
-body.notae-theme-dark .notae-topbar,
 body.notae-theme-dark .notae-ai-rail,
 body.notae-theme-dark .notae-create-menu,
 body.notae-theme-dark .notae-modal-panel,
@@ -378,7 +377,6 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 @media (prefers-color-scheme: dark) {
   body.notae-theme-system .notae-sidebar,
-  body.notae-theme-system .notae-topbar,
   body.notae-theme-system .notae-ai-rail,
   body.notae-theme-system .notae-create-menu,
   body.notae-theme-system .notae-modal-panel,
@@ -15145,23 +15143,23 @@ body.notae-theme-dark .notae-auth-submit {
   height: auto;
   margin: 0.9rem 1.1rem 0;
   padding: 0.88rem 1.18rem;
-  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 28%, transparent);
   border-radius: 1.2rem;
   position: relative;
   z-index: 140;
   isolation: isolate;
-  background-color: color-mix(in srgb, var(--notae-panel-bg) 8%, transparent);
+  background-color: color-mix(in srgb, var(--notae-panel-bg) 4%, transparent);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--notae-panel-elevated) 18%, transparent),
-      color-mix(in srgb, var(--notae-panel-bg) 8%, transparent)
+      color-mix(in srgb, var(--notae-panel-elevated) 10%, transparent),
+      color-mix(in srgb, var(--notae-panel-bg) 4%, transparent)
     );
   box-shadow:
-    0 16px 34px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  -webkit-backdrop-filter: blur(34px) saturate(1.12);
-  backdrop-filter: blur(34px) saturate(1.12);
+    0 14px 28px rgba(15, 23, 42, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(40px) saturate(1.08);
+  backdrop-filter: blur(40px) saturate(1.08);
 }
 
 .notae-topbar-title {
@@ -15216,20 +15214,20 @@ body.notae-theme-dark .notae-auth-submit {
   display: grid;
   gap: 0.72rem;
   padding: 0.98rem 1.02rem;
-  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 28%, transparent);
   border-radius: 1.2rem;
-  background-color: color-mix(in srgb, var(--notae-panel-bg) 8%, transparent);
+  background-color: color-mix(in srgb, var(--notae-panel-bg) 4%, transparent);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--notae-panel-elevated) 18%, transparent),
-      color-mix(in srgb, var(--notae-panel-bg) 8%, transparent)
+      color-mix(in srgb, var(--notae-panel-elevated) 10%, transparent),
+      color-mix(in srgb, var(--notae-panel-bg) 4%, transparent)
     );
   box-shadow:
-    0 16px 34px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  -webkit-backdrop-filter: blur(34px) saturate(1.12);
-  backdrop-filter: blur(34px) saturate(1.12);
+    0 14px 28px rgba(15, 23, 42, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(40px) saturate(1.08);
+  backdrop-filter: blur(40px) saturate(1.08);
   z-index: 135;
 }
 
@@ -15253,21 +15251,21 @@ body.notae-theme-dark .notae-auth-submit {
   display: grid;
   gap: 0.3rem;
   padding: 0.7rem 0.76rem 0.76rem;
-  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 48%, transparent);
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 34%, transparent);
   border-radius: 0.96rem;
-  background-color: color-mix(in srgb, var(--notae-panel-bg) 8%, transparent);
+  background-color: color-mix(in srgb, var(--notae-panel-bg) 4%, transparent);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--notae-panel-elevated) 18%, transparent),
-      color-mix(in srgb, var(--notae-panel-bg) 8%, transparent)
+      color-mix(in srgb, var(--notae-panel-elevated) 10%, transparent),
+      color-mix(in srgb, var(--notae-panel-bg) 4%, transparent)
     );
   color: var(--notae-text-default);
   box-shadow:
-    0 12px 24px rgba(15, 23, 42, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  -webkit-backdrop-filter: blur(34px) saturate(1.12);
-  backdrop-filter: blur(34px) saturate(1.12);
+    0 10px 20px rgba(15, 23, 42, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(40px) saturate(1.08);
+  backdrop-filter: blur(40px) saturate(1.08);
 }
 
 .notae-shell-status-bar-item-top {
@@ -15286,9 +15284,9 @@ body.notae-theme-dark .notae-auth-submit {
 .notae-shell-status-bar-control {
   width: 1.8rem;
   height: 1.8rem;
-  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 42%, transparent);
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 30%, transparent);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--notae-panel-muted) 14%, transparent);
+  background: color-mix(in srgb, var(--notae-panel-muted) 8%, transparent);
   color: var(--notae-text-subtle);
   display: inline-flex;
   align-items: center;
@@ -15335,7 +15333,7 @@ body.notae-theme-dark .notae-auth-submit {
 
 .notae-shell-status-bar-item:hover {
   border-color: color-mix(in srgb, var(--notae-accent) 24%, var(--notae-border-muted));
-  background-color: color-mix(in srgb, var(--notae-panel-bg) 10%, transparent);
+  background-color: color-mix(in srgb, var(--notae-panel-bg) 6%, transparent);
 }
 
 .notae-content {
