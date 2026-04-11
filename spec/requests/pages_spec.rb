@@ -20,10 +20,10 @@ RSpec.describe "Pages", type: :request do
 
     expect(stylesheet).to include(".notae-topbar {\n  min-height: 4rem;")
     expect(stylesheet).to include("  position: relative;\n  z-index: 140;\n  isolation: isolate;")
-    expect(stylesheet).to include("  background-color: color-mix(in srgb, var(--notae-panel-bg) 4%, transparent);")
-    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 10%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 4%, transparent)\n    );")
-    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(40px) saturate(1.08);")
-    expect(stylesheet).to include("  backdrop-filter: blur(40px) saturate(1.08);")
+    expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")
+    expect(stylesheet).to include("  background: var(--notae-glass-surface);")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(44px) saturate(1.12);")
+    expect(stylesheet).to include("  backdrop-filter: blur(44px) saturate(1.12);")
     expect(stylesheet).not_to include("body.notae-theme-dark .notae-topbar,")
     expect(stylesheet).not_to include("body.notae-theme-system .notae-topbar,")
     expect(stylesheet).to include(".notae-sidebar,\n.notae-ai-rail,\n.notae-mobile-tabbar {\n  background: color-mix(in srgb, var(--notae-panel-elevated) 82%, transparent);\n}")
@@ -45,7 +45,7 @@ RSpec.describe "Pages", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include("--notae-layer-flash: 1400;")
-    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;\n  z-index: var(--notae-layer-flash);")
+    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: fixed;\n  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
   end
 
   it "elevates shared context menu layers above page chrome while staying below flash" do

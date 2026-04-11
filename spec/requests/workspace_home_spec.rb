@@ -220,11 +220,11 @@ RSpec.describe "Workspace home", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include(".notae-shell-status-bar {\n  position: fixed;")
-    expect(stylesheet).to include("  background-color: color-mix(in srgb, var(--notae-panel-bg) 4%, transparent);")
-    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 10%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 4%, transparent)\n    );")
-    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(40px) saturate(1.08);")
+    expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")
+    expect(stylesheet).to include("  background: var(--notae-glass-surface);")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(44px) saturate(1.12);")
     expect(stylesheet).to include(".notae-shell-status-bar-item {\n  display: grid;")
-    expect(stylesheet).to include("  background-color: color-mix(in srgb, var(--notae-panel-bg) 4%, transparent);")
+    expect(stylesheet).to include("  background: var(--notae-glass-surface-soft);")
     expect(stylesheet).to include(".notae-shell-status-bar-control {\n  width: 1.8rem;")
   end
 

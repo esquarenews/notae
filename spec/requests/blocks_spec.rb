@@ -508,13 +508,13 @@ RSpec.describe "Blocks", type: :request do
     expect(action_markup.index("Indent")).to be < action_markup.index("Outdent")
   end
 
-  it "keeps page flash notices sticky inside the current viewport" do
+  it "keeps page flash notices fixed to the visible viewport" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
-    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: sticky;\n  top: 0.65rem;")
+    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: fixed;\n  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);\n  left: 0;\n  right: 0;")
     expect(stylesheet).to include("  height: 0;\n  margin: 0;\n  overflow: visible;")
     expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack,\n.notae-content.notae-content-home > #notae_flash_messages .notae-flash-stack {\n  width: min(50%, 760px);")
-    expect(stylesheet).to include(".notae-page-inline-flash-host,\n.notae-db-inline-flash-host {\n  position: sticky;\n  top: 0.75rem;")
+    expect(stylesheet).to include(".notae-page-inline-flash-host,\n.notae-db-inline-flash-host {\n  position: fixed;\n  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);\n  left: 0;\n  right: 0;")
     expect(stylesheet).to include(".notae-page-inline-flash-host .notae-flash-stack,\n.notae-db-inline-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
   end
 

@@ -29,7 +29,7 @@ RSpec.describe "Databases", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
     template = Rails.root.join("app/views/databases/show.html.erb").read
 
-    expect(stylesheet).to include(".notae-db-inline-flash-host {\n  position: sticky;\n  top: 0.75rem;\n  z-index: var(--notae-layer-flash);")
+    expect(stylesheet).to include(".notae-db-inline-flash-host {\n  position: fixed;\n  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
     expect(stylesheet).to include(".notae-db-inline-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
     expect(template).to include('flash_dom_id: "database_flash_messages"')
     expect(template).to include('flash_host_class: "notae-db-inline-flash-host"')
@@ -523,6 +523,8 @@ RSpec.describe "Databases", type: :request do
     expect(response).not_to be_redirect
     expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
     expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
+    expect(response.body).to include("Cell updated.")
     expect(response.body).to include("Edited")
     expect(db_cell.reload.value_text).to eq("Done")
     expect(db_row.reload.data_json["Status"]).to eq("Done")
@@ -1709,6 +1711,8 @@ RSpec.describe "Databases", type: :request do
     expect(response).not_to be_redirect
     expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
     expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
+    expect(response.body).to include("Row updated.")
     expect(response.headers["X-Notae-Perf-Action"]).to eq("DbRowsController#update")
     expect(row.reload.title).to eq("Renamed row")
     expect(database.reload.updated_at).to be > previous_database_updated_at
@@ -1737,6 +1741,8 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('turbo-stream action="after" target="row_')
     expect(response.body).to include('turbo-stream action="update" target="database_row_count"')
     expect(response.body).to include('turbo-stream action="update" target="database_table_placeholders"')
+    expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
+    expect(response.body).to include("Row updated.")
     expect(response.body).to include('data-auto-submit-focus-on-connect-value="true"')
     expect(response.body).to include("is-new-row-highlight")
     expect(first_row.reload.title).to eq("Updated first row")

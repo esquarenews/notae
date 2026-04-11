@@ -1,0 +1,11 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img "Notae icon" [ref=e5]
+      - generic [ref=e6]:
+        - heading "Notae" [level=1] [ref=e7]
+        - paragraph [ref=e8]: Sign in to continue to your workspace.
+    - generic [ref=e9]:
+      - paragraph [ref=e10]: Capture ideas, keep docs nested, and manage tables in one calm workspace.
+      - link "Sign in" [ref=e11] [cursor=pointer]:
+        - /url: /users/sign_in

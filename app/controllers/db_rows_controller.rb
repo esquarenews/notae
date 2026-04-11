@@ -81,11 +81,14 @@ class DbRowsController < ApplicationController
         }, status: :ok
       elsif turbo_title_autosave_request?(next_row:)
         @database.reload
-        render turbo_stream: turbo_stream.update(
-          "database_topbar_edited_at",
-          partial: "databases/topbar_edited_meta",
-          locals: { database: @database }
-        )
+        render turbo_stream: [
+          turbo_stream.update(
+            "database_topbar_edited_at",
+            partial: "databases/topbar_edited_meta",
+            locals: { database: @database }
+          ),
+          database_flash_stream("notice", "Row updated.")
+        ]
       elsif turbo_create_next_row_request?(next_row)
         render turbo_stream: turbo_stream_create_next_row_response(next_row)
       elsif next_row.present?
@@ -503,7 +506,8 @@ class DbRowsController < ApplicationController
           visible_properties: @visible_db_properties,
           placeholder_count: [ 6 - active_row_count, 0 ].max
         }
-      )
+      ),
+      database_flash_stream("notice", "Row updated.")
     ]
   end
 
@@ -615,18 +619,22 @@ class DbRowsController < ApplicationController
 
   def respond_row_create_failure(message:)
     if request.format.turbo_stream? && simple_table_render_context?
-      render turbo_stream: turbo_stream.replace(
-        "database_flash_messages",
-        partial: "shared/flash_messages",
-        locals: {
-          flash_messages: [ [ "alert", message ] ],
-          flash_dom_id: "database_flash_messages",
-          flash_host_class: "notae-db-inline-flash-host"
-        }
-      ), status: :unprocessable_entity
+      render turbo_stream: database_flash_stream("alert", message), status: :unprocessable_entity
     else
       redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: message
     end
+  end
+
+  def database_flash_stream(type, message)
+    turbo_stream.replace(
+      "database_flash_messages",
+      partial: "shared/flash_messages",
+      locals: {
+        flash_messages: [ [ type, message ] ],
+        flash_dom_id: "database_flash_messages",
+        flash_host_class: "notae-db-inline-flash-host"
+      }
+    )
   end
 
   def current_database_view_for_response

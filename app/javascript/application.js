@@ -17,7 +17,10 @@ function registerPwaServiceWorker() {
   if (!("serviceWorker" in navigator)) return Promise.resolve(null)
   if (!securePwaContext()) return Promise.resolve(null)
 
-  pwaRegistrationPromise = navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => null)
+  pwaRegistrationPromise = navigator.serviceWorker.register("/service-worker.js", {
+    scope: "/",
+    updateViaCache: "none"
+  }).catch(() => null)
   return pwaRegistrationPromise
 }
 

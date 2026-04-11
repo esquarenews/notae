@@ -67,7 +67,9 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("CLEAR_PRIVATE_CACHES")
     expect(response.body).to include("/app")
     expect(response.body).to include("/app/notifications/__NOTIFICATION_ID__")
-    expect(response.body).to include("const CACHE_VERSION = \"pwa-v5\"")
+    expect(response.body).to include("const CACHE_VERSION = \"pwa-v6\"")
+    expect(response.body).to include("event.respondWith(networkFirstDocument(request))")
+    expect(response.body).to include("async function networkFirstDocument(request)")
     expect(response.body).to include("self.addEventListener(\"push\"")
     expect(response.body).to include("self.addEventListener(\"notificationclick\"")
 

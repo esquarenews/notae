@@ -1,0 +1,224 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Glass Check
+        - generic [ref=e9]:
+          - button "＋" [ref=e11]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/glass-check
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/glass-check/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/glass-check/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/glass-check/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/glass-check/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/glass-check/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/glass-check/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/glass-check/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - paragraph [ref=e82]: Loading workspaces…
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - button "Notarum" [expanded] [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]: ▾
+                - generic [ref=e87]: Notarum
+              - button "Create new Nota" [ref=e89] [cursor=pointer]: "[+]"
+            - list [ref=e91]:
+              - listitem [ref=e92]:
+                - paragraph [ref=e93]: Loading Notarum…
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - paragraph [ref=e104]: Loading grids…
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - button "Meetings" [expanded] [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]: ▾
+                - generic [ref=e109]: Meetings
+              - button "Create new Meeting" [ref=e111] [cursor=pointer]: "[+]"
+            - list [ref=e113]:
+              - listitem [ref=e114]:
+                - paragraph [ref=e115]: Loading meetings…
+          - generic [ref=e116]:
+            - button "Favorites" [expanded] [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: ▾
+              - generic [ref=e120]: Favorites
+            - list [ref=e122]:
+              - listitem [ref=e123]:
+                - paragraph [ref=e124]: Loading favorites…
+      - generic [ref=e125]:
+        - link "Settings" [ref=e126] [cursor=pointer]:
+          - /url: /w/glass-check/settings/preferences
+          - generic [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e132]: Settings
+        - link "Trash" [ref=e133] [cursor=pointer]:
+          - /url: /w/glass-check/trash
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e139]: Trash
+        - button "Sign out" [ref=e141] [cursor=pointer]:
+          - generic [ref=e142]:
+            - img [ref=e144]
+            - generic [ref=e147]: Sign out
+  - generic [ref=e148]:
+    - banner [ref=e149]:
+      - generic [ref=e151]:
+        - generic [ref=e152]: 📄
+        - generic [ref=e153]: Glass Check
+        - generic [ref=e154]: Private
+    - main [ref=e155]:
+      - generic [ref=e156]:
+        - generic [ref=e158]:
+          - generic [ref=e159]:
+            - paragraph [ref=e160]: Workspace home
+            - heading "Good afternoon" [level=1] [ref=e161]
+          - generic [ref=e163]:
+            - textbox "Search Notarum, blocks, and rows" [ref=e164]
+            - button "Search" [ref=e165] [cursor=pointer]
+            - link "Notifications (1)" [ref=e166] [cursor=pointer]:
+              - /url: /w/glass-check/notifications
+        - generic [ref=e167]:
+          - generic [ref=e168]:
+            - generic [ref=e169]:
+              - generic [ref=e170]:
+                - heading "Daily workspace brief" [level=2] [ref=e171]
+                - paragraph [ref=e172]: Your next daily brief window is Sun 7:00 AM.
+              - generic [ref=e174]:
+                - text: Next brief
+                - strong [ref=e175]: Sun 7:00 AM
+            - generic [ref=e176]:
+              - paragraph [ref=e177]: No daily brief yet.
+              - paragraph [ref=e178]: Your first workspace brief appears once Notae has enough indexed activity to summarise.
+          - generic [ref=e179]:
+            - generic [ref=e180]:
+              - generic [ref=e181]:
+                - heading "Important updates" [level=2] [ref=e182]
+                - paragraph [ref=e183]: Review AI suggestions, draft actions, and jump back into planning from here.
+              - generic [ref=e184]:
+                - link "Create Nota" [ref=e185] [cursor=pointer]:
+                  - /url: /w/glass-check#workspace-home-create-nota
+                - link "Open Kalendārium" [ref=e186] [cursor=pointer]:
+                  - /url: /w/glass-check/kalendarium
+                - link "Review drafts" [ref=e187] [cursor=pointer]:
+                  - /url: /w/glass-check/agent-actions
+                - link "New draft" [ref=e188] [cursor=pointer]:
+                  - /url: /w/glass-check/agent-actions/new
+            - generic [ref=e190]:
+              - generic [ref=e191]:
+                - heading "Agent draft actions" [level=3] [ref=e192]
+                - generic [ref=e193]: 0 drafts pending
+              - generic [ref=e194]:
+                - paragraph [ref=e195]: No pending draft actions.
+                - paragraph [ref=e196]: Use draft actions for calendar holds, task tickets, and reviewable outbound work.
+          - generic [ref=e197]:
+            - generic [ref=e198]:
+              - heading "Create Nota" [level=2] [ref=e200]
+              - generic [ref=e201]:
+                - textbox "New Nota title" [ref=e202]
+                - button "Create Nota" [ref=e203] [cursor=pointer]
+            - generic [ref=e204]:
+              - heading "Create Grid" [level=2] [ref=e206]
+              - generic [ref=e207]:
+                - textbox "New grid name" [ref=e208]
+                - button "Create Grid" [ref=e209] [cursor=pointer]
+          - generic [ref=e210]:
+            - heading "Notarum" [level=2] [ref=e212]
+            - paragraph [ref=e213]: No Notarum yet.
+          - generic [ref=e214]:
+            - heading "Grids" [level=2] [ref=e216]
+            - paragraph [ref=e217]: No grids yet.
+          - generic [ref=e218]:
+            - heading "Members" [level=2] [ref=e220]
+            - list [ref=e221]:
+              - listitem [ref=e222]:
+                - generic [ref=e224]:
+                  - strong [ref=e225]: glass@example.com
+                  - text: owner
+          - generic [ref=e226]:
+            - heading "Invite people" [level=2] [ref=e228]
+            - generic [ref=e229]:
+              - textbox "teammate@example.com" [ref=e230]
+              - combobox [ref=e231]:
+                - option "Member"
+                - option "Admin"
+                - option "Owner"
+                - option "Guest" [selected]
+                - option "Auditor"
+                - option "Automation Agent"
+              - button "Send invite" [ref=e232] [cursor=pointer]
+  - complementary "Workspace notification bar" [ref=e233]:
+    - generic [ref=e234]: Sat 11 Apr · 14:54
+    - generic [ref=e235]:
+      - article [ref=e236]:
+        - generic [ref=e237]:
+          - generic [ref=e238]: Mail
+          - generic [ref=e239]:
+            - button "Snooze this alert for one hour" [ref=e240] [cursor=pointer]:
+              - img [ref=e242]
+            - button "Dismiss this alert" [ref=e245] [cursor=pointer]:
+              - img [ref=e247]
+        - link "1 email just came in Glass Sender glass.sender@example.com · Transparency check subject" [ref=e249] [cursor=pointer]:
+          - /url: /w/glass-check/epistularium
+          - strong [ref=e250]: 1 email just came in
+          - generic [ref=e251]: Glass Sender glass.sender@example.com · Transparency check subject
+      - article [ref=e252]:
+        - generic [ref=e253]:
+          - generic [ref=e254]: Updates
+          - generic [ref=e255]:
+            - button "Snooze this alert for one hour" [ref=e256] [cursor=pointer]:
+              - img [ref=e258]
+            - button "Dismiss this alert" [ref=e261] [cursor=pointer]:
+              - img [ref=e263]
+        - link "1 new workspace update New mention or comment" [ref=e265] [cursor=pointer]:
+          - /url: /w/glass-check/notifications
+          - strong [ref=e266]: 1 new workspace update
+          - generic [ref=e267]: New mention or comment
+  - complementary [ref=e270]:
+    - button "Open AI assistant rail" [ref=e271] [cursor=pointer]

@@ -17,17 +17,23 @@ class DbCellsController < ApplicationController
       @database.reload
       respond_to do |format|
         format.turbo_stream do
-          render turbo_stream: turbo_stream.update(
-            "database_topbar_edited_at",
-            partial: "databases/topbar_edited_meta",
-            locals: { database: @database }
-          )
+          render turbo_stream: [
+            turbo_stream.update(
+              "database_topbar_edited_at",
+              partial: "databases/topbar_edited_meta",
+              locals: { database: @database }
+            ),
+            database_flash_stream("notice", "Cell updated.")
+          ]
         end
         format.html { redirect_to cell_redirect_location, notice: "Cell updated." }
       end
     else
       respond_to do |format|
-        format.turbo_stream { render plain: @db_cell.errors.full_messages.to_sentence, status: :unprocessable_entity }
+        format.turbo_stream do
+          render turbo_stream: database_flash_stream("alert", @db_cell.errors.full_messages.to_sentence),
+                 status: :unprocessable_entity
+        end
         format.html { redirect_to cell_redirect_location, alert: @db_cell.errors.full_messages.to_sentence }
       end
     end
@@ -91,6 +97,18 @@ class DbCellsController < ApplicationController
     return unless @database.locked?
 
     redirect_to cell_redirect_location, alert: "Grid is locked. Unlock to make changes."
+  end
+
+  def database_flash_stream(type, message)
+    turbo_stream.replace(
+      "database_flash_messages",
+      partial: "shared/flash_messages",
+      locals: {
+        flash_messages: [ [ type, message ] ],
+        flash_dom_id: "database_flash_messages",
+        flash_host_class: "notae-db-inline-flash-host"
+      }
+    )
   end
 
   def apply_task_status_row_style!(db_cell)

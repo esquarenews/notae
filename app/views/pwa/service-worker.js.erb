@@ -13,7 +13,7 @@
     ]
   ).uniq
 %>
-const CACHE_VERSION = "pwa-v5"
+const CACHE_VERSION = "pwa-v6"
 const SHELL_CACHE = `notae-shell-${CACHE_VERSION}`
 const DOCUMENT_CACHE = `notae-documents-${CACHE_VERSION}`
 const ASSET_CACHE = `notae-assets-${CACHE_VERSION}`
@@ -76,7 +76,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url)
 
   if (isTopLevelDocumentRequest(request, url)) {
-    event.respondWith(staleWhileRevalidateDocument(request))
+    event.respondWith(networkFirstDocument(request))
     return
   }
 
@@ -124,26 +124,20 @@ function isFontRequest(url) {
   )
 }
 
-async function staleWhileRevalidateDocument(request) {
+async function networkFirstDocument(request) {
   const cache = await caches.open(DOCUMENT_CACHE)
-  const cached = await cache.match(request)
-  const networkRequest = fetch(request)
-    .then(async (response) => {
-      if (cacheableDocumentResponse(request, response)) {
-        await cache.put(request, response.clone())
-      }
-
-      return response
-    })
-
-  if (cached) {
-    networkRequest.catch(() => {})
-    return cached
-  }
-
   try {
-    return await networkRequest
+    const response = await fetch(request)
+
+    if (cacheableDocumentResponse(request, response)) {
+      await cache.put(request, response.clone())
+    }
+
+    return response
   } catch (_error) {
+    const cached = await cache.match(request)
+    if (cached) return cached
+
     return offlineFallbackResponse()
   }
 }
