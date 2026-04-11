@@ -1,5 +1,6 @@
 <% display_title = @page_title_page&.title.presence || @database.name %>
 <% embedded_preview = params[:embedded].to_s == "1" %>
+<% content_for :suppress_layout_flash, true %>
 <% content_for :title, display_title %>
 <% content_for :topbar_page_icon do %>
   <%= render_notae_icon(@page_title_page&.icon.presence || @database.icon.presence, workspace: @workspace, fallback: "🗃️", css_class: "notae-topbar-page-icon-inner", label: "Grid icon") %>
@@ -95,7 +96,6 @@
          data-database-view-state-storage-key-value="database-view-scroll:<%= @database.id %>">
 <section class="notae-db-canvas">
   <%= render "shared/flash_messages",
-             flash_messages: [],
              flash_dom_id: "database_flash_messages",
              flash_host_class: "notae-db-inline-flash-host" %>
   <% if (shell_page.present? ? shell_page.cover? : @database.cover?) && !embedded_preview %>

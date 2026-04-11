@@ -2,6 +2,7 @@
 <% can_edit_shell_page = @can_update_page_title_page && !shell_page.locked? %>
 <% can_show_comment_action = @can_comment_on_page && !@page.locked? %>
 <% embedded_preview = params[:embedded].to_s == "1" %>
+<% content_for :suppress_layout_flash, true %>
 <% content_for :title, shell_page.title.presence || "New page" %>
 <% content_for :topbar_page_icon do %>
   <%= render_notae_icon(shell_page.icon.presence || @page.icon.presence, workspace: @workspace, fallback: "📄", css_class: "notae-topbar-page-icon-inner", label: "Page icon") %>
@@ -117,7 +118,9 @@
 
 <section class="<%= page_split_layout_classes.join(" ") %>">
   <section class="<%= doc_layout_classes.join(" ") %>"
-           data-controller="page-collaboration"
+           data-controller="database-view-state page-collaboration"
+           data-action="turbo:submit-start->database-view-state#capture turbo:submit-end->database-view-state#restoreAfterSubmit click->database-view-state#captureLink"
+           data-database-view-state-storage-key-value="page-view-scroll:<%= @page.id %>"
            data-page-collaboration-workspace-slug-value="<%= @workspace.slug %>"
            data-page-collaboration-page-id-value="<%= @page.id %>"
            data-page-collaboration-current-user-id-value="<%= current_user.id %>">
@@ -227,7 +230,6 @@
     <% end %>
 
     <%= render "shared/flash_messages",
-               flash_messages: [],
                flash_dom_id: "page_flash_messages",
                flash_host_class: "notae-page-inline-flash-host" %>
 

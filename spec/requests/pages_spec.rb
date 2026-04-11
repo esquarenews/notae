@@ -19,9 +19,10 @@ RSpec.describe "Pages", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include(".notae-topbar {\n  min-height: 4rem;")
-    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 72%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 64%, transparent)\n    );")
-    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(16px) saturate(1.08);")
-    expect(stylesheet).to include("  backdrop-filter: blur(16px) saturate(1.08);")
+    expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 58%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 46%, transparent)\n    );")
+    expect(stylesheet).to include("  -webkit-backdrop-filter: blur(18px) saturate(1.12);")
+    expect(stylesheet).to include("  backdrop-filter: blur(18px) saturate(1.12);")
+    expect(stylesheet).to include(".notae-page-cover {\n  margin-top: -5rem;\n  padding-top: 0.4rem;\n}")
   end
 
   it "keeps the title save status above the cover controls without lifting the closed picker" do
@@ -996,7 +997,7 @@ RSpec.describe "Pages", type: :request do
     html = Nokogiri::HTML(response.body)
     expect(html.at_css("#page-actions-menu[open]")).to be_present
     expect(response.body).to include('data-controller="actions-menu page-import lazy-panel"')
-    expect(response.body).to include('data-controller="page-collaboration"')
+    expect(response.body).to include('data-controller="database-view-state page-collaboration"')
     expect(response.body).to include("data-lazy-panel-url-value")
     expect(response.body).not_to include("Current block as MD")
     expect(response.body).not_to include('href="/w/actions/pages/')
@@ -1040,6 +1041,24 @@ RSpec.describe "Pages", type: :request do
 
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
     expect(page.reload.title).to eq("Project brief")
+  end
+
+  it "renders redirect notices in the local page flash host instead of the shell top" do
+    owner = User.create!(email: "page-inline-flash-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Inline page flash", slug: "inline-page-flash")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Untitled")
+    sign_in owner
+
+    patch page_path(workspace_slug: workspace.slug, id: page.id),
+          params: { page: { title: "Project brief" } }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    follow_redirect!
+
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css("#page_flash_messages .notae-flash.notice")&.text&.strip).to eq("Page updated.")
+    expect(html.at_css("#notae_flash_messages .notae-flash")).to be_nil
   end
 
   it "updates page title through json endpoint for autosave" do

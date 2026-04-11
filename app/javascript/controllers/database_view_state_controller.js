@@ -8,42 +8,44 @@ export default class extends Controller {
   }
 
   connect() {
-    this.pendingSubmitScrollPosition = null
+    this.pendingSubmitState = null
     this.restoreScrollPosition()
   }
 
   capture(event) {
     const form = event.target
     if (!(form instanceof HTMLFormElement)) return
-    if (form.dataset.preserveDatabaseScroll !== "true") return
+    if (form.dataset.preserveScroll === "false") return
 
-    this.pendingSubmitScrollPosition = this.currentScrollPosition()
-    this.storeScrollPosition()
+    this.pendingSubmitState = this.currentStateFor(this.submitterFor(event, form))
+    this.storeScrollPosition(this.pendingSubmitState)
   }
 
   restoreAfterSubmit(event) {
     const form = event.target
     if (!(form instanceof HTMLFormElement)) return
-    if (form.dataset.preserveDatabaseScroll !== "true") return
+    if (form.dataset.preserveScroll === "false") return
 
-    const position = this.pendingSubmitScrollPosition
-    this.pendingSubmitScrollPosition = null
+    const state = this.pendingSubmitState
+    this.pendingSubmitState = null
 
-    if (!position) return
+    if (!state) return
     if (!event.detail?.success) return
 
     const contentType = this.responseContentType(event)
     if (contentType.present && !contentType.value.includes("turbo-stream")) return
 
-    this.restoreSubmitScrollPosition(position)
+    this.clearStoredPosition()
+    this.restoreSubmitScrollPosition(state)
   }
 
   captureLink(event) {
-    const link = event.target.closest("a[data-preserve-database-scroll='true']")
+    const link = event.target.closest("a")
     if (!(link instanceof HTMLAnchorElement)) return
     if (!this.element.contains(link)) return
+    if (!this.shouldCaptureLink(link)) return
 
-    this.storeScrollPosition()
+    this.storeScrollPosition(this.currentStateFor(link))
   }
 
   restoreScrollPosition() {
@@ -59,11 +61,7 @@ export default class extends Controller {
     }
 
     this.clearStoredPosition()
-    const top = Number(storedPosition.scrollTop || 0)
-    const left = Number(storedPosition.scrollLeft || 0)
-
-    this.applyScrollPosition(scrollContainer, { top, left })
-    window.requestAnimationFrame(() => this.applyScrollPosition(scrollContainer, { top, left }))
+    this.restoreStoredPosition(scrollContainer, storedPosition)
   }
 
   scrollContainer() {
@@ -80,19 +78,27 @@ export default class extends Controller {
     }
   }
 
-  storeScrollPosition() {
-    const scrollContainer = this.scrollContainer()
-    if (!scrollContainer) return
+  currentStateFor(sourceElement = null) {
+    const position = this.currentScrollPosition()
+    if (!position) return null
 
-    const payload = {
+    const trackedElement = this.trackedElementFor(sourceElement)
+
+    return {
       path: window.location.pathname,
       timestamp: Date.now(),
-      scrollTop: scrollContainer.scrollTop,
-      scrollLeft: scrollContainer.scrollLeft
+      scrollTop: position.top,
+      scrollLeft: position.left,
+      trackedSelector: this.selectorForTrackedElement(trackedElement),
+      trackedViewportTop: trackedElement ? trackedElement.getBoundingClientRect().top : null
     }
+  }
+
+  storeScrollPosition(state = this.currentStateFor()) {
+    if (!state) return
 
     try {
-      window.sessionStorage.setItem(this.storageKey(), JSON.stringify(payload))
+      window.sessionStorage.setItem(this.storageKey(), JSON.stringify(state))
     } catch (_error) {
       // Ignore storage failures and allow normal navigation.
     }
@@ -124,17 +130,26 @@ export default class extends Controller {
     scrollContainer.scrollLeft = position.left
   }
 
-  restoreSubmitScrollPosition(position) {
+  restoreStoredPosition(scrollContainer, state) {
     const apply = () => {
-      const scrollContainer = this.scrollContainer()
-      if (!scrollContainer) return
-
-      this.applyScrollPosition(scrollContainer, position)
+      this.applyScrollPosition(scrollContainer, {
+        top: Number(state.scrollTop || 0),
+        left: Number(state.scrollLeft || 0)
+      })
+      this.restoreTrackedElementPosition(scrollContainer, state)
     }
 
     apply()
     window.requestAnimationFrame(() => apply())
     window.setTimeout(() => apply(), 60)
+    window.setTimeout(() => apply(), 180)
+  }
+
+  restoreSubmitScrollPosition(state) {
+    const scrollContainer = this.scrollContainer()
+    if (!scrollContainer) return
+
+    this.restoreStoredPosition(scrollContainer, state)
   }
 
   responseContentType(event) {
@@ -147,5 +162,65 @@ export default class extends Controller {
       present: true,
       value: response.headers.get("content-type") || ""
     }
+  }
+
+  shouldCaptureLink(link) {
+    if (link.dataset.preserveScroll === "false") return false
+    if (link.dataset.preserveDatabaseScroll === "true") return true
+
+    return false
+  }
+
+  submitterFor(event, fallbackForm) {
+    const turboSubmitter = event.detail?.formSubmission?.submitter
+    if (turboSubmitter instanceof Element) return turboSubmitter
+    if (document.activeElement instanceof Element && fallbackForm.contains(document.activeElement)) {
+      return document.activeElement
+    }
+
+    return fallbackForm
+  }
+
+  trackedElementFor(sourceElement) {
+    if (!(sourceElement instanceof Element)) return null
+
+    return sourceElement.closest("[data-scroll-preserve-key], [id]")
+  }
+
+  selectorForTrackedElement(element) {
+    if (!(element instanceof Element)) return null
+
+    const customKey = element.getAttribute("data-scroll-preserve-key")
+    if (customKey) {
+      return `[data-scroll-preserve-key="${this.escapeSelectorValue(customKey)}"]`
+    }
+
+    if (element.id) {
+      return `#${this.escapeSelectorValue(element.id)}`
+    }
+
+    return null
+  }
+
+  restoreTrackedElementPosition(scrollContainer, state) {
+    if (!state?.trackedSelector) return
+    if (typeof state.trackedViewportTop !== "number") return
+
+    const trackedElement = this.element.querySelector(state.trackedSelector) || document.querySelector(state.trackedSelector)
+    if (!(trackedElement instanceof Element)) return
+
+    const currentViewportTop = trackedElement.getBoundingClientRect().top
+    const delta = currentViewportTop - state.trackedViewportTop
+    if (Math.abs(delta) < 1) return
+
+    scrollContainer.scrollTop += delta
+  }
+
+  escapeSelectorValue(value) {
+    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+      return CSS.escape(value)
+    }
+
+    return String(value).replace(/["\\]/g, "\\$&")
   }
 }

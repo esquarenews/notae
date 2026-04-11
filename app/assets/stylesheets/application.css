@@ -15150,12 +15150,12 @@ body.notae-theme-dark .notae-auth-submit {
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--notae-panel-elevated) 72%, transparent),
-      color-mix(in srgb, var(--notae-panel-bg) 64%, transparent)
+      color-mix(in srgb, var(--notae-panel-elevated) 58%, transparent),
+      color-mix(in srgb, var(--notae-panel-bg) 46%, transparent)
     );
   box-shadow: var(--notae-shadow-soft);
-  -webkit-backdrop-filter: blur(16px) saturate(1.08);
-  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  backdrop-filter: blur(18px) saturate(1.12);
 }
 
 .notae-topbar-title {
@@ -15401,6 +15401,7 @@ body.notae-theme-dark .notae-auth-submit {
 }
 
 .notae-page-cover {
+  margin-top: -5rem;
   padding-top: 0.4rem;
 }
 
@@ -15824,6 +15825,10 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
   .notae-shell.is-mobile-viewport .notae-doc-layout {
     padding: 1rem 0.92rem 0;
     gap: 0.9rem;
+  }
+
+  .notae-shell.is-mobile-viewport .notae-page-cover {
+    margin-top: 0;
   }
 
   .notae-shell.is-mobile-viewport .notae-page-cover-frame {

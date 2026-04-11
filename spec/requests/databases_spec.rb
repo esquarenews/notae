@@ -988,6 +988,28 @@ RSpec.describe "Databases", type: :request do
     expect(row.reload.title).to eq("After edit")
   end
 
+  it "renders redirect notices in the local grid flash host instead of the shell top" do
+    owner = User.create!(email: "database-inline-flash-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Inline grid flash", slug: "inline-grid-flash")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Untitled grid")
+    Databases::EnsureLinkedPageService.call(database: database, actor: owner)
+    sign_in owner
+
+    patch page_path(workspace_slug: workspace.slug, id: database.linked_page.id),
+          params: {
+            return_to: database_path(workspace_slug: workspace.slug, id: database.id),
+            page: { root_tab_title: "Overview" }
+          }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    follow_redirect!
+
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css("#database_flash_messages .notae-flash.notice")&.text&.strip).to eq("Page updated.")
+    expect(html.at_css("#notae_flash_messages .notae-flash")).to be_nil
+  end
+
   it "renders board view with more than 500 rows" do
     owner = User.create!(email: "database-board-scale-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Board scale tables", slug: "board-scale-tables")
