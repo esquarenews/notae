@@ -40,7 +40,7 @@ export default class extends Controller {
       const allowed = allowedSystems.includes(option.value)
       option.disabled = !allowed
       option.hidden = !allowed
-      selectedValueAllowed = true if allowed && option.selected
+      if (allowed && option.selected) selectedValueAllowed = true
     })
 
     if (!selectedValueAllowed) {

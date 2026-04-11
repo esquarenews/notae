@@ -130,4 +130,4 @@ export default class extends Controller {
   searchQuery() {
     return this.hasSearchInputTarget ? this.searchInputTarget.value.trim() : ""
   }
-end
+}

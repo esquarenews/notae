@@ -4,6 +4,7 @@ const AGENT_UPDATE_POLL_INTERVAL_MS = 15000
 const AGENT_UPDATE_TOAST_DURATION_MS = 10000
 const AGENT_UPDATE_FOCUS_CLASS = "is-recently-focused"
 const AGENT_UPDATE_FOCUS_DURATION_MS = 2200
+const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"
 
 export default class extends Controller {
   static targets = [
@@ -289,7 +290,7 @@ export default class extends Controller {
     if (!this.shellElement) return
 
     this.shellElement.classList.toggle("is-ai-rail-collapsed", collapsed)
-    this.setPreference("notae-ai-rail-collapsed", collapsed)
+    this.setPreference(AI_RAIL_COLLAPSED_PREFERENCE_KEY, collapsed)
     this.notifyLayoutChange()
     this.refreshAgentToastState()
     this.syncAgentUpdatePolling({ immediate: !collapsed && !this.compactViewport() })
@@ -306,7 +307,7 @@ export default class extends Controller {
   }
 
   restoreRailState() {
-    this.setRailCollapsed(this.preference("notae-ai-rail-collapsed", true))
+    this.setRailCollapsed(this.preference(AI_RAIL_COLLAPSED_PREFERENCE_KEY, false))
   }
 
   restoreUsageState() {

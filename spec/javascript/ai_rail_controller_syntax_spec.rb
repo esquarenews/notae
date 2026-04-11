@@ -24,7 +24,7 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include("viewportWidth()")
   end
 
-  it "keeps agent update polling, toast handling, and the default collapsed desktop rail" do
+  it "keeps agent update polling, toast handling, and the expanded desktop rail default" do
     source = Rails.root.join("app/javascript/controllers/ai_rail_controller.js").read
 
     expect(source).to include("AGENT_UPDATE_POLL_INTERVAL_MS")
@@ -34,7 +34,8 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include("stopAgentUpdatePolling()")
     expect(source).to include("if (!this.railActive()) return")
     expect(source).to include("showAgentToast(count)")
-    expect(source).to include('this.preference("notae-ai-rail-collapsed", true)')
+    expect(source).to include('const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"')
+    expect(source).to include("this.preference(AI_RAIL_COLLAPSED_PREFERENCE_KEY, false)")
     expect(source).to match(/window\.setTimeout\(\(\) => \{\s*this\.dismissCurrentAgentToast\(\)/m)
   end
 

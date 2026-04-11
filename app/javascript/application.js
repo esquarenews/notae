@@ -4,7 +4,7 @@ import "controllers"
 
 let pwaRegistrationPromise
 const AI_RAIL_COLLAPSED_CLASS = "is-ai-rail-collapsed"
-const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed"
+const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"
 const PRESERVED_SAVE_SCROLL_KEY = "notae-preserved-save-scroll"
 const PRESERVED_SAVE_SCROLL_MAX_AGE_MS = 30_000
 
