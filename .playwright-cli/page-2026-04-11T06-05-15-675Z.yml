@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - button "Copy as text" [ref=e3]
+    - heading "ActiveRecord::RecordNotFound in DatabasesController#show" [level=1] [ref=e4]
+  - main [ref=e5]:
+    - generic [ref=e7]: Couldn't find Workspace with [WHERE "workspaces"."archived_at" IS NULL AND "memberships"."user_id" = $1 AND "workspaces"."slug" = $2]
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - text: Extracted source (around line
+        - strong [ref=e10]: "#352"
+        - text: "):"
+      - table [ref=e12]:
+        - rowgroup [ref=e13]:
+          - 'row "350 351 352 353 354 355 def set_workspace @workspace = policy_scope(Workspace) .find_by! (slug: params[:workspace_slug]) end def set_database" [ref=e14]':
+            - cell "350 351 352 353 354 355" [ref=e15]:
+              - generic [ref=e16]: 350 351 352 353 354 355
+            - 'cell "def set_workspace @workspace = policy_scope(Workspace) .find_by! (slug: params[:workspace_slug]) end def set_database" [ref=e17]':
+              - generic [ref=e18]:
+                - generic [ref=e20]: def set_workspace
+                - generic [ref=e21]:
+                  - text: "@workspace = policy_scope(Workspace)"
+                  - generic [ref=e22]: .find_by!
+                  - text: "(slug: params[:workspace_slug])"
+                - generic [ref=e23]: end
+                - generic [ref=e25]: def set_database
+    - paragraph [ref=e26]:
+      - code [ref=e27]: "Rails.root: /Users/errolschmidt/Documents/notae_app/notae"
+    - generic [ref=e28]:
+      - link "Application Trace" [ref=e29] [cursor=pointer]:
+        - /url: "#"
+      - text: "|"
+      - link "Framework Trace" [ref=e30] [cursor=pointer]:
+        - /url: "#"
+      - text: "|"
+      - link "Full Trace" [ref=e31] [cursor=pointer]:
+        - /url: "#"
+      - code [ref=e33]:
+        - link "/Users/errolschmidt/Documents/notae_app/notae/app/controllers/databases_controller.rb:352:in 'DatabasesController#set_workspace'" [ref=e35] [cursor=pointer]:
+          - /url: "#"
+        - link "/Users/errolschmidt/Documents/notae_app/notae/app/controllers/concerns/request_performance_instrumentation.rb:50:in 'block in RequestPerformanceInstrumentation#instrument_request_performance'" [ref=e37] [cursor=pointer]:
+          - /url: "#"
+        - link "/Users/errolschmidt/Documents/notae_app/notae/app/controllers/concerns/request_performance_instrumentation.rb:49:in 'RequestPerformanceInstrumentation#instrument_request_performance'" [ref=e39] [cursor=pointer]:
+          - /url: "#"
+        - link "/Users/errolschmidt/Documents/notae_app/notae/app/controllers/application_controller.rb:706:in 'ApplicationController#use_user_time_zone'" [ref=e41] [cursor=pointer]:
+          - /url: "#"
+    - heading "Request" [level=2] [ref=e42]
+    - paragraph [ref=e43]: "Parameters:"
+    - generic [ref=e44]: "{\"workspace_slug\" => \"scroll-check\", \"id\" => \"4390662f-5a2f-426e-a113-bbc04213aafb\"}"
+    - link "Toggle session dump" [ref=e47] [cursor=pointer]:
+      - /url: "#"
+    - link "Toggle env dump" [ref=e50] [cursor=pointer]:
+      - /url: "#"
+    - heading "Response" [level=2] [ref=e51]
+    - paragraph [ref=e52]: "Headers:"
+    - generic [ref=e53]: None
+  - generic [ref=e54]:
+    - generic [ref=e56]:
+      - generic "close" [ref=e58] [cursor=pointer]: ×
+      - generic [ref=e60]: ">>"
+    - textbox [ref=e62]

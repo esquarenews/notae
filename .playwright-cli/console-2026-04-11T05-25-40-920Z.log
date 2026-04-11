@@ -1,3 +1,8 @@
 [     915ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
 [    1266ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
 [    1266ms] [ERROR] Failed to register controller: document-picker (controllers/document_picker_controller) SyntaxError: Unexpected end of input @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[ 2316335ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[ 2316409ms] [ERROR] Failed to register controller: agent-action-form (controllers/agent_action_form_controller) SyntaxError: Unexpected token 'if' @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[ 2316410ms] [ERROR] Failed to register controller: document-picker (controllers/document_picker_controller) SyntaxError: Unexpected end of input @ http://127.0.0.1:4000/assets/stimulus-loading-1fc53fe7.js:25
+[ 2373304ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:4000/w/scroll-check/databases/4390662f-5a2f-426e-a113-bbc04213aafb:0
+[ 2373557ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:4000/favicon.ico:0

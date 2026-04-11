@@ -1,0 +1,185 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Glass Check
+        - generic [ref=e9]:
+          - button "＋" [ref=e11]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/glass-check
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/glass-check/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/glass-check/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/glass-check/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/glass-check/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/glass-check/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/glass-check/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/glass-check/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - paragraph [ref=e82]: Loading workspaces…
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - button "Notarum" [expanded] [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]: ▾
+                - generic [ref=e87]: Notarum
+              - button "Create new Nota" [ref=e89] [cursor=pointer]: "[+]"
+            - list [ref=e91]:
+              - listitem [ref=e92]:
+                - paragraph [ref=e93]: Loading Notarum…
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - paragraph [ref=e104]: Loading grids…
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - button "Meetings" [expanded] [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]: ▾
+                - generic [ref=e109]: Meetings
+              - button "Create new Meeting" [ref=e111] [cursor=pointer]: "[+]"
+            - list [ref=e113]:
+              - listitem [ref=e114]:
+                - paragraph [ref=e115]: Loading meetings…
+          - generic [ref=e116]:
+            - button "Favorites" [expanded] [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: ▾
+              - generic [ref=e120]: Favorites
+            - list [ref=e122]:
+              - listitem [ref=e123]:
+                - paragraph [ref=e124]: Loading favorites…
+      - generic [ref=e125]:
+        - link "Settings" [ref=e126] [cursor=pointer]:
+          - /url: /w/glass-check/settings/preferences
+          - generic [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e132]: Settings
+        - link "Trash" [ref=e133] [cursor=pointer]:
+          - /url: /w/glass-check/trash
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e139]: Trash
+        - button "Sign out" [ref=e141] [cursor=pointer]:
+          - generic [ref=e142]:
+            - img [ref=e144]
+            - generic [ref=e147]: Sign out
+  - generic [ref=e148]:
+    - banner [ref=e149]:
+      - generic [ref=e151]:
+        - generic "Page icon" [ref=e153]:
+          - generic [ref=e154]: 🧼
+        - generic [ref=e155]: Day Off
+        - generic [ref=e156]: Shared to workspace
+      - generic [ref=e157]:
+        - generic [ref=e158]: Edited 1 minute ago
+        - button "Add to favorites" [ref=e160] [cursor=pointer]: ☆
+        - group [ref=e161]:
+          - generic "Page comments" [ref=e162] [cursor=pointer]: 💬
+        - group [ref=e163]:
+          - generic "Actions" [ref=e164] [cursor=pointer]:
+            - generic [ref=e165]: ⚡
+            - generic [ref=e166]: Actions
+        - group [ref=e167]:
+          - generic "Options" [ref=e168] [cursor=pointer]:
+            - generic [ref=e169]: ⚙
+            - generic [ref=e170]: Options
+    - main [ref=e171]:
+      - generic [ref=e175]:
+        - group [ref=e176]:
+          - generic "Change" [ref=e177] [cursor=pointer]
+        - button "Move cover up" [ref=e179] [cursor=pointer]: ↑
+        - button "Move cover down" [ref=e181] [cursor=pointer]: ↓
+      - generic [ref=e183]:
+        - generic [ref=e185]:
+          - generic "Page icon" [ref=e187]:
+            - generic [ref=e188]: 🧼
+          - generic [ref=e189]:
+            - group [ref=e190]:
+              - generic "Change icon" [ref=e191] [cursor=pointer]:
+                - generic [ref=e192]: ◌
+                - generic [ref=e193]: Change icon
+            - group [ref=e194]:
+              - generic "Change cover" [ref=e195] [cursor=pointer]:
+                - generic [ref=e196]: ▭
+                - generic [ref=e197]: Change cover
+            - button "Add comment" [ref=e198] [cursor=pointer]:
+              - generic [ref=e199]: 💬
+              - generic [ref=e200]: Add comment
+          - generic [ref=e201]:
+            - textbox "Page title" [ref=e202]:
+              - /placeholder: New page
+              - text: Day Off
+            - text: Saved
+          - region "Linked tabs" [ref=e203]:
+            - navigation [ref=e204]:
+              - generic [ref=e205]:
+                - link "Tab 1 Tab 1" [ref=e206] [cursor=pointer]:
+                  - /url: /w/glass-check/pages/330bc9ab-514a-4eac-a487-6cc16e399f1c
+                  - generic "Tab 1" [ref=e208]:
+                    - generic [ref=e209]: 🧼
+                  - generic [ref=e210]: Tab 1
+                - group [ref=e211]:
+                  - generic "Tab options" [ref=e212] [cursor=pointer]: ⋯
+            - button "+ New tab" [ref=e214]
+        - paragraph [ref=e215]: Signed in successfully.
+        - generic [ref=e216]:
+          - article [ref=e218]:
+            - generic:
+              - generic "Drag block" [ref=e219]: ⋮⋮
+              - paragraph
+              - group [ref=e220]:
+                - generic "Block options" [ref=e221] [cursor=pointer]: ⋯
+            - textbox [ref=e224]:
+              - paragraph [ref=e225]
+          - button "+ Add block" [ref=e227] [cursor=pointer]
+        - generic [ref=e228]:
+          - heading "Backlinks" [level=2] [ref=e229]
+          - paragraph [ref=e230]: No backlinks yet.
+  - complementary "Workspace notification bar" [ref=e231]:
+    - generic [ref=e232]: Sat 11 Apr · 6:05
+  - complementary [ref=e235]:
+    - button "Open AI assistant rail" [ref=e236] [cursor=pointer]

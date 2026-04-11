@@ -20,8 +20,9 @@ RSpec.describe "Pages", type: :request do
 
     expect(stylesheet).to include("--notae-glass-surface: rgba(255, 255, 255, 0.012);")
     expect(stylesheet).to include("--notae-glass-surface-soft: rgba(255, 255, 255, 0.006);")
+    expect(stylesheet).to include(".notae-shell {\n  --notae-topbar-overlay-depth: 4.15rem;")
     expect(stylesheet).to include(".notae-topbar {\n  min-height: 4rem;")
-    expect(stylesheet).to include("  position: relative;\n  z-index: 140;\n  isolation: isolate;")
+    expect(stylesheet).to include("  position: sticky;\n  top: 0.9rem;\n  z-index: 240;\n  isolation: isolate;")
     expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")
     expect(stylesheet).to include("  background: var(--notae-glass-surface);")
     expect(stylesheet).to include("  -webkit-backdrop-filter: blur(28px) saturate(1.18);")
