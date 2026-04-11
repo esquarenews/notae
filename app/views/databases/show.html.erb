@@ -14,17 +14,17 @@
      else
        "Shared to workspace"
      end %>
+<% shell_page = @page_title_page %>
+<% has_display_cover = shell_page.present? ? shell_page.cover? : @database.cover? %>
 <% content_for :topbar_privacy, database_privacy_label %>
-<% content_for :content_class, [ "notae-content-page", "notae-content-overlay-page", ("is-embedded-preview" if embedded_preview) ].compact.join(" ") %>
+<% content_for :content_class, [ "notae-content-page", ("notae-content-overlay-page" if has_display_cover && !embedded_preview), ("is-embedded-preview" if embedded_preview) ].compact.join(" ") %>
 <% can_update_database = policy(@database).update? %>
 <% can_edit_database = can_update_database && !@database.locked? %>
 <% can_create_database = policy(Database.new(workspace: @workspace, name: "Untitled grid")).create? %>
-<% shell_page = @page_title_page %>
 <% shell_page_route_params = shell_page.present? ? { workspace_slug: @workspace.slug, id: shell_page.id } : nil %>
 <% can_edit_shell_page = shell_page.present? && @can_update_page_title_page && !shell_page.locked? %>
 <% current_path = request.fullpath %>
 <% header_icon_value = shell_page&.icon.presence || @database.icon.presence %>
-<% has_display_cover = shell_page.present? ? shell_page.cover? : @database.cover? %>
 <% icon_over_cover = has_display_cover && header_icon_value.present? %>
 <% page_search_url = workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page") %>
 <% topbar_view_params = {
@@ -88,6 +88,7 @@
 <% db_layout_classes << "is-small-text" if @database.small_text? %>
 <% db_layout_classes << "is-font-serif" if @database.font_style == "serif" %>
 <% db_layout_classes << "is-font-mono" if @database.font_style == "mono" %>
+<% db_layout_classes << "has-covered-primary" if @split_page.present? && has_display_cover && !embedded_preview %>
 <% db_layout_classes << "is-embedded-preview" if embedded_preview %>
 
 <section class="<%= db_layout_classes.join(" ") %>"

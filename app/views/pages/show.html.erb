@@ -2,13 +2,14 @@
 <% can_edit_shell_page = @can_update_page_title_page && !shell_page.locked? %>
 <% can_show_comment_action = @can_comment_on_page && !@page.locked? %>
 <% embedded_preview = params[:embedded].to_s == "1" %>
+<% has_cover = shell_page.cover? %>
 <% content_for :suppress_layout_flash, true %>
 <% content_for :title, shell_page.title.presence || "New page" %>
 <% content_for :topbar_page_icon do %>
   <%= render_notae_icon(shell_page.icon.presence || @page.icon.presence, workspace: @workspace, fallback: "📄", css_class: "notae-topbar-page-icon-inner", label: "Page icon") %>
 <% end %>
 <% content_for :topbar_privacy, shell_page.permission_mode.humanize %>
-<% content_for :content_class, [ "notae-content-page", "notae-content-overlay-page", ("is-embedded-preview" if embedded_preview) ].compact.join(" ") %>
+<% content_for :content_class, [ "notae-content-page", ("notae-content-overlay-page" if has_cover && !embedded_preview), ("is-embedded-preview" if embedded_preview) ].compact.join(" ") %>
 <% embedded_page_params = embedded_preview ? { embedded: "1" } : {} %>
 <% page_canvas_params = embedded_page_params.merge(
      split_page_id: params[:split_page_id].presence,
@@ -56,7 +57,6 @@
   <% end %>
 <% end %>
 
-<% has_cover = shell_page.cover? %>
 <% header_icon_value = shell_page.icon.presence %>
 <% icon_over_cover = has_cover && header_icon_value.present? %>
 <% doc_layout_classes = [ "notae-doc-layout" ] %>
@@ -68,6 +68,7 @@
 <% doc_layout_classes << "is-embedded-preview" if embedded_preview %>
 <% page_split_layout_classes = [ "notae-page-split-layout" ] %>
 <% page_split_layout_classes << "has-side-peek" if @split_page.present? %>
+<% page_split_layout_classes << "has-covered-primary" if @split_page.present? && has_cover && !embedded_preview %>
 <% page_split_layout_classes << "is-embedded-preview" if embedded_preview %>
 <% if has_cover && !embedded_preview %>
   <section class="notae-page-cover">

@@ -1367,17 +1367,16 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 .notae-content.notae-content-home {
   max-width: none;
   margin: 0;
-  padding: 0 0 1.9rem;
+  padding: var(--notae-topbar-content-clearance) 0 1.9rem;
 }
 
 .notae-content.notae-content-overlay-page {
   padding-top: 0;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages,
-.notae-content.notae-content-home > #notae_flash_messages {
+.notae-content > #notae_flash_messages {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  top: var(--notae-topbar-content-clearance);
   left: 0;
   right: 0;
   z-index: var(--notae-layer-flash);
@@ -1389,34 +1388,30 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   pointer-events: none;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash-stack,
-.notae-content.notae-content-home > #notae_flash_messages .notae-flash-stack {
+.notae-content > #notae_flash_messages .notae-flash-stack {
   width: min(50%, 760px);
   max-width: calc(100% - 1.2rem);
   margin: 0;
   pointer-events: auto;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash,
-.notae-content.notae-content-home > #notae_flash_messages .notae-flash {
+.notae-content > #notae_flash_messages .notae-flash {
   margin: 0;
   animation: notae-flash-fade 420ms ease 5.5s forwards;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash.notice,
-.notae-content.notae-content-home > #notae_flash_messages .notae-flash.notice {
+.notae-content > #notae_flash_messages .notae-flash.notice {
   animation-delay: 3s;
 }
 
-.notae-content.notae-content-page > #notae_flash_messages .notae-flash.alert,
-.notae-content.notae-content-home > #notae_flash_messages .notae-flash.alert {
+.notae-content > #notae_flash_messages .notae-flash.alert {
   animation-delay: 4.2s;
 }
 
 .notae-page-inline-flash-host,
 .notae-db-inline-flash-host {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  top: var(--notae-topbar-content-clearance);
   left: 0;
   right: 0;
   z-index: var(--notae-layer-flash);
@@ -4839,6 +4834,15 @@ turbo-frame#notae_sidebar_sections {
   height: 100%;
   border: 0;
   background: var(--notae-surface);
+}
+
+@media (min-width: 1001px) {
+  .notae-page-split-layout.has-side-peek.has-covered-primary > .notae-db-split-pane,
+  .notae-db-split-layout.has-side-peek.has-covered-primary > .notae-db-split-pane {
+    margin-top: var(--notae-topbar-content-clearance);
+    top: var(--notae-topbar-content-clearance);
+    height: calc(100dvh - var(--notae-topbar-content-clearance));
+  }
 }
 
 .notae-shell.notae-shell-embedded .notae-content.is-embedded-preview {
@@ -11740,7 +11744,7 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 }
 
 .notae-content.notae-content-kalendarium {
-  padding: 1.05rem clamp(0.6rem, 1.4vw, 1rem) 1.8rem;
+  padding: var(--notae-topbar-content-clearance) clamp(0.6rem, 1.4vw, 1rem) 1.8rem;
 }
 
 .notae-kalendarium-sidebar.is-pinned {
@@ -15972,8 +15976,7 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
     padding: var(--notae-topbar-content-clearance) 0 calc(env(safe-area-inset-bottom, 0px) + 6.25rem);
   }
 
-  .notae-shell.is-mobile-viewport .notae-content.notae-content-overlay-page,
-  .notae-shell.is-mobile-viewport .notae-content.notae-content-home {
+  .notae-shell.is-mobile-viewport .notae-content.notae-content-overlay-page {
     padding-top: 0;
   }
 

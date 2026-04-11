@@ -55,7 +55,11 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.headers["X-Notae-Perf-Action"]).to eq("KalendariumController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     document = Nokogiri::HTML.parse(response.body)
+    content = document.at_css("main.notae-content")
     kalendarium_shell = document.at_css(".notae-kalendarium")
+    expect(content&.[]("class")).to include("notae-content-wide")
+    expect(content&.[]("class")).to include("notae-content-kalendarium")
+    expect(content&.[]("class")).not_to include("notae-content-overlay-page")
     expect(kalendarium_shell).to be_present
     expect(kalendarium_shell["data-action"]).to include("kalendarium:quick-create->kalendarium-focus#prepareNewEvent")
     expect(kalendarium_shell["data-action"]).to include("kalendarium:preview-event->kalendarium-preview#render")

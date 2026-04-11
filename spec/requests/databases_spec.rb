@@ -19,11 +19,34 @@ RSpec.describe "Databases", type: :request do
     expect(stylesheet).to include("  body.notae-theme-system .notae-db-actions-menu .notae-actions-panel,\n  body.notae-theme-system .notae-db-settings-panel,\n  body.notae-theme-system .notae-db-settings-subpanel {\n    background: var(--notae-surface-raised);\n    backdrop-filter: none;")
   end
 
-  it "marks grid pages as overlay surfaces beneath the topbar" do
-    owner = User.create!(email: "database-overlay-surface-owner@example.com", password: "password123")
-    workspace = Workspace.create!(name: "Overlay grids", slug: "overlay-grids")
+  it "keeps uncovered grid pages below the topbar" do
+    owner = User.create!(email: "database-standard-surface-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Standard grids", slug: "standard-grids")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
-    database = Database.create!(workspace: workspace, name: "Overlay grid")
+    database = Database.create!(workspace: workspace, name: "Standard grid")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    content = document.at_css("main.notae-content")
+
+    expect(content&.[]("class")).to include("notae-content-page")
+    expect(content&.[]("class")).not_to include("notae-content-overlay-page")
+  end
+
+  it "keeps covered grid pages in the topbar overlap mode" do
+    owner = User.create!(email: "database-cover-surface-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Covered grids", slug: "covered-grids")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(
+      workspace: workspace,
+      name: "Covered grid",
+      cover_preset_key: Database::COVER_PRESET_KEYS.first,
+      cover_focal_y: 45
+    )
     sign_in owner
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
@@ -47,7 +70,7 @@ RSpec.describe "Databases", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
     template = Rails.root.join("app/views/databases/show.html.erb").read
 
-    expect(stylesheet).to include(".notae-db-inline-flash-host {\n  position: fixed;\n  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
+    expect(stylesheet).to include(".notae-db-inline-flash-host {\n  position: fixed;\n  top: var(--notae-topbar-content-clearance);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
     expect(stylesheet).to include(".notae-db-inline-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
     expect(template).to include('flash_dom_id: "database_flash_messages"')
     expect(template).to include('flash_host_class: "notae-db-inline-flash-host"')

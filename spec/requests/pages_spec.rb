@@ -33,17 +33,43 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-sidebar,\n.notae-ai-rail,\n.notae-mobile-tabbar {\n  background: color-mix(in srgb, var(--notae-panel-elevated) 82%, transparent);\n}")
     expect(stylesheet).to include(".notae-content {\n  padding: var(--notae-topbar-content-clearance) clamp(1.1rem, 3vw, 2.8rem) 2.4rem;\n}")
     expect(stylesheet).to include(".notae-content.notae-content-page {\n  max-width: none;\n  margin: 0;\n  padding: var(--notae-topbar-content-clearance) 0 1.9rem;\n}")
+    expect(stylesheet).to include(".notae-content.notae-content-home {\n  max-width: none;\n  margin: 0;\n  padding: var(--notae-topbar-content-clearance) 0 1.9rem;\n}")
     expect(stylesheet).to include(".notae-content.notae-content-overlay-page {\n  padding-top: 0;\n}")
     expect(stylesheet).to include(".notae-content.notae-content-wide {\n  max-width: none;\n  width: 100%;\n  margin: 0;\n  padding: var(--notae-topbar-content-clearance) clamp(0.6rem, 1.6vw, 1rem) 1.8rem;\n}")
+    expect(stylesheet).to include(".notae-content.notae-content-kalendarium {\n  padding: var(--notae-topbar-content-clearance) clamp(0.6rem, 1.4vw, 1rem) 1.8rem;\n}")
     expect(stylesheet).to include(".notae-page-cover {\n  padding-top: 0.4rem;\n}")
     expect(stylesheet).to include(".notae-page-cover-frame {\n  margin: 0 clamp(0.9rem, 3vw, 1.4rem);\n  height: clamp(230px, 31vw, 360px);")
   end
 
-  it "marks document pages as overlay surfaces beneath the topbar" do
-    owner = User.create!(email: "page-overlay-surface-owner@example.com", password: "password123")
-    workspace = Workspace.create!(name: "Overlay pages", slug: "overlay-pages")
+  it "keeps document pages without covers below the topbar" do
+    owner = User.create!(email: "page-standard-surface-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Standard pages", slug: "standard-pages")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
-    page = Page.create!(workspace: workspace, created_by: owner, title: "Overlay page")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Standard page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    content = document.at_css("main.notae-content")
+
+    expect(content&.[]("class")).to include("notae-content-page")
+    expect(content&.[]("class")).not_to include("notae-content-overlay-page")
+  end
+
+  it "keeps covered document pages in the topbar overlap mode" do
+    owner = User.create!(email: "page-cover-surface-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Covered pages", slug: "covered-pages")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Covered page",
+      cover_preset_key: Page::COVER_PRESET_KEYS.first,
+      cover_focal_y: 45
+    )
     sign_in owner
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
@@ -71,7 +97,7 @@ RSpec.describe "Pages", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include("--notae-layer-flash: 1400;")
-    expect(stylesheet).to include(".notae-content.notae-content-page > #notae_flash_messages,\n.notae-content.notae-content-home > #notae_flash_messages {\n  position: fixed;\n  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
+    expect(stylesheet).to include(".notae-content > #notae_flash_messages {\n  position: fixed;\n  top: var(--notae-topbar-content-clearance);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
   end
 
   it "elevates shared context menu layers above page chrome while staying below flash" do
