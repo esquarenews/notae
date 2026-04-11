@@ -22,7 +22,9 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include("  background:\n    linear-gradient(\n      180deg,\n      color-mix(in srgb, var(--notae-panel-elevated) 58%, transparent),\n      color-mix(in srgb, var(--notae-panel-bg) 46%, transparent)\n    );")
     expect(stylesheet).to include("  -webkit-backdrop-filter: blur(18px) saturate(1.12);")
     expect(stylesheet).to include("  backdrop-filter: blur(18px) saturate(1.12);")
-    expect(stylesheet).to include(".notae-page-cover {\n  margin-top: -5rem;\n  padding-top: 0.4rem;\n}")
+    expect(stylesheet).to include(".notae-main:has(.notae-page-cover) .notae-topbar {\n  margin-bottom: -5.35rem;\n}")
+    expect(stylesheet).to include(".notae-page-cover {\n  padding-top: 0.4rem;\n}")
+    expect(stylesheet).to include(".notae-page-cover-frame {\n  margin: 0 clamp(0.9rem, 3vw, 1.4rem);\n  height: clamp(230px, 31vw, 360px);")
   end
 
   it "keeps the title save status above the cover controls without lifting the closed picker" do
