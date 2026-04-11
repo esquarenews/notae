@@ -242,38 +242,36 @@
                  embedded_page_params: page_canvas_params
                } %>
 
-    <% unless embedded_preview %>
-      <section class="notae-doc-backlinks">
-        <h2>Backlinks</h2>
-        <% backlink_targets = [] %>
-        <% @backlinks.each do |backlink| %>
-          <% source_page = backlink.source_page %>
-          <% next if source_page.blank? %>
-          <% backlink_targets << { key: "page:#{source_page.id}", record: source_page, source: source_page.id } %>
-        <% end %>
-        <% @row_backlink_databases.each do |database| %>
-          <% backlink_targets << { key: "database:#{database.id}", record: database, source: "database:#{database.id}" } %>
-        <% end %>
-        <% backlink_targets = backlink_targets.uniq { |entry| entry[:key] } %>
-        <% if backlink_targets.any? %>
-          <ul>
-            <% backlink_targets.each do |entry| %>
-              <li>
-                <%= link_to linked_document_label(entry[:record]),
-                            linked_document_path(
-                              entry[:record],
-                              workspace: @workspace,
-                              embedded: embedded_preview
-                            ),
-                            data: { backlink_source: entry[:source] } %>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p>No backlinks yet.</p>
-        <% end %>
-      </section>
-    <% end %>
+    <section class="notae-doc-backlinks">
+      <h2>Backlinks</h2>
+      <% backlink_targets = [] %>
+      <% @backlinks.each do |backlink| %>
+        <% source_page = backlink.source_page %>
+        <% next if source_page.blank? %>
+        <% backlink_targets << { key: "page:#{source_page.id}", record: source_page, source: source_page.id } %>
+      <% end %>
+      <% @row_backlink_databases.each do |database| %>
+        <% backlink_targets << { key: "database:#{database.id}", record: database, source: "database:#{database.id}" } %>
+      <% end %>
+      <% backlink_targets = backlink_targets.uniq { |entry| entry[:key] } %>
+      <% if backlink_targets.any? %>
+        <ul>
+          <% backlink_targets.each do |entry| %>
+            <li>
+              <%= link_to linked_document_label(entry[:record]),
+                          linked_document_path(
+                            entry[:record],
+                            workspace: @workspace,
+                            embedded: embedded_preview
+                          ),
+                          data: { backlink_source: entry[:source] } %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p>No backlinks yet.</p>
+      <% end %>
+    </section>
   </section>
 
   <% if @split_page.present? %>

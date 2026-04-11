@@ -20,7 +20,7 @@ RSpec.describe Imports::IngestService, type: :service do
       QA,2,2026-04-03,no
     CSV
 
-    result = described_class.call(workspace: workspace, user: user, files: [csv])
+    result = described_class.call(workspace: workspace, user: user, files: [ csv ])
 
     expect(result.imported_page_count).to eq(0)
     expect(result.imported_database_count).to eq(1)
@@ -29,11 +29,11 @@ RSpec.describe Imports::IngestService, type: :service do
     expect(database.database_views.find_by(default: true)&.view_type).to eq("table")
 
     properties = database.db_properties.ordered.to_a
-    expect(properties.map(&:name)).to eq(["Estimate", "Due", "Done"])
-    expect(properties.map(&:property_type)).to eq(["number", "date", "checkbox"])
+    expect(properties.map(&:name)).to eq([ "Estimate", "Due", "Done" ])
+    expect(properties.map(&:property_type)).to eq([ "number", "date", "checkbox" ])
 
     rows = database.db_rows.ordered.includes(:db_cells).to_a
-    expect(rows.map(&:title)).to eq(["Launch prep", "QA"])
+    expect(rows.map(&:title)).to eq([ "Launch prep", "QA" ])
     expect(rows.first.db_cells.find { |cell| cell.db_property.name == "Estimate" }&.value_text).to eq("5")
     expect(rows.first.db_cells.find { |cell| cell.db_property.name == "Due" }&.value_text).to eq("2026-04-01")
     expect(rows.first.db_cells.find { |cell| cell.db_property.name == "Done" }&.value_text).to eq("true")

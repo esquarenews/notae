@@ -1,25 +1,26 @@
-<% mobile_workspace = (defined?(@workspace) ? @workspace : nil) || ui_current_workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
-<% if mobile_workspace.present? %>
+<% mobile_workspace = ui_current_workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
+<% mobile_workspace_slug = mobile_workspace&.slug.to_s.presence %>
+<% if mobile_workspace_slug %>
   <nav class="notae-mobile-tabbar" aria-label="Primary mobile navigation">
     <% mobile_nav_items = [
          {
            label: "Home",
-           path: workspace_path(mobile_workspace.slug),
+           path: workspace_path(mobile_workspace_slug),
            icon: :home
          },
          {
            label: "Search",
-           path: workspace_search_path(workspace_slug: mobile_workspace.slug),
+           path: workspace_search_path(workspace_slug: mobile_workspace_slug),
            icon: :search
          },
          {
            label: "Calendar",
-           path: kalendarium_path(workspace_slug: mobile_workspace.slug),
+           path: kalendarium_path(workspace_slug: mobile_workspace_slug),
            icon: :kalendarium
          },
          {
            label: "Mail",
-           path: workspace_epistularium_path(workspace_slug: mobile_workspace.slug),
+           path: workspace_epistularium_path(workspace_slug: mobile_workspace_slug),
            icon: :epistularium
          }
        ] %>
@@ -34,7 +35,7 @@
       <% end %>
     <% end %>
 
-    <% library_path = workspace_library_path(workspace_slug: mobile_workspace.slug) %>
+    <% library_path = workspace_library_path(workspace_slug: mobile_workspace_slug) %>
     <% library_active_class = current_page?(library_path) ? " active" : "" %>
     <%= link_to library_path,
                 class: "notae-mobile-tabbar-link#{library_active_class}",

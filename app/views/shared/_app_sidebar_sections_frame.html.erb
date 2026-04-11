@@ -1,7 +1,8 @@
 <%
   workspace = local_assigns[:workspace] || (defined?(@workspace) ? @workspace : nil)
   lazy = local_assigns.fetch(:lazy, false)
-  sections_src = workspace.present? ? workspace_sidebar_sections_path(workspace_slug: workspace.slug) : nil
+  workspace_slug = workspace&.slug.to_s.presence
+  sections_src = workspace_slug ? workspace_sidebar_sections_path(workspace_slug: workspace_slug) : nil
 %>
 
 <% if lazy && sections_src.present? %>

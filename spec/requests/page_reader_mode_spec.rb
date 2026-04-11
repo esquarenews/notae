@@ -34,10 +34,17 @@ RSpec.describe "Page reader mode", type: :request do
     expect(page.reload.locked).to be(true)
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
-    expect(response.body).to include("Page is locked. Other actions are unavailable.")
     expect(response.body).to include("notae-actions-panel is-page-locked")
-    expect(response.body).not_to include("id=\"page-options-menu\"")
-    expect(response.body).not_to include("id=\"page-comments-menu\"")
     expect(response.body).to include("is-reader-mode")
+
+    get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "actions")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Page is locked. Other actions are unavailable.")
+
+    get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "options")
+    expect(response).to have_http_status(:forbidden)
+
+    get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "comments")
+    expect(response).to have_http_status(:forbidden)
   end
 end

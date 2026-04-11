@@ -42,7 +42,7 @@ class WorkspaceDocumentTargetsController < ApplicationController
       scope = scope.where.not(id: params[:exclude_page_id])
     end
 
-    apply_text_search(scope, column: "pages.title")
+    apply_text_search(scope, target: :page)
   end
 
   def move_scope
@@ -55,7 +55,7 @@ class WorkspaceDocumentTargetsController < ApplicationController
 
   def database_scope
     scope = policy_scope(Database).for_workspace(@workspace).active.select(:id, :name, :updated_at)
-    apply_text_search(scope, column: "databases.name")
+    apply_text_search(scope, target: :database)
   end
 
   def page_results(scope)
@@ -78,11 +78,18 @@ class WorkspaceDocumentTargetsController < ApplicationController
     end
   end
 
-  def apply_text_search(scope, column:)
+  def apply_text_search(scope, target:)
     return scope if search_query.blank?
 
     pattern = "%#{ActiveRecord::Base.sanitize_sql_like(search_query.downcase)}%"
-    scope.where("LOWER(#{column}) LIKE ?", pattern)
+    case target
+    when :page
+      scope.where("LOWER(pages.title) LIKE ?", pattern)
+    when :database
+      scope.where("LOWER(databases.name) LIKE ?", pattern)
+    else
+      scope
+    end
   end
 
   def apply_ordering(scope, column:)

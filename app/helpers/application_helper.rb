@@ -54,7 +54,7 @@ module ApplicationHelper
 
   def ui_current_workspace
     return nil unless user_signed_in?
-    return @workspace if defined?(@workspace) && @workspace.present?
+    return @workspace if defined?(@workspace) && @workspace&.persisted? && @workspace.slug.present?
     return @ui_current_workspace if defined?(@ui_current_workspace)
 
     requested_slug = params[:workspace_slug].presence
@@ -399,7 +399,7 @@ module ApplicationHelper
     return [] if workspace.blank? || user.blank?
 
     @workspace_recent_cover_assets ||= {}
-    @workspace_recent_cover_assets[[workspace.id, user.id]] ||=
+    @workspace_recent_cover_assets[[ workspace.id, user.id ]] ||=
       workspace.cover_assets.for_picker(workspace, user).with_attached_image.limit(12).to_a
   end
 

@@ -27,11 +27,17 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response.body).to include("notae-ai-loader-beam")
     expect(response.body).to include("p-16")
     expect(response.body).to include("notae-ai-loader-options-grid is-two-column")
+    expect(response.body).to include("Agent Action Policy")
+    expect(response.body).to include("notae-settings-nav-item active")
+    expect(response.body).to include('id="ai_rail_panel"')
+    expect(response.body).to include("Open AI assistant")
+
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("This document only")
     expect(response.body).to include("This workspace only")
     expect(response.body).to include("Whole account")
-    expect(response.body).to include("Agent Action Policy")
-    expect(response.body).to include("notae-settings-nav-item active")
   end
 
   it "updates the selected Notae AI loader style for the current user" do
@@ -87,6 +93,11 @@ RSpec.describe "Notae AI settings", type: :request do
     sign_in user
 
     get workspace_notae_ai_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('id="ai_rail_panel"')
+
+    get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-ai-usage-card")

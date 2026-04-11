@@ -519,29 +519,27 @@
     <%= render "databases/table_view" %>
   <% end %>
 
-  <% unless embedded_preview %>
-    <section class="notae-doc-backlinks">
-      <h2>Backlinks</h2>
-      <% backlink_pages = @backlinks.map(&:source_page).compact.uniq { |source_page| source_page.id } %>
-      <% if backlink_pages.any? %>
-        <ul>
-          <% backlink_pages.each do |source_page| %>
-            <li>
-              <%= link_to linked_document_label(source_page),
-                          linked_document_path(
-                            source_page,
-                            workspace: @workspace,
-                            embedded: embedded_preview
-                          ),
-                          data: { backlink_source: source_page.id } %>
-            </li>
-          <% end %>
-        </ul>
-      <% else %>
-        <p>No backlinks yet.</p>
-      <% end %>
-    </section>
-  <% end %>
+  <section class="notae-doc-backlinks">
+    <h2>Backlinks</h2>
+    <% backlink_pages = @backlinks.map(&:source_page).compact.uniq { |source_page| source_page.id } %>
+    <% if backlink_pages.any? %>
+      <ul>
+        <% backlink_pages.each do |source_page| %>
+          <li>
+            <%= link_to linked_document_label(source_page),
+                        linked_document_path(
+                          source_page,
+                          workspace: @workspace,
+                          embedded: embedded_preview
+                        ),
+                        data: { backlink_source: source_page.id } %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>No backlinks yet.</p>
+    <% end %>
+  </section>
 </section>
 
 <% if @split_page.present? %>

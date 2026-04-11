@@ -2491,7 +2491,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).not_to include("notae-page-cover")
     expect(response.body).not_to include("notae-db-header")
     expect(response.body).not_to include("notae-db-viewbar")
-    expect(response.body).not_to include("notae-doc-backlinks")
+    expect(response.body).to include("notae-doc-backlinks")
     expect(response.body).not_to include("Change cover")
     expect(response.body).not_to include("Add description")
     expect(response.body).to include("notae-db-grid")

@@ -1,68 +1,73 @@
 <aside class="notae-sidebar">
   <% workspace = ui_current_workspace %>
   <% nav_workspace = workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
+  <% nav_workspace_slug = nav_workspace&.slug.to_s.presence %>
   <% current_database_id = (controller_name == "databases" && action_name == "show") ? params[:id].presence : nil %>
   <% can_create_workspace = policy(Workspace.new).create? %>
   <% can_create_page = workspace && policy(Page.new(workspace: workspace)).create? %>
   <% can_create_database = workspace && policy(Database.new(workspace: workspace)).create? %>
+  <% sidebar_home_path = nav_workspace_slug ? workspace_path(workspace_slug: nav_workspace_slug) : new_workspace_path %>
+  <% sidebar_search_path = nav_workspace_slug ? workspace_search_path(workspace_slug: nav_workspace_slug) : new_workspace_path %>
+  <% sidebar_settings_path = nav_workspace_slug ? workspace_preferences_path(workspace_slug: nav_workspace_slug) : new_workspace_path %>
+  <% sidebar_trash_path = nav_workspace_slug ? workspace_trash_path(workspace_slug: nav_workspace_slug) : root_path %>
   <div class="notae-sidebar-dock" aria-hidden="true">
     <button type="button"
             class="notae-sidebar-dock-toggle"
             data-action="click->shell#toggleSidebarCollapse"
             aria-label="Expand sidebar">☰</button>
     <nav class="notae-sidebar-dock-icons" aria-label="Sidebar quick links">
-      <%= link_to (workspace ? workspace_path(workspace.slug) : root_path),
-                  class: notae_sidebar_link_classes(workspace ? workspace_path(workspace.slug) : root_path, active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+      <%= link_to sidebar_home_path,
+                  class: notae_sidebar_link_classes(sidebar_home_path, active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                   title: "Home",
                   data: notae_shell_link_data do %>
         <%= notae_icon_svg(:home, css_class: "notae-sidebar-nav-icon") %>
       <% end %>
-      <%= link_to (workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
-                  class: notae_sidebar_link_classes(workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path, active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+      <%= link_to sidebar_search_path,
+                  class: notae_sidebar_link_classes(sidebar_search_path, active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                   title: "Search",
                   data: notae_shell_link_data do %>
         <%= notae_icon_svg(:search, css_class: "notae-sidebar-nav-icon") %>
       <% end %>
-      <% if nav_workspace %>
-        <%= link_to workspace_notifications_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+      <% if nav_workspace_slug %>
+        <%= link_to workspace_notifications_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: nav_workspace_slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "Notifications",
                     data: notae_shell_link_data do %>
           <%= notae_icon_svg(:notifications, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
-        <%= link_to workspace_library_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_library_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+        <%= link_to workspace_library_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_library_path(workspace_slug: nav_workspace_slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "Library",
                     data: notae_shell_link_data do %>
           <%= notae_icon_svg(:library, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
-        <%= link_to kalendarium_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(kalendarium_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+        <%= link_to kalendarium_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(kalendarium_path(workspace_slug: nav_workspace_slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "Kalendārium",
                     data: notae_shell_link_data do %>
           <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
-        <%= link_to workspace_epistularium_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_epistularium_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+        <%= link_to workspace_epistularium_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_epistularium_path(workspace_slug: nav_workspace_slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "Epistularium",
                     data: notae_shell_link_data do %>
           <%= notae_icon_svg(:epistularium, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
-        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace_slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "Meetings",
                     data: notae_shell_link_data do %>
           <%= notae_icon_svg(:meeting, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
-        <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+        <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: nav_workspace_slug), active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                     title: "AI Conversation History",
                     data: notae_shell_link_data do %>
           <%= notae_icon_svg(:ai_history, css_class: "notae-sidebar-nav-icon") %>
         <% end %>
       <% end %>
-      <%= link_to (workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path),
-                  class: notae_sidebar_link_classes(workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path, active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
+      <%= link_to sidebar_settings_path,
+                  class: notae_sidebar_link_classes(sidebar_settings_path, active: false).sub("notae-sidebar-link", "notae-sidebar-dock-link"),
                   title: "Settings",
                   data: notae_shell_link_data do %>
         <%= notae_icon_svg(:settings, css_class: "notae-sidebar-nav-icon") %>
@@ -172,65 +177,65 @@
 
   <div class="notae-sidebar-scroll">
     <nav class="notae-sidebar-nav">
-      <%= link_to (workspace ? workspace_path(workspace.slug) : root_path),
-                  class: notae_sidebar_link_classes(workspace ? workspace_path(workspace.slug) : root_path),
+      <%= link_to sidebar_home_path,
+                  class: notae_sidebar_link_classes(sidebar_home_path),
                   data: notae_shell_link_data do %>
         <span class="notae-sidebar-link-content">
           <%= notae_icon_svg(:home, css_class: "notae-sidebar-nav-icon") %>
           <span class="notae-sidebar-link-label">Home</span>
         </span>
       <% end %>
-      <%= link_to (workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
-                  class: notae_sidebar_link_classes(workspace ? workspace_search_path(workspace_slug: workspace.slug) : root_path),
+      <%= link_to sidebar_search_path,
+                  class: notae_sidebar_link_classes(sidebar_search_path),
                   data: notae_shell_link_data do %>
         <span class="notae-sidebar-link-content">
           <%= notae_icon_svg(:search, css_class: "notae-sidebar-nav-icon") %>
           <span class="notae-sidebar-link-label">Search</span>
         </span>
       <% end %>
-      <% if nav_workspace %>
-        <%= link_to workspace_notifications_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: nav_workspace.slug)),
+      <% if nav_workspace_slug %>
+        <%= link_to workspace_notifications_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_notifications_path(workspace_slug: nav_workspace_slug)),
                     data: notae_shell_link_data do %>
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:notifications, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Notifications</span>
           </span>
         <% end %>
-        <%= link_to workspace_library_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_library_path(workspace_slug: nav_workspace.slug)),
+        <%= link_to workspace_library_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_library_path(workspace_slug: nav_workspace_slug)),
                     data: notae_shell_link_data do %>
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:library, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Library</span>
           </span>
         <% end %>
-        <%= link_to kalendarium_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(kalendarium_path(workspace_slug: nav_workspace.slug)),
+        <%= link_to kalendarium_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(kalendarium_path(workspace_slug: nav_workspace_slug)),
                     data: notae_shell_link_data do %>
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:kalendarium, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Kalendārium</span>
           </span>
         <% end %>
-        <%= link_to workspace_epistularium_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_epistularium_path(workspace_slug: nav_workspace.slug)),
+        <%= link_to workspace_epistularium_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_epistularium_path(workspace_slug: nav_workspace_slug)),
                     data: notae_shell_link_data do %>
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:epistularium, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Epistularium</span>
           </span>
         <% end %>
-        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace.slug)),
+        <%= link_to workspace_meetings_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_meetings_path(workspace_slug: nav_workspace_slug)),
                     data: notae_shell_link_data do %>
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:meeting, css_class: "notae-sidebar-nav-icon") %>
             <span class="notae-sidebar-link-label">Meetings</span>
           </span>
         <% end %>
-        <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug),
-                    class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: nav_workspace.slug)),
+        <%= link_to workspace_ai_conversation_history_path(workspace_slug: nav_workspace_slug),
+                    class: notae_sidebar_link_classes(workspace_ai_conversation_history_path(workspace_slug: nav_workspace_slug)),
                     data: notae_shell_link_data do %>
           <span class="notae-sidebar-link-content">
             <%= notae_icon_svg(:ai_history, css_class: "notae-sidebar-nav-icon") %>
@@ -248,16 +253,16 @@
   </div>
 
   <div class="notae-sidebar-footer">
-    <%= link_to (workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path),
-                class: notae_sidebar_link_classes(workspace ? workspace_preferences_path(workspace_slug: workspace.slug) : root_path),
+    <%= link_to sidebar_settings_path,
+                class: notae_sidebar_link_classes(sidebar_settings_path),
                 data: notae_shell_link_data do %>
       <span class="notae-sidebar-link-content">
         <%= notae_icon_svg(:settings, css_class: "notae-sidebar-nav-icon") %>
         <span class="notae-sidebar-link-label">Settings</span>
       </span>
     <% end %>
-    <%= link_to (workspace ? workspace_trash_path(workspace_slug: workspace.slug) : root_path),
-                class: notae_sidebar_link_classes(workspace ? workspace_trash_path(workspace_slug: workspace.slug) : root_path),
+    <%= link_to sidebar_trash_path,
+                class: notae_sidebar_link_classes(sidebar_trash_path),
                 data: notae_shell_link_data do %>
       <span class="notae-sidebar-link-content">
         <%= notae_icon_svg(:trash, css_class: "notae-sidebar-nav-icon") %>

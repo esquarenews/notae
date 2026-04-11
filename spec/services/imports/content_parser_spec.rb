@@ -41,7 +41,7 @@ RSpec.describe Imports::ContentParser, type: :service do
     expect(result.documents.size).to eq(1)
     document = result.documents.first
     expect(document.target_type).to eq(Imports::ContentParser::TARGET_DATABASE)
-    expect(document.table_rows).to eq([["name", "score"], ["A", "10"], ["B", "12"]])
+    expect(document.table_rows).to eq([ [ "name", "score" ], [ "A", "10" ], [ "B", "12" ] ])
     expect(document.blocks.first[:block_type]).to eq("heading_2")
     expect(document.blocks.second[:block_type]).to eq("code_block")
   end

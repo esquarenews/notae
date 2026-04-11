@@ -54,23 +54,17 @@ module Databases
 
       alias_name = "filter_cells"
       scope = join_cell(scope, alias_name, @filter_property.id)
-      sql_value = sql_value_expression(@filter_property, alias_name)
       bound_value = normalized_filter_value(@filter_property, @filter_value)
       return scope unless bound_value.present?
 
-      case @filter_operator
-      when "neq"
-        scope.where("#{sql_value} IS NULL OR #{sql_value} != ?", bound_value)
-      when "before"
-        return scope unless @filter_property.number? || @filter_property.date?
-
-        scope.where("#{sql_value} < ?", bound_value)
-      when "after"
-        return scope unless @filter_property.number? || @filter_property.date?
-
-        scope.where("#{sql_value} > ?", bound_value)
+      if @filter_property.number?
+        apply_number_filter(scope, bound_value)
+      elsif @filter_property.date?
+        apply_date_filter(scope, bound_value)
+      elsif @filter_property.checkbox?
+        apply_checkbox_filter(scope, bound_value)
       else
-        scope.where("#{sql_value} = ?", bound_value)
+        apply_text_filter(scope, bound_value)
       end
     end
 
@@ -79,13 +73,83 @@ module Databases
 
       alias_name = "sort_cells"
       scope = join_cell(scope, alias_name, @sort_property.id)
-      sql_value = sql_value_expression(@sort_property, alias_name)
-      scope.order(
-        Arel.sql("CASE WHEN #{sql_value} IS NULL THEN 1 ELSE 0 END ASC"),
-        Arel.sql("#{sql_value} #{@sort_direction.upcase}"),
-        Arel.sql("LOWER(db_rows.title) ASC"),
-        :created_at
-      )
+
+      null_order_sql, value_order_sql =
+        if @sort_property.number?
+          [
+            Arel.sql("CASE WHEN CAST(NULLIF(TRIM(sort_cells.value_text), '') AS REAL) IS NULL THEN 1 ELSE 0 END ASC"),
+            @sort_direction == "desc" ?
+              Arel.sql("CAST(NULLIF(TRIM(sort_cells.value_text), '') AS REAL) DESC") :
+              Arel.sql("CAST(NULLIF(TRIM(sort_cells.value_text), '') AS REAL) ASC")
+          ]
+        elsif @sort_property.date?
+          [
+            Arel.sql("CASE WHEN DATE(NULLIF(TRIM(sort_cells.value_text), '')) IS NULL THEN 1 ELSE 0 END ASC"),
+            @sort_direction == "desc" ?
+              Arel.sql("DATE(NULLIF(TRIM(sort_cells.value_text), '')) DESC") :
+              Arel.sql("DATE(NULLIF(TRIM(sort_cells.value_text), '')) ASC")
+          ]
+        elsif @sort_property.checkbox?
+          [
+            Arel.sql("CASE WHEN CASE WHEN LOWER(COALESCE(sort_cells.value_text, '')) IN ('1', 'true', 'yes', 'on') THEN 1 WHEN LOWER(COALESCE(sort_cells.value_text, '')) IN ('0', 'false', 'no', 'off') THEN 0 ELSE NULL END IS NULL THEN 1 ELSE 0 END ASC"),
+            @sort_direction == "desc" ?
+              Arel.sql("CASE WHEN LOWER(COALESCE(sort_cells.value_text, '')) IN ('1', 'true', 'yes', 'on') THEN 1 WHEN LOWER(COALESCE(sort_cells.value_text, '')) IN ('0', 'false', 'no', 'off') THEN 0 ELSE NULL END DESC") :
+              Arel.sql("CASE WHEN LOWER(COALESCE(sort_cells.value_text, '')) IN ('1', 'true', 'yes', 'on') THEN 1 WHEN LOWER(COALESCE(sort_cells.value_text, '')) IN ('0', 'false', 'no', 'off') THEN 0 ELSE NULL END ASC")
+          ]
+        else
+          [
+            Arel.sql("CASE WHEN LOWER(NULLIF(TRIM(sort_cells.value_text), '')) IS NULL THEN 1 ELSE 0 END ASC"),
+            @sort_direction == "desc" ?
+              Arel.sql("LOWER(NULLIF(TRIM(sort_cells.value_text), '')) DESC") :
+              Arel.sql("LOWER(NULLIF(TRIM(sort_cells.value_text), '')) ASC")
+          ]
+        end
+
+      scope.order(null_order_sql, value_order_sql, Arel.sql("LOWER(db_rows.title) ASC"), :created_at)
+    end
+
+    def apply_text_filter(scope, bound_value)
+      case @filter_operator
+      when "neq"
+        scope.where("LOWER(NULLIF(TRIM(filter_cells.value_text), '')) IS NULL OR LOWER(NULLIF(TRIM(filter_cells.value_text), '')) != ?", bound_value)
+      else
+        scope.where("LOWER(NULLIF(TRIM(filter_cells.value_text), '')) = ?", bound_value)
+      end
+    end
+
+    def apply_number_filter(scope, bound_value)
+      case @filter_operator
+      when "neq"
+        scope.where("CAST(NULLIF(TRIM(filter_cells.value_text), '') AS REAL) IS NULL OR CAST(NULLIF(TRIM(filter_cells.value_text), '') AS REAL) != ?", bound_value)
+      when "before"
+        scope.where("CAST(NULLIF(TRIM(filter_cells.value_text), '') AS REAL) < ?", bound_value)
+      when "after"
+        scope.where("CAST(NULLIF(TRIM(filter_cells.value_text), '') AS REAL) > ?", bound_value)
+      else
+        scope.where("CAST(NULLIF(TRIM(filter_cells.value_text), '') AS REAL) = ?", bound_value)
+      end
+    end
+
+    def apply_date_filter(scope, bound_value)
+      case @filter_operator
+      when "neq"
+        scope.where("DATE(NULLIF(TRIM(filter_cells.value_text), '')) IS NULL OR DATE(NULLIF(TRIM(filter_cells.value_text), '')) != ?", bound_value)
+      when "before"
+        scope.where("DATE(NULLIF(TRIM(filter_cells.value_text), '')) < ?", bound_value)
+      when "after"
+        scope.where("DATE(NULLIF(TRIM(filter_cells.value_text), '')) > ?", bound_value)
+      else
+        scope.where("DATE(NULLIF(TRIM(filter_cells.value_text), '')) = ?", bound_value)
+      end
+    end
+
+    def apply_checkbox_filter(scope, bound_value)
+      case @filter_operator
+      when "neq"
+        scope.where("CASE WHEN LOWER(COALESCE(filter_cells.value_text, '')) IN ('1', 'true', 'yes', 'on') THEN 1 WHEN LOWER(COALESCE(filter_cells.value_text, '')) IN ('0', 'false', 'no', 'off') THEN 0 ELSE NULL END IS NULL OR CASE WHEN LOWER(COALESCE(filter_cells.value_text, '')) IN ('1', 'true', 'yes', 'on') THEN 1 WHEN LOWER(COALESCE(filter_cells.value_text, '')) IN ('0', 'false', 'no', 'off') THEN 0 ELSE NULL END != ?", bound_value)
+      else
+        scope.where("CASE WHEN LOWER(COALESCE(filter_cells.value_text, '')) IN ('1', 'true', 'yes', 'on') THEN 1 WHEN LOWER(COALESCE(filter_cells.value_text, '')) IN ('0', 'false', 'no', 'off') THEN 0 ELSE NULL END = ?", bound_value)
+      end
     end
 
     def join_cell(scope, alias_name, property_id)
@@ -97,27 +161,6 @@ module Databases
           ]
         )
       )
-    end
-
-    def sql_value_expression(property, alias_name)
-      case property.property_type
-      when "number"
-        "CAST(NULLIF(TRIM(#{alias_name}.value_text), '') AS REAL)"
-      when "date"
-        "DATE(NULLIF(TRIM(#{alias_name}.value_text), ''))"
-      when "checkbox"
-        truthy = DbCell::TRUTHY_VALUES.map { |value| ActiveRecord::Base.connection.quote(value) }.join(", ")
-        falsy = DbCell::FALSY_VALUES.map { |value| ActiveRecord::Base.connection.quote(value) }.join(", ")
-        <<~SQL.squish
-          CASE
-            WHEN LOWER(COALESCE(#{alias_name}.value_text, '')) IN (#{truthy}) THEN 1
-            WHEN LOWER(COALESCE(#{alias_name}.value_text, '')) IN (#{falsy}) THEN 0
-            ELSE NULL
-          END
-        SQL
-      else
-        "LOWER(NULLIF(TRIM(#{alias_name}.value_text), ''))"
-      end
     end
 
     def normalized_filter_value(property, raw_value)

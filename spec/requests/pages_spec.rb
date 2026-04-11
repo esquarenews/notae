@@ -902,7 +902,7 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).not_to include("notae-page-cover")
     expect(response.body).not_to include("notae-doc-header")
     expect(response.body).not_to include("notae-page-title-input")
-    expect(response.body).not_to include("notae-doc-backlinks")
+    expect(response.body).to include("notae-doc-backlinks")
     expect(response.body).not_to include("Change cover")
     expect(response.body).not_to include("notae-doc-add-form")
     expect(response.body).not_to include("notae-doc-handle")
