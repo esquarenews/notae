@@ -15,7 +15,7 @@
        "Shared to workspace"
      end %>
 <% content_for :topbar_privacy, database_privacy_label %>
-<% content_for :content_class, [ "notae-content-page", ("is-embedded-preview" if embedded_preview) ].compact.join(" ") %>
+<% content_for :content_class, [ "notae-content-page", "notae-content-overlay-page", ("is-embedded-preview" if embedded_preview) ].compact.join(" ") %>
 <% can_update_database = policy(@database).update? %>
 <% can_edit_database = can_update_database && !@database.locked? %>
 <% can_create_database = policy(Database.new(workspace: @workspace, name: "Untitled grid")).create? %>

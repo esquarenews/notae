@@ -19,6 +19,24 @@ RSpec.describe "Databases", type: :request do
     expect(stylesheet).to include("  body.notae-theme-system .notae-db-actions-menu .notae-actions-panel,\n  body.notae-theme-system .notae-db-settings-panel,\n  body.notae-theme-system .notae-db-settings-subpanel {\n    background: var(--notae-surface-raised);\n    backdrop-filter: none;")
   end
 
+  it "marks grid pages as overlay surfaces beneath the topbar" do
+    owner = User.create!(email: "database-overlay-surface-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Overlay grids", slug: "overlay-grids")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Overlay grid")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    content = document.at_css("main.notae-content")
+
+    expect(content&.[]("class")).to include("notae-content-page")
+    expect(content&.[]("class")).to include("notae-content-overlay-page")
+  end
+
   it "keeps the board card dialog centered in the viewport" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 

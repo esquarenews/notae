@@ -60,6 +60,25 @@ RSpec.describe "General settings", type: :request do
     expect(active_colour&.[]("value")).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.second.fetch(:value))
   end
 
+  it "renders the workspace colour heading above the palette without the old helper copy" do
+    user = User.create!(email: "general-settings-colour-layout@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Colour layout", slug: "general-settings-colour-layout")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    get workspace_general_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    colour_row = document.at_css(".notae-general-color-form")&.ancestors(".notae-pref-row")&.first
+    colour_heading = document.at_css(".notae-general-color-form .notae-pref-label")
+
+    expect(colour_row&.[]("class")).to include("notae-pref-row--stacked")
+    expect(colour_heading&.text&.strip).to eq("Workspace colour")
+    expect(response.body).not_to include("Shown in the sidebar next to the workspace name and as the page-top border.")
+  end
+
   it "renders the selected settings workspace even if the route workspace slug is stale" do
     user = User.create!(email: "general-settings-stale-route@example.com", password: "password123")
     first_workspace = Workspace.create!(name: "First Workspace", slug: "general-settings-first", workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.first.fetch(:value))

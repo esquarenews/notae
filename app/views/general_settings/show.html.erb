@@ -33,15 +33,12 @@
         <% end %>
       </div>
 
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Workspace colour</p>
-          <p class="notae-pref-description">Shown in the sidebar next to the workspace name and as the page-top border.</p>
-        </div>
+      <div class="notae-pref-row notae-pref-row--stacked">
         <%= form_with model: @workspace,
                       url: workspace_general_settings_path(workspace_slug: @workspace.slug),
                       method: :patch,
                       class: "notae-pref-control-form notae-general-color-form" do |form| %>
+          <p class="notae-pref-label">Workspace colour</p>
           <%= render "shared/workspace_color_picker",
                      form: form,
                      selected_value: @workspace.display_color,

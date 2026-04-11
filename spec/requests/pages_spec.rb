@@ -21,6 +21,7 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include("--notae-glass-surface: rgba(255, 255, 255, 0.012);")
     expect(stylesheet).to include("--notae-glass-surface-soft: rgba(255, 255, 255, 0.006);")
     expect(stylesheet).to include(".notae-shell {\n  --notae-topbar-overlay-depth: 4.15rem;")
+    expect(stylesheet).to include("  --notae-topbar-content-clearance: calc(var(--notae-topbar-overlay-depth) + 0.35rem);")
     expect(stylesheet).to include(".notae-topbar {\n  min-height: 4rem;")
     expect(stylesheet).to include("  position: sticky;\n  top: 0.9rem;\n  z-index: 240;\n  isolation: isolate;")
     expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")
@@ -30,8 +31,30 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).not_to include("body.notae-theme-dark .notae-topbar,")
     expect(stylesheet).not_to include("body.notae-theme-system .notae-topbar,")
     expect(stylesheet).to include(".notae-sidebar,\n.notae-ai-rail,\n.notae-mobile-tabbar {\n  background: color-mix(in srgb, var(--notae-panel-elevated) 82%, transparent);\n}")
+    expect(stylesheet).to include(".notae-content {\n  padding: var(--notae-topbar-content-clearance) clamp(1.1rem, 3vw, 2.8rem) 2.4rem;\n}")
+    expect(stylesheet).to include(".notae-content.notae-content-page {\n  max-width: none;\n  margin: 0;\n  padding: var(--notae-topbar-content-clearance) 0 1.9rem;\n}")
+    expect(stylesheet).to include(".notae-content.notae-content-overlay-page {\n  padding-top: 0;\n}")
+    expect(stylesheet).to include(".notae-content.notae-content-wide {\n  max-width: none;\n  width: 100%;\n  margin: 0;\n  padding: var(--notae-topbar-content-clearance) clamp(0.6rem, 1.6vw, 1rem) 1.8rem;\n}")
     expect(stylesheet).to include(".notae-page-cover {\n  padding-top: 0.4rem;\n}")
     expect(stylesheet).to include(".notae-page-cover-frame {\n  margin: 0 clamp(0.9rem, 3vw, 1.4rem);\n  height: clamp(230px, 31vw, 360px);")
+  end
+
+  it "marks document pages as overlay surfaces beneath the topbar" do
+    owner = User.create!(email: "page-overlay-surface-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Overlay pages", slug: "overlay-pages")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Overlay page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+
+    document = Nokogiri::HTML(response.body)
+    content = document.at_css("main.notae-content")
+
+    expect(content&.[]("class")).to include("notae-content-page")
+    expect(content&.[]("class")).to include("notae-content-overlay-page")
   end
 
   it "keeps the title save status above the cover controls without lifting the closed picker" do
