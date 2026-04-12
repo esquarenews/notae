@@ -12017,6 +12017,15 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   line-height: 1.2;
 }
 
+.notae-kalendarium-task-slot-candidate strong {
+  display: block;
+  font-size: 0.76rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .notae-kalendarium-draft-preview {
   position: absolute;
   left: 0.4rem;
