@@ -171,19 +171,20 @@ class DbRowsController < ApplicationController
     end
 
     tasks_project = Kalendarium::TasksProjectEnsurer.new(workspace: @workspace, actor: current_user).call
-    candidate_result = Kalendarium::TaskSchedulingService.new(
+    scheduling_service = Kalendarium::TaskSchedulingService.new(
       workspace: @workspace,
       row: @db_row,
       actor: current_user,
       tasks_project: tasks_project
-    ).candidate_slots(limit: 3)
+    )
+    candidate_result = scheduling_service.candidate_slots(limit: Kalendarium::TaskSchedulingService::DEFAULT_CANDIDATE_LIMIT)
 
     if candidate_result.success?
       notice_message =
         if suggested_schedule_window_start(candidate_result.slots) > scheduling_today
           "Showing the next available suggested slots in Kalendarium."
         else
-          "Choose a suggested slot in Kalendarium."
+          scheduling_service.suggestion_notice(slot_count: candidate_result.slots.size)
         end
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
                   notice: notice_message
@@ -203,8 +204,8 @@ class DbRowsController < ApplicationController
       return
     end
 
-    starts_at = parse_schedule_slot_time(params[:starts_at])
-    ends_at = parse_schedule_slot_time(params[:ends_at])
+    starts_at = parse_schedule_slot_time(params[:starts_at].presence || params[:starts_at_local])
+    ends_at = parse_schedule_slot_time(params[:ends_at].presence || params[:ends_at_local])
     unless starts_at.present? && ends_at.present? && ends_at > starts_at
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
                   alert: "That suggested slot is invalid. Choose another slot in Kalendarium."
@@ -218,7 +219,7 @@ class DbRowsController < ApplicationController
       actor: current_user,
       tasks_project: tasks_project
     )
-    candidate_result = scheduling_service.candidate_slots(limit: 3)
+    candidate_result = scheduling_service.candidate_slots(limit: Kalendarium::TaskSchedulingService::DEFAULT_CANDIDATE_LIMIT)
     unless candidate_result.success?
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id), alert: candidate_result.error
       return
@@ -228,9 +229,14 @@ class DbRowsController < ApplicationController
       slot.starts_at.to_i == starts_at.to_i && slot.ends_at.to_i == ends_at.to_i
     end
 
+    if chosen_slot.blank? && scheduling_service.slot_available?(starts_at:, ends_at:)
+      chosen_slot = Kalendarium::TaskSchedulingService::Slot.new(starts_at:, ends_at:)
+    end
+
     if chosen_slot.blank?
+      availability_error = scheduling_service.availability_error(starts_at:, ends_at:)
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
-                  alert: "That slot is no longer available. Choose another one in Kalendarium."
+                  alert: availability_error.presence || "That slot is no longer available. Choose another one in Kalendarium."
       return
     end
 
@@ -249,8 +255,9 @@ class DbRowsController < ApplicationController
     authorize event, :create?
 
     if event.save
+      duration_minutes = chosen_slot.duration_minutes
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: nil),
-                  notice: "Scheduled a #{Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES}-minute task block in Kalendarium."
+                  notice: "Scheduled a #{duration_minutes}-minute task block in Kalendarium."
     else
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
                   alert: event.errors.full_messages.to_sentence

@@ -6,7 +6,10 @@ export default class extends Controller {
     startHour: Number,
     slotHeight: Number,
     allDayOffset: Number,
-    timeZone: String
+    timeZone: String,
+    initialFocusMinutes: Number,
+    taskScheduling: Boolean,
+    taskDefaultDurationMinutes: Number
   }
 
   connect() {
@@ -28,7 +31,10 @@ export default class extends Controller {
       const now = this.currentZonedTime()
       const canFocusNow = now && this.hasNowDateInView(now.date)
 
-      if (canFocusNow) {
+      if (this.hasInitialFocusMinutesValue) {
+        const rawTop = this.allDayOffsetForScroll() + ((this.initialFocusMinutesValue / 30.0) * slotHeight) - (this.scrollerTarget.clientHeight * 0.2)
+        this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
+      } else if (canFocusNow) {
         const minutesIntoDay = (now.hour * 60) + now.minute
         const rawTop = this.allDayOffsetForScroll() + ((minutesIntoDay / 30.0) * slotHeight) - (this.scrollerTarget.clientHeight * 0.35)
         this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
@@ -101,7 +107,21 @@ export default class extends Controller {
     const usableY = Math.max(rawY - this.allDayOffsetForScroll(), 0)
     const slotIndex = Math.max(Math.floor(usableY / slotHeight), 0)
     const startMinutes = Math.min(slotIndex * 30, (24 * 60) - 30)
-    const endMinutes = startMinutes + 60
+    const taskDurationMinutes = this.hasTaskDefaultDurationMinutesValue ? this.taskDefaultDurationMinutesValue : 20
+    const endMinutes = this.taskSchedulingValue ? Math.min(startMinutes + taskDurationMinutes, 24 * 60) : startMinutes + 60
+
+    if (this.taskSchedulingValue) {
+      this.element.dispatchEvent(new CustomEvent("kalendarium:task-slot-draft", {
+        bubbles: true,
+        detail: {
+          date: dateString,
+          label: "Custom slot",
+          startLocal: this.localTimestampFor(dateString, startMinutes),
+          endLocal: this.localTimestampFor(dateString, endMinutes)
+        }
+      }))
+      return
+    }
 
     this.element.dispatchEvent(new CustomEvent("kalendarium:quick-create", {
       bubbles: true,

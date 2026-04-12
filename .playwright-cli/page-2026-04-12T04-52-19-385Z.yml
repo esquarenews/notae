@@ -1,0 +1,264 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: UI Debug 1775956965
+        - generic [ref=e9]:
+          - button "＋" [ref=e11]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "UI Debug 1775956965" [ref=e82] [cursor=pointer]:
+                  - /url: /w/ui-debug-1775956965
+                  - generic [ref=e83]: UI Debug 1775956965
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - button "Notarum" [expanded] [ref=e87] [cursor=pointer]:
+                - generic [ref=e88]: ▾
+                - generic [ref=e89]: Notarum
+              - button "Create new Nota" [ref=e91] [cursor=pointer]: "[+]"
+            - paragraph [ref=e93]: No Notarum yet.
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Task planning Task planning" [ref=e104] [cursor=pointer]:
+                  - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2
+                  - generic [ref=e105]:
+                    - generic "Task planning" [ref=e106]:
+                      - generic [ref=e107]: 🗃️
+                    - text: Task planning
+          - generic [ref=e108]:
+            - generic [ref=e109]:
+              - button "Meetings" [expanded] [ref=e110] [cursor=pointer]:
+                - generic [ref=e111]: ▾
+                - generic [ref=e112]: Meetings
+              - button "Create new Meeting" [ref=e114] [cursor=pointer]: "[+]"
+            - paragraph [ref=e116]: No meetings yet.
+          - generic [ref=e117]:
+            - button "Favorites" [expanded] [ref=e119] [cursor=pointer]:
+              - generic [ref=e120]: ▾
+              - generic [ref=e121]: Favorites
+            - paragraph [ref=e123]: No favorites yet.
+      - generic [ref=e124]:
+        - link "Settings" [ref=e125] [cursor=pointer]:
+          - /url: /w/ui-debug-1775956965/settings/preferences
+          - generic [ref=e126]:
+            - img [ref=e128]
+            - generic [ref=e131]: Settings
+        - link "Trash" [ref=e132] [cursor=pointer]:
+          - /url: /w/ui-debug-1775956965/trash
+          - generic [ref=e133]:
+            - img [ref=e135]
+            - generic [ref=e138]: Trash
+        - button "Sign out" [ref=e140] [cursor=pointer]:
+          - generic [ref=e141]:
+            - img [ref=e143]
+            - generic [ref=e146]: Sign out
+  - generic [ref=e147]:
+    - banner [ref=e148]:
+      - generic [ref=e150]:
+        - generic "Grid icon" [ref=e152]:
+          - generic [ref=e153]: 🗃️
+        - generic [ref=e154]: Task planning
+        - generic [ref=e155]: Shared to workspace
+      - generic [ref=e156]:
+        - generic [ref=e157]: Edited about 3 hours ago
+        - button "Add to favorites" [ref=e159] [cursor=pointer]: ☆
+        - group [ref=e160]:
+          - generic "Grid comments" [ref=e161] [cursor=pointer]: 💬
+        - group [ref=e162]:
+          - generic "Options" [ref=e163] [cursor=pointer]:
+            - generic [ref=e164]: ⚙
+            - generic [ref=e165]: Options
+    - main [ref=e166]:
+      - generic [ref=e168]:
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - group [ref=e171]:
+              - generic "Add icon" [ref=e172] [cursor=pointer]:
+                - generic [ref=e173]: ◌
+                - generic [ref=e174]: Add icon
+            - group [ref=e175]:
+              - generic "Add cover" [ref=e176] [cursor=pointer]:
+                - generic [ref=e177]: ▭
+                - generic [ref=e178]: Add cover
+            - group [ref=e179]:
+              - generic "Add description" [ref=e180] [cursor=pointer]:
+                - generic [ref=e181]: ℹ
+                - generic [ref=e182]: Add description
+          - generic [ref=e183]:
+            - textbox "Grid title" [ref=e184]: Task planning
+            - text: Saved
+          - region "Linked tabs" [ref=e185]:
+            - navigation [ref=e186]:
+              - generic [ref=e187]:
+                - link "Tab 1 Tab 1" [ref=e188] [cursor=pointer]:
+                  - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2
+                  - generic "Tab 1" [ref=e190]:
+                    - generic [ref=e191]: 🗃️
+                  - generic [ref=e192]: Tab 1
+                - group [ref=e193]:
+                  - generic "Tab options" [ref=e194] [cursor=pointer]: ⋯
+            - button "+ New tab" [ref=e196]
+        - generic [ref=e197]:
+          - link "⊞ Table" [ref=e199] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2?view_id=13664611-9284-4ba6-b867-f911e6b451a5
+            - generic [ref=e200]: ⊞
+            - text: Table
+          - generic [ref=e201]:
+            - generic [ref=e202]:
+              - button "Grid" [ref=e204] [cursor=pointer]
+              - button "Tasks" [ref=e206] [cursor=pointer]
+              - button "Kanban" [ref=e208] [cursor=pointer]
+              - link "Kalendārium" [ref=e209] [cursor=pointer]:
+                - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2?split_panel=kalendarium&view_id=13664611-9284-4ba6-b867-f911e6b451a5
+            - group [ref=e210]:
+              - generic "⚡" [ref=e211] [cursor=pointer]
+            - group [ref=e212]:
+              - generic "⚙" [ref=e213] [cursor=pointer]
+        - paragraph [ref=e214]: 1 row
+        - generic [ref=e215]:
+          - link "Task planning" [ref=e216] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2?split_page_id=b520eb13-0b1c-447b-9a06-898d4d7b5839&split_source=database&view_id=13664611-9284-4ba6-b867-f911e6b451a5
+          - button "Unlink" [ref=e218]
+        - table [ref=e220]:
+          - rowgroup [ref=e226]:
+            - row "Aa Name Resize Name column Date created Resize Date created column Due date Resize Due date column" [ref=e227]:
+              - columnheader "Aa Name Resize Name column" [ref=e228]:
+                - generic [ref=e229]:
+                  - generic [ref=e230]: Aa
+                  - text: Name
+                - button "Resize Name column" [ref=e231]
+              - columnheader "Date created Resize Date created column" [ref=e232]:
+                - button "Date created" [ref=e235] [cursor=pointer]
+                - button "Resize Date created column" [ref=e236]
+              - columnheader "Due date Resize Due date column" [ref=e237]:
+                - button "Due date" [ref=e240] [cursor=pointer]
+                - button "Resize Due date column" [ref=e241]
+              - columnheader [ref=e242]:
+                - group [ref=e243]:
+                  - generic "+ Add property" [ref=e244] [cursor=pointer]
+                  - option "Text" [selected]
+                  - option "Number"
+                  - option "Date"
+                  - option "Checkbox"
+                  - option "Select"
+          - rowgroup [ref=e245]:
+            - row "Insert row below Drag to reorder Row options Review roadmap Create linked Nota 2026-04-12 2026-04-13" [ref=e246]:
+              - cell "Insert row below Drag to reorder Row options Review roadmap Create linked Nota" [ref=e247]:
+                - generic [ref=e248]:
+                  - generic:
+                    - generic:
+                      - button "Insert row below": +
+                    - button "Drag to reorder": ⠿
+                    - generic:
+                      - button "Row options": ⋯
+                  - generic [ref=e250]:
+                    - generic [ref=e251]:
+                      - textbox "Enter name" [ref=e252]: Review roadmap
+                      - button [ref=e253]
+                    - button "Create linked Nota" [ref=e255] [cursor=pointer]: +
+                    - group [ref=e256]:
+                      - generic "Choose linked Nota" [ref=e257] [cursor=pointer]: 🔗
+              - cell "2026-04-12" [ref=e258]:
+                - textbox [ref=e260]: 2026-04-12
+              - cell "2026-04-13" [ref=e261]:
+                - textbox [ref=e263]: 2026-04-13
+              - cell [ref=e264]
+          - rowgroup [ref=e265]:
+            - row [ref=e266]:
+              - cell [ref=e267]
+              - cell [ref=e268]
+              - cell [ref=e269]
+              - cell [ref=e270]
+            - row [ref=e271]:
+              - cell [ref=e272]
+              - cell [ref=e273]
+              - cell [ref=e274]
+              - cell [ref=e275]
+            - row [ref=e276]:
+              - cell [ref=e277]
+              - cell [ref=e278]
+              - cell [ref=e279]
+              - cell [ref=e280]
+            - row [ref=e281]:
+              - cell [ref=e282]
+              - cell [ref=e283]
+              - cell [ref=e284]
+              - cell [ref=e285]
+            - row [ref=e286]:
+              - cell [ref=e287]
+              - cell [ref=e288]
+              - cell [ref=e289]
+              - cell [ref=e290]
+          - rowgroup [ref=e291]:
+            - row "+ New row" [ref=e292]:
+              - cell "+ New row" [ref=e293]:
+                - button "+ New row" [ref=e295] [cursor=pointer]
+              - cell [ref=e296]
+              - cell [ref=e297]
+              - cell [ref=e298]
+        - generic [ref=e299]:
+          - heading "Backlinks" [level=2] [ref=e300]
+          - paragraph [ref=e301]: No backlinks yet.
+  - complementary "Workspace notification bar" [ref=e302]:
+    - generic [ref=e303]: Sun 12 Apr · 4:52
+  - complementary [ref=e306]:
+    - generic [ref=e308]: New AI chat
+    - generic [ref=e309]:
+      - paragraph [ref=e310]: Open AI assistant
+      - paragraph [ref=e311]: The page is ready. AI context loads on demand so navigation stays fast.

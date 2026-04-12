@@ -105,7 +105,7 @@ RSpec.describe "Kalendarium", type: :request do
 
     travel_to Time.zone.parse("2026-04-12 08:10:00") do
       DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-12")
-      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-13")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-20")
       KalendariumEvent.create!(
         workspace: workspace,
         kalendarium_calendar: calendar,
@@ -131,28 +131,90 @@ RSpec.describe "Kalendarium", type: :request do
     end
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Choose a slot for")
-    expect(response.body).to include(row.title)
-    expect(response.body).to include("Click a suggested slot in the calendar to lock it in.")
+    expect(response.body).not_to include("Choose a slot for")
     expect(response.body).not_to include("Create event")
+    expect(response.body).not_to include("Create project")
+    expect(response.body).not_to include("Time zones")
     expect(response.body).to include("data-kalendarium-focus-window-start-value=\"2026-04-12\"")
+    expect(response.body).to include("data-kalendarium-timeline-initial-focus-minutes-value=\"540\"")
 
     document = Nokogiri::HTML.parse(response.body)
-    slot_forms = document.css(".notae-kalendarium-task-slot-form")
-    expect(slot_forms.size).to eq(3)
-
-    first_form = slot_forms.first
-    expect(first_form["action"]).to eq(
-      confirm_schedule_in_kalendarium_database_db_row_path(
-        workspace_slug: workspace.slug,
-        database_id: database.id,
-        id: row.id
-      )
+    expect(document.at_css(".notae-kalendarium.is-embedded-split")).to be_present
+    expect(document.at_css(".notae-kalendarium-sidebar")).to be_nil
+    slot_cards = document.css(".notae-kalendarium-task-slot-form")
+    expect(slot_cards.size).to eq(4)
+    expect(slot_cards.map { |card| card.at_css(".notae-kalendarium-task-slot-candidate")["data-start-local"] }).to eq(
+      [
+        "2026-04-13T09:00",
+        "2026-04-14T09:00",
+        "2026-04-15T09:00",
+        "2026-04-16T09:00"
+      ]
     )
-    expect(first_form.at_css("input[name='starts_at']")["value"]).to eq("2026-04-12T09:00:00Z")
-    expect(first_form.at_css("input[name='ends_at']")["value"]).to eq("2026-04-12T09:20:00Z")
-    expect(first_form.at_css("input[name='view_id']")["value"]).to eq("table-view-1")
-    expect(first_form.at_css("input[name='filter_value']")["value"]).to eq("active")
+    first_button = slot_cards.first.at_css(".notae-kalendarium-task-slot-candidate")
+    expect(first_button["data-start-local"]).to eq("2026-04-13T09:00")
+    expect(first_button["data-end-local"]).to eq("2026-04-13T09:20")
+    expect(first_button.at_css("strong")&.text.to_s.squish).to eq("9:00 AM - 9:20 AM")
+
+    editor_form = document.at_css("form[action='#{confirm_schedule_in_kalendarium_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)}']")
+    expect(editor_form).to be_present
+    expect(editor_form["data-turbo"]).to eq("false")
+    expect(editor_form.at_css("input[name='view_id']")["value"]).to eq("table-view-1")
+    expect(editor_form.at_css("input[name='filter_value']")["value"]).to eq("active")
+    expect(document.at_css("[data-kalendarium-task-slot-target='dialog']")).to be_present
+  end
+
+  it "renders suggested slots in the viewer time zone instead of pinning them to midnight" do
+    user, workspace, = build_stack(suffix: "task-slots-melbourne", time_zone: "Australia/Melbourne")
+    database = Database.create!(workspace: workspace, created_by: user, name: "Task Grid")
+    date_created_property = DbProperty.create!(workspace: workspace, database: database, name: "Date created", property_type: :date)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Buy groceries")
+    tasks_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Tasks",
+      color_hex: "#10B981",
+      time_zone: "Australia/Melbourne",
+      source_kind: "project"
+    )
+    tasks_project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: tasks_calendar,
+      name: "Tasks",
+      slug: "tasks",
+      color_hex: "#10B981"
+    )
+    sign_in user
+
+    melbourne = ActiveSupport::TimeZone["Australia/Melbourne"]
+    travel_to melbourne.parse("2026-04-12 15:37:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-12")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-18")
+
+      get kalendarium_path(
+        workspace_slug: workspace.slug,
+        view: "next_7_days",
+        date: "2026-04-12",
+        window_start: "2026-04-12",
+        embedded: "1",
+        task_row_id: row.id,
+        project_id: tasks_project.id,
+        project_scope_id: tasks_project.id
+      )
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("data-kalendarium-timeline-initial-focus-minutes-value=\"940\"")
+
+    document = Nokogiri::HTML.parse(response.body)
+    first_card = document.at_css(".notae-kalendarium-task-slot-form")
+    expect(first_card).to be_present
+    expect(first_card["style"]).to include("top: 877.33px")
+    first_button = first_card.at_css(".notae-kalendarium-task-slot-candidate")
+    expect(first_button.at_css("strong")&.text.to_s.squish).to eq("3:40 PM - 4:00 PM")
+    expect(first_button["data-start-local"]).to eq("2026-04-12T15:40")
   end
 
   it "hides the create event accordion in embedded split mode even without a selected task" do
@@ -169,8 +231,11 @@ RSpec.describe "Kalendarium", type: :request do
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css(".notae-kalendarium.is-embedded-split")).to be_present
+    expect(document.at_css(".notae-kalendarium-sidebar")).to be_nil
     expect(document.at_css(".notae-kalendarium-sidebar-accordion-summary")&.text.to_s).not_to include("Create event")
     expect(document.at_css("[data-kalendarium-focus-target='createAccordion']")).to be_nil
+    expect(document.at_css(".notae-kalendarium-task-schedule-panel")).to be_nil
   end
 
   it "scopes visible project events without persisting that filter to later requests" do

@@ -13,6 +13,14 @@
 <% task_schedule_params = @task_schedule_row.present? ? { task_row_id: @task_schedule_row.id } : {} %>
 <% window_start_value = params[:window_start].presence || (@view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : nil) %>
 <% window_start_params = window_start_value.present? ? { window_start: window_start_value } : {} %>
+<% kalendarium_controllers = ["kalendarium-focus", "kalendarium-preview"] %>
+<% kalendarium_controllers << "kalendarium-task-slot" if @task_schedule_row.present? %>
+<% kalendarium_actions = [
+  "kalendarium:quick-create->kalendarium-focus#prepareNewEvent",
+  "kalendarium:preview-event->kalendarium-preview#render",
+  "kalendarium:preview-clear->kalendarium-preview#clear"
+] %>
+<% kalendarium_actions << "kalendarium:task-slot-draft->kalendarium-task-slot#openDraft" if @task_schedule_row.present? %>
 <% database_return_params = {
   view_id: params[:view_id].presence,
   month: params[:month].presence,
@@ -28,12 +36,16 @@
 }.compact %>
 <% kalendarium_base_params = { workspace_slug: @workspace.slug }.merge(embedded_params).merge(task_schedule_params).merge(window_start_params).merge(database_return_params) %>
 
-<section class="notae-kalendarium"
-         data-controller="kalendarium-focus kalendarium-preview"
-         data-action="kalendarium:quick-create->kalendarium-focus#prepareNewEvent kalendarium:preview-event->kalendarium-preview#render kalendarium:preview-clear->kalendarium-preview#clear"
+<section class="<%= ["notae-kalendarium", ("is-embedded-split" if embedded_split_view)].compact.join(" ") %>"
+         data-controller="<%= kalendarium_controllers.join(" ") %>"
+         data-action="<%= kalendarium_actions.join(" ") %>"
          data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
          data-kalendarium-focus-view-value="<%= @view %>"
-         data-kalendarium-focus-window-start-value="<%= @view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : "" %>">
+         data-kalendarium-focus-window-start-value="<%= @view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : "" %>"
+         <% if @task_schedule_row.present? %>
+         data-kalendarium-task-slot-task-title-value="<%= @task_schedule_row.title %>"
+         data-kalendarium-task-slot-default-duration-minutes-value="<%= Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES %>"
+         <% end %>>
   <header class="notae-kalendarium-head notae-auth-card">
     <div class="notae-kalendarium-head-top">
       <h1 class="notae-tool-page-title">Kalendārium</h1>
@@ -298,138 +310,138 @@
   </header>
 
   <section class="notae-kalendarium-grid">
-    <aside class="notae-kalendarium-sidebar notae-auth-card is-pinned">
-      <% if @task_schedule_row.present? %>
-        <section class="notae-kalendarium-task-schedule-panel">
-          <p class="notae-page-subtle">Choose a slot for</p>
-          <strong><%= @task_schedule_row.title %></strong>
-          <% if @task_slot_error.present? %>
-            <p class="notae-page-subtle"><%= @task_slot_error %></p>
-          <% else %>
-            <p class="notae-page-subtle">Click a suggested slot in the calendar to lock it in.</p>
-          <% end %>
-        </section>
-      <% end %>
+    <% unless embedded_split_view %>
+      <aside class="notae-kalendarium-sidebar notae-auth-card is-pinned">
+        <% if @task_schedule_row.present? %>
+          <section class="notae-kalendarium-task-schedule-panel">
+            <p class="notae-page-subtle">Choose a slot for</p>
+            <strong><%= @task_schedule_row.title %></strong>
+            <% if @task_slot_error.present? %>
+              <p class="notae-page-subtle"><%= @task_slot_error %></p>
+            <% else %>
+              <p class="notae-page-subtle">Click a suggested slot in the calendar to lock it in.</p>
+            <% end %>
+          </section>
+        <% end %>
 
-      <% unless embedded_split_view %>
-      <details class="notae-kalendarium-sidebar-accordion" data-kalendarium-focus-target="createAccordion">
-        <summary class="notae-kalendarium-sidebar-accordion-summary">Create event</summary>
-        <div class="notae-kalendarium-sidebar-accordion-body">
-          <div class="notae-kalendarium-sidebar-accordion-body-inner">
-            <%= form_with model: @new_event,
-                          url: kalendarium_events_path(kalendarium_base_params),
-                          class: "notae-kalendarium-form",
-                          data: {
-                            controller: "kalendarium-event-form",
-                            kalendarium_event_form_enforce_future_end_value: true,
-                            kalendarium_event_form_preview_enabled_value: true
-                          } do |form| %>
-              <%= hidden_field_tag :view, @view %>
-              <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
-              <% if @scoped_project_id.present? %>
-                <%= hidden_field_tag :project_scope_id, @scoped_project_id %>
+        <details class="notae-kalendarium-sidebar-accordion" data-kalendarium-focus-target="createAccordion">
+          <summary class="notae-kalendarium-sidebar-accordion-summary">Create event</summary>
+          <div class="notae-kalendarium-sidebar-accordion-body">
+            <div class="notae-kalendarium-sidebar-accordion-body-inner">
+              <%= form_with model: @new_event,
+                            url: kalendarium_events_path(kalendarium_base_params),
+                            class: "notae-kalendarium-form",
+                            data: {
+                              controller: "kalendarium-event-form",
+                              kalendarium_event_form_enforce_future_end_value: true,
+                              kalendarium_event_form_preview_enabled_value: true
+                            } do |form| %>
+                <%= hidden_field_tag :view, @view %>
+                <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
+                <% if @scoped_project_id.present? %>
+                  <%= hidden_field_tag :project_scope_id, @scoped_project_id %>
+                <% end %>
+                <%= form.text_field :title,
+                                    placeholder: "Event title",
+                                    required: true,
+                                    class: "notae-auth-input",
+                                    data: {
+                                      kalendarium_focus_target: "createTitleInput",
+                                      kalendarium_event_form_target: "titleInput",
+                                      action: "input->kalendarium-event-form#titleChanged"
+                                    } %>
+                <%= form.select :kalendarium_calendar_id,
+                                options_from_collection_for_select(@visible_calendars, :id, :name),
+                                {},
+                                class: "notae-auth-input" %>
+                <%= form.select :kalendarium_project_id,
+                                options_for_select([["No project", ""]] + @projects.map { |project| [project.name, project.id] }, @selected_project_id),
+                                {},
+                                class: "notae-auth-input" %>
+                <%= form.datetime_local_field :starts_at_local,
+                                              value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"),
+                                              class: "notae-auth-input",
+                                              data: {
+                                                kalendarium_focus_target: "createStartInput",
+                                                kalendarium_event_form_target: "startInput",
+                                                action: "change->kalendarium-event-form#startChanged"
+                                              } %>
+                <%= form.datetime_local_field :ends_at_local,
+                                              value: @selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"),
+                                              min: Time.current.in_time_zone(current_user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+                                              class: "notae-auth-input",
+                                              data: {
+                                                kalendarium_focus_target: "createEndInput",
+                                                kalendarium_event_form_target: "endInput",
+                                                action: "change->kalendarium-event-form#endChanged"
+                                              } %>
+                <label class="notae-options-checkbox">
+                  <%= form.check_box :all_day,
+                                     data: {
+                                       kalendarium_focus_target: "createAllDayInput",
+                                       kalendarium_event_form_target: "allDayInput",
+                                       action: "change->kalendarium-event-form#toggleAllDay"
+                                     } %>
+                  <span>All day</span>
+                </label>
+                <label class="notae-options-checkbox">
+                  <%= form.check_box :meeting_capture_enabled %>
+                  <span>Record &amp; transcribe this event</span>
+                </label>
+                <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
+                <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
+                <%= form.hidden_field :linked_page_action, value: "" %>
+                <div class="notae-kalendarium-form-actions">
+                  <%= button_tag "Cancel",
+                                 type: "button",
+                                 class: "notae-chip-button notae-chip-button-subtle",
+                                 data: { action: "kalendarium-event-form#cancel" } %>
+                  <%= form.submit "Create", class: "notae-chip-button" %>
+                </div>
               <% end %>
-              <%= form.text_field :title,
-                                  placeholder: "Event title",
-                                  required: true,
-                                  class: "notae-auth-input",
-                                  data: {
-                                    kalendarium_focus_target: "createTitleInput",
-                                    kalendarium_event_form_target: "titleInput",
-                                    action: "input->kalendarium-event-form#titleChanged"
-                                  } %>
-              <%= form.select :kalendarium_calendar_id,
-                              options_from_collection_for_select(@visible_calendars, :id, :name),
-                              {},
-                              class: "notae-auth-input" %>
-              <%= form.select :kalendarium_project_id,
-                              options_for_select([["No project", ""]] + @projects.map { |project| [project.name, project.id] }, @selected_project_id),
-                              {},
-                              class: "notae-auth-input" %>
-              <%= form.datetime_local_field :starts_at_local,
-                                            value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"),
-                                            class: "notae-auth-input",
-                                            data: {
-                                              kalendarium_focus_target: "createStartInput",
-                                              kalendarium_event_form_target: "startInput",
-                                              action: "change->kalendarium-event-form#startChanged"
-                                            } %>
-              <%= form.datetime_local_field :ends_at_local,
-                                            value: @selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"),
-                                            min: Time.current.in_time_zone(current_user.time_zone).strftime("%Y-%m-%dT%H:%M"),
-                                            class: "notae-auth-input",
-                                            data: {
-                                              kalendarium_focus_target: "createEndInput",
-                                              kalendarium_event_form_target: "endInput",
-                                              action: "change->kalendarium-event-form#endChanged"
-                                            } %>
-              <label class="notae-options-checkbox">
-                <%= form.check_box :all_day,
-                                   data: {
-                                     kalendarium_focus_target: "createAllDayInput",
-                                     kalendarium_event_form_target: "allDayInput",
-                                     action: "change->kalendarium-event-form#toggleAllDay"
-                                   } %>
-                <span>All day</span>
-              </label>
-              <label class="notae-options-checkbox">
-                <%= form.check_box :meeting_capture_enabled %>
-                <span>Record &amp; transcribe this event</span>
-              </label>
-              <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
-              <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
-              <%= form.hidden_field :linked_page_action, value: "" %>
-              <div class="notae-kalendarium-form-actions">
-                <%= button_tag "Cancel",
-                               type: "button",
-                               class: "notae-chip-button notae-chip-button-subtle",
-                               data: { action: "kalendarium-event-form#cancel" } %>
-                <%= form.submit "Create", class: "notae-chip-button" %>
-              </div>
-            <% end %>
+            </div>
           </div>
-        </div>
-      </details>
-      <% end %>
+        </details>
 
-      <details class="notae-kalendarium-sidebar-accordion">
-        <summary class="notae-kalendarium-sidebar-accordion-summary">Create project</summary>
-        <div class="notae-kalendarium-sidebar-accordion-body">
-          <div class="notae-kalendarium-sidebar-accordion-body-inner">
-            <%= form_with model: @new_project,
-                          url: kalendarium_projects_path(kalendarium_base_params),
-                          class: "notae-kalendarium-form" do |form| %>
-              <% if @scoped_project_id.present? %>
-                <%= hidden_field_tag :project_scope_id, @scoped_project_id %>
+        <details class="notae-kalendarium-sidebar-accordion">
+          <summary class="notae-kalendarium-sidebar-accordion-summary">Create project</summary>
+          <div class="notae-kalendarium-sidebar-accordion-body">
+            <div class="notae-kalendarium-sidebar-accordion-body-inner">
+              <%= form_with model: @new_project,
+                            url: kalendarium_projects_path(kalendarium_base_params),
+                            class: "notae-kalendarium-form" do |form| %>
+                <% if @scoped_project_id.present? %>
+                  <%= hidden_field_tag :project_scope_id, @scoped_project_id %>
+                <% end %>
+                <%= form.text_field :name, placeholder: "Project name", required: true, class: "notae-auth-input" %>
+                <%= form.text_field :slug, placeholder: "project-slug", class: "notae-auth-input" %>
+                <%= form.color_field :color_hex, value: "#8B5CF6", class: "notae-auth-input" %>
+                <div class="notae-kalendarium-project-actions">
+                  <%= button_tag "Quick link Nota", type: "submit", name: "kalendarium_project[linked_page_action]", value: "create_page", class: "notae-chip-button" %>
+                  <%= form.submit "Create project", class: "notae-chip-button" %>
+                </div>
               <% end %>
-              <%= form.text_field :name, placeholder: "Project name", required: true, class: "notae-auth-input" %>
-              <%= form.text_field :slug, placeholder: "project-slug", class: "notae-auth-input" %>
-              <%= form.color_field :color_hex, value: "#8B5CF6", class: "notae-auth-input" %>
-              <div class="notae-kalendarium-project-actions">
-                <%= button_tag "Quick link Nota", type: "submit", name: "kalendarium_project[linked_page_action]", value: "create_page", class: "notae-chip-button" %>
-                <%= form.submit "Create project", class: "notae-chip-button" %>
-              </div>
-            <% end %>
+            </div>
           </div>
-        </div>
-      </details>
+        </details>
 
-      <% if @time_zone_rail.any? %>
-        <section class="notae-kalendarium-timezones-section">
-          <h2>Time zones</h2>
-          <ul class="notae-kalendarium-timezones">
-            <% @time_zone_rail.each do |time_zone| %>
-              <% zone = ActiveSupport::TimeZone[time_zone] %>
-              <% next if zone.blank? %>
-              <li>
-                <strong><%= time_zone %></strong>
-                <span><%= Time.current.in_time_zone(zone).strftime("%H:%M") %></span>
-              </li>
-            <% end %>
-          </ul>
-        </section>
-      <% end %>
-    </aside>
+        <% if @time_zone_rail.any? %>
+          <section class="notae-kalendarium-timezones-section">
+            <h2>Time zones</h2>
+            <ul class="notae-kalendarium-timezones">
+              <% @time_zone_rail.each do |time_zone| %>
+                <% zone = ActiveSupport::TimeZone[time_zone] %>
+                <% next if zone.blank? %>
+                <li>
+                  <strong><%= time_zone %></strong>
+                  <span><%= Time.current.in_time_zone(zone).strftime("%H:%M") %></span>
+                </li>
+              <% end %>
+            </ul>
+          </section>
+        <% end %>
+      </aside>
+    <% end %>
 
     <div class="notae-kalendarium-main notae-auth-card">
       <% today_local = Time.current.in_time_zone(current_user.time_zone).to_date %>
@@ -445,7 +457,10 @@
              data-kalendarium-timeline-start-hour-value="5"
              data-kalendarium-timeline-slot-height-value="<%= slot_height %>"
              data-kalendarium-timeline-all-day-offset-value="<%= @day_all_day_offset %>"
-             data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>">
+             data-kalendarium-timeline-initial-focus-minutes-value="<%= @task_slot_focus_minutes if @task_slot_focus_minutes.present? %>"
+             data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>"
+             data-kalendarium-timeline-task-scheduling-value="<%= @task_schedule_row.present? %>"
+             data-kalendarium-timeline-task-default-duration-minutes-value="<%= Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES %>">
           <div class="notae-kalendarium-timeline-scroller" data-kalendarium-timeline-target="scroller">
             <div class="notae-kalendarium-day-columns">
               <div class="notae-kalendarium-time-rail" aria-hidden="true">
@@ -490,27 +505,17 @@
                           data-kalendarium-timeline-target="nowLineLabel"></span>
                   </div>
                   <% day_task_slot_candidates.each do |candidate| %>
-                    <% slot = candidate[:slot] %>
-                    <%= form_with url: confirm_schedule_in_kalendarium_database_db_row_path(
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @task_schedule_row.database_id,
-                                    id: @task_schedule_row.id
-                                  ),
-                                  method: :post,
-                                  class: "notae-kalendarium-task-slot-form",
-                                  style: candidate[:timeline_style],
-                                  data: { turbo_frame: "_top" },
-                                  target: "_top" do %>
-                      <%= hidden_field_tag :starts_at, slot.starts_at.iso8601 %>
-                      <%= hidden_field_tag :ends_at, slot.ends_at.iso8601 %>
-                      <% database_return_params.each do |name, value| %>
-                        <%= hidden_field_tag name, value %>
-                      <% end %>
-                      <button type="submit" class="notae-kalendarium-task-slot-candidate">
+                    <div class="notae-kalendarium-task-slot-form" style="<%= candidate[:timeline_style] %>">
+                      <button type="button"
+                              class="notae-kalendarium-task-slot-candidate"
+                              data-action="click->kalendarium-task-slot#openCandidate"
+                              data-slot-label="<%= candidate[:label] %>"
+                              data-start-local="<%= candidate[:start_local_value] %>"
+                              data-end-local="<%= candidate[:end_local_value] %>">
                         <span class="notae-kalendarium-task-slot-label">Suggested slot</span>
-                        <strong><%= "#{slot.starts_at.strftime("%-I:%M %p")} - #{slot.ends_at.strftime("%-I:%M %p")}" %></strong>
+                        <strong><%= candidate[:label] %></strong>
                       </button>
-                    <% end %>
+                    </div>
                   <% end %>
                   <% day_timed_events.each do |placement| %>
                     <%= render "kalendarium_event",
@@ -542,7 +547,10 @@
              data-kalendarium-timeline-start-hour-value="5"
              data-kalendarium-timeline-slot-height-value="<%= slot_height %>"
              data-kalendarium-timeline-all-day-offset-value="<%= @week_all_day_offset %>"
-             data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>">
+             data-kalendarium-timeline-initial-focus-minutes-value="<%= @task_slot_focus_minutes if @task_slot_focus_minutes.present? %>"
+             data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>"
+             data-kalendarium-timeline-task-scheduling-value="<%= @task_schedule_row.present? %>"
+             data-kalendarium-timeline-task-default-duration-minutes-value="<%= Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES %>">
           <div class="notae-kalendarium-week-header">
             <span class="notae-kalendarium-week-header-spacer" aria-hidden="true"></span>
             <div class="notae-kalendarium-week-header-days">
@@ -643,27 +651,17 @@
                               data-kalendarium-timeline-target="nowLineLabel"></span>
                       </div>
                       <% day_task_slot_candidates.each do |candidate| %>
-                        <% slot = candidate[:slot] %>
-                        <%= form_with url: confirm_schedule_in_kalendarium_database_db_row_path(
-                                        workspace_slug: @workspace.slug,
-                                        database_id: @task_schedule_row.database_id,
-                                        id: @task_schedule_row.id
-                                      ),
-                                      method: :post,
-                                      class: "notae-kalendarium-task-slot-form",
-                                      style: candidate[:timeline_style],
-                                      data: { turbo_frame: "_top" },
-                                      target: "_top" do %>
-                          <%= hidden_field_tag :starts_at, slot.starts_at.iso8601 %>
-                          <%= hidden_field_tag :ends_at, slot.ends_at.iso8601 %>
-                          <% database_return_params.each do |name, value| %>
-                            <%= hidden_field_tag name, value %>
-                          <% end %>
-                          <button type="submit" class="notae-kalendarium-task-slot-candidate">
+                        <div class="notae-kalendarium-task-slot-form" style="<%= candidate[:timeline_style] %>">
+                          <button type="button"
+                                  class="notae-kalendarium-task-slot-candidate"
+                                  data-action="click->kalendarium-task-slot#openCandidate"
+                                  data-slot-label="<%= candidate[:label] %>"
+                                  data-start-local="<%= candidate[:start_local_value] %>"
+                                  data-end-local="<%= candidate[:end_local_value] %>">
                             <span class="notae-kalendarium-task-slot-label">Suggested slot</span>
-                            <strong><%= "#{slot.starts_at.strftime("%-I:%M %p")} - #{slot.ends_at.strftime("%-I:%M %p")}" %></strong>
+                            <strong><%= candidate[:label] %></strong>
                           </button>
-                        <% end %>
+                        </div>
                       <% end %>
                       <% day_timed_events.each do |placement| %>
                         <%= render "kalendarium_event",
@@ -963,4 +961,71 @@
       <% end %>
     </div>
   </section>
+
+  <% if @task_schedule_row.present? %>
+    <dialog class="notae-danger-modal notae-kalendarium-task-slot-modal"
+            data-kalendarium-task-slot-target="dialog"
+            data-action="click->kalendarium-task-slot#backdropClose">
+      <div class="notae-danger-modal-panel notae-kalendarium-event-modal-panel">
+        <div class="notae-danger-modal-header">
+          <h3 data-kalendarium-task-slot-target="heading">Schedule task</h3>
+          <button type="button"
+                  class="notae-inline-icon-button"
+                  aria-label="Close schedule task dialog"
+                  data-action="kalendarium-task-slot#close">✕</button>
+        </div>
+
+        <%= form_with url: confirm_schedule_in_kalendarium_database_db_row_path(
+                        workspace_slug: @workspace.slug,
+                        database_id: @task_schedule_row.database_id,
+                        id: @task_schedule_row.id
+                      ),
+                      method: :post,
+                      class: "notae-kalendarium-event-modal-form",
+                      html: {
+                        target: "_top",
+                        data: {
+                          turbo: false,
+                          turbo_frame: "_top"
+                        }
+                      } do %>
+          <% database_return_params.each do |name, value| %>
+            <%= hidden_field_tag name, value %>
+          <% end %>
+          <div class="notae-kalendarium-task-slot-editor-meta">
+            <p class="notae-page-subtle">Adjust the time if needed, then save it into the Tasks calendar.</p>
+          </div>
+          <%= label_tag :starts_at_local, "Start", class: "notae-page-subtle" %>
+          <%= datetime_local_field_tag :starts_at_local,
+                                       nil,
+                                       class: "notae-auth-input",
+                                       data: {
+                                         kalendarium_task_slot_target: "startInput",
+                                         action: "change->kalendarium-task-slot#startChanged"
+                                       } %>
+          <%= label_tag :duration_minutes, "Duration", class: "notae-page-subtle" %>
+          <%= select_tag :duration_minutes,
+                         options_for_select([[ "20 minutes", 20 ], [ "30 minutes", 30 ], [ "45 minutes", 45 ], [ "60 minutes", 60 ], [ "90 minutes", 90 ], [ "Custom", "custom" ]], Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES),
+                         class: "notae-auth-input",
+                         data: {
+                           kalendarium_task_slot_target: "durationInput",
+                           action: "change->kalendarium-task-slot#durationChanged"
+                         } %>
+          <%= label_tag :ends_at_local, "End", class: "notae-page-subtle" %>
+          <%= datetime_local_field_tag :ends_at_local,
+                                       nil,
+                                       class: "notae-auth-input",
+                                       data: {
+                                         kalendarium_task_slot_target: "endInput",
+                                         action: "change->kalendarium-task-slot#endChanged"
+                                       } %>
+
+          <div class="notae-danger-modal-actions">
+            <button type="button" class="notae-chip-button" data-action="kalendarium-task-slot#close">Cancel</button>
+            <%= submit_tag "Schedule task", class: "notae-chip-button" %>
+          </div>
+        <% end %>
+      </div>
+    </dialog>
+  <% end %>
 </section>

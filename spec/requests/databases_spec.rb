@@ -2555,8 +2555,8 @@ RSpec.describe "Databases", type: :request do
         database_id: database.id,
         id: row.id
       ), params: {
-        starts_at: "2026-04-12T09:00:00Z",
-        ends_at: "2026-04-12T09:20:00Z",
+        starts_at_local: "2026-04-13T09:00",
+        ends_at_local: "2026-04-13T09:45",
         view_id: database.database_views.find_by(default: true)&.id
       }
     end.to change(KalendariumEvent, :count).by(1)
@@ -2574,7 +2574,7 @@ RSpec.describe "Databases", type: :request do
     expect(created_event.kalendarium_project).to eq(tasks_project)
     expect(created_event.linked_db_row).to eq(row)
     expect(created_event.starts_at_utc.in_time_zone("UTC").strftime("%H:%M")).to eq("09:00")
-    expect(created_event.ends_at_utc.in_time_zone("UTC").strftime("%H:%M")).to eq("09:20")
+    expect(created_event.ends_at_utc.in_time_zone("UTC").strftime("%H:%M")).to eq("09:45")
   end
 
   it "shifts the split Kalendārium window to the first available suggested slot when the next seven days are full" do
@@ -2632,7 +2632,7 @@ RSpec.describe "Databases", type: :request do
     split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
     expect(split_iframe).to be_present
     expect(split_iframe["src"]).to include("view=next_7_days")
-    expect(split_iframe["src"]).to include("window_start=2026-04-19")
+    expect(split_iframe["src"]).to include("window_start=2026-04-20")
     expect(split_iframe["src"]).to include("task_row_id=#{row.id}")
   end
 

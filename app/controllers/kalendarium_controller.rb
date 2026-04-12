@@ -338,6 +338,7 @@ class KalendariumController < ApplicationController
     @task_schedule_row = resolve_task_schedule_row
     @task_slot_candidates = []
     @task_slot_candidate_layouts_by_day = {}
+    @task_slot_focus_minutes = nil
     @task_slot_error = nil
     return if @task_schedule_row.blank?
 
@@ -345,7 +346,7 @@ class KalendariumController < ApplicationController
       workspace: @workspace,
       row: @task_schedule_row,
       actor: current_user
-    ).candidate_slots(limit: 3)
+    ).candidate_slots(limit: Kalendarium::TaskSchedulingService::DEFAULT_CANDIDATE_LIMIT)
 
     unless candidate_result.success?
       @task_slot_error = candidate_result.error
@@ -355,7 +356,10 @@ class KalendariumController < ApplicationController
     @task_slot_candidates = candidate_result.slots
     return if @task_slot_candidates.blank?
 
-    first_candidate_date = @task_slot_candidates.first.starts_at.to_date
+    first_candidate = @task_slot_candidates.first
+    first_candidate_local = first_candidate.starts_at.in_time_zone(current_user.time_zone)
+    @task_slot_focus_minutes = (first_candidate_local.hour * 60) + first_candidate_local.min
+    first_candidate_date = first_candidate_local.to_date
     if @view == "next_7_days"
       range_end = @next_seven_days_start + 6.days
       if first_candidate_date >= @next_seven_days_start && first_candidate_date <= range_end
@@ -407,14 +411,19 @@ class KalendariumController < ApplicationController
 
   def layout_task_slot_candidates_by_day(slots)
     slots.each_with_object(Hash.new { |index, day| index[day] = [] }) do |slot, index|
-      start_minutes = (slot.starts_at.hour * 60) + slot.starts_at.min
-      end_minutes = (slot.ends_at.hour * 60) + slot.ends_at.min
+      starts_local = slot.starts_at.in_time_zone(current_user.time_zone)
+      ends_local = slot.ends_at.in_time_zone(current_user.time_zone)
+      start_minutes = (starts_local.hour * 60) + starts_local.min
+      end_minutes = (ends_local.hour * 60) + ends_local.min
       duration_minutes = [ end_minutes - start_minutes, TIMELINE_MIN_DURATION_MINUTES ].max
 
-      index[slot.starts_at.to_date] << {
+      index[starts_local.to_date] << {
         slot: slot,
         start_minutes: start_minutes,
         end_minutes: end_minutes,
+        label: "#{starts_local.strftime("%-I:%M %p")} - #{ends_local.strftime("%-I:%M %p")}",
+        start_local_value: starts_local.strftime("%Y-%m-%dT%H:%M"),
+        end_local_value: ends_local.strftime("%Y-%m-%dT%H:%M"),
         timeline_style: [
           "top: #{timeline_pixels_for_minutes(start_minutes).round(2)}px",
           "height: #{timeline_pixels_for_minutes(duration_minutes).round(2)}px",

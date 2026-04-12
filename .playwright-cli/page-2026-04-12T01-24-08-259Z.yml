@@ -1,0 +1,404 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: UI Debug 1775956965
+        - generic [ref=e9]:
+          - button "＋" [ref=e11]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/ui-debug-1775956965/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - paragraph [ref=e82]: Loading workspaces…
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - button "Notarum" [expanded] [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]: ▾
+                - generic [ref=e87]: Notarum
+              - button "Create new Nota" [ref=e89] [cursor=pointer]: "[+]"
+            - list [ref=e91]:
+              - listitem [ref=e92]:
+                - paragraph [ref=e93]: Loading Notarum…
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - paragraph [ref=e104]: Loading grids…
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - button "Meetings" [expanded] [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]: ▾
+                - generic [ref=e109]: Meetings
+              - button "Create new Meeting" [ref=e111] [cursor=pointer]: "[+]"
+            - list [ref=e113]:
+              - listitem [ref=e114]:
+                - paragraph [ref=e115]: Loading meetings…
+          - generic [ref=e116]:
+            - button "Favorites" [expanded] [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: ▾
+              - generic [ref=e120]: Favorites
+            - list [ref=e122]:
+              - listitem [ref=e123]:
+                - paragraph [ref=e124]: Loading favorites…
+      - generic [ref=e125]:
+        - link "Settings" [ref=e126] [cursor=pointer]:
+          - /url: /w/ui-debug-1775956965/settings/preferences
+          - generic [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e132]: Settings
+        - link "Trash" [ref=e133] [cursor=pointer]:
+          - /url: /w/ui-debug-1775956965/trash
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e139]: Trash
+        - button "Sign out" [ref=e141] [cursor=pointer]:
+          - generic [ref=e142]:
+            - img [ref=e144]
+            - generic [ref=e147]: Sign out
+  - generic [ref=e148]:
+    - banner [ref=e149]:
+      - generic [ref=e151]:
+        - generic "Grid icon" [ref=e153]:
+          - generic [ref=e154]: 🗃️
+        - generic [ref=e155]: Task planning
+        - generic [ref=e156]: Shared to workspace
+      - generic [ref=e157]:
+        - generic [ref=e158]: Edited less than a minute ago
+        - button "Add to favorites" [ref=e160] [cursor=pointer]: ☆
+        - group [ref=e161]:
+          - generic "Grid comments" [ref=e162] [cursor=pointer]: 💬
+        - group [ref=e163]:
+          - generic "Options" [ref=e164] [cursor=pointer]:
+            - generic [ref=e165]: ⚙
+            - generic [ref=e166]: Options
+    - main [ref=e167]:
+      - generic [ref=e168]:
+        - generic [ref=e169]:
+          - paragraph [ref=e170]: Signed in successfully.
+          - generic [ref=e171]:
+            - generic [ref=e172]:
+              - group [ref=e173]:
+                - generic "Add icon" [ref=e174] [cursor=pointer]:
+                  - generic [ref=e175]: ◌
+                  - generic [ref=e176]: Add icon
+              - group [ref=e177]:
+                - generic "Add cover" [ref=e178] [cursor=pointer]:
+                  - generic [ref=e179]: ▭
+                  - generic [ref=e180]: Add cover
+              - group [ref=e181]:
+                - generic "Add description" [ref=e182] [cursor=pointer]:
+                  - generic [ref=e183]: ℹ
+                  - generic [ref=e184]: Add description
+            - generic [ref=e185]:
+              - textbox "Grid title" [ref=e186]: Task planning
+              - text: Saved
+            - region "Linked tabs" [ref=e187]:
+              - navigation [ref=e188]:
+                - generic [ref=e189]:
+                  - link "Tab 1 Tab 1" [ref=e190] [cursor=pointer]:
+                    - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2
+                    - generic "Tab 1" [ref=e192]:
+                      - generic [ref=e193]: 🗃️
+                    - generic [ref=e194]: Tab 1
+                  - group [ref=e195]:
+                    - generic "Tab options" [ref=e196] [cursor=pointer]: ⋯
+              - button "+ New tab" [ref=e198]
+          - generic [ref=e199]:
+            - link "⊞ Table" [ref=e201] [cursor=pointer]:
+              - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2?split_panel=kalendarium&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view_id=13664611-9284-4ba6-b867-f911e6b451a5
+              - generic [ref=e202]: ⊞
+              - text: Table
+            - generic [ref=e203]:
+              - generic [ref=e204]:
+                - button "Grid" [ref=e206] [cursor=pointer]
+                - button "Tasks" [ref=e208] [cursor=pointer]
+                - button "Kanban" [ref=e210] [cursor=pointer]
+                - link "Kalendārium" [ref=e211] [cursor=pointer]:
+                  - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2?split_panel=kalendarium&view_id=13664611-9284-4ba6-b867-f911e6b451a5
+              - group [ref=e212]:
+                - generic "⚡" [ref=e213] [cursor=pointer]
+              - group [ref=e214]:
+                - generic "⚙" [ref=e215] [cursor=pointer]
+          - paragraph [ref=e216]: 1 row
+          - generic [ref=e217]:
+            - link "Task planning" [ref=e218] [cursor=pointer]:
+              - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2?split_page_id=b520eb13-0b1c-447b-9a06-898d4d7b5839&split_panel=kalendarium&split_source=database&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view_id=13664611-9284-4ba6-b867-f911e6b451a5
+            - button "Unlink" [ref=e220]
+          - table [ref=e222]:
+            - rowgroup [ref=e228]:
+              - row "Aa Name Resize Name column Date created Resize Date created column Due date Resize Due date column" [ref=e229]:
+                - columnheader "Aa Name Resize Name column" [ref=e230]:
+                  - generic [ref=e231]:
+                    - generic [ref=e232]: Aa
+                    - text: Name
+                  - button "Resize Name column" [ref=e233]
+                - columnheader "Date created Resize Date created column" [ref=e234]:
+                  - button "Date created" [ref=e237] [cursor=pointer]
+                  - button "Resize Date created column" [ref=e238]
+                - columnheader "Due date Resize Due date column" [ref=e239]:
+                  - button "Due date" [ref=e242] [cursor=pointer]
+                  - button "Resize Due date column" [ref=e243]
+                - columnheader [ref=e244]:
+                  - group [ref=e245]:
+                    - generic "+ Add property" [ref=e246] [cursor=pointer]
+                    - option "Text" [selected]
+                    - option "Number"
+                    - option "Date"
+                    - option "Checkbox"
+                    - option "Select"
+            - rowgroup [ref=e247]:
+              - row "Insert row below Drag to reorder Row options Review roadmap Create linked Nota 2026-04-12 2026-04-13" [ref=e248]:
+                - cell "Insert row below Drag to reorder Row options Review roadmap Create linked Nota" [ref=e249]:
+                  - generic [ref=e250]:
+                    - generic:
+                      - generic:
+                        - button "Insert row below": +
+                      - button "Drag to reorder": ⠿
+                      - generic:
+                        - button "Row options": ⋯
+                    - generic [ref=e252]:
+                      - generic [ref=e253]:
+                        - textbox "Enter name" [ref=e254]: Review roadmap
+                        - button [ref=e255]
+                      - button "Create linked Nota" [ref=e257] [cursor=pointer]: +
+                      - group [ref=e258]:
+                        - generic "Choose linked Nota" [ref=e259] [cursor=pointer]: 🔗
+                - cell "2026-04-12" [ref=e260]:
+                  - textbox [ref=e262]: 2026-04-12
+                - cell "2026-04-13" [ref=e263]:
+                  - textbox [ref=e265]: 2026-04-13
+                - cell [ref=e266]
+            - rowgroup [ref=e267]:
+              - row [ref=e268]:
+                - cell [ref=e269]
+                - cell [ref=e270]
+                - cell [ref=e271]
+                - cell [ref=e272]
+              - row [ref=e273]:
+                - cell [ref=e274]
+                - cell [ref=e275]
+                - cell [ref=e276]
+                - cell [ref=e277]
+              - row [ref=e278]:
+                - cell [ref=e279]
+                - cell [ref=e280]
+                - cell [ref=e281]
+                - cell [ref=e282]
+              - row [ref=e283]:
+                - cell [ref=e284]
+                - cell [ref=e285]
+                - cell [ref=e286]
+                - cell [ref=e287]
+              - row [ref=e288]:
+                - cell [ref=e289]
+                - cell [ref=e290]
+                - cell [ref=e291]
+                - cell [ref=e292]
+            - rowgroup [ref=e293]:
+              - row "+ New row" [ref=e294]:
+                - cell "+ New row" [ref=e295]:
+                  - button "+ New row" [ref=e297] [cursor=pointer]
+                - cell [ref=e298]
+                - cell [ref=e299]
+                - cell [ref=e300]
+          - generic [ref=e301]:
+            - heading "Backlinks" [level=2] [ref=e302]
+            - paragraph [ref=e303]: No backlinks yet.
+        - complementary [ref=e304]:
+          - generic [ref=e305]:
+            - paragraph [ref=e306]:
+              - generic "Kalendārium" [ref=e307]:
+                - generic [ref=e308]: 🗓️
+              - text: Kalendārium · Review roadmap
+            - generic [ref=e309]:
+              - link "Open full" [ref=e310] [cursor=pointer]:
+                - /url: /w/ui-debug-1775956965/kalendarium?date=2026-04-12&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+              - link "Close Kalendārium side peek" [ref=e311] [cursor=pointer]:
+                - /url: /w/ui-debug-1775956965/databases/090631fb-78cc-4f07-b442-ee68cac327b2?view_id=13664611-9284-4ba6-b867-f911e6b451a5
+                - text: ✕
+          - iframe [ref=e312]:
+            - main [ref=f1e4]:
+              - generic [ref=f1e5]:
+                - generic [ref=f1e6]:
+                  - generic [ref=f1e7]:
+                    - heading "Kalendārium" [level=1] [ref=f1e8]
+                    - generic [ref=f1e9]:
+                      - link "←" [ref=f1e10] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-05&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-05
+                      - generic [ref=f1e11]: Apr 12 - Apr 18, 2026
+                      - link "→" [ref=f1e12] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-19&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-19
+                      - link "Today" [ref=f1e13] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                  - generic [ref=f1e14]:
+                    - generic [ref=f1e15]:
+                      - link "Day" [ref=f1e16] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=day&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                      - link "Next 7 days" [ref=f1e17] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                      - link "Week" [ref=f1e18] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=week&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                      - link "Month" [ref=f1e19] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=month&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                      - link "Year" [ref=f1e20] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=year&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                      - link "Project" [ref=f1e21] [cursor=pointer]:
+                        - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=project&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                    - generic [ref=f1e22]:
+                      - button "Refresh calendars" [ref=f1e24] [cursor=pointer]:
+                        - generic [ref=f1e25]: ↻
+                      - generic [ref=f1e26]:
+                        - combobox "Select workspace calendar view" [ref=f1e27] [cursor=pointer]:
+                          - option "UI Debug 1775956965" [selected]
+                        - text: ▾
+                      - group [ref=f1e29]:
+                        - generic "Calendars (1) ▾" [ref=f1e30] [cursor=pointer]
+                      - group [ref=f1e32]:
+                        - generic "Projects (1) ▾" [ref=f1e33] [cursor=pointer]
+                - generic [ref=f1e34]:
+                  - complementary [ref=f1e35]:
+                    - generic [ref=f1e36]:
+                      - paragraph [ref=f1e37]: Choose a slot for
+                      - strong [ref=f1e38]: Review roadmap
+                      - paragraph [ref=f1e39]: Click a suggested slot in the calendar to lock it in.
+                    - group [ref=f1e40]:
+                      - generic "Create project ▾" [ref=f1e41] [cursor=pointer]
+                    - generic [ref=f1e42]:
+                      - heading "Time zones" [level=2] [ref=f1e43]
+                      - list [ref=f1e44]:
+                        - listitem [ref=f1e45]:
+                          - strong [ref=f1e46]: UTC
+                          - generic [ref=f1e47]: 01:24
+                  - generic [ref=f1e48]:
+                    - heading "Next 7 days" [level=2] [ref=f1e49]
+                    - generic [ref=f1e52]:
+                      - generic [ref=f1e53]:
+                        - generic [ref=f1e55]: 00:00
+                        - generic [ref=f1e58]: 01:00
+                        - generic [ref=f1e61]: 02:00
+                        - generic [ref=f1e64]: 03:00
+                        - generic [ref=f1e67]: 04:00
+                        - generic [ref=f1e70]: 05:00
+                        - generic [ref=f1e73]: 06:00
+                        - generic [ref=f1e76]: 07:00
+                        - generic [ref=f1e79]: 08:00
+                        - generic [ref=f1e82]: 09:00
+                        - generic [ref=f1e85]: 10:00
+                        - generic [ref=f1e88]: 11:00
+                        - generic [ref=f1e91]: 12:00
+                        - generic [ref=f1e94]: 13:00
+                        - generic [ref=f1e97]: 14:00
+                        - generic [ref=f1e100]: 15:00
+                        - generic [ref=f1e103]: 16:00
+                        - generic [ref=f1e106]: 17:00
+                        - generic [ref=f1e109]: 18:00
+                        - generic [ref=f1e112]: 19:00
+                        - generic [ref=f1e115]: 20:00
+                        - generic [ref=f1e118]: 21:00
+                        - generic [ref=f1e121]: 22:00
+                        - generic [ref=f1e124]: 23:00
+                      - generic [ref=f1e126]:
+                        - generic [ref=f1e127]:
+                          - link "Sun 12 Apr" [ref=f1e129] [cursor=pointer]:
+                            - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-12&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                            - strong [ref=f1e130]: Sun
+                            - generic [ref=f1e131]: 12 Apr
+                          - generic [ref=f1e181]:
+                            - generic:
+                              - generic: Now 01:24
+                            - button "Suggested slot 9:00 AM - 9:20 AM" [ref=f1e183] [cursor=pointer]:
+                              - generic [ref=f1e184]: Suggested slot
+                              - strong [ref=f1e185]: 9:00 AM - 9:20 AM
+                            - button "Suggested slot 9:20 AM - 9:40 AM" [ref=f1e187] [cursor=pointer]:
+                              - generic [ref=f1e188]: Suggested slot
+                              - strong [ref=f1e189]: 9:20 AM - 9:40 AM
+                            - button "Suggested slot 9:40 AM - 10:00 AM" [ref=f1e191] [cursor=pointer]:
+                              - generic [ref=f1e192]: Suggested slot
+                              - strong [ref=f1e193]: 9:40 AM - 10:00 AM
+                            - button "View event details for Team standup" [ref=f1e194] [cursor=pointer]:
+                              - generic [ref=f1e195]:
+                                - strong [ref=f1e196]: Team standup
+                                - generic [ref=f1e198]: 08:00 - 09:00
+                        - link "Mon 13 Apr" [ref=f1e201] [cursor=pointer]:
+                          - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-13&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                          - strong [ref=f1e202]: Mon
+                          - generic [ref=f1e203]: 13 Apr
+                        - link "Tue 14 Apr" [ref=f1e256] [cursor=pointer]:
+                          - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-14&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                          - strong [ref=f1e257]: Tue
+                          - generic [ref=f1e258]: 14 Apr
+                        - link "Wed 15 Apr" [ref=f1e311] [cursor=pointer]:
+                          - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-15&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                          - strong [ref=f1e312]: Wed
+                          - generic [ref=f1e313]: 15 Apr
+                        - link "Thu 16 Apr" [ref=f1e366] [cursor=pointer]:
+                          - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-16&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                          - strong [ref=f1e367]: Thu
+                          - generic [ref=f1e368]: 16 Apr
+                        - link "Fri 17 Apr" [ref=f1e421] [cursor=pointer]:
+                          - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-17&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                          - strong [ref=f1e422]: Fri
+                          - generic [ref=f1e423]: 17 Apr
+                        - link "Sat 18 Apr" [ref=f1e476] [cursor=pointer]:
+                          - /url: /w/ui-debug-1775956965/kalendarium?calendar_ids%5B%5D=1ae8b20a-214b-4033-98c9-04e6a0bbb808&date=2026-04-18&embedded=1&project_id=5007e0a0-8b01-41fa-a527-c84105d83577&project_scope_id=5007e0a0-8b01-41fa-a527-c84105d83577&task_row_id=0d9cab73-e5f0-4ac9-9169-2547cb27a57b&view=next_7_days&view_id=13664611-9284-4ba6-b867-f911e6b451a5&window_start=2026-04-12
+                          - strong [ref=f1e477]: Sat
+                          - generic [ref=f1e478]: 18 Apr
+  - complementary "Workspace notification bar" [ref=e313]:
+    - generic [ref=e314]: Sun 12 Apr · 1:24
+  - complementary [ref=e317]:
+    - generic [ref=e319]: New AI chat
+    - generic [ref=e320]:
+      - paragraph [ref=e321]: Open AI assistant
+      - paragraph [ref=e322]: The page is ready. AI context loads on demand so navigation stays fast.

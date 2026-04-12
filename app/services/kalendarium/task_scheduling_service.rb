@@ -18,13 +18,53 @@ module Kalendarium
       end
     end
 
+    SchedulingProfile = Struct.new(
+      :task_mode,
+      :allow_early_work,
+      :lookahead_days,
+      :urgent_status,
+      keyword_init: true
+    )
+
     DEFAULT_DURATION_MINUTES = 20
+    DEFAULT_CANDIDATE_LIMIT = 4
     SLOT_STEP_MINUTES = 5
-    WINDOW_START_HOUR = 8
-    WINDOW_END_HOUR = 18
-    DEFAULT_LOOKAHEAD_DAYS = 14
+    SUGGESTION_SPACING_MINUTES = 60
+    PREFERRED_BUFFER_MINUTES = 15
+    WORKDAY_START_HOUR = 9
+    WORKDAY_END_HOUR = 17
+    EARLY_WORKDAY_START_HOUR = 6
+    PERSONAL_WEEKDAY_START_HOUR = 18
+    PERSONAL_WEEKDAY_END_HOUR = 21
+    PERSONAL_WEEKEND_START_HOUR = 9
+    PERSONAL_WEEKEND_END_HOUR = 18
+    DEFAULT_LOOKAHEAD_DAYS = 7
+    URGENT_LOOKAHEAD_DAYS = 2
+    MAX_SEARCH_DAYS = 21
     ESTABLISHED_PROPERTY_PATTERN = /\A(date created|created|established|start date)\z/i
     DEADLINE_PROPERTY_PATTERN = /\A(due(?: date)?|deadline|end(?: date)?)\z/i
+    STATUS_PROPERTY_PATTERN = /\Astatus\z/i
+    TASK_STATUS_NORMALIZATION_MAP = {
+      "planning" => "not started",
+      "on hold" => "hold",
+      "complete" => "done",
+      "completed" => "done",
+      "in progress" => "started"
+    }.freeze
+    URGENT_STATUS_VALUES = [ "not started", "overdue" ].freeze
+    WORK_KEYWORDS = %w[
+      client company contract deck engineering follow-up invoice launch meeting office product
+      project proposal report review roadmap sprint stakeholder strategy team vendor work
+    ].freeze
+    PERSONAL_KEYWORDS = %w[
+      appointment bank birthday dentist dinner doctor family finance groceries grocery gym home
+      holiday kids laundry meal mortgage personal pharmacy school shopping vacation vet workout
+    ].freeze
+    PERSONAL_SIGNAL_PATTERN = /\b(personal|home|family|kids|shopping|groceries|doctor|dentist|gym|holiday|vacation)\b/i
+    WORK_SIGNAL_PATTERN = /\b(work|client|project|team|meeting|roadmap|launch|proposal|stakeholder|office|invoice|vendor)\b/i
+    EARLY_WORK_REQUEST_PATTERN = /
+      \b(before\s+9|before\s+work|early\s+(?:morning|start)|first\s+thing|7(?::[0-5]\d)?\s*am|8(?::[0-5]\d)?\s*am)\b
+    /ix
 
     def initialize(workspace:, row:, actor:, duration_minutes: DEFAULT_DURATION_MINUTES, tasks_project: nil)
       @workspace = workspace
@@ -49,18 +89,25 @@ module Kalendarium
       Result.new(event:)
     end
 
-    def candidate_slots(limit: 3)
+    def candidate_slots(limit: DEFAULT_CANDIDATE_LIMIT)
       project = resolved_tasks_project
       return CandidateResult.new(slots: [], error: tasks_project_error_message) if project.blank? || project.kalendarium_calendar.blank?
 
       lower_bound = earliest_start_time
-      upper_bound = latest_end_time(lower_bound)
+      upper_bound = search_upper_bound(lower_bound)
 
       if upper_bound <= lower_bound
         return CandidateResult.new(slots: [], error: unavailable_slot_message)
       end
 
-      slots = available_slots(limit:, lower_bound:, upper_bound:)
+      buffered_slots = available_slots(limit:, lower_bound:, upper_bound:, buffer_minutes: PREFERRED_BUFFER_MINUTES)
+      fallback_slots =
+        if buffered_slots.size < limit
+          available_slots(limit:, lower_bound:, upper_bound:, buffer_minutes: 0)
+        else
+          []
+        end
+      slots = merge_unique_slots(buffered_slots, fallback_slots).first(limit)
       if slots.blank?
         return CandidateResult.new(slots: [], error: unavailable_slot_message)
       end
@@ -88,6 +135,55 @@ module Kalendarium
       )
     end
 
+    def slot_available?(starts_at:, ends_at:)
+      availability_error(starts_at:, ends_at:).blank?
+    end
+
+    def availability_error(starts_at:, ends_at:)
+      starts_local = starts_at.in_time_zone(time_zone)
+      ends_local = ends_at.in_time_zone(time_zone)
+      return "Choose a valid start and end time." if ends_local <= starts_local
+
+      lower_bound = earliest_start_time
+      upper_bound = search_upper_bound(lower_bound)
+
+      if starts_local < lower_bound
+        return "This task needs to be scheduled in the future."
+      end
+
+      if ends_local > upper_bound
+        return deadline_date.present? ? "This task needs to be scheduled before its deadline." : "That time is outside the current scheduling window."
+      end
+
+      unless slot_within_lookahead_window?(starts_at: starts_local, lower_bound:)
+        return "That time falls outside the current #{scheduling_profile.lookahead_days}-day scheduling window."
+      end
+
+      unless slot_within_allowed_windows?(starts_at: starts_local, ends_at: ends_local)
+        return scheduling_window_error_message
+      end
+
+      intervals = merged_busy_intervals(
+        lower_bound: starts_local.beginning_of_day,
+        upper_bound: ends_local.end_of_day,
+        buffer_minutes: 0
+      )
+      overlapping_interval = intervals.find do |interval|
+        interval[:start_at] < ends_local && interval[:end_at] > starts_local
+      end
+      return "That time overlaps another calendar event." if overlapping_interval.present?
+
+      nil
+    end
+
+    def suggestion_notice(slot_count:)
+      count = slot_count.to_i
+      return "No available slots matched this task." if count <= 0
+
+      count_label = "#{count} available #{count == 1 ? "slot" : "slots"}"
+      "#{count_label} in #{schedule_notice_window_label} over the next #{scheduling_profile.lookahead_days} #{'day'.pluralize(scheduling_profile.lookahead_days)} in Kalendarium."
+    end
+
     private
 
     attr_reader :workspace, :row, :actor, :duration_minutes, :tasks_project
@@ -95,55 +191,82 @@ module Kalendarium
     def earliest_start_time
       [
         Time.current.in_time_zone(time_zone),
-        row.created_at.in_time_zone(time_zone),
         established_date&.in_time_zone(time_zone)&.beginning_of_day
       ].compact.max
     end
 
-    def latest_end_time(lower_bound)
+    def search_upper_bound(lower_bound)
       deadline = deadline_date
-      return [ lower_bound + DEFAULT_LOOKAHEAD_DAYS.days, window_end_for(lower_bound.to_date) ].max if deadline.blank?
+      fallback = lower_bound + MAX_SEARCH_DAYS.days
+      return fallback if deadline.blank?
 
       deadline_end = deadline.in_time_zone(time_zone).end_of_day
-      [ deadline_end, window_end_for(deadline.to_date) ].min
+      [ deadline_end, fallback ].min
     end
 
-    def available_slots(limit:, lower_bound:, upper_bound:)
-      intervals = merged_busy_intervals(lower_bound:, upper_bound:)
+    def available_slots(limit:, lower_bound:, upper_bound:, buffer_minutes:)
+      intervals = merged_busy_intervals(lower_bound:, upper_bound:, buffer_minutes:)
       cursor_date = lower_bound.to_date
-      slots = []
+      slots_by_day = []
+      eligible_days_seen = 0
 
-      while cursor_date <= upper_bound.to_date && slots.size < limit
-        window_start = [ lower_bound, window_start_for(cursor_date) ].max
-        window_end = [ upper_bound, window_end_for(cursor_date) ].min
+      while cursor_date <= upper_bound.to_date && eligible_days_seen < scheduling_profile.lookahead_days
+        day_windows = scheduling_windows_for(cursor_date)
+        eligible_day = day_eligible?(windows: day_windows, lower_bound:, upper_bound:)
+        if eligible_day
+          slots_by_day << available_slots_for_day(
+            cursor_date,
+            lower_bound:,
+            upper_bound:,
+            intervals:,
+            limit:,
+            windows: day_windows
+          )
+          eligible_days_seen += 1
+        end
+
+        cursor_date += 1.day
+      end
+
+      interleave_slots_by_day(slots_by_day, limit)
+    end
+
+    def available_slots_for_day(date, lower_bound:, upper_bound:, intervals:, limit:, windows:)
+      day_slots = []
+
+      windows.each do |window|
+        window_start = [ lower_bound, window[:start_at] ].max
+        window_end = [ upper_bound, window[:end_at] ].min
+        next unless window_end > window_start
+
         candidate_start = round_up_to_step(window_start)
 
-        while (candidate_start + duration_minutes.minutes) <= window_end && slots.size < limit
+        while (candidate_start + duration_minutes.minutes) <= window_end && day_slots.size < limit
           candidate_end = candidate_start + duration_minutes.minutes
           overlapping_interval = intervals.find do |interval|
             interval[:start_at] < candidate_end && interval[:end_at] > candidate_start
           end
 
           if overlapping_interval.blank?
-            slots << Slot.new(starts_at: candidate_start, ends_at: candidate_end)
-            candidate_start = round_up_to_step(candidate_end)
+            day_slots << Slot.new(starts_at: candidate_start, ends_at: candidate_end)
+            candidate_start = round_up_to_step(candidate_end + SUGGESTION_SPACING_MINUTES.minutes)
             next
           end
 
           candidate_start = round_up_to_step([ overlapping_interval[:end_at], candidate_start + SLOT_STEP_MINUTES.minutes ].max)
         end
-
-        cursor_date += 1.day
       end
 
-      slots
+      day_slots
     end
 
-    def merged_busy_intervals(lower_bound:, upper_bound:)
+    def merged_busy_intervals(lower_bound:, upper_bound:, buffer_minutes:)
       busy_intervals = busy_events(lower_bound:, upper_bound:).map do |event|
+        event_start = event.starts_at_utc.in_time_zone(time_zone) - buffer_minutes.minutes
+        event_end = event.ends_at_utc.in_time_zone(time_zone) + buffer_minutes.minutes
         {
-          start_at: [ event.starts_at_utc.in_time_zone(time_zone), lower_bound ].max,
-          end_at: [ event.ends_at_utc.in_time_zone(time_zone), upper_bound ].min
+          start_at: [ event_start, lower_bound ].max,
+          end_at: [ event_end, upper_bound ].min
         }
       end.select { |interval| interval[:end_at] > interval[:start_at] }
        .sort_by { |interval| [ interval[:start_at], interval[:end_at] ] }
@@ -179,6 +302,15 @@ module Kalendarium
       date_for_matching_property(DEADLINE_PROPERTY_PATTERN)
     end
 
+    def status_value
+      property = ordered_properties.find do |db_property|
+        db_property.name.to_s.match?(STATUS_PROPERTY_PATTERN)
+      end
+      return nil if property.blank?
+
+      normalize_status_value(row_cells_by_property_id[property.id])
+    end
+
     def date_for_matching_property(pattern)
       property = ordered_properties.find { |db_property| db_property.date? && db_property.name.to_s.match?(pattern) }
       return nil if property.blank?
@@ -202,6 +334,155 @@ module Kalendarium
       nil
     end
 
+    def normalize_status_value(value)
+      normalized = value.to_s.strip.downcase
+      TASK_STATUS_NORMALIZATION_MAP.fetch(normalized, normalized)
+    end
+
+    def merge_unique_slots(primary_slots, fallback_slots)
+      (Array(primary_slots) + Array(fallback_slots)).uniq do |slot|
+        [ slot.starts_at.to_i, slot.ends_at.to_i ]
+      end
+    end
+
+    def interleave_slots_by_day(slots_by_day, limit)
+      ordered_slots = []
+      slot_index = 0
+
+      while ordered_slots.size < limit
+        added_in_round = false
+
+        slots_by_day.each do |day_slots|
+          slot = day_slots[slot_index]
+          next if slot.blank?
+
+          ordered_slots << slot
+          added_in_round = true
+          return ordered_slots if ordered_slots.size >= limit
+        end
+
+        break unless added_in_round
+
+        slot_index += 1
+      end
+
+      ordered_slots
+    end
+
+    def day_eligible?(windows:, lower_bound:, upper_bound:)
+      windows.any? do |window|
+        [ lower_bound, window[:start_at] ].max < [ upper_bound, window[:end_at] ].min
+      end
+    end
+
+    def scheduling_profile
+      @scheduling_profile ||= SchedulingProfile.new(
+        task_mode: infer_task_mode,
+        allow_early_work: early_work_requested?,
+        lookahead_days: URGENT_STATUS_VALUES.include?(status_value) ? URGENT_LOOKAHEAD_DAYS : DEFAULT_LOOKAHEAD_DAYS,
+        urgent_status: URGENT_STATUS_VALUES.include?(status_value)
+      )
+    end
+
+    def infer_task_mode
+      signal_text = task_signal_text
+      return :personal if signal_text.match?(PERSONAL_SIGNAL_PATTERN)
+      return :work if signal_text.match?(WORK_SIGNAL_PATTERN)
+
+      work_score = keyword_score(signal_text, WORK_KEYWORDS)
+      personal_score = keyword_score(signal_text, PERSONAL_KEYWORDS)
+      personal_score > work_score ? :personal : :work
+    end
+
+    def keyword_score(text, keywords)
+      keywords.sum { |keyword| text.match?(/\b#{Regexp.escape(keyword)}\b/) ? 1 : 0 }
+    end
+
+    def task_signal_text
+      @task_signal_text ||= begin
+        property_lines = ordered_properties.filter_map do |property|
+          value = row_cells_by_property_id[property.id].to_s.strip
+          next if value.blank?
+
+          "#{property.name}: #{value}"
+        end
+
+        [
+          row.database.name,
+          row.title,
+          property_lines.join("\n")
+        ].compact.join("\n").downcase
+      end
+    end
+
+    def early_work_requested?
+      return false unless infer_task_mode == :work
+
+      task_signal_text.match?(EARLY_WORK_REQUEST_PATTERN)
+    end
+
+    def scheduling_windows_for(date)
+      if scheduling_profile.task_mode == :work
+        return [] if weekend?(date)
+
+        start_hour = scheduling_profile.allow_early_work ? EARLY_WORKDAY_START_HOUR : WORKDAY_START_HOUR
+        return [ { start_at: local_time_for(date, start_hour), end_at: local_time_for(date, WORKDAY_END_HOUR) } ]
+      end
+
+      if weekend?(date)
+        [
+          {
+            start_at: local_time_for(date, PERSONAL_WEEKEND_START_HOUR),
+            end_at: local_time_for(date, PERSONAL_WEEKEND_END_HOUR)
+          }
+        ]
+      else
+        [
+          {
+            start_at: local_time_for(date, PERSONAL_WEEKDAY_START_HOUR),
+            end_at: local_time_for(date, PERSONAL_WEEKDAY_END_HOUR)
+          }
+        ]
+      end
+    end
+
+    def slot_within_allowed_windows?(starts_at:, ends_at:)
+      return false unless starts_at.to_date == ends_at.to_date
+
+      scheduling_windows_for(starts_at.to_date).any? do |window|
+        starts_at >= window[:start_at] && ends_at <= window[:end_at]
+      end
+    end
+
+    def slot_within_lookahead_window?(starts_at:, lower_bound:)
+      eligible_days_seen = 0
+      cursor_date = lower_bound.to_date
+
+      while cursor_date <= starts_at.to_date
+        day_windows = scheduling_windows_for(cursor_date)
+        eligible_days_seen += 1 if day_eligible?(windows: day_windows, lower_bound:, upper_bound: starts_at.end_of_day)
+        return true if cursor_date == starts_at.to_date && eligible_days_seen <= scheduling_profile.lookahead_days
+
+        cursor_date += 1.day
+      end
+
+      false
+    end
+
+    def scheduling_window_error_message
+      if scheduling_profile.task_mode == :work
+        return "Work tasks are scheduled on weekdays between 9:00 AM and 5:00 PM." unless scheduling_profile.allow_early_work
+
+        "Work tasks are scheduled on weekdays, with early starts only when the task asks for them."
+      else
+        "Personal tasks are scheduled after hours on weekdays and during weekends."
+      end
+    end
+
+    def schedule_notice_window_label
+      scheduling_profile.task_mode == :work ? "weekday work hours" : "after-hours and weekend windows"
+    end
+
     def round_up_to_step(timestamp)
       rounded = timestamp.change(sec: 0)
       remainder = rounded.min % SLOT_STEP_MINUTES
@@ -210,12 +491,12 @@ module Kalendarium
       rounded + (SLOT_STEP_MINUTES - remainder).minutes
     end
 
-    def window_start_for(date)
-      time_zone.local(date.year, date.month, date.day, WINDOW_START_HOUR, 0, 0)
+    def local_time_for(date, hour)
+      time_zone.local(date.year, date.month, date.day, hour, 0, 0)
     end
 
-    def window_end_for(date)
-      time_zone.local(date.year, date.month, date.day, WINDOW_END_HOUR, 0, 0)
+    def weekend?(date)
+      date.saturday? || date.sunday?
     end
 
     def time_zone
@@ -231,7 +512,8 @@ module Kalendarium
     end
 
     def unavailable_slot_message
-      "No open #{duration_minutes}-minute slot is available before this task's deadline."
+      deadline_label = deadline_date.present? ? " before this task's deadline" : ""
+      "No open #{duration_minutes}-minute slot is available in #{schedule_notice_window_label} over the next #{scheduling_profile.lookahead_days} #{'day'.pluralize(scheduling_profile.lookahead_days)}#{deadline_label}."
     end
   end
 end

@@ -11743,6 +11743,15 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   align-self: start;
 }
 
+.notae-kalendarium.is-embedded-split {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.notae-kalendarium.is-embedded-split .notae-kalendarium-head,
+.notae-kalendarium.is-embedded-split .notae-kalendarium-main {
+  grid-column: 1;
+}
+
 .notae-content.notae-content-kalendarium {
   padding: var(--notae-topbar-content-clearance) clamp(0.6rem, 1.4vw, 1rem) 1.8rem;
 }

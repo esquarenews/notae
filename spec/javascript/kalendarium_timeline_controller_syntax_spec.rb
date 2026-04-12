@@ -21,7 +21,17 @@ RSpec.describe "kalendarium_timeline_controller.js" do
 
     expect(source).to include("quickCreate(event)")
     expect(source).to include('new CustomEvent("kalendarium:quick-create"')
+    expect(source).to include('new CustomEvent("kalendarium:task-slot-draft"')
     expect(source).to include("startLocal: this.localTimestampFor(dateString, startMinutes)")
     expect(source).to include("endLocal: this.localTimestampFor(dateString, endMinutes)")
+    expect(source).to include("taskScheduling: Boolean")
+  end
+
+  it "can focus the initial scroll position on suggested task slots" do
+    source = Rails.root.join("app/javascript/controllers/kalendarium_timeline_controller.js").read
+
+    expect(source).to include("initialFocusMinutes: Number")
+    expect(source).to include("this.hasInitialFocusMinutesValue")
+    expect(source).to include("this.initialFocusMinutesValue / 30.0")
   end
 end
