@@ -137,32 +137,39 @@ module Kalendarium
       )
     end
 
-    def slot_available?(starts_at:, ends_at:)
-      availability_error(starts_at:, ends_at:).blank?
+    def slot_available?(starts_at:, ends_at:, manual_override: false)
+      availability_error(starts_at:, ends_at:, manual_override:).blank?
     end
 
-    def availability_error(starts_at:, ends_at:)
+    def availability_error(starts_at:, ends_at:, manual_override: false)
       starts_local = starts_at.in_time_zone(time_zone)
       ends_local = ends_at.in_time_zone(time_zone)
       return "Choose a valid start and end time." if ends_local <= starts_local
 
       lower_bound = earliest_start_time
-      upper_bound = search_upper_bound(lower_bound)
 
       if starts_local < lower_bound
         return "This task needs to be scheduled in the future."
       end
 
-      if ends_local > upper_bound
-        return deadline_date.present? ? "This task needs to be scheduled before its deadline." : "That time is outside the current scheduling window."
+      deadline_end = deadline_date&.in_time_zone(time_zone)&.end_of_day
+      if deadline_end.present? && ends_local > deadline_end
+        return "This task needs to be scheduled before its deadline."
       end
 
-      unless slot_within_lookahead_window?(starts_at: starts_local, lower_bound:)
-        return "That time falls outside the current #{scheduling_profile.lookahead_days}-day scheduling window."
-      end
+      unless manual_override
+        upper_bound = search_upper_bound(lower_bound)
+        if ends_local > upper_bound
+          return "That time is outside the current scheduling window."
+        end
 
-      unless slot_within_allowed_windows?(starts_at: starts_local, ends_at: ends_local)
-        return scheduling_window_error_message
+        unless slot_within_lookahead_window?(starts_at: starts_local, lower_bound:)
+          return "That time falls outside the current #{scheduling_profile.lookahead_days}-day scheduling window."
+        end
+
+        unless slot_within_allowed_windows?(starts_at: starts_local, ends_at: ends_local)
+          return scheduling_window_error_message
+        end
       end
 
       intervals = merged_busy_intervals(

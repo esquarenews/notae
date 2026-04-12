@@ -234,12 +234,12 @@ class DbRowsController < ApplicationController
       slot.starts_at.to_i == starts_at.to_i && slot.ends_at.to_i == ends_at.to_i
     end
 
-    if chosen_slot.blank? && scheduling_service.slot_available?(starts_at:, ends_at:)
+    if chosen_slot.blank? && scheduling_service.slot_available?(starts_at:, ends_at:, manual_override: true)
       chosen_slot = Kalendarium::TaskSchedulingService::Slot.new(starts_at:, ends_at:)
     end
 
     if chosen_slot.blank?
-      availability_error = scheduling_service.availability_error(starts_at:, ends_at:)
+      availability_error = scheduling_service.availability_error(starts_at:, ends_at:, manual_override: true)
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
                   alert: availability_error.presence || "That slot is no longer available. Choose another one in Kalendarium."
       return

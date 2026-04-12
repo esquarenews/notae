@@ -2640,6 +2640,38 @@ RSpec.describe "Databases", type: :request do
     expect(flash[:alert]).to be_blank
   end
 
+  it "allows a manually selected slot to override work-hour scheduling rules" do
+    owner = User.create!(email: "database-kal-manual-override-owner@example.com", password: "password123", time_zone: "UTC")
+    workspace = Workspace.create!(name: "Grid kal manual override", slug: "grid-kal-manual-override")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Task planning")
+    date_created_property = DbProperty.create!(workspace: workspace, database: database, name: "Date created", property_type: :date)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Review roadmap")
+    sign_in owner
+
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-12")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-25")
+
+      expect do
+        post confirm_schedule_in_kalendarium_database_db_row_path(
+          workspace_slug: workspace.slug,
+          database_id: database.id,
+          id: row.id
+        ), params: {
+          starts_at_local: "2026-04-17T20:00",
+          ends_at_local: "2026-04-17T20:20",
+          view_id: database.database_views.find_by(default: true)&.id
+        }
+      end.to change(KalendariumEvent, :count).by(1)
+    end
+
+    created_event = workspace.kalendarium_events.find_by!(linked_db_row: row)
+    expect(created_event.starts_at_utc.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-17 20:00")
+    expect(created_event.ends_at_utc.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-17 20:20")
+  end
+
   it "shifts the split Kalendārium window to the first available suggested slot when the next seven days are full" do
     owner = User.create!(email: "database-kal-shift-owner@example.com", password: "password123", time_zone: "UTC")
     workspace = Workspace.create!(name: "Grid kal shift", slug: "grid-kal-shift")
