@@ -6,7 +6,7 @@ class DbRowsController < ApplicationController
   before_action :set_workspace
   before_action :set_database
   before_action :ensure_database_unlocked!
-  before_action :set_db_row, only: %i[update destroy move duplicate restore]
+  before_action :set_db_row, only: %i[update destroy move duplicate restore schedule_in_kalendarium confirm_schedule_in_kalendarium]
   track_request_performance_for :create, :update
 
   def create
@@ -161,6 +161,99 @@ class DbRowsController < ApplicationController
     redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: error.record.errors.full_messages.to_sentence
   end
 
+  def schedule_in_kalendarium
+    authorize @db_row, :update?
+
+    unless can_prepare_tasks_project?
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}"),
+                  alert: "You do not have permission to schedule tasks in Kalendarium."
+      return
+    end
+
+    tasks_project = Kalendarium::TasksProjectEnsurer.new(workspace: @workspace, actor: current_user).call
+    candidate_result = Kalendarium::TaskSchedulingService.new(
+      workspace: @workspace,
+      row: @db_row,
+      actor: current_user,
+      tasks_project: tasks_project
+    ).candidate_slots(limit: 3)
+
+    if candidate_result.success?
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
+                  notice: "Choose a suggested slot in Kalendarium."
+    else
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}"), alert: candidate_result.error
+    end
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}"), alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def confirm_schedule_in_kalendarium
+    authorize @db_row, :update?
+
+    unless can_prepare_tasks_project?
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
+                  alert: "You do not have permission to schedule tasks in Kalendarium."
+      return
+    end
+
+    starts_at = parse_schedule_slot_time(params[:starts_at])
+    ends_at = parse_schedule_slot_time(params[:ends_at])
+    unless starts_at.present? && ends_at.present? && ends_at > starts_at
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
+                  alert: "That suggested slot is invalid. Choose another slot in Kalendarium."
+      return
+    end
+
+    tasks_project = Kalendarium::TasksProjectEnsurer.new(workspace: @workspace, actor: current_user).call
+    scheduling_service = Kalendarium::TaskSchedulingService.new(
+      workspace: @workspace,
+      row: @db_row,
+      actor: current_user,
+      tasks_project: tasks_project
+    )
+    candidate_result = scheduling_service.candidate_slots(limit: 3)
+    unless candidate_result.success?
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id), alert: candidate_result.error
+      return
+    end
+
+    chosen_slot = candidate_result.slots.find do |slot|
+      slot.starts_at.to_i == starts_at.to_i && slot.ends_at.to_i == ends_at.to_i
+    end
+
+    if chosen_slot.blank?
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
+                  alert: "That slot is no longer available. Choose another one in Kalendarium."
+      return
+    end
+
+    event = scheduling_service.build_event(
+      starts_at: chosen_slot.starts_at,
+      ends_at: chosen_slot.ends_at,
+      tasks_project: tasks_project
+    )
+
+    if event.blank?
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
+                  alert: "The Tasks calendar could not be prepared."
+      return
+    end
+
+    authorize event, :create?
+
+    if event.save
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: nil),
+                  notice: "Scheduled a #{Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES}-minute task block in Kalendarium."
+    else
+      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
+                  alert: event.errors.full_messages.to_sentence
+    end
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
+                alert: error.record.errors.full_messages.to_sentence
+  end
+
   private
 
   def set_workspace
@@ -312,10 +405,12 @@ class DbRowsController < ApplicationController
     )
   end
 
-  def database_redirect_location(anchor: nil, highlight_row_id: nil)
+  def database_redirect_location(anchor: nil, highlight_row_id: nil, task_row_id: :__preserve__)
     split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
     split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
     split_row_id = @clear_split_page ? nil : (@redirect_split_row_id || params[:split_row_id].presence)
+    split_panel = @redirect_split_panel || params[:split_panel].presence
+    task_row_id = params[:task_row_id].presence if task_row_id == :__preserve__
 
     path_params = {
       workspace_slug: @workspace.slug,
@@ -331,9 +426,11 @@ class DbRowsController < ApplicationController
       view_settings: params[:view_settings].presence,
       actions_menu: params[:actions_menu].presence,
       options_menu: params[:options_menu].presence,
+      split_panel: split_panel,
       split_page_id: split_page_id,
       split_source: split_source,
       split_row_id: split_row_id,
+      task_row_id: task_row_id,
       highlight_row_id: highlight_row_id.presence || params[:highlight_row_id].presence
     }.compact
     path_params[:anchor] = anchor if anchor.present?
@@ -351,10 +448,18 @@ class DbRowsController < ApplicationController
       filter_operator: params[:filter_operator].presence,
       rows_page: params[:rows_page].presence,
       options_menu: params[:options_menu].presence,
+      split_panel: params[:split_panel].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
-      split_row_id: params[:split_row_id].presence
+      split_row_id: params[:split_row_id].presence,
+      task_row_id: params[:task_row_id].presence
     )
+  end
+
+  def schedule_redirect_location(anchor: nil, task_row_id: :__preserve__)
+    @clear_split_page = true
+    @redirect_split_panel = "kalendarium"
+    database_redirect_location(anchor:, task_row_id:)
   end
 
   def apply_linked_page_update!
@@ -651,7 +756,7 @@ class DbRowsController < ApplicationController
     if request.format.turbo_stream? && simple_table_render_context?
       render turbo_stream: database_flash_stream("alert", message), status: :unprocessable_entity
     else
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: message
+      redirect_to database_redirect_location, alert: message
     end
   end
 
@@ -762,9 +867,11 @@ class DbRowsController < ApplicationController
       filter_operator: params[:filter_operator].presence,
       rows_page: params[:rows_page].presence,
       highlight_row_id: params[:highlight_row_id].presence,
+      split_panel: params[:split_panel].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
-      split_row_id: params[:split_row_id].presence
+      split_row_id: params[:split_row_id].presence,
+      task_row_id: params[:task_row_id].presence
     }.compact
   end
 
@@ -920,6 +1027,31 @@ class DbRowsController < ApplicationController
     return unless @database.locked?
 
     redirect_to database_redirect_location, alert: "Grid is locked. Unlock to make changes."
+  end
+
+  def can_prepare_tasks_project?
+    existing_project =
+      policy_scope(KalendariumProject).for_workspace(@workspace).find_by(slug: Kalendarium::TasksProjectEnsurer::PROJECT_SLUG) ||
+      policy_scope(KalendariumProject).for_workspace(@workspace).where("LOWER(name) = ?", Kalendarium::TasksProjectEnsurer::PROJECT_NAME.downcase).order(:created_at).first
+    return true if existing_project.present?
+
+    policy(
+      KalendariumProject.new(
+        workspace: @workspace,
+        created_by: current_user,
+        name: Kalendarium::TasksProjectEnsurer::PROJECT_NAME,
+        slug: Kalendarium::TasksProjectEnsurer::PROJECT_SLUG,
+        color_hex: Kalendarium::TasksProjectEnsurer::PROJECT_COLOR
+      )
+    ).create?
+  end
+
+  def parse_schedule_slot_time(value)
+    return nil if value.blank?
+
+    Time.zone.parse(value.to_s)
+  rescue ArgumentError, TypeError
+    nil
   end
 
   def respond_row_update_failure(anchor:, message:)

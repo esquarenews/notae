@@ -8,9 +8,11 @@
   filter_operator: params[:filter_operator],
   rows_page: params[:rows_page].presence,
   highlight_row_id: params[:highlight_row_id],
+  split_panel: params[:split_panel],
   split_page_id: params[:split_page_id],
   split_source: params[:split_source],
-  split_row_id: params[:split_row_id]
+  split_row_id: params[:split_row_id],
+  task_row_id: params[:task_row_id]
 }.compact %>
 <% visible_properties = @visible_db_properties || @db_properties %>
 <% can_edit_grid = policy(@database).update? && !@database.locked? %>
@@ -94,6 +96,7 @@ end %>
                                 filter_value: row_params[:filter_value],
                                 filter_operator: row_params[:filter_operator],
                                 rows_page: row_params[:rows_page],
+                                split_panel: row_params[:split_panel],
                                 split_page_id: row_params[:split_page_id],
                                 split_source: row_params[:split_source],
                                 split_row_id: row_params[:split_row_id]
@@ -123,7 +126,11 @@ end %>
                               filter_property_id: params[:filter_property_id],
                               filter_value: params[:filter_value],
                               filter_operator: params[:filter_operator],
-                              rows_page: row_params[:rows_page]
+                              rows_page: row_params[:rows_page],
+                              split_panel: row_params[:split_panel],
+                              split_page_id: row_params[:split_page_id],
+                              split_source: row_params[:split_source],
+                              split_row_id: row_params[:split_row_id]
                             ),
                             data: { preserve_database_scroll: true },
                             class: "notae-db-grid-property-link" %>
@@ -158,6 +165,7 @@ end %>
                                 filter_value: row_params[:filter_value],
                                 filter_operator: row_params[:filter_operator],
                                 rows_page: row_params[:rows_page],
+                                split_panel: row_params[:split_panel],
                                 split_page_id: row_params[:split_page_id],
                                 split_source: row_params[:split_source],
                                 split_row_id: row_params[:split_row_id]
@@ -221,6 +229,7 @@ end %>
               <%= hidden_field_tag :filter_operator, row_params[:filter_operator] %>
               <%= hidden_field_tag :rows_page, row_params[:rows_page] %>
               <%= hidden_field_tag :highlight_row_id, row_params[:highlight_row_id] %>
+              <%= hidden_field_tag :split_panel, row_params[:split_panel] %>
               <%= hidden_field_tag :split_page_id, row_params[:split_page_id] %>
               <%= hidden_field_tag :split_source, row_params[:split_source] %>
               <%= hidden_field_tag :split_row_id, row_params[:split_row_id] %>

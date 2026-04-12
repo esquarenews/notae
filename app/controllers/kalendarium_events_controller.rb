@@ -7,14 +7,14 @@ class KalendariumEventsController < ApplicationController
     project = find_event_project(event_params[:kalendarium_project_id])
     if event_params[:kalendarium_project_id].present? && project.blank?
       skip_authorization
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+      redirect_to kalendarium_redirect_path,
                   alert: "Selected project could not be found."
       return
     end
     calendar = resolve_event_calendar(project: project, selected_calendar_id: event_params[:kalendarium_calendar_id])
     if calendar.blank?
       skip_authorization
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+      redirect_to kalendarium_redirect_path,
                   alert: "Select a calendar for this event."
       return
     end
@@ -24,7 +24,7 @@ class KalendariumEventsController < ApplicationController
 
     if starts_at_utc.blank? || ends_at_utc.blank?
       skip_authorization
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+      redirect_to kalendarium_redirect_path,
                   alert: "Start and end times must be valid."
       return
     end
@@ -32,7 +32,7 @@ class KalendariumEventsController < ApplicationController
     starts_at_utc, ends_at_utc = normalize_all_day_times(starts_at_utc: starts_at_utc, ends_at_utc: ends_at_utc) if all_day
     if ends_at_utc <= Time.current
       skip_authorization
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+      redirect_to kalendarium_redirect_path,
                   alert: "End time must be in the future."
       return
     end
@@ -56,10 +56,10 @@ class KalendariumEventsController < ApplicationController
 
     if @event.save
       sync_warning = sync_event_to_provider(@event)
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+      redirect_to kalendarium_redirect_path,
                   flash: event_success_flash("Event created.", sync_warning)
     else
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: @event.errors.full_messages.to_sentence
+      redirect_to kalendarium_redirect_path, alert: @event.errors.full_messages.to_sentence
     end
   end
 
@@ -73,7 +73,7 @@ class KalendariumEventsController < ApplicationController
     end
     if event_params.key?(:kalendarium_project_id) && event_params[:kalendarium_project_id].present? && project.blank?
       skip_authorization
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+      redirect_to kalendarium_redirect_path,
                   alert: "Selected project could not be found."
       return
     end
@@ -96,7 +96,7 @@ class KalendariumEventsController < ApplicationController
       starts_at_utc = parse_local_time(event_params[:starts_at_local])
       if starts_at_utc.blank?
         skip_authorization
-        redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+        redirect_to kalendarium_redirect_path,
                     alert: "Start time must be valid."
         return
       end
@@ -106,7 +106,7 @@ class KalendariumEventsController < ApplicationController
       ends_at_utc = parse_local_time(event_params[:ends_at_local])
       if ends_at_utc.blank?
         skip_authorization
-        redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+        redirect_to kalendarium_redirect_path,
                     alert: "End time must be valid."
         return
       end
@@ -124,10 +124,10 @@ class KalendariumEventsController < ApplicationController
 
     if @event.save
       sync_warning = sync_event_to_provider(@event)
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]),
+      redirect_to kalendarium_redirect_path,
                   flash: event_success_flash("Event updated.", sync_warning)
     else
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: @event.errors.full_messages.to_sentence
+      redirect_to kalendarium_redirect_path, alert: @event.errors.full_messages.to_sentence
     end
   end
 
@@ -135,12 +135,12 @@ class KalendariumEventsController < ApplicationController
     authorize @event
     delete_warning = delete_event_from_provider(@event)
     if delete_warning.present?
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: delete_warning
+      redirect_to kalendarium_redirect_path, alert: delete_warning
       return
     end
 
     @event.destroy!
-    redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), notice: "Event deleted."
+    redirect_to kalendarium_redirect_path, notice: "Event deleted."
   end
 
   private
@@ -189,6 +189,25 @@ class KalendariumEventsController < ApplicationController
 
   def normalize_all_day_times(starts_at_utc:, ends_at_utc:)
     [ starts_at_utc.beginning_of_day, ends_at_utc.end_of_day ]
+  end
+
+  def kalendarium_redirect_path
+    redirect_params = {
+      workspace_slug: @workspace.slug,
+      view: params[:view],
+      date: params[:date]
+    }
+    redirect_params[:project_id] = params[:project_id].presence if params[:project_id].present?
+    redirect_params[:project_scope_id] = params[:project_scope_id].presence if params[:project_scope_id].present?
+    calendar_ids = Array(params[:calendar_ids]).map(&:to_s).reject(&:blank?)
+    redirect_params[:calendar_ids] = calendar_ids if calendar_ids.any?
+    time_zones = Array(params[:tz]).map(&:to_s).reject(&:blank?)
+    redirect_params[:tz] = time_zones if time_zones.any?
+    redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
+    redirect_params[:window_start] = params[:window_start].presence if params[:window_start].present?
+    redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
+    redirect_params[:task_row_id] = params[:task_row_id].presence if params[:task_row_id].present?
+    kalendarium_path(redirect_params)
   end
 
   def find_event_project(project_id)

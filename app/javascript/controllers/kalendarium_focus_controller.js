@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = ["viewLink", "dateInput", "dateLabel", "dayLink", "weekTrack", "monthCell", "createAccordion", "createTitleInput", "createStartInput", "createEndInput", "createAllDayInput"]
   static values = {
     selectedDate: String,
-    view: String
+    view: String,
+    windowStart: String
   }
 
   connect() {
@@ -164,6 +165,26 @@ export default class extends Controller {
         year: "numeric",
         timeZone: "UTC"
       }).format(dateObject)
+    }
+
+    if (view === "next_7_days") {
+      const startDate = this.parseIsoDate(this.hasWindowStartValue ? this.windowStartValue : "") || dateObject
+      const endDate = new Date(startDate.getTime())
+      endDate.setUTCDate(endDate.getUTCDate() + 6)
+
+      const startLabel = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC"
+      }).format(startDate)
+      const endLabel = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC"
+      }).format(endDate)
+
+      return `${startLabel} - ${endLabel}`
     }
 
     return new Intl.DateTimeFormat("en-US", {

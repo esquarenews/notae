@@ -24,6 +24,13 @@
         <span class="notae-db-row-menu-icon">⧉</span>
         <span class="notae-db-row-menu-label">Duplicate row</span>
       <% end %>
+      <%= button_to schedule_in_kalendarium_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+                    params: row_params,
+                    class: "notae-db-row-menu-button",
+                    form: { class: "notae-db-row-menu-form" } do %>
+        <span class="notae-db-row-menu-icon">🗓️</span>
+        <span class="notae-db-row-menu-label">Find space in my calendar</span>
+      <% end %>
       <% if linked_page.present? %>
         <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
           <%= form.hidden_field :linked_page_id, value: "" %>

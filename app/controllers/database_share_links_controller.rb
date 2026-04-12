@@ -77,9 +77,11 @@ class DatabaseShareLinksController < ApplicationController
     route_params[:filter_value] = params[:filter_value] if params[:filter_value].present?
     route_params[:filter_operator] = params[:filter_operator] if params[:filter_operator].present?
     route_params[:rows_page] = params[:rows_page] if params[:rows_page].present?
+    route_params[:split_panel] = params[:split_panel] if params[:split_panel].present?
     route_params[:split_page_id] = params[:split_page_id] if params[:split_page_id].present?
     route_params[:split_source] = params[:split_source] if params[:split_source].present?
     route_params[:split_row_id] = params[:split_row_id] if params[:split_row_id].present?
+    route_params[:task_row_id] = params[:task_row_id] if params[:task_row_id].present?
     route_params[:options_menu] = "open"
     database_path(route_params)
   end

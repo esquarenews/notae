@@ -77,9 +77,11 @@ class DbCellsController < ApplicationController
       rows_page: params[:rows_page].presence,
       view_settings: params[:view_settings].presence,
       actions_menu: params[:actions_menu].presence,
+      split_panel: params[:split_panel].presence,
       split_page_id: split_page_id,
       split_source: split_source,
-      split_row_id: split_row_id
+      split_row_id: split_row_id,
+      task_row_id: params[:task_row_id].presence
     }.compact
     path_params[:anchor] = "row_#{@db_cell.db_row_id}" if @db_cell.present?
     database_path(path_params)
@@ -248,9 +250,11 @@ class DbCellsController < ApplicationController
       filter_operator: params[:filter_operator].presence,
       rows_page: params[:rows_page].presence,
       highlight_row_id: params[:highlight_row_id].presence,
+      split_panel: params[:split_panel].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
-      split_row_id: params[:split_row_id].presence
+      split_row_id: params[:split_row_id].presence,
+      task_row_id: params[:task_row_id].presence
     }.compact
   end
 

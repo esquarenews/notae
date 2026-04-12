@@ -5,7 +5,7 @@ class KalendariumController < ApplicationController
   before_action :set_workspace
   track_request_performance_for :show, :refresh
 
-  VIEW_OPTIONS = %w[day week month year project].freeze
+  VIEW_OPTIONS = %w[day next_7_days week month year project].freeze
   TIMELINE_SLOT_MINUTES = 30
   TIMELINE_SLOT_HEIGHT_PX = 28.0
   TIMELINE_DAY_MINUTES = 1_440
@@ -20,12 +20,15 @@ class KalendariumController < ApplicationController
     persist_last_calendar_view!
     @project_return_view = resolve_project_return_view
     @selected_date = parse_selected_date
+    @next_seven_days_start = resolve_next_seven_days_start
+    normalize_selected_date_for_view!
     @show_year_daily_events = ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     @week_start_day = week_start_day
     @weekday_labels = ordered_weekday_labels
     @year_weekday_labels = @weekday_labels.map { |label| label.first }
     @projects = policy_scope(KalendariumProject).for_workspace(@workspace).active.order(:name).to_a
     @archived_projects = policy_scope(KalendariumProject).for_workspace(@workspace).archived.order(archived_at: :desc, name: :asc).to_a
+    @scoped_project_id = scoped_project_id(@projects)
     @selected_project_id = selected_active_project_id
     @visible_project_ids = resolve_visible_project_ids(@projects)
     @visible_projects = @projects.select { |project| @visible_project_ids.include?(project.id.to_s) }
@@ -40,6 +43,7 @@ class KalendariumController < ApplicationController
     @visible_event_calendars = (@visible_calendars + @project_calendars).uniq
 
     @time_zone_rail = resolve_time_zone_rail
+    prepare_task_schedule_state!
 
     range_start, range_end = range_for_view
     @events = policy_scope(KalendariumEvent)
@@ -88,6 +92,8 @@ class KalendariumController < ApplicationController
 
     @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week"
     @selected_date = parse_selected_date
+    @next_seven_days_start = resolve_next_seven_days_start
+    normalize_selected_date_for_view!
     range_start, range_end = range_for_view
 
     refreshable_connections = policy_scope(KalendariumConnection)
@@ -178,6 +184,8 @@ class KalendariumController < ApplicationController
   end
 
   def selected_active_project_id
+    return @scoped_project_id if @scoped_project_id.present?
+
     requested_id = params[:project_id].to_s.presence
     return nil if requested_id.blank?
 
@@ -235,6 +243,9 @@ class KalendariumController < ApplicationController
 
   def resolve_visible_project_ids(projects)
     allowed_ids = projects.map { |project| project.id.to_s }
+    scoped_id = scoped_project_id(projects)
+    return [ scoped_id ] if scoped_id.present?
+
     payload = persisted_project_visibility_payload
 
     selected = if stored_project_visibility?
@@ -284,6 +295,8 @@ class KalendariumController < ApplicationController
     case @view
     when "day"
       [ @selected_date.beginning_of_day, @selected_date.end_of_day ]
+    when "next_7_days"
+      [ @next_seven_days_start.beginning_of_day, (@next_seven_days_start + 6.days).end_of_day ]
     when "week"
       week_start = @selected_date.beginning_of_week(week_start_day)
       [ week_start.beginning_of_day, (week_start + 6.days).end_of_day ]
@@ -314,7 +327,44 @@ class KalendariumController < ApplicationController
       redirect_params[:tz] = time_zones if time_zones.any?
 
       redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
+      redirect_params[:project_scope_id] = params[:project_scope_id].to_s.presence if params[:project_scope_id].present?
+      redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
+      redirect_params[:task_row_id] = params[:task_row_id].to_s.presence if params[:task_row_id].present?
+      redirect_params[:window_start] = params[:window_start].to_s.presence if params[:window_start].present?
     end
+  end
+
+  def prepare_task_schedule_state!
+    @task_schedule_row = resolve_task_schedule_row
+    @task_slot_candidates = []
+    @task_slot_candidate_layouts_by_day = {}
+    @task_slot_error = nil
+    return if @task_schedule_row.blank?
+
+    candidate_result = Kalendarium::TaskSchedulingService.new(
+      workspace: @workspace,
+      row: @task_schedule_row,
+      actor: current_user
+    ).candidate_slots(limit: 3)
+
+    unless candidate_result.success?
+      @task_slot_error = candidate_result.error
+      return
+    end
+
+    @task_slot_candidates = candidate_result.slots
+    return if @task_slot_candidates.blank?
+
+    first_candidate_date = @task_slot_candidates.first.starts_at.to_date
+    if @view == "next_7_days"
+      range_end = @next_seven_days_start + 6.days
+      if first_candidate_date >= @next_seven_days_start && first_candidate_date <= range_end
+        @selected_date = first_candidate_date
+      end
+    else
+      @selected_date = first_candidate_date
+    end
+    @task_slot_candidate_layouts_by_day = layout_task_slot_candidates_by_day(@task_slot_candidates)
   end
 
   def refresh_scope_calendars(connections)
@@ -353,6 +403,26 @@ class KalendariumController < ApplicationController
         index[day] << event
       end
     end.transform_values { |day_events| prioritize_year_day_events(day_events) }
+  end
+
+  def layout_task_slot_candidates_by_day(slots)
+    slots.each_with_object(Hash.new { |index, day| index[day] = [] }) do |slot, index|
+      start_minutes = (slot.starts_at.hour * 60) + slot.starts_at.min
+      end_minutes = (slot.ends_at.hour * 60) + slot.ends_at.min
+      duration_minutes = [ end_minutes - start_minutes, TIMELINE_MIN_DURATION_MINUTES ].max
+
+      index[slot.starts_at.to_date] << {
+        slot: slot,
+        start_minutes: start_minutes,
+        end_minutes: end_minutes,
+        timeline_style: [
+          "top: #{timeline_pixels_for_minutes(start_minutes).round(2)}px",
+          "height: #{timeline_pixels_for_minutes(duration_minutes).round(2)}px",
+          "left: 0.34rem",
+          "width: calc(100% - 0.68rem)"
+        ].join("; ")
+      }
+    end
   end
 
   def build_year_month_event_counts(events)
@@ -505,9 +575,26 @@ class KalendariumController < ApplicationController
     (row_count.to_i * ALL_DAY_ROW_HEIGHT_PX) + ALL_DAY_PADDING_PX
   end
 
+  def resolve_task_schedule_row
+    task_row_id = params[:task_row_id].to_s.presence
+    return nil if task_row_id.blank?
+
+    row = policy_scope(DbRow).for_workspace(@workspace).active.includes(:database).find_by(id: task_row_id)
+    return nil if row.blank?
+    return nil unless policy(row).show?
+
+    row
+  end
+
   def build_week_days
-    week_start = @selected_date.beginning_of_week(week_start_day)
-    (0..6).map { |offset| week_start + offset.days }
+    range_start =
+      if @view == "next_7_days"
+        @next_seven_days_start
+      else
+        @selected_date.beginning_of_week(week_start_day)
+      end
+
+    (0..6).map { |offset| range_start + offset.days }
   end
 
   def build_month_days
@@ -523,6 +610,26 @@ class KalendariumController < ApplicationController
   def ordered_weekday_labels
     base_day = Date.current.beginning_of_week(week_start_day)
     (0..6).map { |offset| (base_day + offset.days).strftime("%a") }
+  end
+
+  def resolve_next_seven_days_start
+    return @selected_date unless @view == "next_7_days"
+
+    raw = params[:window_start].presence
+    return @selected_date if raw.blank?
+
+    Date.parse(raw.to_s)
+  rescue ArgumentError
+    @selected_date
+  end
+
+  def normalize_selected_date_for_view!
+    return unless @view == "next_7_days"
+
+    range_end = @next_seven_days_start + 6.days
+    return if @selected_date >= @next_seven_days_start && @selected_date <= range_end
+
+    @selected_date = @next_seven_days_start
   end
 
   def calendar_filter_session
@@ -694,5 +801,13 @@ class KalendariumController < ApplicationController
     return stored if stored.present? && VIEW_OPTIONS.include?(stored) && stored != "project"
 
     "week"
+  end
+
+  def scoped_project_id(projects)
+    requested_id = params[:project_scope_id].to_s.presence
+    return nil if requested_id.blank?
+
+    allowed_ids = projects.map { |project| project.id.to_s }
+    allowed_ids.include?(requested_id) ? requested_id : nil
   end
 end

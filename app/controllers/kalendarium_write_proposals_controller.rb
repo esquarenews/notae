@@ -8,9 +8,9 @@ class KalendariumWriteProposalsController < ApplicationController
     authorize proposal
 
     if proposal.save
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), notice: "Proposal saved for confirmation."
+      redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Proposal saved for confirmation."
     else
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: proposal.errors.full_messages.to_sentence
+      redirect_to kalendarium_path(kalendarium_redirect_params), alert: proposal.errors.full_messages.to_sentence
     end
   end
 
@@ -19,16 +19,16 @@ class KalendariumWriteProposalsController < ApplicationController
 
     event = Kalendarium::WriteProposalApplier.new(workspace: @workspace, actor: current_user, proposal: @proposal).call
     @proposal.confirm!(event: event)
-    redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), notice: "Proposal applied."
+    redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Proposal applied."
   rescue Kalendarium::WriteProposalApplier::Error => error
     @proposal.update(status: "failed", error_message: error.message)
-    redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), alert: error.message
+    redirect_to kalendarium_path(kalendarium_redirect_params), alert: error.message
   end
 
   def reject
     authorize @proposal, :reject?
     @proposal.reject!
-    redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: params[:view], date: params[:date]), notice: "Proposal rejected."
+    redirect_to kalendarium_path(kalendarium_redirect_params), notice: "Proposal rejected."
   end
 
   private
@@ -43,5 +43,17 @@ class KalendariumWriteProposalsController < ApplicationController
 
   def proposal_params
     params.require(:kalendarium_write_proposal).permit(:operation, :proposed_by, :expires_at, payload_json: {})
+  end
+
+  def kalendarium_redirect_params
+    {
+      workspace_slug: @workspace.slug,
+      view: params[:view],
+      date: params[:date]
+    }.tap do |redirect_params|
+      redirect_params[:window_start] = params[:window_start].presence if params[:window_start].present?
+      redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
+      redirect_params[:task_row_id] = params[:task_row_id].presence if params[:task_row_id].present?
+    end
   end
 end

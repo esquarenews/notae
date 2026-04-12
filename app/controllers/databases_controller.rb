@@ -55,6 +55,9 @@ class DatabasesController < ApplicationController
     schedule_missing_cells_backfill(property_ids: required_property_ids, loaded_cell_count: @cells.size)
     @select_options_by_property = build_select_options_by_property
     @split_page = resolve_split_page
+    @kalendarium_split_active = params[:split_panel].to_s == "kalendarium"
+    @kalendarium_split_project = resolve_tasks_project_for_split if @kalendarium_split_active
+    @kalendarium_task_row = resolve_kalendarium_task_row if @kalendarium_split_active
     @backlinks =
       if @database.linked_page.present?
         policy_scope(PageLink).for_target(@database.linked_page).includes(source_page: :linked_database).order(created_at: :desc)
@@ -772,6 +775,7 @@ class DatabasesController < ApplicationController
     split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
     split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
     split_row_id = @clear_split_page ? nil : params[:split_row_id].presence
+    split_panel = @redirect_split_panel || params[:split_panel].presence
 
     database_path(
       workspace_slug: @workspace.slug,
@@ -788,9 +792,11 @@ class DatabasesController < ApplicationController
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
       options_menu: params[:options_menu].presence,
+      split_panel: split_panel,
       split_page_id: split_page_id,
       split_source: split_source,
-      split_row_id: split_row_id
+      split_row_id: split_row_id,
+      task_row_id: params[:task_row_id].presence
     )
   end
 
@@ -888,9 +894,11 @@ class DatabasesController < ApplicationController
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
       options_menu: params[:options_menu].presence,
+      split_panel: params[:split_panel].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
-      split_row_id: params[:split_row_id].presence
+      split_row_id: params[:split_row_id].presence,
+      task_row_id: params[:task_row_id].presence
     }.compact
   end
 
@@ -900,11 +908,45 @@ class DatabasesController < ApplicationController
         :view_settings,
         :actions_menu,
         :options_menu,
+        :split_panel,
         :split_page_id,
         :split_source,
-        :split_row_id
+        :split_row_id,
+        :task_row_id
       )
     )
+  end
+
+  def resolve_tasks_project_for_split
+    existing_project =
+      policy_scope(KalendariumProject).for_workspace(@workspace).find_by(slug: Kalendarium::TasksProjectEnsurer::PROJECT_SLUG) ||
+      policy_scope(KalendariumProject).for_workspace(@workspace).where("LOWER(name) = ?", Kalendarium::TasksProjectEnsurer::PROJECT_NAME.downcase).order(:created_at).first
+    return existing_project if existing_project.present?
+    return nil unless can_manage_tasks_project?
+
+    Kalendarium::TasksProjectEnsurer.new(workspace: @workspace, actor: current_user).call
+  rescue ActiveRecord::RecordInvalid => error
+    Rails.logger.warn("Could not prepare Tasks project for database split #{@database.id}: #{error.record.errors.full_messages.to_sentence}")
+    nil
+  end
+
+  def resolve_kalendarium_task_row
+    task_row_id = params[:task_row_id].to_s.presence
+    return nil if task_row_id.blank?
+
+    policy_scope(DbRow).for_database(@database).active.find_by(id: task_row_id)
+  end
+
+  def can_manage_tasks_project?
+    policy(
+      KalendariumProject.new(
+        workspace: @workspace,
+        created_by: current_user,
+        name: Kalendarium::TasksProjectEnsurer::PROJECT_NAME,
+        slug: Kalendarium::TasksProjectEnsurer::PROJECT_SLUG,
+        color_hex: Kalendarium::TasksProjectEnsurer::PROJECT_COLOR
+      )
+    ).create?
   end
 
   def can_comment_on_database?

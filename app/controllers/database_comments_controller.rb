@@ -52,7 +52,7 @@ class DatabaseCommentsController < ApplicationController
   def database_redirect_path
     preserved_keys = %i[
       view_id month sort_property_id sort_direction filter_property_id filter_value filter_operator
-      split_page_id split_source split_row_id
+      split_panel split_page_id split_source split_row_id task_row_id
     ]
     preserved_params = params.permit(*preserved_keys).to_h.compact
 

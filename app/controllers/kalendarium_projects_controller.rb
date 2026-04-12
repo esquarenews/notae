@@ -23,12 +23,12 @@ class KalendariumProjectsController < ApplicationController
     end
 
     if @project.persisted?
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: "project", project_id: @project.id), notice: "Project created."
+      redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project", project_id: @project.id)), notice: "Project created."
     else
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: "project"), alert: @project.errors.full_messages.to_sentence
+      redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project")), alert: @project.errors.full_messages.to_sentence
     end
   rescue ActiveRecord::RecordInvalid => error
-    redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: "project"), alert: error.record.errors.full_messages.to_sentence
+    redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project")), alert: error.record.errors.full_messages.to_sentence
   end
 
   def update
@@ -41,9 +41,9 @@ class KalendariumProjectsController < ApplicationController
       if @project.kalendarium_calendar.present?
         @project.kalendarium_calendar.update(name: @project.name, color_hex: @project.color_hex)
       end
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: "project", project_id: @project.id), notice: "Project updated."
+      redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project", project_id: @project.id)), notice: "Project updated."
     else
-      redirect_to kalendarium_path(workspace_slug: @workspace.slug, view: "project", project_id: @project.id), alert: @project.errors.full_messages.to_sentence
+      redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project", project_id: @project.id)), alert: @project.errors.full_messages.to_sentence
     end
   end
 
@@ -113,6 +113,10 @@ class KalendariumProjectsController < ApplicationController
       time_zones = Array(params[:tz]).map(&:to_s).reject(&:blank?)
       redirect_params[:tz] = time_zones if time_zones.any?
       redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
+      redirect_params[:project_scope_id] = params[:project_scope_id].to_s.presence if params[:project_scope_id].present?
+      redirect_params[:window_start] = params[:window_start].to_s.presence if params[:window_start].present?
+      redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
+      redirect_params[:task_row_id] = params[:task_row_id].to_s.presence if params[:task_row_id].present?
     end
   end
 

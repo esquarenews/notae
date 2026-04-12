@@ -134,6 +134,8 @@ Rails.application.routes.draw do
           patch :move
           post :duplicate
           patch :restore
+          post :schedule_in_kalendarium
+          post :confirm_schedule_in_kalendarium
         end
       end
       resources :share_links, only: %i[create destroy], controller: "database_share_links"

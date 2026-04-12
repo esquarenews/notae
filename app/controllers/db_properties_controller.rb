@@ -101,9 +101,11 @@ class DbPropertiesController < ApplicationController
       view_settings: params[:view_settings].presence,
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
+      split_panel: params[:split_panel].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
-      split_row_id: params[:split_row_id].presence
+      split_row_id: params[:split_row_id].presence,
+      task_row_id: params[:task_row_id].presence
     )
   end
 

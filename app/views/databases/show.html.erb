@@ -42,9 +42,11 @@
   view_settings_section: params[:view_settings_section],
   actions_menu: params[:actions_menu],
   options_menu: params[:options_menu],
+  split_panel: params[:split_panel],
   split_page_id: params[:split_page_id],
   split_source: params[:split_source],
-  split_row_id: params[:split_row_id]
+  split_row_id: params[:split_row_id],
+  task_row_id: params[:task_row_id]
 }.compact %>
 <% unless embedded_preview %>
   <% content_for :topbar_actions do %>
@@ -84,12 +86,36 @@
 
 <% view_params = topbar_view_params %>
 <% db_layout_classes = [ "notae-db-split-layout" ] %>
-<% db_layout_classes << "has-side-peek" if @split_page.present? %>
+<% db_layout_classes << "has-side-peek" if @split_page.present? || @kalendarium_split_active %>
 <% db_layout_classes << "is-small-text" if @database.small_text? %>
 <% db_layout_classes << "is-font-serif" if @database.font_style == "serif" %>
 <% db_layout_classes << "is-font-mono" if @database.font_style == "mono" %>
-<% db_layout_classes << "has-covered-primary" if @split_page.present? && has_display_cover && !embedded_preview %>
+<% db_layout_classes << "has-covered-primary" if (@split_page.present? || @kalendarium_split_active) && has_display_cover && !embedded_preview %>
 <% db_layout_classes << "is-embedded-preview" if embedded_preview %>
+<% kalendarium_split_params = view_params.merge(split_panel: "kalendarium", split_page_id: nil, split_source: nil, split_row_id: nil, task_row_id: nil) %>
+<% kalendarium_return_params = {
+  view_id: @current_view&.id,
+  month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+  sort_property_id: params[:sort_property_id],
+  sort_direction: params[:sort_direction],
+  filter_property_id: params[:filter_property_id],
+  filter_value: params[:filter_value],
+  filter_operator: params[:filter_operator],
+  rows_page: params[:rows_page].presence,
+  view_settings: params[:view_settings],
+  actions_menu: params[:actions_menu],
+  options_menu: params[:options_menu]
+}.compact %>
+<% kalendarium_full_params = {
+  workspace_slug: @workspace.slug,
+  view: "next_7_days",
+  date: Date.current,
+  window_start: Date.current,
+  project_id: @kalendarium_split_project&.id,
+  project_scope_id: @kalendarium_split_project&.id,
+  task_row_id: @kalendarium_task_row&.id
+}.merge(kalendarium_return_params).compact %>
+<% kalendarium_embed_params = kalendarium_full_params.merge(embedded: "1") %>
 
 <section class="<%= db_layout_classes.join(" ") %>"
          data-controller="database-view-state"
@@ -417,6 +443,10 @@
                          class: "notae-chip-button notae-db-template-button",
                          disabled: !can_edit_database %>
         <% end %>
+        <%= link_to "Kalendārium",
+                    database_path(kalendarium_split_params),
+                    class: [ "notae-chip-button", "notae-db-template-button", ("is-active" if @kalendarium_split_active) ].compact.join(" "),
+                    data: { preserve_database_scroll: true } %>
       </div>
       <% if @current_view.present? %>
         <%= render "databases/actions_menu",
@@ -557,7 +587,7 @@
                     linked_document_path(split_record, workspace: @workspace),
                     class: "notae-chip-button" %>
         <%= link_to "✕",
-                    database_path(view_params.except(:split_page_id, :split_source, :split_row_id)),
+                    database_path(view_params.except(:split_page_id, :split_source, :split_row_id, :task_row_id)),
                     class: "notae-inline-icon-button",
                     aria: { label: "Close side peek" },
                     title: "Close side peek" %>
@@ -565,6 +595,36 @@
     </div>
     <iframe src="<%= linked_document_path(split_record, workspace: @workspace, embedded: true) %>"
             title="Linked page side peek"
+            class="notae-db-split-frame"
+            loading="lazy"></iframe>
+  </aside>
+<% elsif @kalendarium_split_active %>
+  <aside class="notae-db-split-pane">
+    <div class="notae-db-split-pane-head">
+      <% kalendarium_split_title = if @kalendarium_task_row.present?
+        "Kalendārium · #{@kalendarium_task_row.title}"
+      elsif @kalendarium_split_project.present?
+        "Kalendārium · #{@kalendarium_split_project.name}"
+      else
+        "Kalendārium"
+      end %>
+      <p class="notae-db-split-pane-title" title="<%= kalendarium_split_title %>">
+        <%= render_notae_icon("🗓️", workspace: @workspace, fallback: "🗓️", css_class: "notae-inline-linked-icon", label: "Kalendārium") %>
+        <%= kalendarium_split_title %>
+      </p>
+      <div class="notae-db-split-pane-actions">
+        <%= link_to "Open full",
+                    kalendarium_path(kalendarium_full_params),
+                    class: "notae-chip-button" %>
+        <%= link_to "✕",
+                    database_path(view_params.except(:split_panel, :split_page_id, :split_source, :split_row_id, :task_row_id)),
+                    class: "notae-inline-icon-button",
+                    aria: { label: "Close Kalendārium side peek" },
+                    title: "Close Kalendārium side peek" %>
+      </div>
+    </div>
+    <iframe src="<%= kalendarium_path(kalendarium_embed_params) %>"
+            title="Kalendārium side peek"
             class="notae-db-split-frame"
             loading="lazy"></iframe>
   </aside>

@@ -11823,6 +11823,22 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   margin: 0;
 }
 
+.notae-kalendarium-task-schedule-panel {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, #10b981 22%, var(--notae-border, #d6d3d1) 78%);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, #dcfce7 38%, var(--notae-surface, #fff) 62%);
+  margin-bottom: 0.75rem;
+}
+
+.notae-kalendarium-task-schedule-panel strong {
+  font-size: 0.98rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
 .notae-kalendarium-sidebar h2,
 .notae-kalendarium-main h2,
 .notae-kalendarium-main h3 {
@@ -11945,6 +11961,51 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   position: absolute;
   inset: var(--kal-all-day-offset) 0 0;
   z-index: 2;
+}
+
+.notae-kalendarium-task-slot-form {
+  position: absolute;
+  margin: 0;
+  z-index: 4;
+}
+
+.notae-kalendarium-task-slot-candidate {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed color-mix(in srgb, #10b981 82%, #065f46 18%);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, #d1fae5 70%, rgb(255 255 255 / 94%) 30%);
+  box-shadow: 0 8px 18px rgb(16 185 129 / 18%);
+  padding: 0.36rem 0.42rem;
+  display: grid;
+  align-content: start;
+  gap: 0.16rem;
+  text-align: left;
+  color: #065f46;
+  cursor: pointer;
+}
+
+.notae-kalendarium-task-slot-candidate:hover {
+  background: color-mix(in srgb, #a7f3d0 76%, rgb(255 255 255 / 92%) 24%);
+}
+
+.notae-kalendarium-task-slot-candidate:focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 2px;
+}
+
+.notae-kalendarium-task-slot-label {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.08rem 0.34rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 78%);
+  color: #047857;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .notae-kalendarium-draft-preview {

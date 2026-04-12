@@ -14,7 +14,7 @@ class DatabaseViewsController < ApplicationController
       @database_view.set_as_default! if @database_view.default?
       redirect_to database_path(database_view_redirect_params(@database_view)), notice: "View saved."
     else
-      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: @database_view.errors.full_messages.to_sentence
+      redirect_to database_path(database_view_redirect_params(@database_view)), alert: @database_view.errors.full_messages.to_sentence
     end
   end
 
@@ -130,7 +130,8 @@ class DatabaseViewsController < ApplicationController
   def ensure_database_unlocked!
     return unless @database.locked?
 
-    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: "Grid is locked. Unlock to make changes."
+    fallback_view = policy_scope(DatabaseView).for_database(@database).ordered.first || DatabaseView.new(id: params[:id], database: @database)
+    redirect_to database_path(database_view_redirect_params(fallback_view)), alert: "Grid is locked. Unlock to make changes."
   end
 
   def normalize_filter_operator(value)
@@ -202,9 +203,11 @@ class DatabaseViewsController < ApplicationController
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
       rows_page: params[:rows_page].presence,
+      split_panel: params[:split_panel].presence,
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence,
+      task_row_id: params[:task_row_id].presence,
       view_settings: params[:view_settings].presence,
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence

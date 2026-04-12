@@ -13,9 +13,11 @@
     filter_operator: params[:filter_operator],
     rows_page: params[:rows_page].presence,
     highlight_row_id: params[:highlight_row_id],
+    split_panel: params[:split_panel],
     split_page_id: params[:split_page_id],
     split_source: params[:split_source],
-    split_row_id: params[:split_row_id]
+    split_row_id: params[:split_row_id],
+    task_row_id: params[:task_row_id]
   }.compact %>
   <% board_card_properties = @db_properties.reject { |property| property.id == @board_group_property.id } %>
   <% editor_properties = @db_properties %>

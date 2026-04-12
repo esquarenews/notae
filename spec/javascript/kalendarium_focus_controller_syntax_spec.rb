@@ -27,4 +27,13 @@ RSpec.describe "kalendarium_focus_controller.js" do
     expect(source).to include("dispatchChange(this.createStartInputTarget)")
     expect(source).to include("dispatchChange(this.createEndInputTarget)")
   end
+
+  it "formats the rolling next-7-days label from the window start value" do
+    source = Rails.root.join("app/javascript/controllers/kalendarium_focus_controller.js").read
+
+    expect(source).to include("windowStart: String")
+    expect(source).to include("view === \"next_7_days\"")
+    expect(source).to include("endDate.setUTCDate(endDate.getUTCDate() + 6)")
+    expect(source).to include("return `${startLabel} - ${endLabel}`")
+  end
 end

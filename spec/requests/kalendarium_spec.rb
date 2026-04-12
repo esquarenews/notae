@@ -8,12 +8,13 @@ RSpec.describe "Kalendarium", type: :request do
     clear_enqueued_jobs
   end
 
-  def build_stack(suffix:, theme_preference: nil)
+  def build_stack(suffix:, theme_preference: nil, time_zone: nil)
     user_attributes = {
       email: "kal-request-#{suffix}@example.com",
       password: "password123"
     }
     user_attributes[:theme_preference] = theme_preference if theme_preference.present?
+    user_attributes[:time_zone] = time_zone if time_zone.present?
     user = User.create!(**user_attributes)
     workspace = Workspace.create!(name: "Kal Request #{suffix}", slug: "kal-request-#{suffix}")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -38,6 +39,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Kalendārium")
     expect(response.body).to include("Day")
+    expect(response.body).to include("Next 7 days")
     expect(response.body).to include("Week")
     expect(response.body).to include("Month")
     expect(response.body).to include("Year")
@@ -75,6 +77,157 @@ RSpec.describe "Kalendarium", type: :request do
     expect(create_form.at_css("button[data-action='kalendarium-event-form#cancel']")&.text.to_s.strip).to eq("Cancel")
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
+  end
+
+  it "renders embedded task slot suggestions and hides the create event accordion" do
+    user, workspace, calendar = build_stack(suffix: "task-slots", time_zone: "UTC")
+    database = Database.create!(workspace: workspace, created_by: user, name: "Task Grid")
+    date_created_property = DbProperty.create!(workspace: workspace, database: database, name: "Date created", property_type: :date)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Review roadmap")
+    tasks_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Tasks",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    tasks_project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: tasks_calendar,
+      name: "Tasks",
+      slug: "tasks",
+      color_hex: "#10B981"
+    )
+    sign_in user
+
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-12")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-13")
+      KalendariumEvent.create!(
+        workspace: workspace,
+        kalendarium_calendar: calendar,
+        created_by: user,
+        updated_by: user,
+        title: "Team standup",
+        starts_at_utc: Time.zone.parse("2026-04-12 08:00:00"),
+        ends_at_utc: Time.zone.parse("2026-04-12 09:00:00")
+      )
+
+      get kalendarium_path(
+        workspace_slug: workspace.slug,
+        view: "next_7_days",
+        date: "2026-04-12",
+        window_start: "2026-04-12",
+        embedded: "1",
+        task_row_id: row.id,
+        project_id: tasks_project.id,
+        project_scope_id: tasks_project.id,
+        view_id: "table-view-1",
+        filter_value: "active"
+      )
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Choose a slot for")
+    expect(response.body).to include(row.title)
+    expect(response.body).to include("Click a suggested slot in the calendar to lock it in.")
+    expect(response.body).not_to include("Create event")
+    expect(response.body).to include("data-kalendarium-focus-window-start-value=\"2026-04-12\"")
+
+    document = Nokogiri::HTML.parse(response.body)
+    slot_forms = document.css(".notae-kalendarium-task-slot-form")
+    expect(slot_forms.size).to eq(3)
+
+    first_form = slot_forms.first
+    expect(first_form["action"]).to eq(
+      confirm_schedule_in_kalendarium_database_db_row_path(
+        workspace_slug: workspace.slug,
+        database_id: database.id,
+        id: row.id
+      )
+    )
+    expect(first_form.at_css("input[name='starts_at']")["value"]).to eq("2026-04-12T09:00:00Z")
+    expect(first_form.at_css("input[name='ends_at']")["value"]).to eq("2026-04-12T09:20:00Z")
+    expect(first_form.at_css("input[name='view_id']")["value"]).to eq("table-view-1")
+    expect(first_form.at_css("input[name='filter_value']")["value"]).to eq("active")
+  end
+
+  it "scopes visible project events without persisting that filter to later requests" do
+    user, workspace, calendar = build_stack(suffix: "project-scope")
+    tasks_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Tasks",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    tasks_project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: tasks_calendar,
+      name: "Tasks",
+      slug: "tasks",
+      color_hex: "#10B981"
+    )
+    other_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Roadmap",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    other_project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: other_calendar,
+      name: "Roadmap",
+      slug: "roadmap",
+      color_hex: "#8B5CF6"
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: tasks_calendar,
+      kalendarium_project: tasks_project,
+      created_by: user,
+      updated_by: user,
+      title: "Tasks event",
+      starts_at_utc: Time.zone.parse("2026-03-18 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-18 09:30:00")
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: other_calendar,
+      kalendarium_project: other_project,
+      created_by: user,
+      updated_by: user,
+      title: "Roadmap event",
+      starts_at_utc: Time.zone.parse("2026-03-18 10:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-18 10:30:00")
+    )
+    sign_in user
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "week",
+      date: "2026-03-18",
+      project_id: tasks_project.id,
+      project_scope_id: tasks_project.id
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Tasks event")
+    expect(response.body).not_to include("Roadmap event")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-18")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Tasks event")
+    expect(response.body).to include("Roadmap event")
   end
 
   it "ships dark theme contrast overrides for kalendarium controls and cards" do
@@ -178,6 +331,20 @@ RSpec.describe "Kalendarium", type: :request do
     week_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-03-01']")
     expect(week_track).to be_present
     expect(week_track["data-action"]).to include("dblclick->kalendarium-timeline#quickCreate")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "next_7_days", date: "2026-03-18", window_start: "2026-03-18")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("<h2>Next 7 days</h2>")
+    expect(response.body).to include("Mar 18 - Mar 24, 2026")
+    expect(response.body).to include("data-kalendarium-focus-view-value=\"next_7_days\"")
+    expect(response.body).to include("data-kalendarium-focus-window-start-value=\"2026-03-18\"")
+    expect(response.body).to include("date=2026-03-18&amp;view=day")
+    expect(response.body).to include("window_start=2026-03-18")
+    document = Nokogiri::HTML.parse(response.body)
+    rolling_week_tracks = document.css(".notae-kalendarium-week-day-track").map { |track| track["data-day-date"] }
+    expect(rolling_week_tracks.first).to eq("2026-03-18")
+    expect(rolling_week_tracks.last).to eq("2026-03-24")
+    expect(rolling_week_tracks).to include("2026-03-18", "2026-03-24")
 
     travel_to Time.zone.parse("2026-03-15 09:30:00") do
       get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01")
