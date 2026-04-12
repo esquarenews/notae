@@ -97,7 +97,7 @@ module Kalendarium
       upper_bound = search_upper_bound(lower_bound)
 
       if upper_bound <= lower_bound
-        return CandidateResult.new(slots: [], error: unavailable_slot_message)
+        return CandidateResult.new(slots: [], error: unavailable_slot_message(lower_bound:, upper_bound:))
       end
 
       buffered_slots = available_slots(limit:, lower_bound:, upper_bound:, buffer_minutes: PREFERRED_BUFFER_MINUTES)
@@ -109,7 +109,7 @@ module Kalendarium
         end
       slots = merge_unique_slots(buffered_slots, fallback_slots).first(limit)
       if slots.blank?
-        return CandidateResult.new(slots: [], error: unavailable_slot_message)
+        return CandidateResult.new(slots: [], error: unavailable_slot_message(lower_bound:, upper_bound:))
       end
 
       CandidateResult.new(slots:)
@@ -511,9 +511,62 @@ module Kalendarium
       "The Tasks calendar could not be prepared."
     end
 
-    def unavailable_slot_message
+    def unavailable_slot_message(lower_bound: nil, upper_bound: nil)
+      lower_bound ||= earliest_start_time
+      upper_bound ||= search_upper_bound(lower_bound)
       deadline_label = deadline_date.present? ? " before this task's deadline" : ""
-      "No open #{duration_minutes}-minute slot is available in #{schedule_notice_window_label} over the next #{scheduling_profile.lookahead_days} #{'day'.pluralize(scheduling_profile.lookahead_days)}#{deadline_label}."
+      [
+        "No open #{duration_minutes}-minute slot is available in #{schedule_notice_window_label} over the next #{scheduling_profile.lookahead_days} #{'day'.pluralize(scheduling_profile.lookahead_days)}#{deadline_label}.",
+        unavailability_diagnostic_message(lower_bound:, upper_bound:)
+      ].join(" ")
+    end
+
+    def unavailability_diagnostic_message(lower_bound:, upper_bound:)
+      mode_label = scheduling_profile.task_mode == :work ? "work" : "personal"
+      normalized_status = status_value.presence || "unset"
+      eligible_days = eligible_day_count(lower_bound:, upper_bound:)
+      enabled_calendar_count = workspace.kalendarium_calendars.enabled.count
+      busy_event_count = busy_events(lower_bound:, upper_bound:).size
+
+      summary = "This task is being treated as a #{mode_label} task with status \"#{normalized_status}\", so only #{diagnostic_window_label} were checked."
+      visibility_note = "Scheduling checks all enabled calendars, not only the ones currently visible in the split view."
+
+      if eligible_days.zero?
+        return [
+          summary,
+          "No eligible #{schedule_notice_window_label} fall inside the current search window.",
+          visibility_note
+        ].join(" ")
+      end
+
+      [
+        summary,
+        "Checked #{eligible_days} eligible #{'day'.pluralize(eligible_days)} across #{enabled_calendar_count} enabled #{'calendar'.pluralize(enabled_calendar_count)} and found #{busy_event_count} existing #{'event'.pluralize(busy_event_count)} in that window.",
+        visibility_note
+      ].join(" ")
+    end
+
+    def eligible_day_count(lower_bound:, upper_bound:)
+      cursor_date = lower_bound.to_date
+      eligible_days = 0
+
+      while cursor_date <= upper_bound.to_date && eligible_days < scheduling_profile.lookahead_days
+        day_windows = scheduling_windows_for(cursor_date)
+        eligible_days += 1 if day_eligible?(windows: day_windows, lower_bound:, upper_bound:)
+        cursor_date += 1.day
+      end
+
+      eligible_days
+    end
+
+    def diagnostic_window_label
+      if scheduling_profile.task_mode == :work
+        return "weekday 9:00 AM to 5:00 PM windows" unless scheduling_profile.allow_early_work
+
+        "weekday work-hour windows with early starts allowed"
+      else
+        "after-hours weekday and weekend windows"
+      end
     end
   end
 end

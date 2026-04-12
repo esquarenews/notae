@@ -119,7 +119,9 @@ RSpec.describe Kalendarium::TaskSchedulingService do
       result = described_class.new(workspace: workspace, row: row, actor: user).call
 
       expect(result).not_to be_success
-      expect(result.error).to eq("No open 20-minute slot is available in weekday work hours over the next 7 days before this task's deadline.")
+      expect(result.error).to include("No open 20-minute slot is available in weekday work hours over the next 7 days before this task's deadline.")
+      expect(result.error).to include('This task is being treated as a work task with status "unset"')
+      expect(result.error).to include("Scheduling checks all enabled calendars, not only the ones currently visible in the split view.")
     end
   end
 end
