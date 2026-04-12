@@ -193,11 +193,21 @@
                          aria: { label: "Select workspace calendar view" } %>
         </div>
 
-        <%= form_with url: kalendarium_path(kalendarium_base_params), method: :get, class: "notae-kalendarium-calendar-filter" do |form| %>
+        <%= form_with url: kalendarium_path(kalendarium_base_params),
+                      method: :get,
+                      class: "notae-kalendarium-calendar-filter",
+                      html: {
+                        data: {
+                          turbo: (embedded_split_view ? false : nil)
+                        }.compact
+                      } do |form| %>
           <%= hidden_field_tag :view, @view %>
           <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
           <%= hidden_field_tag :year_daily_events, year_daily_events_param %>
           <%= hidden_field_tag :calendar_filter_applied, "1" %>
+          <% if embedded_split_view %>
+            <%= hidden_field_tag :embedded, "1" %>
+          <% end %>
           <% if @scoped_project_id.present? %>
             <%= hidden_field_tag :project_scope_id, @scoped_project_id %>
           <% end %>

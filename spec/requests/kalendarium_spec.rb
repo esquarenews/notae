@@ -161,6 +161,10 @@ RSpec.describe "Kalendarium", type: :request do
     expect(editor_form["data-turbo"]).to eq("false")
     expect(editor_form.at_css("input[name='view_id']")["value"]).to eq("table-view-1")
     expect(editor_form.at_css("input[name='filter_value']")["value"]).to eq("active")
+    calendar_filter_form = document.at_css("form.notae-kalendarium-calendar-filter")
+    expect(calendar_filter_form).to be_present
+    expect(calendar_filter_form["data-turbo"]).to eq("false")
+    expect(calendar_filter_form.at_css("input[name='embedded']")["value"]).to eq("1")
     expect(document.at_css("[data-kalendarium-task-slot-target='dialog']")).to be_present
   end
 
