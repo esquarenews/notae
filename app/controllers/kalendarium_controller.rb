@@ -345,7 +345,9 @@ class KalendariumController < ApplicationController
     candidate_result = Kalendarium::TaskSchedulingService.new(
       workspace: @workspace,
       row: @task_schedule_row,
-      actor: current_user
+      actor: current_user,
+      busy_calendar_ids: @visible_event_calendars.map(&:id),
+      visible_project_ids: @visible_project_ids
     ).candidate_slots(limit: Kalendarium::TaskSchedulingService::DEFAULT_CANDIDATE_LIMIT)
 
     unless candidate_result.success?

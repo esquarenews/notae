@@ -1,5 +1,6 @@
 class DatabasesController < ApplicationController
   include DatabaseTablePresentation
+  include KalendariumCalendarScope
   include RequestPerformanceInstrumentation
 
   before_action :authenticate_user!
@@ -946,7 +947,9 @@ class DatabasesController < ApplicationController
       workspace: @workspace,
       row: @kalendarium_task_row,
       actor: current_user,
-      tasks_project: @kalendarium_split_project
+      tasks_project: @kalendarium_split_project,
+      busy_calendar_ids: split_scheduling_calendar_ids,
+      visible_project_ids: [ @kalendarium_split_project.id ]
     ).candidate_slots(limit: 1)
     return today unless candidate_result.success?
 
@@ -977,6 +980,10 @@ class DatabasesController < ApplicationController
   def can_comment_on_database?
     database_comment_probe = Comment.new(commentable: @database, workspace: @workspace, author: current_user, body: "draft")
     policy(database_comment_probe).create?
+  end
+
+  def split_scheduling_calendar_ids
+    selected_provider_calendar_ids_for_workspace + [ @kalendarium_split_project.kalendarium_calendar_id.to_s ]
   end
 
   def prepare_database_comments_panel!

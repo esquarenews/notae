@@ -1,5 +1,6 @@
 class DbRowsController < ApplicationController
   include DatabaseTablePresentation
+  include KalendariumCalendarScope
   include RequestPerformanceInstrumentation
 
   before_action :authenticate_user!
@@ -175,7 +176,9 @@ class DbRowsController < ApplicationController
       workspace: @workspace,
       row: @db_row,
       actor: current_user,
-      tasks_project: tasks_project
+      tasks_project: tasks_project,
+      busy_calendar_ids: scheduling_calendar_ids(tasks_project: tasks_project),
+      visible_project_ids: [ tasks_project.id ]
     )
     candidate_result = scheduling_service.candidate_slots(limit: Kalendarium::TaskSchedulingService::DEFAULT_CANDIDATE_LIMIT)
 
@@ -217,7 +220,9 @@ class DbRowsController < ApplicationController
       workspace: @workspace,
       row: @db_row,
       actor: current_user,
-      tasks_project: tasks_project
+      tasks_project: tasks_project,
+      busy_calendar_ids: scheduling_calendar_ids(tasks_project: tasks_project),
+      visible_project_ids: [ tasks_project.id ]
     )
     candidate_result = scheduling_service.candidate_slots(limit: Kalendarium::TaskSchedulingService::DEFAULT_CANDIDATE_LIMIT)
     unless candidate_result.success?
@@ -473,6 +478,10 @@ class DbRowsController < ApplicationController
     @clear_split_page = true
     @redirect_split_panel = "kalendarium"
     database_redirect_location(anchor:, task_row_id:)
+  end
+
+  def scheduling_calendar_ids(tasks_project:)
+    selected_provider_calendar_ids_for_workspace + [ tasks_project.kalendarium_calendar_id.to_s ]
   end
 
   def suggested_schedule_window_start(slots)

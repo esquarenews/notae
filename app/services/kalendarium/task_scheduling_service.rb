@@ -66,12 +66,14 @@ module Kalendarium
       \b(before\s+9|before\s+work|early\s+(?:morning|start)|first\s+thing|7(?::[0-5]\d)?\s*am|8(?::[0-5]\d)?\s*am)\b
     /ix
 
-    def initialize(workspace:, row:, actor:, duration_minutes: DEFAULT_DURATION_MINUTES, tasks_project: nil)
+    def initialize(workspace:, row:, actor:, duration_minutes: DEFAULT_DURATION_MINUTES, tasks_project: nil, busy_calendar_ids: nil, visible_project_ids: nil)
       @workspace = workspace
       @row = row
       @actor = actor
       @duration_minutes = duration_minutes.to_i.positive? ? duration_minutes.to_i : DEFAULT_DURATION_MINUTES
       @tasks_project = tasks_project
+      @busy_calendar_ids = busy_calendar_ids.nil? ? nil : Array(busy_calendar_ids).compact.uniq
+      @visible_project_ids = visible_project_ids.nil? ? nil : Array(visible_project_ids).compact.uniq
     end
 
     def call
@@ -186,7 +188,7 @@ module Kalendarium
 
     private
 
-    attr_reader :workspace, :row, :actor, :duration_minutes, :tasks_project
+    attr_reader :workspace, :row, :actor, :duration_minutes, :tasks_project, :busy_calendar_ids, :visible_project_ids
 
     def earliest_start_time
       [
@@ -282,16 +284,28 @@ module Kalendarium
     end
 
     def busy_events(lower_bound:, upper_bound:)
-      calendar_ids = workspace.kalendarium_calendars.enabled.pluck(:id)
+      calendar_ids = scoped_busy_calendar_ids
       return [] if calendar_ids.empty?
 
-      KalendariumEvent
+      scope = KalendariumEvent
         .for_workspace(workspace)
         .where(kalendarium_calendar_id: calendar_ids)
+        .where(all_day: [ false, nil ])
         .where.not(status: "cancelled")
         .for_range(lower_bound.utc, upper_bound.utc)
-        .order(:starts_at_utc)
-        .to_a
+      scope =
+        if visible_project_ids.nil?
+          scope
+        elsif visible_project_ids.any?
+          scope.where(
+            "kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)",
+            visible_project_ids
+          )
+        else
+          scope.where(kalendarium_project_id: nil)
+        end
+
+      scope.order(:starts_at_utc).to_a
     end
 
     def established_date
@@ -525,11 +539,16 @@ module Kalendarium
       mode_label = scheduling_profile.task_mode == :work ? "work" : "personal"
       normalized_status = status_value.presence || "unset"
       eligible_days = eligible_day_count(lower_bound:, upper_bound:)
-      enabled_calendar_count = workspace.kalendarium_calendars.enabled.count
+      scoped_calendar_count = scoped_busy_calendar_ids.size
       busy_event_count = busy_events(lower_bound:, upper_bound:).size
 
       summary = "This task is being treated as a #{mode_label} task with status \"#{normalized_status}\", so only #{diagnostic_window_label} were checked."
-      visibility_note = "Scheduling checks all enabled calendars, not only the ones currently visible in the split view."
+      visibility_note =
+        if busy_calendar_ids.nil?
+          "Scheduling checks all enabled calendars, not only the ones currently visible in the split view."
+        else
+          "Scheduling only checks calendars that are currently visible in this Kalendarium view."
+        end
 
       if eligible_days.zero?
         return [
@@ -541,9 +560,19 @@ module Kalendarium
 
       [
         summary,
-        "Checked #{eligible_days} eligible #{'day'.pluralize(eligible_days)} across #{enabled_calendar_count} enabled #{'calendar'.pluralize(enabled_calendar_count)} and found #{busy_event_count} existing #{'event'.pluralize(busy_event_count)} in that window.",
+        "Checked #{eligible_days} eligible #{'day'.pluralize(eligible_days)} across #{scoped_calendar_count} #{busy_calendar_ids.nil? ? "enabled" : "visible"} #{'calendar'.pluralize(scoped_calendar_count)} and found #{busy_event_count} timed #{'event'.pluralize(busy_event_count)} in that window.",
         visibility_note
       ].join(" ")
+    end
+
+    def scoped_busy_calendar_ids
+      @scoped_busy_calendar_ids ||= begin
+        if busy_calendar_ids.present? || busy_calendar_ids == []
+          busy_calendar_ids
+        else
+          workspace.kalendarium_calendars.enabled.pluck(:id)
+        end
+      end
     end
 
     def eligible_day_count(lower_bound:, upper_bound:)

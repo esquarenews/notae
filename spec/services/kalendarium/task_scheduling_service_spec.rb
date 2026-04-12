@@ -109,6 +109,84 @@ RSpec.describe Kalendarium::TaskSchedulingService do
     end
   end
 
+  it "ignores all-day events when finding timed task slots" do
+    user, workspace, _database, row, date_created_property, due_date_property, status_property = build_stack(suffix: "all-day")
+    busy_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Main",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
+
+    travel_to Time.zone.parse("2026-04-13 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-13")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-25")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+      KalendariumEvent.create!(
+        workspace: workspace,
+        kalendarium_calendar: busy_calendar,
+        created_by: user,
+        updated_by: user,
+        title: "Working elsewhere",
+        starts_at_utc: Time.zone.parse("2026-04-13 00:00:00"),
+        ends_at_utc: Time.zone.parse("2026-04-14 00:00:00"),
+        all_day: true
+      )
+
+      candidate_result = described_class.new(workspace: workspace, row: row, actor: user).candidate_slots(limit: 1)
+
+      expect(candidate_result).to be_success
+      expect(candidate_result.slots.first.starts_at.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-13 09:00")
+    end
+  end
+
+  it "only considers calendars in the visible scope" do
+    user, workspace, _database, row, date_created_property, due_date_property, status_property = build_stack(suffix: "visible-scope")
+    visible_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Visible",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
+    hidden_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Hidden",
+      color_hex: "#8B5CF6",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
+
+    travel_to Time.zone.parse("2026-04-13 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-13")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-25")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+      KalendariumEvent.create!(
+        workspace: workspace,
+        kalendarium_calendar: hidden_calendar,
+        created_by: user,
+        updated_by: user,
+        title: "Hidden meeting",
+        starts_at_utc: Time.zone.parse("2026-04-13 09:00:00"),
+        ends_at_utc: Time.zone.parse("2026-04-13 17:00:00")
+      )
+
+      candidate_result = described_class.new(
+        workspace: workspace,
+        row: row,
+        actor: user,
+        busy_calendar_ids: [ visible_calendar.id ]
+      ).candidate_slots(limit: 1)
+
+      expect(candidate_result).to be_success
+      expect(candidate_result.slots.first.starts_at.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-13 09:00")
+    end
+  end
+
   it "returns an error when no slot fits before the task deadline" do
     user, workspace, _database, row, date_created_property, due_date_property, = build_stack(suffix: "deadline")
 
