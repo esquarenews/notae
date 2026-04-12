@@ -155,6 +155,24 @@ RSpec.describe "Kalendarium", type: :request do
     expect(first_form.at_css("input[name='filter_value']")["value"]).to eq("active")
   end
 
+  it "hides the create event accordion in embedded split mode even without a selected task" do
+    user, workspace, = build_stack(suffix: "embedded-no-create", time_zone: "UTC")
+    sign_in user
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "next_7_days",
+      date: "2026-04-12",
+      window_start: "2026-04-12",
+      embedded: "1"
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css(".notae-kalendarium-sidebar-accordion-summary")&.text.to_s).not_to include("Create event")
+    expect(document.at_css("[data-kalendarium-focus-target='createAccordion']")).to be_nil
+  end
+
   it "scopes visible project events without persisting that filter to later requests" do
     user, workspace, calendar = build_stack(suffix: "project-scope")
     tasks_calendar = KalendariumCalendar.create!(

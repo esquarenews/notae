@@ -179,8 +179,14 @@ class DbRowsController < ApplicationController
     ).candidate_slots(limit: 3)
 
     if candidate_result.success?
+      notice_message =
+        if suggested_schedule_window_start(candidate_result.slots) > scheduling_today
+          "Showing the next available suggested slots in Kalendarium."
+        else
+          "Choose a suggested slot in Kalendarium."
+        end
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
-                  notice: "Choose a suggested slot in Kalendarium."
+                  notice: notice_message
     else
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}"), alert: candidate_result.error
     end
@@ -460,6 +466,20 @@ class DbRowsController < ApplicationController
     @clear_split_page = true
     @redirect_split_panel = "kalendarium"
     database_redirect_location(anchor:, task_row_id:)
+  end
+
+  def suggested_schedule_window_start(slots)
+    first_slot = slots.first
+    return scheduling_today if first_slot.blank?
+
+    first_slot_date = first_slot.starts_at.in_time_zone(current_user.time_zone).to_date
+    return scheduling_today if first_slot_date <= scheduling_today + 6.days
+
+    first_slot_date
+  end
+
+  def scheduling_today
+    @scheduling_today ||= Time.current.in_time_zone(current_user.time_zone).to_date
   end
 
   def apply_linked_page_update!

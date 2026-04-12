@@ -58,6 +58,7 @@ class DatabasesController < ApplicationController
     @kalendarium_split_active = params[:split_panel].to_s == "kalendarium"
     @kalendarium_split_project = resolve_tasks_project_for_split if @kalendarium_split_active
     @kalendarium_task_row = resolve_kalendarium_task_row if @kalendarium_split_active
+    @kalendarium_split_window_start = resolve_kalendarium_split_window_start if @kalendarium_split_active
     @backlinks =
       if @database.linked_page.present?
         policy_scope(PageLink).for_target(@database.linked_page).includes(source_page: :linked_database).order(created_at: :desc)
@@ -935,6 +936,30 @@ class DatabasesController < ApplicationController
     return nil if task_row_id.blank?
 
     policy_scope(DbRow).for_database(@database).active.find_by(id: task_row_id)
+  end
+
+  def resolve_kalendarium_split_window_start
+    today = Time.current.in_time_zone(current_user.time_zone).to_date
+    return today if @kalendarium_task_row.blank? || @kalendarium_split_project.blank?
+
+    candidate_result = Kalendarium::TaskSchedulingService.new(
+      workspace: @workspace,
+      row: @kalendarium_task_row,
+      actor: current_user,
+      tasks_project: @kalendarium_split_project
+    ).candidate_slots(limit: 1)
+    return today unless candidate_result.success?
+
+    first_slot = candidate_result.slots.first
+    return today if first_slot.blank?
+
+    first_slot_date = first_slot.starts_at.in_time_zone(current_user.time_zone).to_date
+    return today if first_slot_date <= today + 6.days
+
+    first_slot_date
+  rescue StandardError => error
+    Rails.logger.warn("Could not resolve split window start for database #{@database.id}: #{error.message}")
+    today
   end
 
   def can_manage_tasks_project?

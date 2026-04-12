@@ -9,6 +9,7 @@
 <% end %>
 <% project_scope_params = @scoped_project_id.present? ? { project_scope_id: @scoped_project_id } : {} %>
 <% embedded_params = params[:embedded].to_s == "1" ? { embedded: "1" } : {} %>
+<% embedded_split_view = embedded_params[:embedded] == "1" %>
 <% task_schedule_params = @task_schedule_row.present? ? { task_row_id: @task_schedule_row.id } : {} %>
 <% window_start_value = params[:window_start].presence || (@view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : nil) %>
 <% window_start_params = window_start_value.present? ? { window_start: window_start_value } : {} %>
@@ -310,7 +311,7 @@
         </section>
       <% end %>
 
-      <% unless @task_schedule_row.present? %>
+      <% unless embedded_split_view %>
       <details class="notae-kalendarium-sidebar-accordion" data-kalendarium-focus-target="createAccordion">
         <summary class="notae-kalendarium-sidebar-accordion-summary">Create event</summary>
         <div class="notae-kalendarium-sidebar-accordion-body">

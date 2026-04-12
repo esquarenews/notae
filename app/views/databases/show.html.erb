@@ -1,5 +1,6 @@
 <% display_title = @page_title_page&.title.presence || @database.name %>
 <% embedded_preview = params[:embedded].to_s == "1" %>
+<% kalendarium_split_window_start = @kalendarium_split_window_start || Date.current %>
 <% content_for :suppress_layout_flash, true %>
 <% content_for :title, display_title %>
 <% content_for :topbar_page_icon do %>
@@ -110,7 +111,7 @@
   workspace_slug: @workspace.slug,
   view: "next_7_days",
   date: Date.current,
-  window_start: Date.current,
+  window_start: kalendarium_split_window_start,
   project_id: @kalendarium_split_project&.id,
   project_scope_id: @kalendarium_split_project&.id,
   task_row_id: @kalendarium_task_row&.id

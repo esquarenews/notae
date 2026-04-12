@@ -2577,6 +2577,65 @@ RSpec.describe "Databases", type: :request do
     expect(created_event.ends_at_utc.in_time_zone("UTC").strftime("%H:%M")).to eq("09:20")
   end
 
+  it "shifts the split Kalendārium window to the first available suggested slot when the next seven days are full" do
+    owner = User.create!(email: "database-kal-shift-owner@example.com", password: "password123", time_zone: "UTC")
+    workspace = Workspace.create!(name: "Grid kal shift", slug: "grid-kal-shift")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Task planning")
+    date_created_property = DbProperty.create!(workspace: workspace, database: database, name: "Date created", property_type: :date)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Review roadmap")
+    busy_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Main",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
+    sign_in owner
+
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-12")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-25")
+
+      (Date.parse("2026-04-12")..Date.parse("2026-04-18")).each do |day|
+        KalendariumEvent.create!(
+          workspace: workspace,
+          kalendarium_calendar: busy_calendar,
+          created_by: owner,
+          updated_by: owner,
+          title: "Busy #{day}",
+          starts_at_utc: Time.zone.parse("#{day} 08:00:00"),
+          ends_at_utc: Time.zone.parse("#{day} 18:00:00")
+        )
+      end
+
+      post schedule_in_kalendarium_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)
+
+      expect(response).to redirect_to(
+        database_path(
+          workspace_slug: workspace.slug,
+          id: database.id,
+          split_panel: "kalendarium",
+          task_row_id: row.id,
+          anchor: "row_#{row.id}"
+        )
+      )
+      expect(flash[:notice]).to eq("Showing the next available suggested slots in Kalendarium.")
+
+      get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "kalendarium", task_row_id: row.id)
+    end
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
+    expect(split_iframe).to be_present
+    expect(split_iframe["src"]).to include("view=next_7_days")
+    expect(split_iframe["src"]).to include("window_start=2026-04-19")
+    expect(split_iframe["src"]).to include("task_row_id=#{row.id}")
+  end
+
   it "keeps the current grid link when an invalid page id is submitted" do
     owner = User.create!(email: "database-grid-link-invalid-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Grid link invalid tables", slug: "grid-link-invalid-tables")
