@@ -11,6 +11,7 @@ class BlocksController < ApplicationController
     authorize @block
 
     if @block.save
+      insert_block_after_reference!(@block, params[:insert_after_id]) if params[:insert_after_id].present?
       respond_to do |format|
         format.turbo_stream { render turbo_stream: create_block_streams(@block, "Block created.") }
         format.html { redirect_to page_redirect_path, notice: "Block created." }
@@ -249,7 +250,7 @@ class BlocksController < ApplicationController
   end
 
   def block_params
-    params.require(:block).permit(:parent_block_id, :block_type)
+    params.require(:block).permit(:parent_block_id, :block_type, content_json: {})
   end
 
   def block_update_params
@@ -434,6 +435,21 @@ class BlocksController < ApplicationController
         }
       )
     ]
+  end
+
+  def insert_block_after_reference!(block, reference_block_id)
+    reference = policy_scope(Block).for_page(@page).active.find_by(id: reference_block_id)
+    return if reference.blank?
+
+    siblings = policy_scope(Block).for_page(@page).active.where(parent_block_id: reference.parent_block_id).ordered.to_a
+    reference_index = siblings.index { |candidate| candidate.id == reference.id }
+    return if reference_index.nil?
+
+    Blocks::ReorderService.call(
+      block: block,
+      target_parent_id: reference.parent_block_id,
+      target_index: reference_index + 1
+    )
   end
 
   def page_flash_stream(type, message)

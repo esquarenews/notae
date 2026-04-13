@@ -83,6 +83,18 @@ class Block < ApplicationRecord
     metadata["notae_synced_source_id"].presence
   end
 
+  def gantt_workspace_slug
+    metadata["notae_gantt_workspace_slug"].presence
+  end
+
+  def gantt_database_id
+    metadata["notae_gantt_database_id"].presence
+  end
+
+  def gantt_view_id
+    metadata["notae_gantt_view_id"].presence
+  end
+
   def layout_columns_count
     count = metadata["notae_columns_count"].to_i
     count.positive? ? count : nil

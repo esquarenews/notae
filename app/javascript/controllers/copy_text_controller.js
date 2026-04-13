@@ -5,10 +5,20 @@ export default class extends Controller {
     event.preventDefault()
 
     const text = event.currentTarget?.dataset?.copyTextValue?.toString().trim()
+    const html = event.currentTarget?.dataset?.copyTextHtmlValue?.toString().trim()
     if (!text) return
 
     try {
-      await navigator.clipboard.writeText(text)
+      if (html && navigator.clipboard?.write && typeof window.ClipboardItem !== "undefined") {
+        await navigator.clipboard.write([
+          new window.ClipboardItem({
+            "text/plain": new Blob([ text ], { type: "text/plain" }),
+            "text/html": new Blob([ html ], { type: "text/html" })
+          })
+        ])
+      } else {
+        await navigator.clipboard.writeText(text)
+      }
       this.flashCopied(event.currentTarget)
     } catch (_error) {
       this.copyFallback(text)

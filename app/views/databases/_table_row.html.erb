@@ -229,7 +229,11 @@
                                 value: db_cell.value_text,
                                 id: "db_cell_#{db_cell.id}_value_text",
                                 class: field_classes,
-                                data: { action: "change->auto-submit#submit" } %>
+                                data: {
+                                  action: "change->auto-submit#submit",
+                                  gantt_grid_row_id: row.id,
+                                  gantt_grid_property_id: db_property.id
+                                } %>
           <% else %>
             <%= form.text_field :value_text,
                                 value: db_cell.value_text,

@@ -7,7 +7,7 @@ class DbRowsController < ApplicationController
   before_action :set_workspace
   before_action :set_database
   before_action :ensure_database_unlocked!
-  before_action :set_db_row, only: %i[update destroy move duplicate restore schedule_in_kalendarium confirm_schedule_in_kalendarium]
+  before_action :set_db_row, only: %i[update destroy move duplicate restore gantt_range schedule_in_kalendarium confirm_schedule_in_kalendarium]
   track_request_performance_for :create, :update
 
   def create
@@ -162,6 +162,50 @@ class DbRowsController < ApplicationController
     redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), alert: error.record.errors.full_messages.to_sentence
   end
 
+  def gantt_range
+    authorize @db_row, :update?
+
+    start_property = policy_scope(DbProperty).for_database(@database).find_by(id: params[:start_property_id], property_type: :date)
+    end_property = policy_scope(DbProperty).for_database(@database).find_by(id: params[:end_property_id], property_type: :date)
+    start_date = parse_gantt_date(params[:start_date]) || parse_gantt_date(@db_row.db_cells.find_by(db_property_id: start_property&.id)&.value_text)
+    end_date = parse_gantt_date(params[:end_date])
+
+    if start_property.blank? || end_property.blank?
+      render json: { error: "The Gantt chart date columns could not be found." }, status: :not_found
+      return
+    end
+
+    if start_date.blank? || end_date.blank?
+      render json: { error: "A valid start date and end date are required." }, status: :unprocessable_entity
+      return
+    end
+
+    if end_date < start_date
+      render json: { error: "The end date must be on or after the start date." }, status: :unprocessable_entity
+      return
+    end
+
+    ActiveRecord::Base.transaction do
+      upsert_date_cell_for_row!(@db_row, property: start_property, value: start_date.iso8601)
+      upsert_date_cell_for_row!(@db_row, property: end_property, value: end_date.iso8601)
+    end
+
+    respond_to do |format|
+      format.json do
+        render json: {
+          row_id: @db_row.id,
+          start_date: start_date.iso8601,
+          end_date: end_date.iso8601
+        }, status: :ok
+      end
+      format.html do
+        redirect_to database_redirect_location(anchor: "row_#{@db_row.id}"), notice: "Task dates updated."
+      end
+    end
+  rescue ActiveRecord::RecordInvalid => error
+    render json: { error: error.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
   def schedule_in_kalendarium
     authorize @db_row, :update?
 
@@ -291,7 +335,7 @@ class DbRowsController < ApplicationController
   end
 
   def db_row_style_params
-    params.fetch(:db_row, ActionController::Parameters.new).permit(:style_action, :text_color)
+    params.fetch(:db_row, ActionController::Parameters.new).permit(:style_action, :text_color, :gantt_color_hex)
   end
 
   def create_next_row_requested?
@@ -423,6 +467,22 @@ class DbRowsController < ApplicationController
     )
   end
 
+  def upsert_date_cell_for_row!(row, property:, value:)
+    return if row.blank? || property.blank?
+
+    cell = row.db_cells.find_or_initialize_by(db_property: property)
+    cell.value_text = value
+    cell.save! if cell.new_record? || cell.value_text_changed?
+  end
+
+  def parse_gantt_date(value)
+    return nil if value.blank?
+
+    Date.iso8601(value.to_s)
+  rescue ArgumentError
+    nil
+  end
+
   def database_redirect_location(anchor: nil, highlight_row_id: nil, task_row_id: :__preserve__)
     split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
     split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
@@ -527,7 +587,11 @@ class DbRowsController < ApplicationController
     payload = db_row_style_params
     return if payload[:style_action].blank?
 
-    @db_row.apply_row_style_action!(action: payload[:style_action], text_color: payload[:text_color])
+    @db_row.apply_row_style_action!(
+      action: payload[:style_action],
+      text_color: payload[:text_color],
+      gantt_color_hex: payload[:gantt_color_hex]
+    )
   end
 
   def create_linked_page_for_row

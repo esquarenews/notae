@@ -119,6 +119,8 @@ Rails.application.routes.draw do
         post :duplicate
         post :taskify
         post :kanbanize
+        get :export_gantt_pdf
+        get :gantt_embed
         patch :archive
         patch :restore
         patch :permissions
@@ -134,6 +136,7 @@ Rails.application.routes.draw do
           patch :move
           post :duplicate
           patch :restore
+          patch :gantt_range
           post :schedule_in_kalendarium
           post :confirm_schedule_in_kalendarium
         end

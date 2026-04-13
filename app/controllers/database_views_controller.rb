@@ -79,7 +79,8 @@ class DatabaseViewsController < ApplicationController
       :conditional_color_mode,
       :conditional_color_property_id,
       visible_property_ids: [],
-      column_widths: {}
+      column_widths: {},
+      gantt_status_colors: {}
     )
 
     config = @database_view&.config_json.to_h.deep_dup
@@ -113,6 +114,19 @@ class DatabaseViewsController < ApplicationController
         config.delete("column_widths")
       else
         config["column_widths"] = column_widths
+      end
+    end
+
+    if permitted.key?(:gantt_status_colors)
+      gantt_status_colors = normalize_gantt_status_colors(permitted.delete(:gantt_status_colors))
+      existing_colors = config["gantt_status_colors"]
+      merged_colors = (existing_colors.respond_to?(:to_h) ? existing_colors.to_h : {}).merge(gantt_status_colors)
+      merged_colors.compact_blank!
+
+      if merged_colors.empty?
+        config.delete("gantt_status_colors")
+      else
+        config["gantt_status_colors"] = merged_colors
       end
     end
 
@@ -174,6 +188,19 @@ class DatabaseViewsController < ApplicationController
       next if width.nil?
 
       widths[column_key] = width.clamp(minimum, 960)
+    end
+  end
+
+  def normalize_gantt_status_colors(raw_colors)
+    return {} unless raw_colors.respond_to?(:to_h)
+
+    raw_colors.to_h.each_with_object({}) do |(key, value), colors|
+      normalized_key = key.to_s
+      normalized_value = value.to_s.strip.upcase
+      next if normalized_key.blank?
+      next unless normalized_value.match?(/\A#(?:[0-9A-F]{3}|[0-9A-F]{6})\z/)
+
+      colors[normalized_key] = normalized_value
     end
   end
 

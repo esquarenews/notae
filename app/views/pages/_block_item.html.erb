@@ -62,6 +62,7 @@
   ["Rose", "rose"]
 ] %>
 <% is_embed_block = block.block_type == "embed" %>
+<% is_gantt_embed_block = block.block_type == "gantt_embed" %>
 <% is_media_block = %w[image video file].include?(block.block_type) %>
 <% block_color = block.color.to_s %>
 <% active_color = block_color.presence || "default" %>
@@ -360,6 +361,17 @@
         <p class="notae-doc-muted">Allowed embed domains: youtube, vimeo, figma, loom.</p>
       <% end %>
     </div>
+  <% elsif is_gantt_embed_block %>
+    <div class="notae-doc-gantt-embed">
+      <% if block.gantt_database_id.present? %>
+        <iframe src="<%= gantt_embed_database_path(workspace_slug: block.gantt_workspace_slug || workspace.slug, id: block.gantt_database_id, view_id: block.gantt_view_id.presence) %>"
+                class="notae-doc-gantt-embed-frame"
+                loading="lazy"
+                title="Embedded Gantt chart"></iframe>
+      <% else %>
+        <p class="notae-doc-muted">Copy a Gantt chart from a grid to embed it here.</p>
+      <% end %>
+    </div>
   <% elsif is_media_block %>
     <%= render partial: "pages/block_media",
                locals: {
@@ -371,6 +383,7 @@
   <% else %>
     <div data-controller="block-editor"
          data-block-editor-url-value="<%= page_block_path(block_route_params) %>"
+         data-block-editor-create-url-value="<%= page_blocks_path(page_blocks_route_params) %>"
          data-block-editor-initial-json-value="<%= block.content_json.to_json %>"
          data-block-editor-block-type-value="<%= block.block_type %>"
          data-block-editor-block-id-value="<%= block.id %>">

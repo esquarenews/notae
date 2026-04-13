@@ -639,8 +639,10 @@ RSpec.describe "Pages", type: :request do
   it "uses darker label text for primary buttons in dark themes" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
-    expect(stylesheet).to include("body.notae-theme-dark button[type=\"submit\"].notae-chip-button,\nbody.notae-theme-dark input[type=\"submit\"].notae-chip-button,\nbody.notae-theme-dark .notae-db-toolbar-new,\nbody.notae-theme-dark .notae-ai-compose button,\nbody.notae-theme-dark .notae-auth-submit {\n  color: #2b3437;")
-    expect(stylesheet).to include("body.notae-theme-system button[type=\"submit\"].notae-chip-button,\n  body.notae-theme-system input[type=\"submit\"].notae-chip-button,\n  body.notae-theme-system .notae-db-toolbar-new,\n  body.notae-theme-system .notae-ai-compose button,\n  body.notae-theme-system .notae-auth-submit {\n    color: #2b3437;")
+    expect(stylesheet).to include("body.notae-theme-dark .notae-chip-button.is-primary,")
+    expect(stylesheet).to include("body.notae-theme-dark button[type=\"submit\"].notae-chip-button.notae-chip-button-primary,")
+    expect(stylesheet).to include("body.notae-theme-system .notae-chip-button.is-primary,")
+    expect(stylesheet).to include("body.notae-theme-system button[type=\"submit\"].notae-chip-button.notae-chip-button-primary,")
   end
 
   it "uses high-contrast hover text for dark topbar menus" do

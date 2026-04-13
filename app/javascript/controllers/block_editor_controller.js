@@ -138,6 +138,7 @@ export default class extends Controller {
   static targets = ["editor"]
   static values = {
     url: String,
+    createUrl: String,
     initialJson: String,
     blockType: String,
     blockId: String
@@ -182,6 +183,7 @@ export default class extends Controller {
       ],
       content: initialContent,
       editorProps: {
+        handlePaste: (_view, event) => this.handleEditorPaste(event),
         handleKeyDown: (_view, event) => this.handleEditorKeydown(event),
         handleDOMEvents: {
           click: (_view, event) => this.handleEditorClick(event),
@@ -384,6 +386,15 @@ export default class extends Controller {
       this.followStandardLink(clickedLink, url, event)
     })
 
+    return true
+  }
+
+  handleEditorPaste(event) {
+    const payload = this.ganttEmbedPayloadFromClipboard(event)
+    if (!payload) return false
+
+    event.preventDefault()
+    Promise.resolve(this.flushSave()).finally(() => this.insertGanttEmbedBlock(payload))
     return true
   }
 
@@ -682,6 +693,109 @@ export default class extends Controller {
 
     const children = Array.isArray(node.content) ? node.content : []
     return children.map((child) => this.flattenText(child)).join(" ")
+  }
+
+  ganttEmbedPayloadFromClipboard(event) {
+    const html = event.clipboardData?.getData("text/html")?.trim()
+    const htmlPayload = this.extractGanttEmbedPayloadFromHtml(html)
+    if (htmlPayload) return htmlPayload
+
+    const text = event.clipboardData?.getData("text/plain")?.trim()
+    return this.extractGanttEmbedPayloadFromText(text)
+  }
+
+  extractGanttEmbedPayloadFromHtml(html) {
+    if (!html) return null
+
+    const document = new window.DOMParser().parseFromString(html, "text/html")
+    const source = document.querySelector("[data-notae-gantt-embed='1']")
+    if (!source) return null
+
+    const href = source.getAttribute("href")
+    const datasetPayload = {
+      workspaceSlug: source.dataset.notaeGanttWorkspaceSlug,
+      databaseId: source.dataset.notaeGanttDatabaseId,
+      viewId: source.dataset.notaeGanttViewId
+    }
+
+    return this.normalizeGanttEmbedPayload(datasetPayload, href)
+  }
+
+  extractGanttEmbedPayloadFromText(text) {
+    if (!text) return null
+
+    return this.normalizeGanttEmbedPayload({}, text)
+  }
+
+  normalizeGanttEmbedPayload(payload, href) {
+    const normalized = {
+      workspaceSlug: String(payload.workspaceSlug || "").trim(),
+      databaseId: String(payload.databaseId || "").trim(),
+      viewId: String(payload.viewId || "").trim()
+    }
+
+    const parsedUrl = this.parseGanttEmbedUrl(href)
+    if (parsedUrl) {
+      normalized.workspaceSlug ||= parsedUrl.workspaceSlug
+      normalized.databaseId ||= parsedUrl.databaseId
+      normalized.viewId ||= parsedUrl.viewId
+    }
+
+    if (!normalized.workspaceSlug || !normalized.databaseId) return null
+    return normalized
+  }
+
+  parseGanttEmbedUrl(rawUrl) {
+    if (!rawUrl) return null
+
+    let url
+    try {
+      url = new URL(rawUrl, window.location.origin)
+    } catch (_error) {
+      return null
+    }
+
+    if (url.origin !== window.location.origin) return null
+
+    const match = url.pathname.match(/^\/w\/([^/]+)\/databases\/([^/]+)\/gantt_embed$/)
+    if (!match) return null
+
+    return {
+      workspaceSlug: decodeURIComponent(match[1]),
+      databaseId: decodeURIComponent(match[2]),
+      viewId: url.searchParams.get("view_id") || ""
+    }
+  }
+
+  async insertGanttEmbedBlock(payload) {
+    if (!this.hasCreateUrlValue || !this.hasBlockIdValue) return false
+
+    const formData = new window.FormData()
+    formData.append("insert_after_id", this.blockIdValue)
+    formData.append("block[block_type]", "gantt_embed")
+    formData.append("block[content_json][notae_gantt_workspace_slug]", payload.workspaceSlug)
+    formData.append("block[content_json][notae_gantt_database_id]", payload.databaseId)
+    if (payload.viewId) {
+      formData.append("block[content_json][notae_gantt_view_id]", payload.viewId)
+    }
+
+    const response = await fetch(this.createUrlValue, {
+      method: "POST",
+      headers: {
+        "Accept": "text/vnd.turbo-stream.html, text/html",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
+      },
+      body: formData
+    })
+
+    const responseText = await response.text()
+    if (responseText && window.Turbo?.renderStreamMessage) {
+      window.Turbo.renderStreamMessage(responseText)
+    }
+
+    if (!response.ok) return false
+    if (!window.Turbo?.renderStreamMessage) window.location.reload()
+    return true
   }
 
   cleanInlineNodes(nodes) {

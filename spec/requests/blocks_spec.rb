@@ -329,6 +329,64 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include(%(id="block_#{created_block.id}"))
   end
 
+  it "creates a gantt embed block after the reference block for paste-driven embeds" do
+    owner = User.create!(email: "blocks-gantt-embed-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Gantt embed blocks", slug: "gantt-embed-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embed page")
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    first = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    second = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post page_blocks_path(workspace_slug: workspace.slug, page_id: page.id),
+         params: {
+           insert_after_id: first.id,
+           block: {
+             block_type: "gantt_embed",
+             content_json: {
+               notae_gantt_workspace_slug: workspace.slug,
+               notae_gantt_database_id: database.id
+             }
+           }
+         },
+         as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    inserted = page.blocks.active.where(block_type: "gantt_embed").sole
+    expect(page.blocks.active.roots.ordered.pluck(:id)).to eq([ first.id, inserted.id, second.id ])
+    expect(inserted.gantt_workspace_slug).to eq(workspace.slug)
+    expect(inserted.gantt_database_id).to eq(database.id.to_s)
+    expect(response.body).to include(%(id="block_#{inserted.id}"))
+  end
+
+  it "renders gantt embed blocks as live chart iframes inside the Nota" do
+    owner = User.create!(email: "blocks-gantt-render-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Gantt render blocks", slug: "gantt-render-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embed page")
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "gantt_embed",
+      content_json: {
+        "notae_gantt_workspace_slug" => workspace.slug,
+        "notae_gantt_database_id" => database.id.to_s
+      }
+    )
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    iframe = html.at_css(".notae-doc-gantt-embed-frame")
+    expect(iframe).to be_present
+    expect(iframe["src"]).to include("/w/#{workspace.slug}/databases/#{database.id}/gantt_embed")
+  end
+
   it "adds a blank block above the current block from the block menu command" do
     owner = User.create!(email: "blocks-add-above-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Add above", slug: "add-above")

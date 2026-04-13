@@ -297,9 +297,22 @@
           </details>
         </div>
         <% if @view == "year" %>
-          <%= form_with url: kalendarium_path(kalendarium_base_params), method: :get, class: "notae-kalendarium-year-toggle", data: { controller: "auto-submit" } do |form| %>
+          <%= form_with url: kalendarium_path(kalendarium_base_params),
+                        method: :get,
+                        class: "notae-kalendarium-year-toggle",
+                        data: {
+                          controller: "auto-submit"
+                        },
+                        html: {
+                          data: {
+                            turbo: (embedded_split_view ? false : nil)
+                          }.compact
+                        } do |form| %>
             <%= hidden_field_tag :view, @view %>
             <%= hidden_field_tag :date, @selected_date %>
+            <% if embedded_split_view %>
+              <%= hidden_field_tag :embedded, "1" %>
+            <% end %>
             <% if window_start_value.present? %>
               <%= hidden_field_tag :window_start, window_start_value %>
             <% end %>

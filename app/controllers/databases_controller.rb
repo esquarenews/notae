@@ -5,7 +5,7 @@ class DatabasesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv permissions taskify kanbanize panel]
+  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf gantt_embed permissions taskify kanbanize panel]
   before_action :set_archived_database, only: %i[restore destroy]
   track_request_performance_for :show, :update
 
@@ -50,16 +50,17 @@ class DatabasesController < ApplicationController
     @rows_per_page = row_query.per_page
     @rows_total_pages = row_query.total_pages
     @rows_paginated = row_query.paginated?
+    @split_page = resolve_split_page
+    @kalendarium_split_active = params[:split_panel].to_s == "kalendarium"
+    @gantt_split_active = params[:split_panel].to_s == "gantt"
+    @kalendarium_split_project = resolve_tasks_project_for_split if @kalendarium_split_active
+    @kalendarium_task_row = resolve_kalendarium_task_row if @kalendarium_split_active
+    @kalendarium_split_window_start = resolve_kalendarium_split_window_start if @kalendarium_split_active
     required_property_ids = required_property_ids_for_cell_load
     @cells = load_cells_for_rows_and_properties(property_ids: required_property_ids)
     @cells_by_key = @cells.index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
     schedule_missing_cells_backfill(property_ids: required_property_ids, loaded_cell_count: @cells.size)
     @select_options_by_property = build_select_options_by_property
-    @split_page = resolve_split_page
-    @kalendarium_split_active = params[:split_panel].to_s == "kalendarium"
-    @kalendarium_split_project = resolve_tasks_project_for_split if @kalendarium_split_active
-    @kalendarium_task_row = resolve_kalendarium_task_row if @kalendarium_split_active
-    @kalendarium_split_window_start = resolve_kalendarium_split_window_start if @kalendarium_split_active
     @backlinks =
       if @database.linked_page.present?
         policy_scope(PageLink).for_target(@database.linked_page).includes(source_page: :linked_database).order(created_at: :desc)
@@ -71,6 +72,7 @@ class DatabasesController < ApplicationController
     sort_rows!
     prepare_board_view_data!
     prepare_calendar_view_data!
+    prepare_gantt_split_data!
 
     @new_database = Database.new
     @new_property = DbProperty.new
@@ -351,6 +353,24 @@ class DatabasesController < ApplicationController
               type: "text/csv; charset=utf-8"
   end
 
+  def export_gantt_pdf
+    authorize @database, :show?
+
+    prepare_gantt_export_context!
+    send_data Databases::GanttPdfExportService.call(database: @database, gantt_data: @gantt_split).pdf,
+              filename: "#{@database.name.parameterize.presence || "gantt"}-gantt.pdf",
+              type: "application/pdf",
+              disposition: "attachment"
+  end
+
+  def gantt_embed
+    authorize @database, :show?
+
+    prepare_gantt_export_context!
+    @gantt_embed_view_params = database_panel_view_params
+    render :gantt_embed, layout: false
+  end
+
   private
 
   def set_workspace
@@ -602,6 +622,17 @@ class DatabasesController < ApplicationController
     end
   end
 
+  def prepare_gantt_split_data!
+    return unless @gantt_split_active
+
+    @gantt_split_data = Databases::GanttChartDataBuilder.new(
+      rows: @rows,
+      db_properties: @db_properties,
+      cells_by_key: @cells_by_key,
+      view_config: @view_config
+    ).call
+  end
+
   def resolve_property_from_config(config_key, required_type)
     property_id = params[config_key].presence || @view_config[config_key.to_s]
     @db_properties.find { |property| property.id.to_s == property_id.to_s && property.property_type == required_type }
@@ -829,9 +860,49 @@ class DatabasesController < ApplicationController
       .to_a
   end
 
+  def load_gantt_export_cells(rows:)
+    row_ids = Array(rows).map(&:id)
+    property_ids = @db_properties.map(&:id)
+    return {} if row_ids.empty? || property_ids.empty?
+
+    policy_scope(DbCell)
+      .for_database(@database)
+      .where(db_row_id: row_ids, db_property_id: property_ids)
+      .to_a
+      .index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
+  end
+
+  def prepare_gantt_export_context!
+    @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+    @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
+    @current_view = resolve_current_view
+    @view_config = @current_view&.config_json.to_h || {}
+    resolve_filter_and_sort_settings!
+
+    @rows = Databases::RowWindowQueryService.new(
+      scope: policy_scope(DbRow).for_database(@database).active,
+      sort_property: @sort_property,
+      sort_direction: @sort_direction,
+      filter_property: @filter_property,
+      filter_value: @filter_value,
+      filter_operator: @filter_operator,
+      view_type: "gantt",
+      page: 1
+    ).call.rows
+
+    @cells_by_key = load_gantt_export_cells(rows: @rows)
+    @gantt_split = Databases::GanttChartDataBuilder.new(
+      rows: @rows,
+      db_properties: @db_properties,
+      cells_by_key: @cells_by_key,
+      view_config: @view_config
+    ).call
+  end
+
   def required_property_ids_for_cell_load
     required_ids = []
     required_ids.concat(@db_properties.map(&:id)) if @view_type == "board"
+    required_ids.concat(@db_properties.map(&:id)) if @gantt_split_active
     required_ids.concat(Array(@visible_db_properties).map(&:id))
     required_ids << @sort_property&.id
     required_ids << @filter_property&.id

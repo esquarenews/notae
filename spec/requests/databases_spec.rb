@@ -2490,6 +2490,214 @@ RSpec.describe "Databases", type: :request do
     expect(kalendarium_button["class"]).to include("is-active")
   end
 
+  it "opens a Gantt split pane for rows with start and end dates" do
+    owner = User.create!(email: "database-gantt-split-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid gantt split", slug: "grid-gantt-split")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    start_property = DbProperty.create!(workspace: workspace, database: database, name: "Start date", property_type: :date)
+    end_property = DbProperty.create!(workspace: workspace, database: database, name: "End date", property_type: :date)
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship beta")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: start_property, value_text: "2026-04-12")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: end_property, value_text: "2026-04-18")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "gantt")
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    split_title = html.at_css(".notae-db-split-pane-title")
+    expect(split_title.text).to include("Gantt")
+    expect(html.at_css(".notae-db-gantt-bar-wrap")).to be_present
+    expect(html.at_css("[data-board-card-dialog]")).to be_present
+    expect(html.css(".notae-db-split-view-option").map { |node| node.text.strip }).to include("Kanban board", "Kalendārium", "Gantt")
+    color_input = html.at_css('.notae-db-gantt-status-swatch input[type="color"]')
+    expect(color_input).to be_present
+    expect(color_input["data-action"]).to include("updateRowColor")
+    toolbar_buttons = html.css(".notae-db-gantt-toolbar button.notae-chip-button.notae-db-template-button").map { |node| node.text.squish }
+    expect(toolbar_buttons).to eq([ "Print to PDF", "Copy to Nota" ])
+    expect(response.body).to include("data-copy-text-html-value=")
+    expect(response.body).to include("data-notae-gantt-embed=&quot;1&quot;")
+    expect(response.body).to include("/gantt_embed")
+    expect(response.body).not_to include("Gantt chart ·")
+    expect(response.body).not_to include("Change colour for")
+    expect(response.body).not_to include("Drag the bar edge to extend the finish date.")
+
+    views_button = html.at_css(".notae-db-split-view-menu > summary")
+    expect(views_button["class"]).to include("is-active")
+    expect(views_button.at_css(".notae-db-split-view-caret")&.text).to eq("▾")
+  end
+
+  it "keeps the gantt color picker beside the status badge and aligns bars to the badge baseline" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-db-gantt-row {\n  align-items: end;\n}")
+    expect(stylesheet).to include(".notae-db-gantt-status-swatch input[type=\"color\"] {\n  width: 1.12rem;")
+    expect(stylesheet).to include("  height: 1.3rem;")
+    expect(stylesheet).to include("  border-radius: 0.45rem;")
+    expect(stylesheet).to include(".notae-db-gantt-bar-wrap {\n  position: absolute;\n  bottom: 0;\n  height: 1.3rem;")
+  end
+
+  it "uses explicit primary button variants instead of submit-element styling for chip buttons" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-chip-button.notae-chip-button-primary,")
+    expect(stylesheet).to include("button[type=\"submit\"].notae-chip-button.notae-chip-button-primary,")
+    expect(stylesheet).not_to include("button[type=\"submit\"].notae-chip-button,\ninput[type=\"submit\"].notae-chip-button,")
+  end
+
+  it "shares neutral button styling across grid and split-view controls" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-chip-button,\n.notae-page-tab-create-button {\n  appearance: none;")
+    expect(stylesheet).to include(".notae-inline-icon-button,\n.notae-db-toolbar-icon,\n.notae-comments-trigger,")
+    expect(stylesheet).to include("  font-family: inherit;")
+    expect(stylesheet).to include(".notae-db-template-button,\n.notae-db-toolbar-icon,\n.notae-page-tab-create-button {\n  min-height: 2.25rem;")
+    expect(stylesheet).not_to include(".notae-db-gantt-toolbar-form .notae-chip-button.notae-db-gantt-toolbar-button {\n  appearance: none;\n  -webkit-appearance: none;\n  text-decoration: none;\n  cursor: pointer;\n  font: inherit;")
+  end
+
+  it "shows a Gantt empty state when no row has both start and end dates" do
+    owner = User.create!(email: "database-gantt-empty-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid gantt empty", slug: "grid-gantt-empty")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    start_property = DbProperty.create!(workspace: workspace, database: database, name: "Start date", property_type: :date)
+    DbProperty.create!(workspace: workspace, database: database, name: "End date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship beta")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: start_property, value_text: "2026-04-12")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "gantt")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Gantt chart unavailable")
+    expect(response.body).to include("Start date")
+    expect(response.body).to include("End date")
+  end
+
+  it "updates a gantt task range and persists both start and end date cells" do
+    owner = User.create!(email: "database-gantt-range-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid gantt range", slug: "grid-gantt-range")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    start_property = DbProperty.create!(workspace: workspace, database: database, name: "Start date", property_type: :date)
+    end_property = DbProperty.create!(workspace: workspace, database: database, name: "End date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship beta")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: start_property, value_text: "2026-04-12")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: end_property, value_text: "2026-04-18")
+    sign_in owner
+
+    patch gantt_range_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: {
+            start_property_id: start_property.id,
+            end_property_id: end_property.id,
+            start_date: "2026-04-10",
+            end_date: "2026-04-21"
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(JSON.parse(response.body)).to include(
+      "start_date" => "2026-04-10",
+      "end_date" => "2026-04-21"
+    )
+    expect(row.reload.db_cells.find_by!(db_property: start_property).value_text).to eq("2026-04-10")
+    expect(row.reload.db_cells.find_by!(db_property: end_property).value_text).to eq("2026-04-21")
+    expect(row.data_json["Start date"]).to eq("2026-04-10")
+    expect(row.data_json["End date"]).to eq("2026-04-21")
+  end
+
+  it "stores gantt colors on the individual row instead of the shared status" do
+    owner = User.create!(email: "database-gantt-row-color-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid gantt row color", slug: "grid-gantt-row-color")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship beta")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: {
+            db_row: {
+              style_action: "set_gantt_color",
+              gantt_color_hex: "#12ab34"
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(row.reload.gantt_color_hex).to eq("#12AB34")
+  end
+
+  it "stores gantt status colors in the current view config" do
+    owner = User.create!(email: "database-gantt-colors-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid gantt colors", slug: "grid-gantt-colors")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    view = DatabaseView.create!(workspace: workspace, database: database, created_by: owner, name: "Table", view_type: :table, default: true)
+    sign_in owner
+
+    patch database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id),
+          params: {
+            database_view: {
+              gantt_status_colors: {
+                "started" => "#123abc"
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(view.reload.config_json["gantt_status_colors"]).to eq(
+      "started" => "#123ABC"
+    )
+  end
+
+  it "exports the gantt view as a chart pdf" do
+    owner = User.create!(email: "database-gantt-pdf-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid gantt pdf", slug: "grid-gantt-pdf")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    start_property = DbProperty.create!(workspace: workspace, database: database, name: "Start date", property_type: :date)
+    end_property = DbProperty.create!(workspace: workspace, database: database, name: "End date", property_type: :date)
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship beta")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: start_property, value_text: "2026-04-12")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: end_property, value_text: "2026-04-18")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+    sign_in owner
+
+    get export_gantt_pdf_database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "gantt")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("application/pdf")
+    expect(response.headers["Content-Disposition"]).to include(".pdf")
+    expect(response.body.byteslice(0, 4)).to eq("%PDF")
+    expect(response.body.bytesize).to be > 5_000
+  end
+
+  it "renders a standalone gantt embed page for Nota embeds" do
+    owner = User.create!(email: "database-gantt-embed-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid gantt embed", slug: "grid-gantt-embed")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    start_property = DbProperty.create!(workspace: workspace, database: database, name: "Start date", property_type: :date)
+    end_property = DbProperty.create!(workspace: workspace, database: database, name: "End date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship beta")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: start_property, value_text: "2026-04-12")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: end_property, value_text: "2026-04-18")
+    sign_in owner
+
+    get gantt_embed_database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-gantt-embed-shell")
+    expect(response.body).to include("notae-db-gantt-bar-wrap")
+    expect(response.body).not_to include("Copy to Nota")
+    expect(response.body).not_to include("Print to PDF")
+  end
+
   it "opens task slot suggestions in the Kalendārium split and confirms a chosen slot" do
     owner = User.create!(email: "database-kal-schedule-owner@example.com", password: "password123", time_zone: "UTC")
     workspace = Workspace.create!(name: "Grid kal schedule", slug: "grid-kal-schedule")

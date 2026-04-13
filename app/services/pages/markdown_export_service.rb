@@ -1,3 +1,4 @@
+require "cgi"
 require "set"
 
 module Pages
@@ -64,6 +65,12 @@ module Pages
         return [ "#{indent(depth)}[Embedded content](#{block.embed_url})" ]
       end
 
+      if block.block_type.to_s == "gantt_embed"
+        return [] if block.gantt_database_id.blank?
+
+        return [ "#{indent(depth)}[Embedded Gantt chart](#{gantt_embed_path_for(block)})" ]
+      end
+
       rendered = render_document(node: block.content_json, depth: depth)
       return rendered if rendered.any?
 
@@ -91,6 +98,13 @@ module Pages
       else
         []
       end
+    end
+
+    def gantt_embed_path_for(block)
+      workspace_slug = block.gantt_workspace_slug.presence || block.workspace&.slug
+      path = "/w/#{workspace_slug}/databases/#{block.gantt_database_id}/gantt_embed"
+      view_id = block.gantt_view_id.presence
+      view_id.present? ? "#{path}?view_id=#{CGI.escape(view_id)}" : path
     end
 
     def render_block_nodes(nodes:, depth:)

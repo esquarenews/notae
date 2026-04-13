@@ -87,13 +87,14 @@
 
 <% view_params = topbar_view_params %>
 <% db_layout_classes = [ "notae-db-split-layout" ] %>
-<% db_layout_classes << "has-side-peek" if @split_page.present? || @kalendarium_split_active %>
+<% db_layout_classes << "has-side-peek" if @split_page.present? || @kalendarium_split_active || @gantt_split_active %>
 <% db_layout_classes << "is-small-text" if @database.small_text? %>
 <% db_layout_classes << "is-font-serif" if @database.font_style == "serif" %>
 <% db_layout_classes << "is-font-mono" if @database.font_style == "mono" %>
-<% db_layout_classes << "has-covered-primary" if (@split_page.present? || @kalendarium_split_active) && has_display_cover && !embedded_preview %>
+<% db_layout_classes << "has-covered-primary" if (@split_page.present? || @kalendarium_split_active || @gantt_split_active) && has_display_cover && !embedded_preview %>
 <% db_layout_classes << "is-embedded-preview" if embedded_preview %>
 <% kalendarium_split_params = view_params.merge(split_panel: "kalendarium", split_page_id: nil, split_source: nil, split_row_id: nil, task_row_id: nil) %>
+<% gantt_split_params = view_params.merge(split_panel: "gantt", split_page_id: nil, split_source: nil, split_row_id: nil, task_row_id: nil) %>
 <% kalendarium_return_params = {
   view_id: @current_view&.id,
   month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
@@ -424,7 +425,7 @@
           <%= form_with model: Database.new, url: databases_path(workspace_slug: @workspace.slug), class: "notae-db-template-form" do |form| %>
             <%= hidden_field_tag :quick_create, "1" %>
             <%= form.hidden_field :name, value: "Untitled grid" %>
-            <%= form.submit "Grid", class: "notae-chip-button notae-db-template-button" %>
+            <%= button_tag "Grid", type: "submit", class: "notae-chip-button notae-db-template-button" %>
           <% end %>
         <% end %>
         <%= form_with url: taskify_database_path(workspace_slug: @workspace.slug, id: @database.id),
@@ -436,18 +437,30 @@
                          disabled: !can_edit_database || !@can_apply_tasks_template,
                          title: (!can_edit_database || @can_apply_tasks_template) ? nil : "Open a blank grid or new tab before using the Tasks template." %>
         <% end %>
-        <%= form_with url: kanbanize_database_path(workspace_slug: @workspace.slug, id: @database.id),
-                      method: :post,
-                      class: "notae-db-template-form" do %>
-          <%= button_tag "Kanban",
-                         type: "submit",
-                         class: "notae-chip-button notae-db-template-button",
-                         disabled: !can_edit_database %>
-        <% end %>
-        <%= link_to "Kalendārium",
-                    database_path(kalendarium_split_params),
-                    class: [ "notae-chip-button", "notae-db-template-button", ("is-active" if @kalendarium_split_active) ].compact.join(" "),
-                    data: { preserve_database_scroll: true } %>
+        <details class="notae-db-inline-details notae-db-split-view-menu">
+          <summary class="<%= [ "notae-chip-button", "notae-db-template-button", ("is-active" if @view_type == "board" || @kalendarium_split_active || @gantt_split_active) ].compact.join(" ") %>">
+            <span>Views</span>
+            <span class="notae-db-split-view-caret" aria-hidden="true">&#9662;</span>
+          </summary>
+          <div class="notae-db-inline-panel notae-db-split-view-panel">
+            <%= form_with url: kanbanize_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                          method: :post,
+                          class: "notae-db-split-view-form" do %>
+              <%= button_tag "Kanban board",
+                             type: "submit",
+                             class: [ "notae-db-split-view-option", ("is-active" if @view_type == "board") ].compact.join(" "),
+                             disabled: !can_edit_database %>
+            <% end %>
+            <%= link_to "Kalendārium",
+                        database_path(kalendarium_split_params),
+                        class: [ "notae-db-split-view-option", ("is-active" if @kalendarium_split_active) ].compact.join(" "),
+                        data: { preserve_database_scroll: true } %>
+            <%= link_to "Gantt",
+                        database_path(gantt_split_params),
+                        class: [ "notae-db-split-view-option", ("is-active" if @gantt_split_active) ].compact.join(" "),
+                        data: { preserve_database_scroll: true } %>
+          </div>
+        </details>
       </div>
       <% if @current_view.present? %>
         <%= render "databases/actions_menu",
@@ -628,6 +641,29 @@
             title="Kalendārium side peek"
             class="notae-db-split-frame"
             loading="lazy"></iframe>
+  </aside>
+<% elsif @gantt_split_active %>
+  <aside class="notae-db-split-pane">
+    <div class="notae-db-split-pane-head">
+      <% gantt_split_title = "Gantt · #{@database.name}" %>
+      <p class="notae-db-split-pane-title" title="<%= gantt_split_title %>">
+        <%= render_notae_icon("📊", workspace: @workspace, fallback: "📊", css_class: "notae-inline-linked-icon", label: "Gantt") %>
+        <%= gantt_split_title %>
+      </p>
+      <div class="notae-db-split-pane-actions">
+        <%= link_to "✕",
+                    database_path(view_params.except(:split_panel, :split_page_id, :split_source, :split_row_id, :task_row_id)),
+                    class: "notae-inline-icon-button",
+                    aria: { label: "Close Gantt side peek" },
+                    title: "Close Gantt side peek" %>
+      </div>
+    </div>
+    <div class="notae-db-split-pane-body">
+      <%= render "databases/gantt_split_view",
+                 gantt_split: @gantt_split_data,
+                 can_edit_database: can_edit_database,
+                 view_params: view_params %>
+    </div>
   </aside>
 <% end %>
 </section>

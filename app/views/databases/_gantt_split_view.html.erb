@@ -1,0 +1,185 @@
+<% gantt_split ||= nil %>
+<% can_edit_database ||= false %>
+<% show_toolbar = local_assigns.fetch(:show_toolbar, true) %>
+<% render_card_dialogs = local_assigns.fetch(:render_card_dialogs, true) %>
+<% embed_view_params = (view_params || {}).except(
+  :workspace_slug,
+  :id,
+  :month,
+  :rows_page,
+  :view_settings,
+  :view_settings_section,
+  :actions_menu,
+  :options_menu,
+  :split_panel,
+  :split_page_id,
+  :split_source,
+  :split_row_id,
+  :task_row_id
+) %>
+<% gantt_embed_url = gantt_embed_database_url(
+  embed_view_params.merge(
+    workspace_slug: @workspace.slug,
+    id: @database.id
+  )
+) %>
+<% gantt_reference_html = content_tag(
+  :a,
+  "Gantt · #{@database.name}",
+  href: gantt_embed_url,
+  data: {
+    notae_gantt_embed: "1",
+    notae_gantt_workspace_slug: @workspace.slug,
+    notae_gantt_database_id: @database.id,
+    notae_gantt_view_id: @current_view&.id
+  }
+) %>
+<% row_params = (view_params || {}).except(:workspace_slug, :id) %>
+<% row_color_options = [
+  ["Default", "default"],
+  ["Gray", "gray"],
+  ["Brown", "brown"],
+  ["Orange", "orange"],
+  ["Yellow", "yellow"],
+  ["Green", "green"],
+  ["Blue", "blue"],
+  ["Purple", "purple"],
+  ["Pink", "pink"],
+  ["Red", "red"]
+] %>
+
+<section class="notae-db-gantt-pane"
+         data-controller="gantt-chart database-drag copy-text"
+         data-database-drag-workspace-slug-value="<%= @workspace.slug %>"
+         data-database-drag-database-id-value="<%= @database.id %>"
+         data-database-drag-view-id-value="<%= @current_view&.id %>">
+  <% if gantt_split&.eligible? %>
+    <% total_days = [ (gantt_split.range_end - gantt_split.range_start).to_i + 1, 1 ].max %>
+    <% if show_toolbar %>
+      <div class="notae-db-gantt-toolbar">
+        <%= form_with url: export_gantt_pdf_database_path(
+                        (view_params || {}).merge(
+                          workspace_slug: @workspace.slug,
+                          id: @database.id
+                        )
+                      ),
+                      method: :get,
+                      class: "notae-db-gantt-toolbar-form",
+                      data: { turbo: false } do %>
+          <%= button_tag "Print to PDF",
+                         type: "submit",
+                         class: "notae-chip-button notae-db-template-button notae-db-gantt-toolbar-button" %>
+        <% end %>
+        <%= button_tag "Copy to Nota",
+                       type: "button",
+                       class: "notae-chip-button notae-db-template-button notae-db-gantt-toolbar-button",
+                       data: {
+                         action: "click->copy-text#copy",
+                         copy_text_value: gantt_embed_url,
+                         copy_text_html_value: gantt_reference_html
+                       } %>
+      </div>
+    <% end %>
+
+    <div class="notae-db-gantt">
+      <div class="notae-db-gantt-header">
+        <div class="notae-db-gantt-label-col">Task</div>
+        <div class="notae-db-gantt-axis" data-gantt-chart-target="axis">
+          <% gantt_split.ticks.each do |tick| %>
+            <div class="notae-db-gantt-axis-tick" style="width: <%= tick.width_pct %>%;">
+              <span><%= tick.label %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="notae-db-gantt-rows">
+        <% gantt_split.tasks.each do |task| %>
+          <% row = @rows.find { |candidate| candidate.id == task.row_id } %>
+          <div class="notae-db-gantt-row" data-gantt-row-id="<%= task.row_id %>">
+            <div class="notae-db-gantt-row-meta">
+              <p class="notae-db-gantt-row-title"><%= task.title %></p>
+              <div class="notae-db-gantt-row-details">
+                <% if row.present? %>
+                  <% if can_edit_database %>
+                    <label class="notae-db-gantt-status-swatch">
+                      <input type="color"
+                             value="<%= task.color_hex %>"
+                             aria-label="Change line colour"
+                             data-action="change->gantt-chart#updateRowColor"
+                             data-gantt-row-id="<%= task.row_id %>"
+                             data-update-url="<%= database_db_row_path(workspace_slug: @workspace.slug, database_id: @database.id, id: task.row_id) %>">
+                    </label>
+                  <% else %>
+                    <span class="notae-db-gantt-status-swatch is-static"
+                          style="--notae-gantt-swatch-color: <%= task.color_hex %>;"
+                          aria-hidden="true"></span>
+                  <% end %>
+                <% end %>
+                <span class="<%= task_status_badge_classes_for(gantt_split.status_property, task.status_label, base_class: "notae-db-gantt-status-badge") %>"><%= task.status_label %></span>
+              </div>
+            </div>
+
+            <div class="notae-db-gantt-track">
+              <div class="notae-db-gantt-track-grid" aria-hidden="true">
+                <% gantt_split.ticks.each do |tick| %>
+                  <span class="notae-db-gantt-track-segment" style="width: <%= tick.width_pct %>%"></span>
+                <% end %>
+              </div>
+
+              <div class="notae-db-gantt-bar-wrap"
+                   style="left: <%= task.left_pct %>%; width: <%= task.width_pct %>%"
+                   data-action="dblclick->database-drag#beginEdit"
+                   data-database-drag-row-id="<%= task.row_id %>"
+                   data-database-drag-update-url="<%= database_db_row_path(workspace_slug: @workspace.slug, database_id: @database.id, id: task.row_id) %>"
+                   data-database-drag-title="<%= task.title %>"
+                   data-gantt-row-id="<%= task.row_id %>"
+                   data-chart-start-date="<%= gantt_split.range_start.iso8601 %>"
+                   data-start-date="<%= task.start_date.iso8601 %>"
+                   data-end-date="<%= task.end_date.iso8601 %>"
+                   data-start-property-id="<%= gantt_split.start_property.id %>"
+                   data-end-property-id="<%= gantt_split.end_property.id %>"
+                   data-total-days="<%= total_days %>"
+                   data-length-days="<%= task.length_days %>"
+                   data-update-url="<%= gantt_range_database_db_row_path(workspace_slug: @workspace.slug, database_id: @database.id, id: task.row_id) %>">
+                <div class="notae-db-gantt-bar"
+                     style="--notae-gantt-bar-color: <%= task.color_hex %>;"
+                     data-action="pointerdown->gantt-chart#startMove">
+                  <% if can_edit_database %>
+                    <button type="button"
+                            class="notae-db-gantt-bar-handle is-start"
+                            data-resize-direction="start"
+                            data-action="pointerdown->gantt-chart#startResize"
+                            aria-label="Adjust start date for <%= task.title %>">
+                    </button>
+                    <button type="button"
+                            class="notae-db-gantt-bar-handle"
+                            data-resize-direction="end"
+                            data-action="pointerdown->gantt-chart#startResize"
+                            aria-label="Extend <%= task.title %>">
+                    </button>
+                  <% end %>
+                </div>
+                <% if row.present? && render_card_dialogs %>
+                  <%= render "databases/board_card_dialog",
+                             row: row,
+                             workspace: @workspace,
+                             database: @database,
+                             row_params: row_params,
+                             editor_properties: @db_properties,
+                             cells_by_key: @cells_by_key,
+                             row_color_options: row_color_options %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="notae-db-gantt-empty">
+      <h3>Gantt chart unavailable</h3>
+      <p><%= gantt_split&.message || "Add a start date and an end date column, then give at least one row both dates." %></p>
+    </div>
+  <% end %>
+</section>

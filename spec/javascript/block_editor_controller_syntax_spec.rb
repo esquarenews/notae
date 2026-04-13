@@ -86,6 +86,18 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("visitWindow.Turbo.visit(url.toString())")
   end
 
+  it "turns copied gantt embed payloads into live Nota blocks" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("handlePaste: (_view, event) => this.handleEditorPaste(event)")
+    expect(source).to include("handleEditorPaste(event)")
+    expect(source).to include("ganttEmbedPayloadFromClipboard(event)")
+    expect(source).to include("data-notae-gantt-embed='1'")
+    expect(source).to include("/gantt_embed$/")
+    expect(source).to include('formData.append("block[block_type]", "gantt_embed")')
+    expect(source).to include("window.Turbo.renderStreamMessage(responseText)")
+  end
+
   it "falls back to explicit navigation for non-split links when tiptap link clicks are disabled" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 

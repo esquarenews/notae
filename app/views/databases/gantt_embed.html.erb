@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Gantt · <%= @database.name %></title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+  </head>
+  <body class="notae-theme <%= notae_theme_body_class %> notae-gantt-embed-page">
+    <main class="notae-gantt-embed-shell">
+      <%= render "databases/gantt_split_view",
+                 gantt_split: @gantt_split,
+                 can_edit_database: false,
+                 show_toolbar: false,
+                 render_card_dialogs: false,
+                 view_params: @gantt_embed_view_params %>
+    </main>
+  </body>
+</html>
