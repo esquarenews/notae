@@ -13308,6 +13308,21 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   overflow-y: auto;
 }
 
+.notae-kalendarium-event-modal-title {
+  min-width: 0;
+  display: grid;
+  gap: 0.14rem;
+}
+
+.notae-kalendarium-event-modal-title h3 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.notae-kalendarium-event-modal-title .notae-page-subtle {
+  margin: 0;
+}
+
 .notae-kalendarium-event-view {
   display: grid;
   gap: 0.65rem;

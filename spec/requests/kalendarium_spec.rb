@@ -385,6 +385,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("aria-label=\"Edit event\"")
     expect(response.body).to include("kalendarium-event-modal#openView")
     expect(response.body).to include("Event details")
+    expect(response.body).to include("data-kalendarium-event-modal-event-title-value=\"Timeline event\"")
     expect(response.body).to include("notae-kalendarium-event-delete-button")
     expect(response.body).to include("notae-kalendarium-event-delete-form")
     document = Nokogiri::HTML.parse(response.body)
@@ -398,6 +399,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(timeline_event).to be_present
     expect(timeline_event["data-start-minutes"]).to eq("570")
     expect(timeline_event["data-end-minutes"]).to eq("630")
+    modal_heading = document.at_css(".notae-kalendarium-event-modal [data-kalendarium-event-modal-target='heading']")
+    expect(modal_heading&.text.to_s.strip).to eq("Timeline event")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)

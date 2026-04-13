@@ -304,6 +304,7 @@ class DbRowsController < ApplicationController
     authorize event, :create?
 
     if event.save
+      ensure_kalendarium_project_visible!(tasks_project.id)
       duration_minutes = chosen_slot.duration_minutes
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: nil),
                   notice: "Scheduled a #{duration_minutes}-minute task block in Kalendarium."
@@ -556,6 +557,105 @@ class DbRowsController < ApplicationController
 
   def scheduling_today
     @scheduling_today ||= Time.current.in_time_zone(current_user.time_zone).to_date
+  end
+
+  def ensure_kalendarium_project_visible!(project_id)
+    project_id = project_id.to_s
+    return if project_id.blank?
+
+    allowed_ids = policy_scope(KalendariumProject).for_workspace(@workspace).active.order(:name).pluck(:id).map(&:to_s)
+    return unless allowed_ids.include?(project_id)
+
+    selected_ids =
+      if stored_project_visibility_for_workspace?
+        persisted_visible_project_ids_for_workspace(allowed_ids:)
+      else
+        allowed_ids
+      end
+
+    return if selected_ids.include?(project_id)
+
+    persist_visible_project_ids_for_workspace(selected_ids | [ project_id ], available_ids: allowed_ids)
+  end
+
+  def project_visibility_session_for_workspace
+    session[:kalendarium_project_visibility] ||= {}
+  end
+
+  def project_visibility_workspace_key
+    @workspace.id.to_s
+  end
+
+  def stored_project_visibility_for_workspace?
+    project_visibility_session_for_workspace.key?(project_visibility_workspace_key)
+  end
+
+  def persisted_project_visibility_payload_for_workspace
+    raw = project_visibility_session_for_workspace[project_visibility_workspace_key]
+    if raw.is_a?(Hash)
+      mode = (raw["mode"] || raw[:mode]).to_s
+      if %w[all none selected all_except].include?(mode)
+        {
+          mode: mode,
+          ids: Array(raw["ids"] || raw[:ids]).map(&:to_s).reject(&:blank?).uniq,
+          available_ids: [],
+          legacy_format: false
+        }
+      else
+        {
+          mode: "selected",
+          ids: Array(raw["selected_ids"] || raw[:selected_ids]).map(&:to_s).reject(&:blank?).uniq,
+          available_ids: Array(raw["available_ids"] || raw[:available_ids]).map(&:to_s).reject(&:blank?).uniq,
+          legacy_format: true
+        }
+      end
+    else
+      {
+        mode: "selected",
+        ids: Array(raw).map(&:to_s).reject(&:blank?).uniq,
+        available_ids: [],
+        legacy_format: true
+      }
+    end
+  end
+
+  def persisted_visible_project_ids_for_workspace(allowed_ids:)
+    payload = persisted_project_visibility_payload_for_workspace
+
+    if payload[:legacy_format]
+      return payload[:ids] & allowed_ids
+    end
+
+    case payload[:mode]
+    when "all"
+      allowed_ids
+    when "none"
+      []
+    when "all_except"
+      allowed_ids - payload[:ids]
+    else
+      payload[:ids] & allowed_ids
+    end
+  end
+
+  def persist_visible_project_ids_for_workspace(ids, available_ids: nil)
+    project_visibility_session_for_workspace[project_visibility_workspace_key] = compact_visibility_payload_for_workspace(ids, available_ids)
+  end
+
+  def compact_visibility_payload_for_workspace(ids, available_ids)
+    available = Array(available_ids).map(&:to_s).reject(&:blank?).uniq
+    selected = Array(ids).map(&:to_s).reject(&:blank?).uniq
+    selected &= available if available.any?
+
+    return { "mode" => "none" } if available.any? && selected.empty?
+    return { "mode" => "all" } if available.any? && selected.sort == available.sort
+
+    deselected = available - selected
+    if available.any? && deselected.any? && deselected.size < selected.size
+      { "mode" => "all_except", "ids" => deselected }
+    else
+      { "mode" => "selected", "ids" => selected }
+    end
   end
 
   def apply_linked_page_update!

@@ -21,6 +21,7 @@
          data-start-minutes="<%= timeline_start_minutes if timeline %>"
          data-end-minutes="<%= timeline_end_minutes if timeline %>"
          data-controller="kalendarium-event-modal"
+         data-kalendarium-event-modal-event-title-value="<%= event.title %>"
          data-action="click->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
          role="button"
          tabindex="0"
@@ -78,7 +79,10 @@
           data-action="click->kalendarium-event-modal#backdropClose">
     <div class="notae-danger-modal-panel notae-kalendarium-event-modal-panel">
       <div class="notae-danger-modal-header">
-        <h3 data-kalendarium-event-modal-target="heading">Event details</h3>
+        <div class="notae-kalendarium-event-modal-title">
+          <p class="notae-page-subtle">Event details</p>
+          <h3 data-kalendarium-event-modal-target="heading"><%= event.title %></h3>
+        </div>
         <button type="button"
                 class="notae-inline-icon-button"
                 aria-label="Close edit event dialog"

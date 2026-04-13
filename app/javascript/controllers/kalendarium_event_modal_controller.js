@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["dialog", "viewPanel", "editPanel", "heading"]
+  static values = { eventTitle: String }
 
   open(event) {
     this.openEdit(event)
@@ -47,18 +48,34 @@ export default class extends Controller {
   showViewMode() {
     if (this.hasViewPanelTarget) this.viewPanelTarget.hidden = false
     if (this.hasEditPanelTarget) this.editPanelTarget.hidden = true
-    if (this.hasHeadingTarget) this.headingTarget.textContent = "Event details"
+    if (this.hasHeadingTarget) this.headingTarget.textContent = this.viewHeadingText()
   }
 
   showEditMode() {
     if (this.hasViewPanelTarget) this.viewPanelTarget.hidden = true
     if (this.hasEditPanelTarget) this.editPanelTarget.hidden = false
-    if (this.hasHeadingTarget) this.headingTarget.textContent = "Edit event"
+    if (this.hasHeadingTarget) this.headingTarget.textContent = this.editHeadingText()
   }
 
   interactiveTarget(target) {
     if (!(target instanceof Element)) return false
 
     return target.closest("a, button, input, textarea, select, label, summary, details, form") !== null
+  }
+
+  viewHeadingText() {
+    if (this.hasEventTitleValue && this.eventTitleValue.trim().length > 0) {
+      return this.eventTitleValue.trim()
+    }
+
+    return "Event details"
+  }
+
+  editHeadingText() {
+    if (this.hasEventTitleValue && this.eventTitleValue.trim().length > 0) {
+      return `Edit ${this.eventTitleValue.trim()}`
+    }
+
+    return "Edit event"
   }
 }

@@ -2757,17 +2757,19 @@ RSpec.describe "Databases", type: :request do
     expect(split_iframe["src"]).to include("window_start=#{Date.current}")
     expect(split_iframe["src"]).to include("task_row_id=#{row.id}")
 
-    expect do
-      post confirm_schedule_in_kalendarium_database_db_row_path(
-        workspace_slug: workspace.slug,
-        database_id: database.id,
-        id: row.id
-      ), params: {
-        starts_at_local: "2026-04-13T09:00",
-        ends_at_local: "2026-04-13T09:45",
-        view_id: database.database_views.find_by(default: true)&.id
-      }
-    end.to change(KalendariumEvent, :count).by(1)
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      expect do
+        post confirm_schedule_in_kalendarium_database_db_row_path(
+          workspace_slug: workspace.slug,
+          database_id: database.id,
+          id: row.id
+        ), params: {
+          starts_at_local: "2026-04-13T09:00",
+          ends_at_local: "2026-04-13T09:45",
+          view_id: database.database_views.find_by(default: true)&.id
+        }
+      end.to change(KalendariumEvent, :count).by(1)
+    end
 
     created_event = workspace.kalendarium_events.find_by!(linked_db_row: row)
     expect(response).to redirect_to(
@@ -2878,6 +2880,55 @@ RSpec.describe "Databases", type: :request do
     created_event = workspace.kalendarium_events.find_by!(linked_db_row: row)
     expect(created_event.starts_at_utc.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-17 20:00")
     expect(created_event.ends_at_utc.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-17 20:20")
+  end
+
+  it "makes the Tasks project visible in full Kalendarium after confirming a split-scheduled task" do
+    owner = User.create!(email: "database-kal-full-view-owner@example.com", password: "password123", time_zone: "UTC")
+    workspace = Workspace.create!(name: "Grid kal full view", slug: "grid-kal-full-view")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Task planning")
+    date_created_property = DbProperty.create!(workspace: workspace, database: database, name: "Date created", property_type: :date)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Review roadmap")
+    sign_in owner
+
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-12")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-25")
+
+      post schedule_in_kalendarium_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)
+    end
+
+    tasks_project = workspace.kalendarium_projects.find_by!(slug: "tasks")
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "week",
+      date: "2026-04-13",
+      toggle_project_id: tasks_project.id,
+      project_visible: "0"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Projects (0)")
+
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      expect do
+        post confirm_schedule_in_kalendarium_database_db_row_path(
+          workspace_slug: workspace.slug,
+          database_id: database.id,
+          id: row.id
+        ), params: {
+          starts_at_local: "2026-04-13T09:00",
+          ends_at_local: "2026-04-13T09:20"
+        }
+      end.to change(KalendariumEvent, :count).by(1)
+    end
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-04-13")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Projects (1)")
+    expect(response.body).to include("Review roadmap")
   end
 
   it "shifts the split Kalendārium window to the first available suggested slot when the next seven days are full" do
