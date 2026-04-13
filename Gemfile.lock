@@ -486,6 +486,7 @@ DEPENDENCIES
   importmap-rails
   jbuilder
   kamal
+  matrix
   paper_trail
   pdf-reader
   pg (~> 1.1)
