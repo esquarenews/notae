@@ -292,27 +292,43 @@ module Kalendarium
 
     def busy_events(lower_bound:, upper_bound:)
       calendar_ids = scoped_busy_calendar_ids
-      return [] if calendar_ids.empty?
+      workspace_events =
+        if calendar_ids.empty?
+          []
+        else
+          scope = KalendariumEvent
+            .for_workspace(workspace)
+            .where(kalendarium_calendar_id: calendar_ids)
+            .where(all_day: [ false, nil ])
+            .where.not(status: "cancelled")
+            .for_range(lower_bound.utc, upper_bound.utc)
+          scope =
+            if visible_project_ids.nil?
+              scope
+            elsif visible_project_ids.any?
+              scope.where(
+                "kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)",
+                visible_project_ids
+              )
+            else
+              scope.where(kalendarium_project_id: nil)
+            end
 
-      scope = KalendariumEvent
-        .for_workspace(workspace)
-        .where(kalendarium_calendar_id: calendar_ids)
+          scope.order(:starts_at_utc).to_a
+        end
+
+      external_task_events = Pundit.policy_scope!(actor, KalendariumEvent)
+        .where.not(workspace_id: workspace.id)
+        .where(created_by_id: actor.id)
+        .joins(:kalendarium_project)
+        .where(kalendarium_projects: { slug: TasksProjectEnsurer::PROJECT_SLUG })
         .where(all_day: [ false, nil ])
         .where.not(status: "cancelled")
         .for_range(lower_bound.utc, upper_bound.utc)
-      scope =
-        if visible_project_ids.nil?
-          scope
-        elsif visible_project_ids.any?
-          scope.where(
-            "kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)",
-            visible_project_ids
-          )
-        else
-          scope.where(kalendarium_project_id: nil)
-        end
+        .order(:starts_at_utc)
+        .to_a
 
-      scope.order(:starts_at_utc).to_a
+      (workspace_events + external_task_events).uniq(&:id).sort_by(&:starts_at_utc)
     end
 
     def established_date

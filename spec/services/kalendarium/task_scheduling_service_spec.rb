@@ -187,6 +187,34 @@ RSpec.describe Kalendarium::TaskSchedulingService do
     end
   end
 
+  it "treats the current user's task blockouts from other workspaces as busy time" do
+    user, workspace, _database, row, date_created_property, due_date_property, status_property = build_stack(suffix: "cross-workspace")
+    other_workspace = Workspace.create!(name: "Kal Task Scheduler cross workspace other", slug: "kal-task-scheduler-cross-workspace-other")
+    Membership.create!(workspace: other_workspace, user: user, role: :owner)
+    other_tasks_project = Kalendarium::TasksProjectEnsurer.new(workspace: other_workspace, actor: user).call
+
+    travel_to Time.zone.parse("2026-04-13 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-13")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-25")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "started")
+      KalendariumEvent.create!(
+        workspace: other_workspace,
+        kalendarium_calendar: other_tasks_project.kalendarium_calendar,
+        kalendarium_project: other_tasks_project,
+        created_by: user,
+        updated_by: user,
+        title: "Cross-workspace task block",
+        starts_at_utc: Time.zone.parse("2026-04-13 09:00:00"),
+        ends_at_utc: Time.zone.parse("2026-04-13 09:20:00")
+      )
+
+      candidate_result = described_class.new(workspace: workspace, row: row, actor: user).candidate_slots(limit: 1)
+
+      expect(candidate_result).to be_success
+      expect(candidate_result.slots.first.starts_at.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-13 09:35")
+    end
+  end
+
   it "returns an error when no slot fits before the task deadline" do
     user, workspace, _database, row, date_created_property, due_date_property, = build_stack(suffix: "deadline")
 

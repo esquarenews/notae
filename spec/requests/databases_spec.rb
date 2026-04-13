@@ -2778,6 +2778,7 @@ RSpec.describe "Databases", type: :request do
         id: database.id,
         view_id: current_view_id,
         split_panel: "kalendarium",
+        kalendarium_window_start: "2026-04-13",
         anchor: "row_#{row.id}"
       )
     )
@@ -2880,6 +2881,65 @@ RSpec.describe "Databases", type: :request do
     created_event = workspace.kalendarium_events.find_by!(linked_db_row: row)
     expect(created_event.starts_at_utc.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-17 20:00")
     expect(created_event.ends_at_utc.in_time_zone("UTC").strftime("%F %H:%M")).to eq("2026-04-17 20:20")
+  end
+
+  it "keeps the split Kalendārium focused on a saved future task block" do
+    owner = User.create!(email: "database-kal-saved-window-owner@example.com", password: "password123", time_zone: "UTC")
+    workspace = Workspace.create!(name: "Grid kal saved window", slug: "grid-kal-saved-window")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Task planning")
+    date_created_property = DbProperty.create!(workspace: workspace, database: database, name: "Date created", property_type: :date)
+    due_date_property = DbProperty.create!(workspace: workspace, database: database, name: "Due date", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Review roadmap")
+    sign_in owner
+
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      DbCell.create!(workspace: workspace, db_row: row, db_property: date_created_property, value_text: "2026-04-12")
+      DbCell.create!(workspace: workspace, db_row: row, db_property: due_date_property, value_text: "2026-04-25")
+
+      expect do
+        post confirm_schedule_in_kalendarium_database_db_row_path(
+          workspace_slug: workspace.slug,
+          database_id: database.id,
+          id: row.id
+        ), params: {
+          starts_at_local: "2026-04-20T09:00",
+          ends_at_local: "2026-04-20T09:20"
+        }
+      end.to change(KalendariumEvent, :count).by(1)
+    end
+
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_panel: "kalendarium",
+        kalendarium_window_start: "2026-04-20",
+        anchor: "row_#{row.id}"
+      )
+    )
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      split_panel: "kalendarium",
+      kalendarium_window_start: "2026-04-20"
+    )
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
+    expect(split_iframe).to be_present
+    expect(split_iframe["src"]).to include("window_start=2026-04-20")
+
+    open_full_link = html.css("a").find { |link| link.text.strip == "Open full" }
+    expect(open_full_link).to be_present
+    expect(open_full_link["href"]).to include("window_start=2026-04-20")
+
+    get split_iframe["src"]
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Review roadmap")
   end
 
   it "makes the Tasks project visible in full Kalendarium after confirming a split-scheduled task" do

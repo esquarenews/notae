@@ -61,7 +61,7 @@ class KalendariumController < ApplicationController
     else
       @events = @events.where(kalendarium_project_id: nil)
     end
-    @events = @events.to_a
+    @events = (@events.to_a + cross_workspace_task_blockout_events(range_start:, range_end:)).uniq(&:id).sort_by(&:starts_at_utc)
 
     @events_by_day = @events.group_by { |event| event.starts_at_utc.in_time_zone(current_user.time_zone).to_date }
     @year_all_day_events_by_day = build_year_events_by_day(@events.select(&:all_day?))
@@ -371,6 +371,19 @@ class KalendariumController < ApplicationController
       @selected_date = first_candidate_date
     end
     @task_slot_candidate_layouts_by_day = layout_task_slot_candidates_by_day(@task_slot_candidates)
+  end
+
+  def cross_workspace_task_blockout_events(range_start:, range_end:)
+    policy_scope(KalendariumEvent)
+      .where.not(workspace_id: @workspace.id)
+      .where(created_by_id: current_user.id)
+      .joins(:kalendarium_project)
+      .where(kalendarium_projects: { slug: Kalendarium::TasksProjectEnsurer::PROJECT_SLUG })
+      .includes(:workspace, :kalendarium_calendar, :kalendarium_project, :linked_page)
+      .where.not(status: "cancelled")
+      .for_range(range_start, range_end)
+      .order(:starts_at_utc)
+      .to_a
   end
 
   def refresh_scope_calendars(connections)

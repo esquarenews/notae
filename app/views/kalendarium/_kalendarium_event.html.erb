@@ -1,5 +1,5 @@
 <% calendar_options = (Array(local_assigns[:calendars]) + [event.kalendarium_calendar]).compact.uniq(&:id) %>
-<% project_options = Array(local_assigns[:projects]) %>
+<% project_options = (Array(local_assigns[:projects]) + [event.kalendarium_project]).compact.uniq(&:id) %>
 <% timeline = local_assigns.fetch(:timeline, false) %>
 <% timeline_style = local_assigns[:timeline_style] %>
 <% timeline_start_minutes = local_assigns[:timeline_start_minutes] %>
@@ -14,6 +14,7 @@
 <% invitee_extra_count = [invitee_labels.length - 3, 0].max %>
 <% meeting_join_url = event.meeting_join_url %>
 <% event_color = event.kalendarium_project&.color_hex.presence || event.kalendarium_calendar.color_hex %>
+<% event_workspace_slug = event.workspace.slug %>
 
 <article id="kalendarium_event_<%= event.id %>"
          class="notae-kalendarium-event-card <%= "is-timeline" if timeline %> <%= "is-compact" if compact %> <%= "is-all-day" if all_day_badge %>"
@@ -68,9 +69,9 @@
       <% if meeting_join_url.present? %>
         <%= link_to "Join meeting", meeting_join_url, class: "notae-utility-link", target: "_blank", rel: "noopener noreferrer" %>
       <% end %>
-      <% if event.linked_page.present? %>
-        <%= link_to "📄 Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
-      <% end %>
+        <% if event.linked_page.present? %>
+          <%= link_to "📄 Nota", page_path(workspace_slug: event_workspace_slug, id: event.linked_page_id), class: "notae-utility-link" %>
+        <% end %>
     </div>
   <% end %>
 
@@ -141,7 +142,7 @@
               <dd>
                 Enabled
                 <% if event.latest_meeting_session.present? %>
-                  · <%= link_to "Latest session", workspace_meetings_path(workspace_slug: workspace.slug), class: "notae-utility-link" %>
+                  · <%= link_to "Latest session", workspace_meetings_path(workspace_slug: event_workspace_slug), class: "notae-utility-link" %>
                 <% end %>
               </dd>
             </div>
@@ -158,7 +159,7 @@
               <%= link_to "Join meeting", meeting_join_url, class: "notae-utility-link", target: "_blank", rel: "noopener noreferrer" %>
             <% end %>
             <% if event.linked_page.present? %>
-              <%= link_to "Open linked Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+              <%= link_to "Open linked Nota", page_path(workspace_slug: event_workspace_slug, id: event.linked_page_id), class: "notae-utility-link" %>
             <% end %>
           </div>
         <% end %>
@@ -171,7 +172,7 @@
 
       <section class="notae-kalendarium-event-edit" data-kalendarium-event-modal-target="editPanel" hidden>
         <%= form_with model: event,
-                      url: kalendarium_event_path(workspace_slug: workspace.slug, id: event.id),
+                      url: kalendarium_event_path(workspace_slug: event_workspace_slug, id: event.id),
                       method: :patch,
                       class: "notae-kalendarium-event-modal-form",
                       data: { controller: "kalendarium-event-form" } do |form| %>
@@ -216,7 +217,7 @@
           <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
           <% if event.linked_page.present? %>
             <div class="notae-kalendarium-event-links">
-              <%= link_to "Open linked Nota", page_path(workspace_slug: workspace.slug, id: event.linked_page_id), class: "notae-utility-link" %>
+              <%= link_to "Open linked Nota", page_path(workspace_slug: event_workspace_slug, id: event.linked_page_id), class: "notae-utility-link" %>
               <button type="submit"
                       name="kalendarium_event[linked_page_action]"
                       value="clear"
@@ -237,7 +238,7 @@
 
         <div class="notae-kalendarium-event-modal-delete">
           <%= button_to "Delete event",
-                        kalendarium_event_path(workspace_slug: workspace.slug, id: event.id, view: view, date: date),
+                        kalendarium_event_path(workspace_slug: event_workspace_slug, id: event.id, view: view, date: date),
                         method: :delete,
                         class: "notae-chip-button notae-chip-danger notae-kalendarium-event-delete-button",
                         form: {

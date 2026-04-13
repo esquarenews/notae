@@ -168,6 +168,57 @@ RSpec.describe "Kalendarium", type: :request do
     expect(document.at_css("[data-kalendarium-task-slot-target='dialog']")).to be_present
   end
 
+  it "shows the current user's Tasks blockouts from other workspaces" do
+    user = User.create!(email: "kal-request-cross-workspace@example.com", password: "password123", time_zone: "UTC")
+    workspace = Workspace.create!(name: "Kal Request cross workspace", slug: "kal-request-cross-workspace")
+    other_workspace = Workspace.create!(name: "Kal Request cross workspace other", slug: "kal-request-cross-workspace-other")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Membership.create!(workspace: other_workspace, user: user, role: :owner)
+    KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Main",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
+    other_tasks_project = Kalendarium::TasksProjectEnsurer.new(workspace: other_workspace, actor: user).call
+    other_user = User.create!(email: "kal-request-cross-workspace-other-user@example.com", password: "password123", time_zone: "UTC")
+    Membership.create!(workspace: other_workspace, user: other_user, role: :owner)
+
+    visible_event = KalendariumEvent.create!(
+      workspace: other_workspace,
+      kalendarium_calendar: other_tasks_project.kalendarium_calendar,
+      kalendarium_project: other_tasks_project,
+      created_by: user,
+      updated_by: user,
+      title: "Review roadmap",
+      starts_at_utc: Time.zone.parse("2026-04-13 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-04-13 09:20:00")
+    )
+    KalendariumEvent.create!(
+      workspace: other_workspace,
+      kalendarium_calendar: other_tasks_project.kalendarium_calendar,
+      kalendarium_project: other_tasks_project,
+      created_by: other_user,
+      updated_by: other_user,
+      title: "Someone else's task block",
+      starts_at_utc: Time.zone.parse("2026-04-13 10:00:00"),
+      ends_at_utc: Time.zone.parse("2026-04-13 10:20:00")
+    )
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-04-13")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    page_text = document.text
+
+    expect(page_text).to include("Review roadmap")
+    expect(page_text).not_to include("Someone else's task block")
+    expect(response.body).to include(kalendarium_event_path(workspace_slug: other_workspace.slug, id: visible_event.id))
+  end
+
   it "renders suggested slots in the viewer time zone instead of pinning them to midnight" do
     user, workspace, = build_stack(suffix: "task-slots-melbourne", time_zone: "Australia/Melbourne")
     database = Database.create!(workspace: workspace, created_by: user, name: "Task Grid")

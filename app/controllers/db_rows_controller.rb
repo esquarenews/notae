@@ -306,7 +306,12 @@ class DbRowsController < ApplicationController
     if event.save
       ensure_kalendarium_project_visible!(tasks_project.id)
       duration_minutes = chosen_slot.duration_minutes
-      redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: nil),
+      scheduled_date = chosen_slot.starts_at.in_time_zone(current_user.time_zone).to_date.iso8601
+      redirect_to schedule_redirect_location(
+                    anchor: "row_#{@db_row.id}",
+                    task_row_id: nil,
+                    kalendarium_window_start: scheduled_date
+                  ),
                   notice: "Scheduled a #{duration_minutes}-minute task block in Kalendarium."
     else
       redirect_to schedule_redirect_location(anchor: "row_#{@db_row.id}", task_row_id: @db_row.id),
@@ -484,12 +489,13 @@ class DbRowsController < ApplicationController
     nil
   end
 
-  def database_redirect_location(anchor: nil, highlight_row_id: nil, task_row_id: :__preserve__)
+  def database_redirect_location(anchor: nil, highlight_row_id: nil, task_row_id: :__preserve__, kalendarium_window_start: :__preserve__)
     split_page_id = @clear_split_page ? nil : (@redirect_split_page_id || params[:split_page_id].presence)
     split_source = @clear_split_page ? nil : (@redirect_split_source || params[:split_source].presence)
     split_row_id = @clear_split_page ? nil : (@redirect_split_row_id || params[:split_row_id].presence)
     split_panel = @redirect_split_panel || params[:split_panel].presence
     task_row_id = params[:task_row_id].presence if task_row_id == :__preserve__
+    kalendarium_window_start = params[:kalendarium_window_start].presence if kalendarium_window_start == :__preserve__
 
     path_params = {
       workspace_slug: @workspace.slug,
@@ -510,6 +516,7 @@ class DbRowsController < ApplicationController
       split_source: split_source,
       split_row_id: split_row_id,
       task_row_id: task_row_id,
+      kalendarium_window_start: kalendarium_window_start,
       highlight_row_id: highlight_row_id.presence || params[:highlight_row_id].presence
     }.compact
     path_params[:anchor] = anchor if anchor.present?
@@ -531,14 +538,15 @@ class DbRowsController < ApplicationController
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence,
-      task_row_id: params[:task_row_id].presence
+      task_row_id: params[:task_row_id].presence,
+      kalendarium_window_start: params[:kalendarium_window_start].presence
     )
   end
 
-  def schedule_redirect_location(anchor: nil, task_row_id: :__preserve__)
+  def schedule_redirect_location(anchor: nil, task_row_id: :__preserve__, kalendarium_window_start: :__preserve__)
     @clear_split_page = true
     @redirect_split_panel = "kalendarium"
-    database_redirect_location(anchor:, task_row_id:)
+    database_redirect_location(anchor:, task_row_id:, kalendarium_window_start:)
   end
 
   def scheduling_calendar_ids(tasks_project:)

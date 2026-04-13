@@ -829,7 +829,8 @@ class DatabasesController < ApplicationController
       split_page_id: split_page_id,
       split_source: split_source,
       split_row_id: split_row_id,
-      task_row_id: params[:task_row_id].presence
+      task_row_id: params[:task_row_id].presence,
+      kalendarium_window_start: params[:kalendarium_window_start].presence
     )
   end
 
@@ -971,7 +972,8 @@ class DatabasesController < ApplicationController
       split_page_id: params[:split_page_id].presence,
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence,
-      task_row_id: params[:task_row_id].presence
+      task_row_id: params[:task_row_id].presence,
+      kalendarium_window_start: params[:kalendarium_window_start].presence
     }.compact
   end
 
@@ -1011,6 +1013,9 @@ class DatabasesController < ApplicationController
   end
 
   def resolve_kalendarium_split_window_start
+    requested_start = parse_kalendarium_window_start_param
+    return requested_start if requested_start.present?
+
     today = Time.current.in_time_zone(current_user.time_zone).to_date
     return today if @kalendarium_task_row.blank? || @kalendarium_split_project.blank?
 
@@ -1034,6 +1039,15 @@ class DatabasesController < ApplicationController
   rescue StandardError => error
     Rails.logger.warn("Could not resolve split window start for database #{@database.id}: #{error.message}")
     today
+  end
+
+  def parse_kalendarium_window_start_param
+    raw = params[:kalendarium_window_start].to_s.presence
+    return nil if raw.blank?
+
+    Date.iso8601(raw)
+  rescue ArgumentError
+    nil
   end
 
   def can_manage_tasks_project?
