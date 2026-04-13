@@ -15509,6 +15509,18 @@ body.notae-theme-dark .notae-auth-submit {
   padding: 0;
 }
 
+.notae-mobile-toggle,
+.notae-sidebar-close,
+.notae-ai-rail-reopen {
+  display: none;
+}
+
+.notae-shell.is-mobile-viewport .notae-mobile-toggle,
+.notae-shell.is-mobile-viewport .notae-sidebar-close,
+.notae-shell.is-ai-rail-collapsed .notae-ai-rail-reopen {
+  display: inline-flex;
+}
+
 .notae-auth-input,
 .notae-sidebar-input,
 .notae-options-input,

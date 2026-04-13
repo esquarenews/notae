@@ -645,6 +645,13 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include("body.notae-theme-system button[type=\"submit\"].notae-chip-button.notae-chip-button-primary,")
   end
 
+  it "keeps mobile-only shell controls hidden until their viewport or state is active" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-mobile-toggle,\n.notae-sidebar-close,\n.notae-ai-rail-reopen {\n  display: none;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-mobile-toggle,\n.notae-shell.is-mobile-viewport .notae-sidebar-close,\n.notae-shell.is-ai-rail-collapsed .notae-ai-rail-reopen {\n  display: inline-flex;\n}")
+  end
+
   it "uses high-contrast hover text for dark topbar menus" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
