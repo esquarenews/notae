@@ -66,18 +66,27 @@
                       method: :get,
                       class: "notae-db-gantt-toolbar-form",
                       data: { turbo: false } do %>
-          <%= button_tag "Print to PDF",
-                         type: "submit",
-                         class: "notae-chip-button notae-db-template-button notae-db-gantt-toolbar-button" %>
+          <%= button_tag type: "submit",
+                         class: "notae-chip-button notae-db-template-button notae-db-gantt-toolbar-button",
+                         data: {
+                           controller: "button-feedback",
+                           action: "click->button-feedback#flash",
+                           button_feedback_active_text_value: "Preparing PDF..."
+                         } do %>
+            <span data-button-feedback-label>Print to PDF</span>
+          <% end %>
         <% end %>
-        <%= button_tag "Copy to Nota",
-                       type: "button",
+        <%= button_tag type: "button",
                        class: "notae-chip-button notae-db-template-button notae-db-gantt-toolbar-button",
                        data: {
-                         action: "click->copy-text#copy",
+                         controller: "button-feedback",
+                         action: "click->button-feedback#flash click->copy-text#copy",
                          copy_text_value: gantt_embed_url,
-                         copy_text_html_value: gantt_reference_html
-                       } %>
+                         copy_text_html_value: gantt_reference_html,
+                         button_feedback_active_text_value: "Copied"
+                       } do %>
+          <span data-copy-text-feedback data-button-feedback-label>Copy to Nota</span>
+        <% end %>
       </div>
     <% end %>
 

@@ -387,6 +387,64 @@ RSpec.describe "Blocks", type: :request do
     expect(iframe["src"]).to include("/w/#{workspace.slug}/databases/#{database.id}/gantt_embed")
   end
 
+  it "creates a graph embed block after the reference block for paste-driven embeds" do
+    owner = User.create!(email: "blocks-graph-embed-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Graph embed blocks", slug: "graph-embed-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embed page")
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    first = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    second = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post page_blocks_path(workspace_slug: workspace.slug, page_id: page.id),
+         params: {
+           insert_after_id: first.id,
+           block: {
+             block_type: "graph_embed",
+             content_json: {
+               notae_graph_workspace_slug: workspace.slug,
+               notae_graph_database_id: database.id
+             }
+           }
+         },
+         as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    inserted = page.blocks.active.where(block_type: "graph_embed").sole
+    expect(page.blocks.active.roots.ordered.pluck(:id)).to eq([ first.id, inserted.id, second.id ])
+    expect(inserted.graph_workspace_slug).to eq(workspace.slug)
+    expect(inserted.graph_database_id).to eq(database.id.to_s)
+    expect(response.body).to include(%(id="block_#{inserted.id}"))
+  end
+
+  it "renders graph embed blocks as live chart iframes inside the Nota" do
+    owner = User.create!(email: "blocks-graph-render-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Graph render blocks", slug: "graph-render-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embed page")
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "graph_embed",
+      content_json: {
+        "notae_graph_workspace_slug" => workspace.slug,
+        "notae_graph_database_id" => database.id.to_s
+      }
+    )
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    iframe = html.at_css(".notae-doc-graph-embed-frame")
+    expect(iframe).to be_present
+    expect(iframe["src"]).to include("/w/#{workspace.slug}/databases/#{database.id}/graph_embed")
+  end
+
   it "adds a blank block above the current block from the block menu command" do
     owner = User.create!(email: "blocks-add-above-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Add above", slug: "add-above")

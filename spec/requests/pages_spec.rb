@@ -13,6 +13,10 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-page-tabs {\n  display: flex;\n  align-items: flex-start;\n  gap: 0.72rem;")
     expect(stylesheet).to include(".notae-page-tabs-list {\n  display: flex;\n  align-items: center;\n  flex: 1 1 auto;\n  min-width: 0;")
     expect(stylesheet).to include(".notae-page-tab-create-form {\n  margin: 0 0 0 auto;\n  flex: 0 0 auto;")
+    expect(stylesheet).to include(".notae-page-tab-shell {\n  --notae-tab-accent: #94a3b8;\n  position: relative;")
+    expect(stylesheet).to include("  padding: 0.14rem 0.18rem 0.14rem 0.38rem;")
+    expect(stylesheet).to include(".notae-page-tab {\n  display: inline-flex;")
+    expect(stylesheet).to include("  padding: 0.24rem 0.18rem 0.24rem 0.04rem;")
   end
 
   it "renders the shared topbar as a translucent blurred surface" do
@@ -222,6 +226,7 @@ RSpec.describe "Pages", type: :request do
     title_input = html.at_css(".notae-page-title-input")
 
     expect(labels).to eq([ "Tab 1", note_tab.title, grid_tab_page.title ])
+    expect(html.css(".notae-page-tab-icon")).to be_empty
     expect(title_input["aria-label"]).to eq("Page title")
     expect(title_input.text.strip).to eq(group_page.title)
     expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: group_page.id)}"]))).to be_present

@@ -63,6 +63,7 @@
 ] %>
 <% is_embed_block = block.block_type == "embed" %>
 <% is_gantt_embed_block = block.block_type == "gantt_embed" %>
+<% is_graph_embed_block = block.block_type == "graph_embed" %>
 <% is_media_block = %w[image video file].include?(block.block_type) %>
 <% block_color = block.color.to_s %>
 <% active_color = block_color.presence || "default" %>
@@ -370,6 +371,17 @@
                 title="Embedded Gantt chart"></iframe>
       <% else %>
         <p class="notae-doc-muted">Copy a Gantt chart from a grid to embed it here.</p>
+      <% end %>
+    </div>
+  <% elsif is_graph_embed_block %>
+    <div class="notae-doc-graph-embed">
+      <% if block.graph_database_id.present? %>
+        <iframe src="<%= graph_embed_database_path(workspace_slug: block.graph_workspace_slug || workspace.slug, id: block.graph_database_id, view_id: block.graph_view_id.presence) %>"
+                class="notae-doc-graph-embed-frame"
+                loading="lazy"
+                title="Embedded graph"></iframe>
+      <% else %>
+        <p class="notae-doc-muted">Copy a graph from a grid to embed it here.</p>
       <% end %>
     </div>
   <% elsif is_media_block %>

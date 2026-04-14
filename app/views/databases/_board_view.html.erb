@@ -3,11 +3,13 @@
     Board view requires a property with type <code>select</code>. Choose one in the view config.
   </p>
 <% else %>
+  <% can_edit_database ||= false %>
   <% row_params = {
     view_id: @current_view&.id,
     month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
     sort_property_id: params[:sort_property_id],
     sort_direction: params[:sort_direction],
+    sort_mode: params[:sort_mode],
     filter_property_id: params[:filter_property_id],
     filter_value: params[:filter_value],
     filter_operator: params[:filter_operator],
@@ -41,10 +43,23 @@
        class="notae-db-board-grid">
     <% @board_columns.each do |column| %>
       <% column_title_classes = task_status_badge_classes_for(@board_group_property, column[:label], base_class: "notae-db-board-column-title") %>
+      <% unassigned_column = column[:value].blank? %>
       <section class="notae-db-board-column">
         <header class="notae-db-board-column-head">
-          <span class="<%= column_title_classes %>"><%= column[:label] %></span>
-          <span class="notae-db-board-column-count"><%= column[:rows].size %></span>
+          <div class="notae-db-board-column-head-main">
+            <span class="<%= column_title_classes %>"><%= column[:label] %></span>
+            <span class="notae-db-board-column-count"><%= column[:rows].size %></span>
+          </div>
+          <% if unassigned_column && can_edit_database %>
+            <%= button_to database_db_rows_path(workspace_slug: @workspace.slug, database_id: @database.id),
+                          params: row_params.merge(db_row: { title: "Untitled row" }),
+                          class: "notae-db-board-column-add",
+                          form: { class: "notae-db-board-column-add-form", data: { preserve_database_scroll: true } },
+                          title: "add new unassigned card",
+                          aria: { label: "add new unassigned card" } do %>
+              <span aria-hidden="true">+</span>
+            <% end %>
+          <% end %>
         </header>
         <div class="notae-db-board-lane"
              data-database-drag-target-value="<%= column[:value].to_s %>"

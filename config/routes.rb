@@ -118,9 +118,13 @@ Rails.application.routes.draw do
       member do
         post :duplicate
         post :taskify
+        post :save_as_template
+        post :apply_template
         post :kanbanize
         get :export_gantt_pdf
+        get :export_graph_pdf
         get :gantt_embed
+        get :graph_embed
         patch :archive
         patch :restore
         patch :permissions
@@ -130,7 +134,7 @@ Rails.application.routes.draw do
       resource :favorite, only: %i[create destroy], controller: "database_favorites"
       resources :database_views, only: %i[create update]
       patch "database_views/:id/default", to: "database_views#set_default", as: :default_database_view
-      resources :db_properties, only: %i[create destroy]
+      resources :db_properties, only: %i[create update destroy]
       resources :db_rows, only: %i[create update destroy] do
         member do
           patch :move

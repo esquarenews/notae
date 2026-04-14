@@ -5,7 +5,7 @@ class DatabasesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf gantt_embed permissions taskify kanbanize panel]
+  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf export_graph_pdf gantt_embed graph_embed permissions taskify save_as_template apply_template kanbanize panel]
   before_action :set_archived_database, only: %i[restore destroy]
   track_request_performance_for :show, :update
 
@@ -38,8 +38,11 @@ class DatabasesController < ApplicationController
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @can_apply_tasks_template = tasks_template_convertible?(properties: @db_properties)
     @tasks_template_ready = tasks_template_ready?(properties: @db_properties)
+    @database_templates = policy_scope(DatabaseTemplate).for_workspace(@workspace).recent_first.limit(20).to_a
+    @current_database_template_label = current_database_template_label
     @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
     @current_view = resolve_current_view
+    @primary_database_view = resolve_primary_database_view
     @view_type = @current_view&.view_type || "table"
     @view_config = @current_view&.config_json.to_h || {}
     resolve_filter_and_sort_settings!
@@ -53,6 +56,7 @@ class DatabasesController < ApplicationController
     @split_page = resolve_split_page
     @kalendarium_split_active = params[:split_panel].to_s == "kalendarium"
     @gantt_split_active = params[:split_panel].to_s == "gantt"
+    @graph_split_active = params[:split_panel].to_s == "graph"
     @kalendarium_split_project = resolve_tasks_project_for_split if @kalendarium_split_active
     @kalendarium_task_row = resolve_kalendarium_task_row if @kalendarium_split_active
     @kalendarium_split_window_start = resolve_kalendarium_split_window_start if @kalendarium_split_active
@@ -73,6 +77,7 @@ class DatabasesController < ApplicationController
     prepare_board_view_data!
     prepare_calendar_view_data!
     prepare_gantt_split_data!
+    prepare_graph_split_data!
 
     @new_database = Database.new
     @new_property = DbProperty.new
@@ -200,6 +205,7 @@ class DatabasesController < ApplicationController
     ActiveRecord::Base.transaction do
       table_view = resolve_or_create_table_view!
       build_tasks_template!(table_view:)
+      @database.update!(database_template: nil, applied_template_name: "Tasks")
       log_database_audit_event!(action: "update", kind: "database_taskified")
     end
 
@@ -208,6 +214,59 @@ class DatabasesController < ApplicationController
   rescue ActiveRecord::RecordInvalid => error
     redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
                 alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def save_as_template
+    authorize @database, :show?
+
+    template_record = DatabaseTemplate.new(
+      workspace: @workspace,
+      database: @database,
+      created_by: current_user,
+      name: database_template_name,
+      snapshot_json: {}
+    )
+    authorize template_record, :create?
+
+    Databases::CreateTemplateService.call(
+      database: @database,
+      current_view: resolve_template_source_view,
+      created_by: current_user,
+      name: database_template_name
+    )
+
+    redirect_to database_redirect_path, notice: "Template saved."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_redirect_path, alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def apply_template
+    authorize @database, :update?
+
+    if @database.locked?
+      redirect_to database_redirect_path, alert: "Grid is locked. Unlock to make changes."
+      return
+    end
+
+    template = policy_scope(DatabaseTemplate).for_workspace(@workspace).find(params[:template_id])
+    authorize template, :apply?
+
+    result = Databases::ApplyTemplateService.call(
+      database: @database,
+      template: template,
+      created_by: current_user
+    )
+
+    log_database_audit_event!(
+      action: "update",
+      kind: "database_template_applied",
+      database_template_id: template.id,
+      template_name: template.name
+    )
+
+    redirect_to database_path(database_panel_view_params.merge(view_id: result.view&.id)), notice: "#{template.name} template applied."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_redirect_path, alert: error.record.errors.full_messages.to_sentence
   end
 
   def kanbanize
@@ -363,12 +422,30 @@ class DatabasesController < ApplicationController
               disposition: "attachment"
   end
 
+  def export_graph_pdf
+    authorize @database, :show?
+
+    prepare_graph_export_context!
+    send_data Databases::GraphPdfExportService.call(database: @database, graph_data: @graph_split).pdf,
+              filename: "#{@database.name.parameterize.presence || "graph"}-graph.pdf",
+              type: "application/pdf",
+              disposition: "attachment"
+  end
+
   def gantt_embed
     authorize @database, :show?
 
     prepare_gantt_export_context!
     @gantt_embed_view_params = database_panel_view_params
     render :gantt_embed, layout: false
+  end
+
+  def graph_embed
+    authorize @database, :show?
+
+    prepare_graph_export_context!
+    @graph_embed_view_params = database_panel_view_params
+    render :graph_embed, layout: false
   end
 
   private
@@ -545,6 +622,18 @@ class DatabasesController < ApplicationController
     @database_views.find(&:default?) || @database_views.first
   end
 
+  def resolve_primary_database_view
+    template_view_type = @database.database_template&.snapshot_json&.dig("view", "view_type").to_s
+    if template_view_type.present?
+      template_view = @database_views.find { |view| view.view_type == template_view_type }
+      return template_view if template_view.present?
+    end
+
+    @database_views.find { |view| view.view_type == "table" } ||
+      @database_views.find(&:default?) ||
+      @database_views.first
+  end
+
   def ensure_tab_shell_page!
     Databases::EnsureLinkedPageService.call(database: @database, actor: current_user)
   end
@@ -554,9 +643,12 @@ class DatabasesController < ApplicationController
     filter_property_id = params[:filter_property_id].presence || @view_config["filter_property_id"]
     conditional_color_property_id = params[:conditional_color_property_id].presence || @view_config["conditional_color_property_id"]
 
-    @sort_property = @db_properties.find { |property| property.id.to_s == sort_property_id.to_s }
+    @sort_by_name = sort_property_id.to_s == DatabaseView::NAME_SORT_KEY
+    @sort_property = @sort_by_name ? nil : @db_properties.find { |property| property.id.to_s == sort_property_id.to_s }
     configured_direction = params[:sort_direction].presence || @view_config["sort_direction"]
     @sort_direction = configured_direction == "desc" ? "desc" : "asc"
+    configured_sort_mode = params[:sort_mode].presence || @view_config["sort_mode"]
+    @sort_mode = DatabaseView::SORT_MODES.include?(configured_sort_mode.to_s) ? configured_sort_mode.to_s : "standard"
 
     @filter_property = @db_properties.find { |property| property.id.to_s == filter_property_id.to_s }
     @filter_value = params[:filter_value].presence || @view_config["filter_value"].to_s
@@ -629,6 +721,31 @@ class DatabasesController < ApplicationController
       rows: @rows,
       db_properties: @db_properties,
       cells_by_key: @cells_by_key,
+      view_config: @view_config
+    ).call
+  end
+
+  def prepare_graph_split_data!
+    return unless @graph_split_active
+
+    graph_rows = Databases::RowWindowQueryService.new(
+      scope: policy_scope(DbRow).for_database(@database).active,
+      sort_property: @sort_property,
+      sort_by_title: @sort_by_name,
+      sort_direction: @sort_direction,
+      sort_mode: @sort_mode,
+      filter_property: @filter_property,
+      filter_value: @filter_value,
+      filter_operator: @filter_operator,
+      view_type: "graph",
+      page: 1
+    ).call.rows
+    graph_cells_by_key = load_chart_export_cells(rows: graph_rows, properties: @visible_db_properties)
+
+    @graph_split_data = Databases::GraphChartDataBuilder.new(
+      rows: graph_rows,
+      db_properties: @visible_db_properties,
+      cells_by_key: graph_cells_by_key,
       view_config: @view_config
     ).call
   end
@@ -817,6 +934,7 @@ class DatabasesController < ApplicationController
       month: params[:month].presence,
       sort_property_id: params[:sort_property_id].presence,
       sort_direction: params[:sort_direction].presence,
+      sort_mode: params[:sort_mode].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
@@ -861,9 +979,9 @@ class DatabasesController < ApplicationController
       .to_a
   end
 
-  def load_gantt_export_cells(rows:)
+  def load_chart_export_cells(rows:, properties:)
     row_ids = Array(rows).map(&:id)
-    property_ids = @db_properties.map(&:id)
+    property_ids = Array(properties).map(&:id)
     return {} if row_ids.empty? || property_ids.empty?
 
     policy_scope(DbCell)
@@ -883,7 +1001,9 @@ class DatabasesController < ApplicationController
     @rows = Databases::RowWindowQueryService.new(
       scope: policy_scope(DbRow).for_database(@database).active,
       sort_property: @sort_property,
+      sort_by_title: @sort_by_name,
       sort_direction: @sort_direction,
+      sort_mode: @sort_mode,
       filter_property: @filter_property,
       filter_value: @filter_value,
       filter_operator: @filter_operator,
@@ -891,11 +1011,45 @@ class DatabasesController < ApplicationController
       page: 1
     ).call.rows
 
-    @cells_by_key = load_gantt_export_cells(rows: @rows)
+    @visible_property_ids = resolve_visible_property_ids
+    @visible_db_properties = if @visible_property_ids.present?
+      @db_properties.select { |property| @visible_property_ids.include?(property.id.to_s) }
+    else
+      @db_properties
+    end
+    @cells_by_key = load_chart_export_cells(rows: @rows, properties: @db_properties)
     @gantt_split = Databases::GanttChartDataBuilder.new(
       rows: @rows,
       db_properties: @db_properties,
       cells_by_key: @cells_by_key,
+      view_config: @view_config
+    ).call
+  end
+
+  def prepare_graph_export_context!
+    @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
+    @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
+    @current_view = resolve_current_view
+    @view_config = @current_view&.config_json.to_h || {}
+    resolve_filter_and_sort_settings!
+
+    @rows = Databases::RowWindowQueryService.new(
+      scope: policy_scope(DbRow).for_database(@database).active,
+      sort_property: @sort_property,
+      sort_by_title: @sort_by_name,
+      sort_direction: @sort_direction,
+      sort_mode: @sort_mode,
+      filter_property: @filter_property,
+      filter_value: @filter_value,
+      filter_operator: @filter_operator,
+      view_type: "graph",
+      page: 1
+    ).call.rows
+
+    @graph_split = Databases::GraphChartDataBuilder.new(
+      rows: @rows,
+      db_properties: @visible_db_properties,
+      cells_by_key: load_chart_export_cells(rows: @rows, properties: @visible_db_properties),
       view_config: @view_config
     ).call
   end
@@ -917,7 +1071,9 @@ class DatabasesController < ApplicationController
     Databases::RowWindowQueryService.new(
       scope: policy_scope(DbRow).for_database(@database).active,
       sort_property: @sort_property,
+      sort_by_title: @sort_by_name,
       sort_direction: @sort_direction,
+      sort_mode: @sort_mode,
       filter_property: @filter_property,
       filter_value: @filter_value,
       filter_operator: @filter_operator,
@@ -960,6 +1116,7 @@ class DatabasesController < ApplicationController
       month: params[:month].presence,
       sort_property_id: params[:sort_property_id].presence,
       sort_direction: params[:sort_direction].presence,
+      sort_mode: params[:sort_mode].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
@@ -1149,6 +1306,7 @@ class DatabasesController < ApplicationController
     return unless template == "tasks"
 
     build_tasks_template!(table_view:)
+    @database.update!(database_template: nil, applied_template_name: "Tasks")
   end
 
   def build_tasks_template!(table_view:)
@@ -1357,5 +1515,24 @@ class DatabasesController < ApplicationController
 
   def normalize_task_template_property_name(name)
     name.to_s.strip.downcase
+  end
+
+  def current_database_template_label
+    @database.applied_template_name.presence ||
+      @database.database_template&.name.presence ||
+      (@tasks_template_ready ? "Tasks" : "Grid")
+  end
+
+  def resolve_template_source_view
+    requested_view_id = params[:view_id].presence
+    return @current_view if requested_view_id.blank? && defined?(@current_view) && @current_view.present?
+
+    policy_scope(DatabaseView).for_database(@database).find_by(id: requested_view_id) ||
+      @current_view ||
+      @database.database_views.ordered.first
+  end
+
+  def database_template_name
+    params.dig(:database_template, :name).to_s
   end
 end

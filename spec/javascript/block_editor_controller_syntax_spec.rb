@@ -98,6 +98,16 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("window.Turbo.renderStreamMessage(responseText)")
   end
 
+  it "turns copied graph embed payloads into live Nota blocks" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("graphEmbedPayloadFromClipboard(event)")
+    expect(source).to include("data-notae-graph-embed='1'")
+    expect(source).to include("/graph_embed$/")
+    expect(source).to include('formData.append("block[block_type]", "graph_embed")')
+    expect(source).to include("window.Turbo.renderStreamMessage(responseText)")
+  end
+
   it "falls back to explicit navigation for non-split links when tiptap link clicks are disabled" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 

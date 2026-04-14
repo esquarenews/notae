@@ -12,6 +12,7 @@
                   month: (@calendar_month - 1.month).to_s,
                   sort_property_id: params[:sort_property_id],
                   sort_direction: params[:sort_direction],
+                  sort_mode: params[:sort_mode],
                   filter_property_id: params[:filter_property_id],
                   filter_value: params[:filter_value],
                   filter_operator: params[:filter_operator],
@@ -28,6 +29,7 @@
                   month: (@calendar_month + 1.month).to_s,
                   sort_property_id: params[:sort_property_id],
                   sort_direction: params[:sort_direction],
+                  sort_mode: params[:sort_mode],
                   filter_property_id: params[:filter_property_id],
                   filter_value: params[:filter_value],
                   filter_operator: params[:filter_operator],
@@ -66,6 +68,7 @@
                 <%= hidden_field_tag :month, @calendar_month.to_s %>
                 <%= hidden_field_tag :sort_property_id, params[:sort_property_id] %>
                 <%= hidden_field_tag :sort_direction, params[:sort_direction] %>
+                <%= hidden_field_tag :sort_mode, params[:sort_mode] %>
                 <%= hidden_field_tag :filter_property_id, params[:filter_property_id] %>
                 <%= hidden_field_tag :filter_value, params[:filter_value] %>
                 <%= hidden_field_tag :filter_operator, params[:filter_operator] %>

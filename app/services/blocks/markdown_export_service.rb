@@ -37,6 +37,12 @@ module Blocks
         return [ "#{indent(depth)}[Embedded Gantt chart](#{gantt_embed_path_for(block)})" ]
       end
 
+      if block.block_type.to_s == "graph_embed"
+        return [] if block.graph_database_id.blank?
+
+        return [ "#{indent(depth)}[Embedded graph](#{graph_embed_path_for(block)})" ]
+      end
+
       rendered = render_document(node: block.content_json, depth: depth)
       return rendered if rendered.any?
 
@@ -72,6 +78,13 @@ module Blocks
       workspace_slug = block.gantt_workspace_slug.presence || block.workspace&.slug
       path = "/w/#{workspace_slug}/databases/#{block.gantt_database_id}/gantt_embed"
       view_id = block.gantt_view_id.presence
+      view_id.present? ? "#{path}?view_id=#{CGI.escape(view_id)}" : path
+    end
+
+    def graph_embed_path_for(block)
+      workspace_slug = block.graph_workspace_slug.presence || block.workspace&.slug
+      path = "/w/#{workspace_slug}/databases/#{block.graph_database_id}/graph_embed"
+      view_id = block.graph_view_id.presence
       view_id.present? ? "#{path}?view_id=#{CGI.escape(view_id)}" : path
     end
 

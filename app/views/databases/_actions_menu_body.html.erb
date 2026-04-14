@@ -219,6 +219,7 @@
             <%= form.hidden_field :view_type, value: current_view.view_type %>
             <%= form.hidden_field :sort_property_id, value: @view_config["sort_property_id"] %>
             <%= form.hidden_field :sort_direction, value: @view_config["sort_direction"] %>
+            <%= form.hidden_field :sort_mode, value: @view_config["sort_mode"] %>
             <%= form.hidden_field :filter_property_id, value: @view_config["filter_property_id"] %>
             <%= form.hidden_field :filter_value, value: @view_config["filter_value"] %>
             <%= form.hidden_field :filter_operator, value: @view_config["filter_operator"] %>

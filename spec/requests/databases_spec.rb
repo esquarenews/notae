@@ -1,4 +1,5 @@
 require "rails_helper"
+require "pdf/reader"
 
 RSpec.describe "Databases", type: :request do
   include ActiveJob::TestHelper
@@ -224,6 +225,80 @@ RSpec.describe "Databases", type: :request do
         [ "Notes", "text" ]
       ]
     )
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: board_view.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    view_options = document.css(".notae-db-split-view-menu .notae-db-split-view-panel").last.css(".notae-db-split-view-option")
+    default_option = view_options.first
+
+    expect(default_option.text.squish).to eq("Default")
+    expect(default_option["href"]).to include("view_id=#{database.database_views.find_by!(view_type: :table).id}")
+  end
+
+  it "saves a grid template, reapplies it, and renders the new template toolbar" do
+    owner = User.create!(email: "database-template-toolbar-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Template toolbar tables", slug: "template-toolbar-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    source_database = Database.create!(workspace: workspace, created_by: owner, name: "Source grid")
+    status_property = DbProperty.create!(workspace: workspace, database: source_database, name: "Status", property_type: :select, position: 1024)
+    due_date_property = DbProperty.create!(workspace: workspace, database: source_database, name: "Due date", property_type: :date, position: 2048)
+    source_view = DatabaseView.create!(
+      workspace: workspace,
+      database: source_database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: {
+        "visible_property_ids" => [ status_property.id, due_date_property.id ],
+        "sort_property_id" => due_date_property.id,
+        "sort_direction" => "asc"
+      }
+    )
+    target_database = Database.create!(workspace: workspace, created_by: owner, name: "Target grid")
+    sign_in owner
+
+    post save_as_template_database_path(workspace_slug: workspace.slug, id: source_database.id),
+         params: {
+           view_id: source_view.id,
+           database_template: { name: "Project tracker" }
+         }
+
+    template = DatabaseTemplate.find_by!(workspace: workspace, name: "Project tracker")
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: source_database.id, view_id: source_view.id))
+    expect(template.snapshot_json.dig("view", "config_json", "sort_property_name")).to eq("Due date")
+
+    post apply_template_database_path(workspace_slug: workspace.slug, id: target_database.id),
+         params: { template_id: template.id }
+
+    target_database.reload
+    expect(response).to redirect_to(/\/w\/#{workspace.slug}\/databases\/#{target_database.id}/)
+    expect(target_database.applied_template_name).to eq("Project tracker")
+    expect(target_database.database_template).to eq(template)
+    expect(target_database.db_properties.order(:position).pluck(:name, :property_type)).to eq(
+      [
+        [ "Status", "select" ],
+        [ "Due date", "date" ]
+      ]
+    )
+
+    get database_path(workspace_slug: workspace.slug, id: target_database.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    toolbar_label = document.at_css(".notae-db-viewbar-left .notae-db-view-pill")
+    toolbar_summaries = document.css(".notae-db-template-actions details > summary").map { |node| node.text.squish }
+    templates_panel_text = document.css(".notae-db-template-actions .notae-db-split-view-panel").first&.text.to_s
+
+    expect(toolbar_label&.text.to_s).to include("Project tracker")
+    expect(toolbar_summaries).to include("Templates ▾", "Views ▾")
+    expect(document.css(".notae-db-template-actions > form > button").map { |node| node.text.squish }).not_to include("Grid")
+    expect(templates_panel_text).to include("Tasks")
+    expect(templates_panel_text).to include("Project tracker")
+    expect(templates_panel_text).to include("Save current layout")
+    expect(templates_panel_text).to include("Save as template")
   end
 
   it "disables taskify for custom grids and rejects direct taskify requests" do
@@ -270,6 +345,7 @@ RSpec.describe "Databases", type: :request do
     expect(labels).to eq([ "Tab 1", note_tab.title, grid_tab_page.title ])
     expect(active_link).to be_present
     expect(active_link.text.strip).to eq(grid_tab_page.title)
+    expect(html.css(".notae-page-tab-icon")).to be_empty
     expect(title_input.text.strip).to eq(group_page.title)
     expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: group_page.id)}"]))).to be_present
     expect(html.at_css(%(.notae-page-tab[href="#{page_path(workspace_slug: workspace.slug, id: note_tab.id)}"]))).to be_present
@@ -601,6 +677,55 @@ RSpec.describe "Databases", type: :request do
     expect(DbCell.where(db_property_id: db_property.id)).to be_empty
   end
 
+  it "renames a column from the grid header" do
+    owner = User.create!(email: "database-rename-column-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables Rename", slug: "tables-rename")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    db_property = DbProperty.create!(workspace: workspace, database: database, name: "Compnay", property_type: :text)
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    rename_form = html.at_css("form[action='#{database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: db_property.id, view_id: view.id)}']")
+    expect(rename_form).to be_present
+    expect(rename_form.at_css("input[name='db_property[name]']")["value"]).to eq("Compnay")
+    expect(response.body).to include("Rename Compnay column")
+
+    patch database_db_property_path(
+            workspace_slug: workspace.slug,
+            database_id: database.id,
+            id: db_property.id,
+            view_id: view.id,
+            sort_property_id: db_property.id,
+            sort_direction: "asc",
+            sort_mode: "calendar"
+          ),
+          params: { db_property: { name: "Company" } }
+
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        view_id: view.id,
+        sort_property_id: db_property.id,
+        sort_direction: "asc",
+        sort_mode: "calendar"
+      )
+    )
+    expect(db_property.reload.name).to eq("Company")
+  end
+
   it "sorts rows by column values" do
     owner = User.create!(email: "database-sort-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables Sort", slug: "tables-sort")
@@ -622,6 +747,100 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body.index("Alpha Row")).to be < response.body.index("Bravo Row")
+  end
+
+  it "sorts rows by the name field" do
+    owner = User.create!(email: "database-name-sort-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables name sort", slug: "tables-name-sort")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Leads")
+    zulu_row = DbRow.create!(workspace: workspace, database: database, title: "Zulu Row")
+    acme_row = DbRow.create!(workspace: workspace, database: database, title: "Acme Row")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, sort_property_id: DatabaseView::NAME_SORT_KEY, sort_direction: "asc")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(acme_row.title)).to be < response.body.index(zulu_row.title)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, sort_property_id: DatabaseView::NAME_SORT_KEY, sort_direction: "desc")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(zulu_row.title)).to be < response.body.index(acme_row.title)
+  end
+
+  it "sorts name values in calendar order for weekdays" do
+    owner = User.create!(email: "database-calendar-name-sort-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables calendar name sort", slug: "tables-calendar-name-sort")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Weekly cadence")
+    sunday_row = DbRow.create!(workspace: workspace, database: database, title: "Sunday")
+    wednesday_row = DbRow.create!(workspace: workspace, database: database, title: "Wednesday")
+    monday_row = DbRow.create!(workspace: workspace, database: database, title: "Monday")
+    sign_in owner
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      sort_property_id: DatabaseView::NAME_SORT_KEY,
+      sort_direction: "asc",
+      sort_mode: "calendar"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(monday_row.title)).to be < response.body.index(wednesday_row.title)
+    expect(response.body.index(wednesday_row.title)).to be < response.body.index(sunday_row.title)
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      sort_property_id: DatabaseView::NAME_SORT_KEY,
+      sort_direction: "desc",
+      sort_mode: "calendar"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(sunday_row.title)).to be < response.body.index(wednesday_row.title)
+    expect(response.body.index(wednesday_row.title)).to be < response.body.index(monday_row.title)
+  end
+
+  it "sorts text property values in calendar order for months" do
+    owner = User.create!(email: "database-calendar-property-sort-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables calendar property sort", slug: "tables-calendar-property-sort")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Monthly roadmap")
+    month_property = DbProperty.create!(workspace: workspace, database: database, name: "Month", property_type: :text)
+    jan_row = DbRow.create!(workspace: workspace, database: database, title: "January task")
+    apr_row = DbRow.create!(workspace: workspace, database: database, title: "April task")
+    feb_row = DbRow.create!(workspace: workspace, database: database, title: "February task")
+    DbCell.create!(workspace: workspace, db_row: jan_row, db_property: month_property, value_text: "Jan")
+    DbCell.create!(workspace: workspace, db_row: apr_row, db_property: month_property, value_text: "Apr")
+    DbCell.create!(workspace: workspace, db_row: feb_row, db_property: month_property, value_text: "Feb")
+    sign_in owner
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      sort_property_id: month_property.id,
+      sort_direction: "asc",
+      sort_mode: "calendar"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(jan_row.title)).to be < response.body.index(feb_row.title)
+    expect(response.body.index(feb_row.title)).to be < response.body.index(apr_row.title)
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      sort_property_id: month_property.id,
+      sort_direction: "desc",
+      sort_mode: "calendar"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(apr_row.title)).to be < response.body.index(feb_row.title)
+    expect(response.body.index(feb_row.title)).to be < response.body.index(jan_row.title)
   end
 
   it "persists table header sorts in the current view config" do
@@ -655,7 +874,9 @@ RSpec.describe "Databases", type: :request do
     expect(database_shell["data-database-view-state-storage-key-value"]).to eq("database-view-scroll:#{database.id}")
     expect(html.at_css("tr#row_#{alpha_row.id}")["data-scroll-preserve-key"]).to eq("row_#{alpha_row.id}")
     expect(html.at_css("tr#row_#{bravo_row.id}")["data-scroll-preserve-key"]).to eq("row_#{bravo_row.id}")
-    sort_form = html.at_css("form.notae-db-grid-property-sort-form[action='#{database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id)}']")
+    sort_form = html.css("form.notae-db-grid-property-sort-form[action='#{database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id)}']").find do |form|
+      form.at_css("input[name='database_view[sort_property_id]'][value='#{db_property.id}']")
+    end
     expect(sort_form).to be_present
     expect(sort_form["data-preserve-database-scroll"]).to eq("true")
     expect(sort_form.at_css("input[name='_method'][value='patch']")).to be_present
@@ -680,6 +901,53 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body.index("Bravo Row")).to be < response.body.index("Alpha Row")
+  end
+
+  it "persists name header sorts in the current view config" do
+    owner = User.create!(email: "database-persistent-name-sort-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Persistent name sort tables", slug: "persistent-name-sort-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Pipeline")
+    zulu_row = DbRow.create!(workspace: workspace, database: database, title: "Zulu Row")
+    acme_row = DbRow.create!(workspace: workspace, database: database, title: "Acme Row")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    name_sort_form = html.css("form.notae-db-grid-property-sort-form[action='#{database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id)}']").find do |form|
+      form.at_css("input[name='database_view[sort_property_id]'][value='#{DatabaseView::NAME_SORT_KEY}']")
+    end
+    expect(name_sort_form).to be_present
+    expect(name_sort_form.at_css("input[name='database_view[sort_direction]'][value='asc']")).to be_present
+
+    patch database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id),
+          params: {
+            database_view: {
+              sort_property_id: DatabaseView::NAME_SORT_KEY,
+              sort_direction: "asc"
+            }
+          }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id))
+    expect(view.reload.config_json).to include(
+      "sort_property_id" => DatabaseView::NAME_SORT_KEY,
+      "sort_direction" => "asc"
+    )
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(acme_row.title)).to be < response.body.index(zulu_row.title)
   end
 
   it "supports typed property filtering and sorting for number, date, and checkbox columns" do
@@ -925,9 +1193,16 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("done")
 
     document = Nokogiri::HTML.parse(response.body)
+    unassigned_column = document.css(".notae-db-board-column").find do |node|
+      node.at_css(".notae-db-board-column-title")&.text.to_s.include?("Unassigned")
+    end
     started_column = document.at_css(".notae-db-board-column-title.is-status-started")
     done_column = document.at_css(".notae-db-board-column-title.is-status-done")
 
+    expect(response.body).not_to include("notae-db-toolbar-new")
+    expect(document.css(".notae-db-board-column-add").length).to eq(1)
+    expect(unassigned_column).to be_present
+    expect(unassigned_column.at_css(".notae-db-board-column-add")["title"]).to eq("add new unassigned card")
     expect(started_column&.text.to_s).to include("Started")
     expect(done_column&.text.to_s).to include("Done")
   end
@@ -1212,6 +1487,7 @@ RSpec.describe "Databases", type: :request do
              view_type: "table",
              sort_property_id: status_property.id,
              sort_direction: "desc",
+             sort_mode: "calendar",
              filter_property_id: status_property.id,
              filter_operator: "neq",
              filter_value: "Done",
@@ -1225,6 +1501,7 @@ RSpec.describe "Databases", type: :request do
     expect(filtered_view.config_json).to include(
       "sort_property_id" => status_property.id,
       "sort_direction" => "desc",
+      "sort_mode" => "calendar",
       "filter_property_id" => status_property.id,
       "filter_operator" => "neq",
       "filter_value" => "Done"
@@ -2204,7 +2481,7 @@ RSpec.describe "Databases", type: :request do
       name: "Table",
       view_type: :table,
       default: true,
-      config_json: { "sort_property_id" => status_property.id, "sort_direction" => "asc" }
+      config_json: { "sort_property_id" => status_property.id, "sort_direction" => "asc", "sort_mode" => "calendar" }
     )
     sign_in owner
 
@@ -2223,8 +2500,10 @@ RSpec.describe "Databases", type: :request do
     expect(payload["redirect_url"]).to include("/w/#{workspace.slug}/databases/#{database.id}")
     expect(payload["redirect_url"]).not_to include("sort_property_id")
     expect(payload["redirect_url"]).not_to include("sort_direction")
+    expect(payload["redirect_url"]).not_to include("sort_mode")
     expect(view.reload.config_json).not_to have_key("sort_property_id")
     expect(view.reload.config_json).not_to have_key("sort_direction")
+    expect(view.reload.config_json).not_to have_key("sort_mode")
     ordered_ids = DbRow.for_database(database).active.ordered.pluck(:id)
     expect(ordered_ids.last).to eq(row_two.id)
   end
@@ -2512,12 +2791,15 @@ RSpec.describe "Databases", type: :request do
     expect(split_title.text).to include("Gantt")
     expect(html.at_css(".notae-db-gantt-bar-wrap")).to be_present
     expect(html.at_css("[data-board-card-dialog]")).to be_present
-    expect(html.css(".notae-db-split-view-option").map { |node| node.text.strip }).to include("Kanban board", "Kalendārium", "Gantt")
+    expect(html.css(".notae-db-split-view-option").map { |node| node.text.strip }).to include("Default", "Kanban board", "Kalendārium", "Gantt")
     color_input = html.at_css('.notae-db-gantt-status-swatch input[type="color"]')
     expect(color_input).to be_present
     expect(color_input["data-action"]).to include("updateRowColor")
     toolbar_buttons = html.css(".notae-db-gantt-toolbar button.notae-chip-button.notae-db-template-button").map { |node| node.text.squish }
     expect(toolbar_buttons).to eq([ "Print to PDF", "Copy to Nota" ])
+    expect(html.at_css(".notae-db-gantt-toolbar [data-button-feedback-label]")&.text).to eq("Print to PDF")
+    expect(html.at_css(".notae-db-gantt-toolbar [data-copy-text-feedback]")&.text).to eq("Copy to Nota")
+    expect(html.css(".notae-db-gantt-toolbar button[data-controller='button-feedback']").map { |node| node.text.squish }).to eq([ "Print to PDF", "Copy to Nota" ])
     expect(response.body).to include("data-copy-text-html-value=")
     expect(response.body).to include("data-notae-gantt-embed=&quot;1&quot;")
     expect(response.body).to include("/gantt_embed")
@@ -2525,9 +2807,297 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).not_to include("Change colour for")
     expect(response.body).not_to include("Drag the bar edge to extend the finish date.")
 
-    views_button = html.at_css(".notae-db-split-view-menu > summary")
+    views_button = html.css(".notae-db-split-view-menu > summary").find { |node| node.text.squish.start_with?("Views") }
     expect(views_button["class"]).to include("is-active")
     expect(views_button.at_css(".notae-db-split-view-caret")&.text).to eq("▾")
+  end
+
+  it "opens a graph split pane with visible numeric series and graph actions" do
+    owner = User.create!(email: "database-graph-split-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph split", slug: "grid-graph-split")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    margin_property = DbProperty.create!(workspace: workspace, database: database, name: "Margin", property_type: :number)
+    DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text)
+    q1 = DbRow.create!(workspace: workspace, database: database, title: "Quarter 1")
+    q2 = DbRow.create!(workspace: workspace, database: database, title: "Quarter 2")
+    DbCell.create!(workspace: workspace, db_row: q1, db_property: revenue_property, value_text: "120")
+    DbCell.create!(workspace: workspace, db_row: q1, db_property: margin_property, value_text: "45")
+    DbCell.create!(workspace: workspace, db_row: q2, db_property: revenue_property, value_text: "160")
+    DbCell.create!(workspace: workspace, db_row: q2, db_property: margin_property, value_text: "52")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "line" }
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    split_title = html.at_css(".notae-db-split-pane-title")
+    expect(split_title.text).to include("Graph")
+    expect(html.at_css(".notae-db-graph-svg")).to be_present
+    expect(html.css(".notae-db-graph-series-line").length).to eq(2)
+    expect(html.css(".notae-db-graph-legend-item").map { |node| node.text.squish }).to include("Revenue", "Margin")
+    expect(html.css(".notae-db-graph-value-label")).to be_empty
+    expect(response.body).to include("Line graph")
+    expect(response.body).to include("Bar graph")
+    expect(response.body).to include("Pie graph")
+    expect(response.body).to include("Stats")
+    expect(response.body).to include("Show values")
+    expect(response.body).to include("Split graph")
+    expect(response.body).to include("data-notae-graph-embed=&quot;1&quot;")
+    expect(response.body).to include("/graph_embed")
+    toolbar_buttons = html.css(".notae-db-chart-toolbar .notae-chip-button.notae-db-gantt-toolbar-button").map { |node| node.text.squish }
+    expect(toolbar_buttons).to eq([ "Print to PDF", "Copy to Nota" ])
+    expect(html.at_css(".notae-db-chart-toolbar [data-button-feedback-label]")&.text).to eq("Print to PDF")
+    expect(html.at_css(".notae-db-chart-toolbar [data-copy-text-feedback]")&.text).to eq("Copy to Nota")
+    expect(html.css(".notae-db-chart-toolbar button[data-controller='button-feedback']").map { |node| node.text.squish }).to eq([ "Print to PDF", "Copy to Nota" ])
+    expect(html.css(".notae-db-split-view-option").map { |node| node.text.strip }).to include("Graph")
+  end
+
+  it "renders split graphs below the main graph when split graph is enabled" do
+    owner = User.create!(email: "database-graph-split-series-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph split series", slug: "grid-graph-split-series")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    margin_property = DbProperty.create!(workspace: workspace, database: database, name: "Margin", property_type: :number)
+    monday = DbRow.create!(workspace: workspace, database: database, title: "Monday")
+    tuesday = DbRow.create!(workspace: workspace, database: database, title: "Tuesday")
+    DbCell.create!(workspace: workspace, db_row: monday, db_property: revenue_property, value_text: "100")
+    DbCell.create!(workspace: workspace, db_row: monday, db_property: margin_property, value_text: "5")
+    DbCell.create!(workspace: workspace, db_row: tuesday, db_property: revenue_property, value_text: "140")
+    DbCell.create!(workspace: workspace, db_row: tuesday, db_property: margin_property, value_text: "7")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "line", "graph_split_series" => true }
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(html.css(".notae-db-graph-svg").length).to eq(3)
+    expect(html.css(".notae-db-graph-split-item").length).to eq(2)
+    expect(html.css(".notae-db-graph-split-item .notae-db-graph-series-line").length).to eq(2)
+    expect(html.css(".notae-db-graph-split-item .notae-db-graph-legend-label").map { |node| node.text.squish }).to eq([ "Revenue", "Margin" ])
+    expect(html.css(".notae-db-graph-split-item .notae-db-graph-legend-swatch input[type='color']").length).to eq(2)
+    expect(response.body).to include("Recombine")
+  end
+
+  it "renders stats graphs with black rising segments and red flat or falling segments" do
+    owner = User.create!(email: "database-graph-stats-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph stats", slug: "grid-graph-stats")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    monday = DbRow.create!(workspace: workspace, database: database, title: "Monday")
+    tuesday = DbRow.create!(workspace: workspace, database: database, title: "Tuesday")
+    wednesday = DbRow.create!(workspace: workspace, database: database, title: "Wednesday")
+    DbCell.create!(workspace: workspace, db_row: monday, db_property: revenue_property, value_text: "100")
+    DbCell.create!(workspace: workspace, db_row: tuesday, db_property: revenue_property, value_text: "140")
+    DbCell.create!(workspace: workspace, db_row: wednesday, db_property: revenue_property, value_text: "140")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: {
+        "graph_type" => "stats",
+        "graph_series_colors" => {
+          revenue_property.id.to_s => "#123456"
+        }
+      }
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(response.body).to include("Stats")
+    expect(html.css(".notae-db-graph-series-line").length).to eq(2)
+    expect(response.body).to include("--notae-graph-series-color: #111111;")
+    expect(response.body).to include("--notae-graph-series-color: #DC2626;")
+    expect(html.css(".notae-db-graph-legend-swatch input[type='color']")).to be_empty
+    expect(html.css(".notae-db-graph-legend-swatch.is-static").length).to eq(1)
+  end
+
+  it "does not keep the view settings menu open when graph toolbar actions are submitted" do
+    owner = User.create!(email: "database-graph-toolbar-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph toolbar", slug: "grid-graph-toolbar")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Monday")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: revenue_property, value_text: "100")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "line" }
+    )
+    sign_in owner
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      split_panel: "graph",
+      view_id: view.id,
+      view_settings: "open",
+      view_settings_section: "visibility"
+    )
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    graph_forms = html.css(
+      ".notae-db-graph-pane form.notae-db-split-view-form, " \
+      ".notae-db-graph-pane form.notae-db-chart-toolbar-toggle-form, " \
+      ".notae-db-graph-pane form.notae-db-graph-legend-form"
+    )
+    hidden_field_names = graph_forms.flat_map { |form| form.css("input[type='hidden']").map { |input| input["name"] } }
+
+    expect(hidden_field_names).not_to include("view_settings")
+    expect(hidden_field_names).not_to include("view_settings_section")
+  end
+
+  it "renders a graph unavailable message when no visible numeric values exist" do
+    owner = User.create!(email: "database-graph-empty-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph empty", slug: "grid-graph-empty")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Notes")
+    DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text)
+    DbRow.create!(workspace: workspace, database: database, title: "Quarter 1")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Graph unavailable")
+    expect(response.body).to include("numeric values")
+  end
+
+  it "renders pie graph slices as percentages of the whole" do
+    owner = User.create!(email: "database-graph-pie-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph pie", slug: "grid-graph-pie")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    profit_property = DbProperty.create!(workspace: workspace, database: database, name: "Profit", property_type: :number)
+    q1 = DbRow.create!(workspace: workspace, database: database, title: "Quarter 1")
+    q2 = DbRow.create!(workspace: workspace, database: database, title: "Quarter 2")
+    DbCell.create!(workspace: workspace, db_row: q1, db_property: revenue_property, value_text: "60")
+    DbCell.create!(workspace: workspace, db_row: q1, db_property: profit_property, value_text: "40")
+    DbCell.create!(workspace: workspace, db_row: q2, db_property: revenue_property, value_text: "30")
+    DbCell.create!(workspace: workspace, db_row: q2, db_property: profit_property, value_text: "20")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "pie", "graph_show_values" => true }
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("66.7%")
+    expect(response.body).to include("33.3%")
+    expect(response.body).to include("<title>Quarter 1: 66.7%</title>")
+    expect(response.body).to include("<title>Quarter 2: 33.3%</title>")
+    expect(response.body).not_to include("<title>Revenue:")
+  end
+
+  it "renders a full pie circle when only one visible numeric series exists" do
+    owner = User.create!(email: "database-graph-single-pie-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph single pie", slug: "grid-graph-single-pie")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    notes_property = DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Quarter 1")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: revenue_property, value_text: "60")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: notes_property, value_text: "steady")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "pie", "graph_show_values" => true }
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("<circle")
+    expect(response.body).to include("class=\"notae-db-graph-pie-slice\"")
+    expect(response.body).to include("<title>Quarter 1: 100%</title>")
+    expect(response.body).to include(">100%</text>")
+  end
+
+  it "respects the source grid filtering and ordering in the graph split pane" do
+    owner = User.create!(email: "database-graph-filter-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph filter", slug: "grid-graph-filter")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :select)
+    alpha = DbRow.create!(workspace: workspace, database: database, title: "Alpha")
+    beta = DbRow.create!(workspace: workspace, database: database, title: "Beta")
+    gamma = DbRow.create!(workspace: workspace, database: database, title: "Gamma")
+    DbCell.create!(workspace: workspace, db_row: alpha, db_property: revenue_property, value_text: "120")
+    DbCell.create!(workspace: workspace, db_row: alpha, db_property: status_property, value_text: "active")
+    DbCell.create!(workspace: workspace, db_row: beta, db_property: revenue_property, value_text: "180")
+    DbCell.create!(workspace: workspace, db_row: beta, db_property: status_property, value_text: "active")
+    DbCell.create!(workspace: workspace, db_row: gamma, db_property: revenue_property, value_text: "240")
+    DbCell.create!(workspace: workspace, db_row: gamma, db_property: status_property, value_text: "archived")
+    DatabaseView.create!(workspace: workspace, database: database, created_by: owner, name: "Table", view_type: :table, default: true)
+    sign_in owner
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      split_panel: "graph",
+      sort_property_id: revenue_property.id,
+      sort_direction: "desc",
+      filter_property_id: status_property.id,
+      filter_value: "active",
+      filter_operator: "eq"
+    )
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    category_labels = html.css(".notae-db-graph-category-label").map do |node|
+      node.at_css("title")&.text&.strip.presence || node.text.strip
+    end.reject(&:blank?)
+
+    expect(category_labels).to eq([ "Beta", "Alpha" ])
+    expect(category_labels).not_to include("Gamma")
   end
 
   it "keeps the gantt color picker beside the status badge and aligns bars to the badge baseline" do
@@ -2556,6 +3126,15 @@ RSpec.describe "Databases", type: :request do
     expect(stylesheet).to include("  font-family: inherit;")
     expect(stylesheet).to include(".notae-db-template-button,\n.notae-db-toolbar-icon,\n.notae-page-tab-create-button {\n  min-height: 2.25rem;")
     expect(stylesheet).not_to include(".notae-db-gantt-toolbar-form .notae-chip-button.notae-db-gantt-toolbar-button {\n  appearance: none;\n  -webkit-appearance: none;\n  text-decoration: none;\n  cursor: pointer;\n  font: inherit;")
+  end
+
+  it "keeps split-view export buttons width-stable while feedback text changes" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-db-gantt-toolbar .notae-chip-button.notae-db-gantt-toolbar-button,")
+    expect(stylesheet).to include("  justify-content: center;")
+    expect(stylesheet).to include("  width: 10.5rem;")
+    expect(stylesheet).to include("  white-space: nowrap;")
   end
 
   it "shows a Gantt empty state when no row has both start and end dates" do
@@ -2654,6 +3233,31 @@ RSpec.describe "Databases", type: :request do
     )
   end
 
+  it "stores graph series colors in the current view config" do
+    owner = User.create!(email: "database-graph-colors-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph colors", slug: "grid-graph-colors")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    view = DatabaseView.create!(workspace: workspace, database: database, created_by: owner, name: "Table", view_type: :table, default: true)
+    sign_in owner
+
+    patch database_database_view_path(workspace_slug: workspace.slug, database_id: database.id, id: view.id),
+          params: {
+            database_view: {
+              graph_series_colors: {
+                revenue_property.id.to_s => "#123abc"
+              }
+            }
+          },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(view.reload.config_json["graph_series_colors"]).to eq(
+      revenue_property.id.to_s => "#123ABC"
+    )
+  end
+
   it "exports the gantt view as a chart pdf" do
     owner = User.create!(email: "database-gantt-pdf-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Grid gantt pdf", slug: "grid-gantt-pdf")
@@ -2694,6 +3298,132 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-gantt-embed-shell")
     expect(response.body).to include("notae-db-gantt-bar-wrap")
+    expect(response.body).not_to include("Copy to Nota")
+    expect(response.body).not_to include("Print to PDF")
+  end
+
+  it "exports the graph view as a chart pdf" do
+    owner = User.create!(email: "database-graph-pdf-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph pdf", slug: "grid-graph-pdf")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    margin_property = DbProperty.create!(workspace: workspace, database: database, name: "Margin", property_type: :number)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Quarter 1")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: revenue_property, value_text: "120")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: margin_property, value_text: "45")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "bar", "graph_show_values" => true }
+    )
+    sign_in owner
+
+    get export_graph_pdf_database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("application/pdf")
+    expect(response.headers["Content-Disposition"]).to include(".pdf")
+    expect(response.body.byteslice(0, 4)).to eq("%PDF")
+    expect(response.body.bytesize).to be > 5_000
+  end
+
+  it "exports a line graph view as a chart pdf" do
+    owner = User.create!(email: "database-line-graph-pdf-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid line graph pdf", slug: "grid-line-graph-pdf")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    january = DbRow.create!(workspace: workspace, database: database, title: "January")
+    february = DbRow.create!(workspace: workspace, database: database, title: "February")
+    DbCell.create!(workspace: workspace, db_row: january, db_property: revenue_property, value_text: "120")
+    DbCell.create!(workspace: workspace, db_row: february, db_property: revenue_property, value_text: "180")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "line", "graph_show_values" => true }
+    )
+    sign_in owner
+
+    get export_graph_pdf_database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("application/pdf")
+    expect(response.headers["Content-Disposition"]).to include(".pdf")
+    expect(response.body.byteslice(0, 4)).to eq("%PDF")
+    expect(response.body.bytesize).to be > 5_000
+  end
+
+  it "exports split graphs as additional pages in the graph pdf" do
+    owner = User.create!(email: "database-split-graph-pdf-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid split graph pdf", slug: "grid-split-graph-pdf")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    margin_property = DbProperty.create!(workspace: workspace, database: database, name: "Margin", property_type: :number)
+    january = DbRow.create!(workspace: workspace, database: database, title: "January")
+    february = DbRow.create!(workspace: workspace, database: database, title: "February")
+    DbCell.create!(workspace: workspace, db_row: january, db_property: revenue_property, value_text: "120")
+    DbCell.create!(workspace: workspace, db_row: january, db_property: margin_property, value_text: "40")
+    DbCell.create!(workspace: workspace, db_row: february, db_property: revenue_property, value_text: "180")
+    DbCell.create!(workspace: workspace, db_row: february, db_property: margin_property, value_text: "55")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: { "graph_type" => "line", "graph_show_values" => true, "graph_split_series" => true }
+    )
+    sign_in owner
+
+    get export_graph_pdf_database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "graph")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("application/pdf")
+    reader = PDF::Reader.new(StringIO.new(response.body))
+    extracted_text = reader.pages.map(&:text).join("\n")
+    normalized_compact = extracted_text.gsub(/\s+/, "")
+
+    expect(reader.page_count).to eq(3)
+    expect(extracted_text).to include("Metrics")
+    expect(normalized_compact).to include("Splitgraph")
+    expect(extracted_text).to include("Revenue")
+    expect(extracted_text).to include("Margin")
+  end
+
+  it "renders a standalone graph embed page for Nota embeds" do
+    owner = User.create!(email: "database-graph-embed-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid graph embed", slug: "grid-graph-embed")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Metrics")
+    revenue_property = DbProperty.create!(workspace: workspace, database: database, name: "Revenue", property_type: :number)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Quarter 1")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: revenue_property, value_text: "120")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get graph_embed_database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-graph-embed-shell")
+    expect(response.body).to include("notae-db-graph-svg")
     expect(response.body).not_to include("Copy to Nota")
     expect(response.body).not_to include("Print to PDF")
   end
@@ -3148,6 +3878,19 @@ RSpec.describe "Databases", type: :request do
     status_property = DbProperty.create!(workspace: workspace, database: database, name: "Status", property_type: :text)
     row = DbRow.create!(workspace: workspace, database: database, title: "Ship launch")
     DbCell.create!(workspace: workspace, db_row: row, db_property: status_property, value_text: "Done")
+    DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true,
+      config_json: {
+        "sort_property_id" => DatabaseView::NAME_SORT_KEY,
+        "sort_direction" => "desc",
+        "sort_mode" => "calendar"
+      }
+    )
     DatabaseView.create!(workspace: workspace, database: database, created_by: owner, name: "Board", view_type: :board)
     sign_in owner
 
@@ -3168,6 +3911,11 @@ RSpec.describe "Databases", type: :request do
     copied_cell = copied_row.db_cells.find_by!(db_property_id: copied_property.id)
     expect(copied_cell.value_text).to eq("Done")
     expect(duplicate.database_views.pluck(:name)).to include("Board")
+    expect(duplicate.database_views.find_by!(view_type: :table).config_json).to include(
+      "sort_property_id" => DatabaseView::NAME_SORT_KEY,
+      "sort_direction" => "desc",
+      "sort_mode" => "calendar"
+    )
   end
 
   it "archives and restores a grid via trash flow" do

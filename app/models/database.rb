@@ -11,10 +11,12 @@ class Database < ApplicationRecord
 
   belongs_to :workspace
   belongs_to :created_by, class_name: "User", optional: true
+  belongs_to :database_template, optional: true
   belongs_to :linked_page, class_name: "Page", optional: true, inverse_of: :linked_database
   has_many :db_properties, -> { order(:position, :created_at) }, dependent: :destroy
   has_many :db_rows, dependent: :destroy
   has_many :database_views, dependent: :destroy
+  has_many :database_templates, dependent: :nullify
   has_many :favorites, as: :favoritable, dependent: :destroy
   has_many :comments, as: :commentable, dependent: :destroy
   has_many :database_shares, dependent: :destroy

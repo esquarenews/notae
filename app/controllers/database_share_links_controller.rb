@@ -73,6 +73,7 @@ class DatabaseShareLinksController < ApplicationController
     route_params[:month] = params[:month] if params[:month].present?
     route_params[:sort_property_id] = params[:sort_property_id] if params[:sort_property_id].present?
     route_params[:sort_direction] = params[:sort_direction] if params[:sort_direction].present?
+    route_params[:sort_mode] = params[:sort_mode] if params[:sort_mode].present?
     route_params[:filter_property_id] = params[:filter_property_id] if params[:filter_property_id].present?
     route_params[:filter_value] = params[:filter_value] if params[:filter_value].present?
     route_params[:filter_operator] = params[:filter_operator] if params[:filter_operator].present?

@@ -1,0 +1,194 @@
+<% chart_type = local_assigns.fetch(:chart_type, "line").to_s %>
+<% show_values = local_assigns.fetch(:show_values, false) %>
+<% categories = Array(local_assigns.fetch(:categories, [])) %>
+<% series = Array(local_assigns.fetch(:series, [])) %>
+<% pie_slices = Array(local_assigns.fetch(:pie_slices, [])) %>
+<% axis_ticks = Array(local_assigns.fetch(:axis_ticks, [])) %>
+<% display_min = local_assigns.fetch(:display_min, 0.0).to_f %>
+<% display_max = local_assigns.fetch(:display_max, 1.0).to_f %>
+<% zero_ratio = local_assigns.fetch(:zero_ratio, 0.0).to_f %>
+<% aria_label = local_assigns.fetch(:aria_label, "Graph") %>
+<% svg_class = [ "notae-db-graph-svg", local_assigns[:svg_class] ].compact.join(" ") %>
+<% stats_segment_color = ->(from_value, to_value) { Databases::GraphChartDataBuilder.stats_segment_color(from_value, to_value) } %>
+<% stats_point_color = ->(points, point_index) { Databases::GraphChartDataBuilder.stats_point_color(points, point_index) } %>
+
+<% if chart_type == "pie" %>
+  <% svg_width = 560 %>
+  <% svg_height = 360 %>
+  <% center_x = 226 %>
+  <% center_y = 176 %>
+  <% radius = 112 %>
+  <% polar_point = lambda do |angle_degrees, current_radius|
+       radians = angle_degrees * Math::PI / 180.0
+       [center_x + (Math.cos(radians) * current_radius), center_y + (Math.sin(radians) * current_radius)]
+     end %>
+  <div class="notae-db-graph-scroll">
+    <svg class="<%= svg_class %>"
+         viewBox="0 0 <%= svg_width %> <%= svg_height %>"
+         role="img"
+         aria-label="<%= aria_label %>">
+      <% pie_slices.each do |slice| %>
+        <% full_circle_slice = slice.fraction.to_f >= 0.999_999 %>
+        <% if full_circle_slice %>
+          <circle cx="<%= center_x %>"
+                  cy="<%= center_y %>"
+                  r="<%= radius %>"
+                  class="notae-db-graph-pie-slice"
+                  style="--notae-graph-series-color: <%= slice.color_hex %>;">
+            <title><%= "#{slice.name}: #{Databases::GraphChartDataBuilder.format_percentage(slice.percentage)}" %></title>
+          </circle>
+        <% else %>
+          <% start_x, start_y = polar_point.call(slice.start_angle, radius) %>
+          <% end_x, end_y = polar_point.call(slice.end_angle, radius) %>
+          <% large_arc = (slice.end_angle - slice.start_angle) > 180 ? 1 : 0 %>
+          <% path_data = [
+               "M #{center_x} #{center_y}",
+               "L #{start_x.round(2)} #{start_y.round(2)}",
+               "A #{radius} #{radius} 0 #{large_arc} 1 #{end_x.round(2)} #{end_y.round(2)}",
+               "Z"
+             ].join(" ") %>
+          <path d="<%= path_data %>"
+                class="notae-db-graph-pie-slice"
+                style="--notae-graph-series-color: <%= slice.color_hex %>;">
+            <title><%= "#{slice.name}: #{Databases::GraphChartDataBuilder.format_percentage(slice.percentage)}" %></title>
+          </path>
+        <% end %>
+        <% if show_values %>
+          <% if full_circle_slice %>
+            <% value_x = center_x %>
+            <% value_y_point = center_y %>
+          <% else %>
+            <% mid_angle = slice.start_angle + ((slice.end_angle - slice.start_angle) / 2.0) %>
+            <% value_x, value_y_point = polar_point.call(mid_angle, radius * 0.62) %>
+          <% end %>
+          <text x="<%= value_x.round(2) %>"
+                y="<%= value_y_point.round(2) %>"
+                text-anchor="middle"
+                class="notae-db-graph-value-label is-pie"><%= Databases::GraphChartDataBuilder.format_percentage(slice.percentage) %></text>
+        <% end %>
+      <% end %>
+    </svg>
+  </div>
+<% else %>
+  <% plot_left = 66 %>
+  <% plot_top = 18 %>
+  <% plot_height = 248 %>
+  <% label_zone = 96 %>
+  <% plot_width = [categories.size * 82, 520].max %>
+  <% svg_width = plot_left + plot_width + 26 %>
+  <% svg_height = plot_top + plot_height + label_zone %>
+  <% category_slot = plot_width.to_f / [categories.size, 1].max %>
+  <% value_range = [display_max - display_min, 1.0].max %>
+  <% value_y = ->(numeric_value) { plot_top + plot_height - (((numeric_value - display_min) / value_range.to_f) * plot_height) } %>
+  <% x_for_index = ->(index) { plot_left + (category_slot * index) + (category_slot / 2.0) } %>
+  <% baseline_y = plot_top + plot_height - (zero_ratio * plot_height) %>
+  <% line_like = %w[line stats].include?(chart_type) %>
+
+  <div class="notae-db-graph-scroll">
+    <svg class="<%= svg_class %>"
+         viewBox="0 0 <%= svg_width %> <%= svg_height %>"
+         role="img"
+         aria-label="<%= aria_label %>">
+      <% axis_ticks.each do |tick| %>
+        <% tick_y = plot_top + plot_height - (tick.ratio.to_f * plot_height) %>
+        <line x1="<%= plot_left %>"
+              y1="<%= tick_y %>"
+              x2="<%= plot_left + plot_width %>"
+              y2="<%= tick_y %>"
+              class="notae-db-graph-grid-line" />
+        <text x="<%= plot_left - 8 %>"
+              y="<%= tick_y + 4 %>"
+              text-anchor="end"
+              class="notae-db-graph-axis-label"><%= tick.label %></text>
+      <% end %>
+
+      <line x1="<%= plot_left %>"
+            y1="<%= baseline_y %>"
+            x2="<%= plot_left + plot_width %>"
+            y2="<%= baseline_y %>"
+            class="notae-db-graph-axis-line" />
+
+      <% if line_like %>
+        <% series.each do |entry| %>
+          <% if chart_type == "stats" %>
+            <% entry.points.each_cons(2) do |from_point, to_point| %>
+              <% path_data = [
+                   "M #{x_for_index.call(from_point.category_index).round(2)} #{value_y.call(from_point.value).round(2)}",
+                   "L #{x_for_index.call(to_point.category_index).round(2)} #{value_y.call(to_point.value).round(2)}"
+                 ].join(" ") %>
+              <path d="<%= path_data %>"
+                    class="notae-db-graph-series-line"
+                    style="--notae-graph-series-color: <%= stats_segment_color.call(from_point.value, to_point.value) %>;" />
+            <% end %>
+          <% else %>
+            <% path_data = entry.points.each_with_index.map do |point, index|
+                 command = index.zero? ? "M" : "L"
+                 "#{command} #{x_for_index.call(point.category_index).round(2)} #{value_y.call(point.value).round(2)}"
+               end.join(" ") %>
+            <path d="<%= path_data %>"
+                  class="notae-db-graph-series-line"
+                  style="--notae-graph-series-color: <%= entry.color_hex %>;" />
+          <% end %>
+
+          <% entry.points.each_with_index do |point, point_index| %>
+            <% point_x = x_for_index.call(point.category_index) %>
+            <% point_y = value_y.call(point.value) %>
+            <% point_color = chart_type == "stats" ? stats_point_color.call(entry.points, point_index) : entry.color_hex %>
+            <circle cx="<%= point_x %>"
+                    cy="<%= point_y %>"
+                    r="4.5"
+                    class="notae-db-graph-point"
+                    style="--notae-graph-series-color: <%= point_color %>;" />
+            <% if show_values %>
+              <text x="<%= point_x %>"
+                    y="<%= point_y - 10 %>"
+                    text-anchor="middle"
+                    class="notae-db-graph-value-label"><%= Databases::GraphChartDataBuilder.format_value(point.value) %></text>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <% series_count = [series.length, 1].max %>
+        <% group_width = category_slot * 0.72 %>
+        <% inner_gap = 4.0 %>
+        <% bar_width = [((group_width - (inner_gap * (series_count - 1))) / series_count.to_f), 6.0].max %>
+        <% categories.each do |category| %>
+          <% group_left = x_for_index.call(category.index) - (group_width / 2.0) %>
+          <% series.each_with_index do |entry, series_index| %>
+            <% point = entry.points.find { |candidate| candidate.category_index == category.index } %>
+            <% next if point.blank? %>
+            <% bar_left = group_left + (series_index * (bar_width + inner_gap)) %>
+            <% bar_value_y = value_y.call(point.value) %>
+            <% bar_top = [bar_value_y, baseline_y].min %>
+            <% bar_height = (baseline_y - bar_value_y).abs %>
+            <rect x="<%= bar_left.round(2) %>"
+                  y="<%= bar_top.round(2) %>"
+                  width="<%= bar_width.round(2) %>"
+                  height="<%= [bar_height.round(2), 2].max %>"
+                  rx="4"
+                  class="notae-db-graph-bar"
+                  style="--notae-graph-series-color: <%= entry.color_hex %>;" />
+            <% if show_values %>
+              <text x="<%= (bar_left + (bar_width / 2.0)).round(2) %>"
+                    y="<%= (bar_top - 8).round(2) %>"
+                    text-anchor="middle"
+                    class="notae-db-graph-value-label"><%= Databases::GraphChartDataBuilder.format_value(point.value) %></text>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% categories.each do |category| %>
+        <% label_x = x_for_index.call(category.index) %>
+        <% label_y = plot_top + plot_height + 24 %>
+        <text x="<%= label_x.round(2) %>"
+              y="<%= label_y %>"
+              transform="rotate(40 <%= label_x.round(2) %> <%= label_y %>)"
+              class="notae-db-graph-category-label">
+          <title><%= category.label %></title>
+          <%= category.short_label %>
+        </text>
+      <% end %>
+    </svg>
+  </div>
+<% end %>

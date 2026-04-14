@@ -95,6 +95,18 @@ class Block < ApplicationRecord
     metadata["notae_gantt_view_id"].presence
   end
 
+  def graph_workspace_slug
+    metadata["notae_graph_workspace_slug"].presence
+  end
+
+  def graph_database_id
+    metadata["notae_graph_database_id"].presence
+  end
+
+  def graph_view_id
+    metadata["notae_graph_view_id"].presence
+  end
+
   def layout_columns_count
     count = metadata["notae_columns_count"].to_i
     count.positive? ? count : nil

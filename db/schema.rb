@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_11_124500) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_14_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -271,6 +271,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_124500) do
     t.index ["user_id"], name: "index_database_shares_on_user_id"
   end
 
+  create_table "database_templates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.uuid "database_id"
+    t.string "name", null: false
+    t.jsonb "snapshot_json", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["created_by_id"], name: "index_database_templates_on_created_by_id"
+    t.index ["database_id"], name: "index_database_templates_on_database_id"
+    t.index ["workspace_id", "created_at"], name: "index_database_templates_on_workspace_id_and_created_at"
+    t.index ["workspace_id", "name"], name: "index_database_templates_on_workspace_id_and_name", unique: true
+    t.index ["workspace_id"], name: "index_database_templates_on_workspace_id"
+  end
+
   create_table "database_views", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.jsonb "config_json", default: {}, null: false
     t.datetime "created_at", null: false
@@ -290,6 +305,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_124500) do
   end
 
   create_table "databases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "applied_template_name"
     t.datetime "archived_at"
     t.string "cover_artist_name"
     t.text "cover_artist_url"
@@ -301,6 +317,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_124500) do
     t.text "cover_source_url"
     t.datetime "created_at", null: false
     t.uuid "created_by_id"
+    t.uuid "database_template_id"
     t.text "description"
     t.string "font_style", default: "default", null: false
     t.string "icon"
@@ -312,6 +329,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_124500) do
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
     t.index ["created_by_id"], name: "index_databases_on_created_by_id"
+    t.index ["database_template_id"], name: "index_databases_on_database_template_id"
     t.index ["linked_page_id"], name: "index_databases_on_linked_page_id"
     t.index ["workspace_id", "archived_at"], name: "index_databases_on_workspace_id_and_archived_at"
     t.index ["workspace_id", "name"], name: "index_databases_on_workspace_id_and_name"
@@ -1078,9 +1096,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_11_124500) do
   add_foreign_key "database_shares", "databases"
   add_foreign_key "database_shares", "users"
   add_foreign_key "database_shares", "users", column: "created_by_id"
+  add_foreign_key "database_templates", "databases", on_delete: :nullify
+  add_foreign_key "database_templates", "users", column: "created_by_id"
+  add_foreign_key "database_templates", "workspaces"
   add_foreign_key "database_views", "databases"
   add_foreign_key "database_views", "users", column: "created_by_id"
   add_foreign_key "database_views", "workspaces"
+  add_foreign_key "databases", "database_templates"
   add_foreign_key "databases", "pages", column: "linked_page_id", on_delete: :nullify
   add_foreign_key "databases", "users", column: "created_by_id"
   add_foreign_key "databases", "workspaces"

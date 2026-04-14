@@ -1,0 +1,237 @@
+<% graph_split ||= nil %>
+<% can_edit_database ||= false %>
+<% show_toolbar = local_assigns.fetch(:show_toolbar, true) %>
+<% embed_view_params = (view_params || {}).except(
+  :workspace_slug,
+  :id,
+  :month,
+  :rows_page,
+  :view_settings,
+  :view_settings_section,
+  :actions_menu,
+  :options_menu,
+  :split_panel,
+  :split_page_id,
+  :split_source,
+  :split_row_id,
+  :task_row_id
+) %>
+<% graph_embed_url = graph_embed_database_url(
+  embed_view_params.merge(
+    workspace_slug: @workspace.slug,
+    id: @database.id
+  )
+) %>
+<% graph_reference_html = content_tag(
+  :a,
+  "Graph · #{@database.name}",
+  href: graph_embed_url,
+  data: {
+    notae_graph_embed: "1",
+    notae_graph_workspace_slug: @workspace.slug,
+    notae_graph_database_id: @database.id,
+    notae_graph_view_id: @current_view&.id
+  }
+) %>
+<% graph_toolbar_params = (view_params || {}).except(
+  :workspace_slug,
+  :id,
+  :view_settings,
+  :view_settings_section
+) %>
+<% graph_type_options = [["Line graph", "line"], ["Bar graph", "bar"], ["Pie graph", "pie"], ["Stats", "stats"]] %>
+<% current_graph_type_label = graph_type_options.find { |(_label, value)| value == graph_split&.chart_type }&.first || "Line graph" %>
+<% can_customize_graph = can_edit_database && @current_view.present? %>
+<% can_split_graph = graph_split&.split_series_available? && can_customize_graph %>
+
+<section class="notae-db-graph-pane" data-controller="copy-text">
+  <% if graph_split&.eligible? %>
+    <% if show_toolbar %>
+      <div class="notae-db-chart-toolbar">
+        <div class="notae-db-chart-toolbar-primary">
+          <% if can_customize_graph %>
+            <details class="notae-db-inline-details notae-db-split-view-menu">
+              <summary class="notae-chip-button notae-db-template-button">
+                <span><%= current_graph_type_label %></span>
+                <span class="notae-db-split-view-caret" aria-hidden="true">&#9662;</span>
+              </summary>
+              <div class="notae-db-inline-panel notae-db-split-view-panel">
+                <% graph_type_options.each do |label, value| %>
+                  <%= form_with url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                                method: :patch,
+                                class: "notae-db-split-view-form" do %>
+                    <% graph_toolbar_params.each do |key, current_value| %>
+                      <%= hidden_field_tag key, current_value %>
+                    <% end %>
+                    <%= hidden_field_tag "database_view[graph_type]", value %>
+                    <%= button_tag label,
+                                   type: "submit",
+                                   class: [ "notae-db-split-view-option", ("is-active" if graph_split&.chart_type == value) ].compact.join(" ") %>
+                  <% end %>
+                <% end %>
+              </div>
+            </details>
+            <%= form_with url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                          method: :patch,
+                          class: "notae-db-chart-toolbar-toggle-form" do %>
+              <% graph_toolbar_params.each do |key, current_value| %>
+                <%= hidden_field_tag key, current_value %>
+              <% end %>
+              <%= hidden_field_tag "database_view[graph_show_values]", (!graph_split.show_values).to_s %>
+              <%= button_tag type: "submit",
+                             class: [ "notae-chip-button", "notae-db-template-button", "notae-db-chart-toolbar-toggle", ("is-active" if graph_split.show_values) ].compact.join(" ") do %>
+                <span class="notae-db-chart-toolbar-toggle-icon" aria-hidden="true">#</span>
+                <span>Show values</span>
+              <% end %>
+            <% end %>
+            <% if can_split_graph %>
+              <%= form_with url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                            method: :patch,
+                            class: "notae-db-chart-toolbar-toggle-form" do %>
+                <% graph_toolbar_params.each do |key, current_value| %>
+                  <%= hidden_field_tag key, current_value %>
+                <% end %>
+                <%= hidden_field_tag "database_view[graph_split_series]", (!graph_split.split_series?).to_s %>
+                <%= button_tag type: "submit",
+                               class: [ "notae-chip-button", "notae-db-template-button", "notae-db-chart-toolbar-toggle", ("is-active" if graph_split.split_series?) ].compact.join(" ") do %>
+                  <span><%= graph_split.split_series? ? "Recombine" : "Split graph" %></span>
+                <% end %>
+              <% end %>
+            <% end %>
+          <% else %>
+            <span class="notae-chip-button notae-db-template-button"><%= current_graph_type_label %></span>
+          <% end %>
+        </div>
+
+        <div class="notae-db-chart-toolbar-actions">
+          <%= form_with url: export_graph_pdf_database_path(
+                          (view_params || {}).merge(
+                            workspace_slug: @workspace.slug,
+                            id: @database.id
+                          )
+                        ),
+                        method: :get,
+                        class: "notae-db-gantt-toolbar-form",
+                        data: { turbo: false } do %>
+            <%= button_tag type: "submit",
+                           class: "notae-chip-button notae-db-template-button notae-db-gantt-toolbar-button",
+                           data: {
+                             controller: "button-feedback",
+                             action: "click->button-feedback#flash",
+                             button_feedback_active_text_value: "Preparing PDF..."
+                           } do %>
+              <span data-button-feedback-label>Print to PDF</span>
+            <% end %>
+          <% end %>
+          <%= button_tag type: "button",
+                         class: "notae-chip-button notae-db-template-button notae-db-gantt-toolbar-button",
+                         data: {
+                           controller: "button-feedback",
+                           action: "click->button-feedback#flash click->copy-text#copy",
+                           copy_text_value: graph_embed_url,
+                           copy_text_html_value: graph_reference_html,
+                           button_feedback_active_text_value: "Copied"
+                         } do %>
+            <span data-copy-text-feedback data-button-feedback-label>Copy to Nota</span>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <%= render "databases/graph_chart_canvas",
+               chart_type: graph_split.chart_type,
+               show_values: graph_split.show_values,
+               categories: graph_split.categories,
+               series: graph_split.series,
+               pie_slices: graph_split.pie_slices,
+               axis_ticks: graph_split.axis_ticks,
+               display_min: graph_split.display_min,
+               display_max: graph_split.display_max,
+               zero_ratio: graph_split.zero_ratio,
+               aria_label: "#{current_graph_type_label} for #{@database.name}" %>
+
+    <% legend_items = graph_split.pie? ? graph_split.pie_slices : graph_split.series %>
+    <div class="notae-db-graph-legend">
+      <% legend_items.each do |legend_item| %>
+        <div class="notae-db-graph-legend-item">
+          <% if can_customize_graph && !graph_split.pie? && !graph_split.stats? %>
+            <%= form_with url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                          method: :patch,
+                          class: "notae-db-graph-legend-form",
+                          data: { controller: "auto-submit", preserve_database_scroll: true } do %>
+              <% graph_toolbar_params.each do |key, current_value| %>
+                <%= hidden_field_tag key, current_value %>
+              <% end %>
+              <label class="notae-db-graph-legend-swatch">
+                <input type="color"
+                       name="database_view[graph_series_colors][<%= legend_item.property_id %>]"
+                       value="<%= legend_item.color_hex %>"
+                       aria-label="Change graph colour for <%= legend_item.name %>"
+                       data-action="change->auto-submit#submit">
+              </label>
+            <% end %>
+          <% else %>
+            <span class="notae-db-graph-legend-swatch is-static"
+                  style="--notae-graph-series-color: <%= legend_item.color_hex %>;"
+                  aria-hidden="true"></span>
+          <% end %>
+          <span class="notae-db-graph-legend-label"><%= legend_item.name %></span>
+        </div>
+      <% end %>
+    </div>
+
+    <% if graph_split.split_series? %>
+      <div class="notae-db-graph-split-series">
+        <% graph_split.series_graphs.each do |series_graph| %>
+          <% split_series = series_graph.series %>
+          <section class="notae-db-graph-split-item">
+            <%= render "databases/graph_chart_canvas",
+                       chart_type: graph_split.chart_type,
+                       show_values: graph_split.show_values,
+                       categories: graph_split.categories,
+                       series: [split_series],
+                       pie_slices: [],
+                       axis_ticks: series_graph.axis_ticks,
+                       display_min: series_graph.display_min,
+                       display_max: series_graph.display_max,
+                       zero_ratio: series_graph.zero_ratio,
+                       svg_class: "is-split-series",
+                       aria_label: "#{split_series.name} #{current_graph_type_label} for #{@database.name}" %>
+
+            <div class="notae-db-graph-legend is-split-series">
+              <div class="notae-db-graph-legend-item">
+                <% if can_customize_graph && !graph_split.stats? %>
+                  <%= form_with url: database_database_view_path(workspace_slug: @workspace.slug, database_id: @database.id, id: @current_view.id),
+                                method: :patch,
+                                class: "notae-db-graph-legend-form",
+                                data: { controller: "auto-submit", preserve_database_scroll: true } do %>
+                    <% graph_toolbar_params.each do |key, current_value| %>
+                      <%= hidden_field_tag key, current_value %>
+                    <% end %>
+                    <label class="notae-db-graph-legend-swatch">
+                      <input type="color"
+                             name="database_view[graph_series_colors][<%= split_series.property_id %>]"
+                             value="<%= split_series.color_hex %>"
+                             aria-label="Change graph colour for <%= split_series.name %>"
+                             data-action="change->auto-submit#submit">
+                    </label>
+                  <% end %>
+                <% else %>
+                  <span class="notae-db-graph-legend-swatch is-static"
+                        style="--notae-graph-series-color: <%= split_series.color_hex %>;"
+                        aria-hidden="true"></span>
+                <% end %>
+                <span class="notae-db-graph-legend-label"><%= split_series.name %></span>
+              </div>
+            </div>
+          </section>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="notae-db-gantt-empty">
+      <h3>Graph unavailable</h3>
+      <p><%= graph_split&.message || "Add at least one numeric column with values to create a graph." %></p>
+    </div>
+  <% end %>
+</section>

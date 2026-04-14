@@ -6,6 +6,10 @@
   ["Before / less than", "before"],
   ["After / greater than", "after"]
 ] %>
+<% sort_mode_options = [
+  ["Standard", "standard"],
+  ["Calendar", "calendar"]
+] %>
 <% layout_labels = {
   "table" => "Table",
   "board" => "Kanban board",
@@ -185,7 +189,7 @@
   <details class="notae-db-settings-submenu">
     <summary class="notae-db-settings-row-button">
       <span><span class="notae-db-settings-icon">↕</span> Sort</span>
-      <span class="notae-db-settings-meta"><%= @sort_property.present? ? @sort_property.name : "None" %></span>
+      <span class="notae-db-settings-meta"><%= @sort_by_name ? "Name" : (@sort_property.present? ? @sort_property.name : "None") %></span>
     </summary>
     <div class="notae-db-settings-subpanel">
       <% if can_update_view %>
@@ -200,12 +204,16 @@
                       data: { preserve_database_scroll: true },
                       class: "notae-db-view-submenu-form" do |form| %>
           <%= form.select :sort_property_id,
-                          @db_properties.map { |property| [property.name, property.id] },
+                          [[ "Name", DatabaseView::NAME_SORT_KEY ]] + @db_properties.map { |property| [property.name, property.id] },
                           { include_blank: "No sort", selected: @view_config["sort_property_id"] },
                           class: "notae-options-input" %>
           <%= form.select :sort_direction,
                           [["Ascending", "asc"], ["Descending", "desc"]],
                           { selected: @view_config["sort_direction"].presence || "asc" },
+                          class: "notae-options-input" %>
+          <%= form.select :sort_mode,
+                          sort_mode_options,
+                          { selected: @sort_mode.presence || @view_config["sort_mode"].presence || "standard" },
                           class: "notae-options-input" %>
           <%= form.submit "Apply", class: "notae-chip-button" %>
         <% end %>

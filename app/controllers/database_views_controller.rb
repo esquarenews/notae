@@ -71,6 +71,7 @@ class DatabaseViewsController < ApplicationController
       :default,
       :sort_property_id,
       :sort_direction,
+      :sort_mode,
       :filter_property_id,
       :filter_value,
       :filter_operator,
@@ -78,15 +79,20 @@ class DatabaseViewsController < ApplicationController
       :date_property_id,
       :conditional_color_mode,
       :conditional_color_property_id,
+      :graph_type,
+      :graph_show_values,
+      :graph_split_series,
       visible_property_ids: [],
       column_widths: {},
-      gantt_status_colors: {}
+      gantt_status_colors: {},
+      graph_series_colors: {}
     )
 
     config = @database_view&.config_json.to_h.deep_dup
 
     apply_config_value!(config, "sort_property_id", permitted, :sort_property_id) { |value| value.presence }
     apply_config_value!(config, "sort_direction", permitted, :sort_direction) { |value| normalize_sort_direction(value) }
+    apply_config_value!(config, "sort_mode", permitted, :sort_mode) { |value| normalize_sort_mode(value) }
     apply_config_value!(config, "filter_property_id", permitted, :filter_property_id) { |value| value.presence }
     apply_config_value!(config, "filter_value", permitted, :filter_value) { |value| value.presence }
     apply_config_value!(config, "filter_operator", permitted, :filter_operator) { |value| normalize_filter_operator(value) }
@@ -97,6 +103,13 @@ class DatabaseViewsController < ApplicationController
     end
     apply_config_value!(config, "conditional_color_property_id", permitted, :conditional_color_property_id) do |value|
       value.presence
+    end
+    apply_config_value!(config, "graph_type", permitted, :graph_type) { |value| normalize_graph_type(value) }
+    apply_config_value!(config, "graph_show_values", permitted, :graph_show_values) do |value|
+      ActiveModel::Type::Boolean.new.cast(value)
+    end
+    apply_config_value!(config, "graph_split_series", permitted, :graph_split_series) do |value|
+      ActiveModel::Type::Boolean.new.cast(value)
     end
 
     if permitted.key?(:visible_property_ids)
@@ -130,6 +143,19 @@ class DatabaseViewsController < ApplicationController
       end
     end
 
+    if permitted.key?(:graph_series_colors)
+      graph_series_colors = normalize_graph_series_colors(permitted.delete(:graph_series_colors))
+      existing_colors = config["graph_series_colors"]
+      merged_colors = (existing_colors.respond_to?(:to_h) ? existing_colors.to_h : {}).merge(graph_series_colors)
+      merged_colors.compact_blank!
+
+      if merged_colors.empty?
+        config.delete("graph_series_colors")
+      else
+        config["graph_series_colors"] = merged_colors
+      end
+    end
+
     permitted[:config_json] = config.compact
     permitted
   end
@@ -137,6 +163,13 @@ class DatabaseViewsController < ApplicationController
   def normalize_sort_direction(value)
     direction = value.to_s
     return direction if %w[asc desc].include?(direction)
+
+    nil
+  end
+
+  def normalize_sort_mode(value)
+    mode = value.to_s
+    return mode if DatabaseView::SORT_MODES.include?(mode)
 
     nil
   end
@@ -158,6 +191,13 @@ class DatabaseViewsController < ApplicationController
   def normalize_conditional_color_mode(value)
     mode = value.to_s
     return mode if %w[overdue].include?(mode)
+
+    nil
+  end
+
+  def normalize_graph_type(value)
+    graph_type = value.to_s
+    return graph_type if %w[line bar pie stats].include?(graph_type)
 
     nil
   end
@@ -204,6 +244,19 @@ class DatabaseViewsController < ApplicationController
     end
   end
 
+  def normalize_graph_series_colors(raw_colors)
+    return {} unless raw_colors.respond_to?(:to_h)
+
+    raw_colors.to_h.each_with_object({}) do |(key, value), colors|
+      normalized_key = key.to_s
+      normalized_value = value.to_s.strip.upcase
+      next if normalized_key.blank?
+      next unless normalized_value.match?(/\A#(?:[0-9A-F]{3}|[0-9A-F]{6})\z/)
+
+      colors[normalized_key] = normalized_value
+    end
+  end
+
   def minimum_width_for_column(column_key, allowed_property_ids)
     return 180 if column_key == "name"
 
@@ -226,6 +279,7 @@ class DatabaseViewsController < ApplicationController
       id: @database.id,
       view_id: database_view.id,
       month: params[:month].presence,
+      sort_mode: params[:sort_mode].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,

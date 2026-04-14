@@ -1,4 +1,7 @@
 class DatabaseView < ApplicationRecord
+  NAME_SORT_KEY = "name".freeze
+  SORT_MODES = %w[standard calendar].freeze
+
   has_paper_trail
 
   attribute :view_type, :integer, default: 0

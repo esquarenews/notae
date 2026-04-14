@@ -3,7 +3,7 @@ class DbPropertiesController < ApplicationController
   before_action :set_workspace
   before_action :set_database
   before_action :ensure_database_unlocked!
-  before_action :set_db_property, only: :destroy
+  before_action :set_db_property, only: %i[update destroy]
 
   def create
     @db_property = @database.db_properties.new(db_property_params)
@@ -24,6 +24,16 @@ class DbPropertiesController < ApplicationController
     redirect_to database_redirect_location, notice: "Column removed."
   end
 
+  def update
+    authorize @db_property
+
+    if @db_property.update(db_property_update_params)
+      redirect_to database_redirect_location, notice: "Column renamed."
+    else
+      redirect_to database_redirect_location, alert: @db_property.errors.full_messages.to_sentence
+    end
+  end
+
   private
 
   def set_workspace
@@ -40,6 +50,10 @@ class DbPropertiesController < ApplicationController
 
   def db_property_params
     params.require(:db_property).permit(:name, :property_type)
+  end
+
+  def db_property_update_params
+    params.require(:db_property).permit(:name)
   end
 
   def seed_cells_for_existing_rows(db_property)
@@ -94,6 +108,7 @@ class DbPropertiesController < ApplicationController
       month: params[:month].presence,
       sort_property_id: params[:sort_property_id].presence,
       sort_direction: params[:sort_direction].presence,
+      sort_mode: params[:sort_mode].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,

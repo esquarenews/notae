@@ -4,10 +4,12 @@ module Databases
 
     Result = Struct.new(:rows, :total_count, :page, :per_page, :total_pages, :paginated?, keyword_init: true)
 
-    def initialize(scope:, sort_property:, sort_direction:, filter_property:, filter_value:, filter_operator:, view_type:, page:)
+    def initialize(scope:, sort_property:, sort_by_title: false, sort_direction:, sort_mode: "standard", filter_property:, filter_value:, filter_operator:, view_type:, page:)
       @scope = scope
       @sort_property = sort_property
+      @sort_by_title = sort_by_title
       @sort_direction = sort_direction == "desc" ? "desc" : "asc"
+      @sort_mode = sort_mode.to_s
       @filter_property = filter_property
       @filter_value = filter_value.to_s.strip
       @filter_operator = filter_operator.to_s
@@ -69,10 +71,45 @@ module Databases
     end
 
     def apply_sort(scope)
+      if @sort_by_title
+        if @sort_mode == "calendar"
+          calendar_rank_sql = calendar_sort_rank_sql("db_rows.title")
+          null_order_sql = Arel.sql("CASE WHEN #{calendar_rank_sql} IS NULL THEN 1 ELSE 0 END ASC")
+          value_order_sql =
+            @sort_direction == "desc" ?
+              Arel.sql("#{calendar_rank_sql} DESC") :
+              Arel.sql("#{calendar_rank_sql} ASC")
+          fallback_title_order_sql =
+            @sort_direction == "desc" ?
+              Arel.sql("LOWER(db_rows.title) DESC") :
+              Arel.sql("LOWER(db_rows.title) ASC")
+
+          return scope.order(null_order_sql, value_order_sql, fallback_title_order_sql, :created_at)
+        end
+
+        title_order_sql = @sort_direction == "desc" ? Arel.sql("LOWER(db_rows.title) DESC") : Arel.sql("LOWER(db_rows.title) ASC")
+        return scope.order(title_order_sql, :created_at)
+      end
+
       return scope.order(:position, :created_at) unless @sort_property.present?
 
       alias_name = "sort_cells"
       scope = join_cell(scope, alias_name, @sort_property.id)
+
+      if calendar_sortable?
+        calendar_rank_sql = calendar_sort_rank_sql("#{alias_name}.value_text")
+        null_order_sql = Arel.sql("CASE WHEN #{calendar_rank_sql} IS NULL THEN 1 ELSE 0 END ASC")
+        value_order_sql =
+          @sort_direction == "desc" ?
+            Arel.sql("#{calendar_rank_sql} DESC") :
+            Arel.sql("#{calendar_rank_sql} ASC")
+        fallback_text_order_sql =
+          @sort_direction == "desc" ?
+            Arel.sql("LOWER(NULLIF(TRIM(#{alias_name}.value_text), '')) DESC") :
+            Arel.sql("LOWER(NULLIF(TRIM(#{alias_name}.value_text), '')) ASC")
+
+        return scope.order(null_order_sql, value_order_sql, fallback_text_order_sql, Arel.sql("LOWER(db_rows.title) ASC"), :created_at)
+      end
 
       null_order_sql, value_order_sql =
         if @sort_property.number?
@@ -106,6 +143,64 @@ module Databases
         end
 
       scope.order(null_order_sql, value_order_sql, Arel.sql("LOWER(db_rows.title) ASC"), :created_at)
+    end
+
+    def calendar_sortable?
+      return false unless @sort_mode == "calendar"
+      return false if @sort_property.blank?
+
+      !@sort_property.number? && !@sort_property.date? && !@sort_property.checkbox?
+    end
+
+    def calendar_sort_rank_sql(column_sql)
+      normalized_value_sql = "LOWER(NULLIF(TRIM(#{column_sql}), ''))"
+
+      <<~SQL.squish
+        CASE #{normalized_value_sql}
+          WHEN 'monday' THEN 1
+          WHEN 'mon' THEN 1
+          WHEN 'tuesday' THEN 2
+          WHEN 'tue' THEN 2
+          WHEN 'tues' THEN 2
+          WHEN 'wednesday' THEN 3
+          WHEN 'wed' THEN 3
+          WHEN 'thursday' THEN 4
+          WHEN 'thu' THEN 4
+          WHEN 'thur' THEN 4
+          WHEN 'thurs' THEN 4
+          WHEN 'friday' THEN 5
+          WHEN 'fri' THEN 5
+          WHEN 'saturday' THEN 6
+          WHEN 'sat' THEN 6
+          WHEN 'sunday' THEN 7
+          WHEN 'sun' THEN 7
+          WHEN 'january' THEN 101
+          WHEN 'jan' THEN 101
+          WHEN 'february' THEN 102
+          WHEN 'feb' THEN 102
+          WHEN 'march' THEN 103
+          WHEN 'mar' THEN 103
+          WHEN 'april' THEN 104
+          WHEN 'apr' THEN 104
+          WHEN 'may' THEN 105
+          WHEN 'june' THEN 106
+          WHEN 'jun' THEN 106
+          WHEN 'july' THEN 107
+          WHEN 'jul' THEN 107
+          WHEN 'august' THEN 108
+          WHEN 'aug' THEN 108
+          WHEN 'september' THEN 109
+          WHEN 'sep' THEN 109
+          WHEN 'sept' THEN 109
+          WHEN 'october' THEN 110
+          WHEN 'oct' THEN 110
+          WHEN 'november' THEN 111
+          WHEN 'nov' THEN 111
+          WHEN 'december' THEN 112
+          WHEN 'dec' THEN 112
+          ELSE NULL
+        END
+      SQL
     end
 
     def apply_text_filter(scope, bound_value)

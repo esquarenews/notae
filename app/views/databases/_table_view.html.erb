@@ -3,6 +3,7 @@
   month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
   sort_property_id: params[:sort_property_id],
   sort_direction: params[:sort_direction],
+  sort_mode: params[:sort_mode],
   filter_property_id: params[:filter_property_id],
   filter_value: params[:filter_value],
   filter_operator: params[:filter_operator],
@@ -17,6 +18,7 @@
 <% visible_properties = @visible_db_properties || @db_properties %>
 <% can_edit_grid = policy(@database).update? && !@database.locked? %>
 <% can_persist_sort = @current_view.present? && policy(@current_view).update? && !@database.locked? %>
+<% can_edit_properties = policy(DbProperty.new(database: @database, workspace: @workspace)).update? && !@database.locked? %>
 <% can_create_rows = policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
 <% new_row_form_id = "db_new_row_form_#{@database.id}" %>
 <% column_widths = @view_config.fetch("column_widths", {}).to_h.transform_values { |value| value.to_i } %>
@@ -39,6 +41,8 @@ end %>
   ["Red", "red"]
 ] %>
 <% highlight_row_id = params[:highlight_row_id].presence %>
+<% name_is_sorted = @sort_by_name %>
+<% name_next_direction = name_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
 
 <div class="notae-db-grid-wrap"
      data-controller="db-column-resize"
@@ -67,7 +71,66 @@ end %>
             data-db-column-resize-target="header"
             data-column-key="name"
             <% if name_width.positive? %>style="width: <%= name_width %>px; min-width: <%= name_width %>px;"<% end %>>
-          <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
+          <div class="notae-db-grid-property-header">
+            <% if can_persist_sort %>
+              <%= button_to database_database_view_path(
+                              workspace_slug: @workspace.slug,
+                              database_id: @database.id,
+                              id: @current_view.id,
+                              month: row_params[:month],
+                              sort_mode: row_params[:sort_mode],
+                              filter_property_id: row_params[:filter_property_id],
+                              filter_value: row_params[:filter_value],
+                              filter_operator: row_params[:filter_operator],
+                              rows_page: row_params[:rows_page],
+                              split_panel: row_params[:split_panel],
+                              split_page_id: row_params[:split_page_id],
+                              split_source: row_params[:split_source],
+                              split_row_id: row_params[:split_row_id]
+                            ),
+                            method: :patch,
+                            params: {
+                              database_view: {
+                                sort_property_id: DatabaseView::NAME_SORT_KEY,
+                                sort_direction: name_next_direction
+                              }
+                            },
+                            form: {
+                              data: { preserve_database_scroll: true }
+                            },
+                            form_class: "notae-db-grid-property-sort-form",
+                            class: "notae-db-grid-property-link",
+                            title: "Sort by Name" do %>
+                <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
+              <% end %>
+            <% else %>
+              <%= link_to database_path(
+                            workspace_slug: @workspace.slug,
+                            id: @database.id,
+                            view_id: @current_view&.id,
+                            month: row_params[:month],
+                            sort_property_id: DatabaseView::NAME_SORT_KEY,
+                            sort_direction: name_next_direction,
+                            sort_mode: row_params[:sort_mode],
+                            filter_property_id: params[:filter_property_id],
+                            filter_value: params[:filter_value],
+                            filter_operator: params[:filter_operator],
+                            rows_page: row_params[:rows_page],
+                            split_panel: row_params[:split_panel],
+                            split_page_id: row_params[:split_page_id],
+                            split_source: row_params[:split_source],
+                            split_row_id: row_params[:split_row_id]
+                          ),
+                          data: { preserve_database_scroll: true },
+                          class: "notae-db-grid-property-link",
+                          title: "Sort by Name" do %>
+                <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
+              <% end %>
+            <% end %>
+            <% if name_is_sorted %>
+              <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+            <% end %>
+          </div>
           <% if column_resize_enabled %>
             <button type="button"
                     class="notae-db-col-resize-handle"
@@ -92,6 +155,7 @@ end %>
                                 database_id: @database.id,
                                 id: @current_view.id,
                                 month: row_params[:month],
+                                sort_mode: row_params[:sort_mode],
                                 filter_property_id: row_params[:filter_property_id],
                                 filter_value: row_params[:filter_value],
                                 filter_operator: row_params[:filter_operator],
@@ -123,6 +187,7 @@ end %>
                               month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
                               sort_property_id: db_property.id,
                               sort_direction: next_direction,
+                              sort_mode: row_params[:sort_mode],
                               filter_property_id: params[:filter_property_id],
                               filter_value: params[:filter_value],
                               filter_operator: params[:filter_operator],
@@ -137,6 +202,44 @@ end %>
               <% end %>
               <% if property_is_sorted %>
                 <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+              <% end %>
+              <% if can_edit_properties %>
+                <details class="notae-db-inline-details notae-db-column-rename-menu">
+                  <summary class="notae-db-grid-property-edit"
+                           aria-label="Rename <%= db_property.name %> column"
+                           title="Rename column">✎</summary>
+                  <div class="notae-db-inline-panel notae-db-column-rename-panel">
+                    <%= form_with model: db_property,
+                                  url: database_db_property_path(
+                                    workspace_slug: @workspace.slug,
+                                    database_id: @database.id,
+                                    id: db_property.id,
+                                    view_id: row_params[:view_id],
+                                    month: row_params[:month],
+                                    sort_property_id: row_params[:sort_property_id],
+                                    sort_direction: row_params[:sort_direction],
+                                    sort_mode: row_params[:sort_mode],
+                                    filter_property_id: row_params[:filter_property_id],
+                                    filter_value: row_params[:filter_value],
+                                    filter_operator: row_params[:filter_operator],
+                                    rows_page: row_params[:rows_page],
+                                    split_panel: row_params[:split_panel],
+                                    split_page_id: row_params[:split_page_id],
+                                    split_source: row_params[:split_source],
+                                    split_row_id: row_params[:split_row_id]
+                                  ),
+                                  method: :patch,
+                                  class: "notae-db-inline-form" do |form| %>
+                      <%= form.text_field :name,
+                                          value: db_property.name,
+                                          placeholder: "Column name",
+                                          required: true,
+                                          class: "notae-options-input",
+                                          aria: { label: "Column name" } %>
+                      <%= form.submit "Save", class: "notae-chip-button" %>
+                    <% end %>
+                  </div>
+                </details>
               <% end %>
             </div>
             <% if column_resize_enabled %>
@@ -161,6 +264,7 @@ end %>
                                 month: row_params[:month],
                                 sort_property_id: row_params[:sort_property_id],
                                 sort_direction: row_params[:sort_direction],
+                                sort_mode: row_params[:sort_mode],
                                 filter_property_id: row_params[:filter_property_id],
                                 filter_value: row_params[:filter_value],
                                 filter_operator: row_params[:filter_operator],
@@ -224,6 +328,7 @@ end %>
               <%= hidden_field_tag :month, row_params[:month] %>
               <%= hidden_field_tag :sort_property_id, row_params[:sort_property_id] %>
               <%= hidden_field_tag :sort_direction, row_params[:sort_direction] %>
+              <%= hidden_field_tag :sort_mode, row_params[:sort_mode] %>
               <%= hidden_field_tag :filter_property_id, row_params[:filter_property_id] %>
               <%= hidden_field_tag :filter_value, row_params[:filter_value] %>
               <%= hidden_field_tag :filter_operator, row_params[:filter_operator] %>

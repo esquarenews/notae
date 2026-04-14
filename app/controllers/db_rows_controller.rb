@@ -504,6 +504,7 @@ class DbRowsController < ApplicationController
       month: params[:month].presence,
       sort_property_id: @clear_sorting ? nil : params[:sort_property_id].presence,
       sort_direction: @clear_sorting ? nil : params[:sort_direction].presence,
+      sort_mode: @clear_sorting ? nil : params[:sort_mode].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
@@ -529,6 +530,7 @@ class DbRowsController < ApplicationController
       id: @database.id,
       view_id: params[:view_id].presence,
       month: params[:month].presence,
+      sort_mode: params[:sort_mode].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
@@ -1070,6 +1072,7 @@ class DbRowsController < ApplicationController
       month: params[:month].presence,
       sort_property_id: params[:sort_property_id].presence,
       sort_direction: params[:sort_direction].presence,
+      sort_mode: params[:sort_mode].presence,
       filter_property_id: params[:filter_property_id].presence,
       filter_value: params[:filter_value].presence,
       filter_operator: params[:filter_operator].presence,
@@ -1166,6 +1169,7 @@ class DbRowsController < ApplicationController
     changed = false
     changed = config.delete("sort_property_id").present? || changed
     changed = config.delete("sort_direction").present? || changed
+    changed = config.delete("sort_mode").present? || changed
     view.update!(config_json: config) if changed
   end
 

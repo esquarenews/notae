@@ -32,6 +32,8 @@ module Databases
       duplicate = workspace.databases.create!(
         name: duplicate_name,
         created_by: created_by,
+        database_template: database.database_template,
+        applied_template_name: database.applied_template_name,
         description: database.description,
         permission_mode: database.permission_mode,
         icon: database.icon,
@@ -118,6 +120,7 @@ module Databases
         conditional_color_property_id
       ].each do |config_key|
         next unless config[config_key].present?
+        next if config_key == "sort_property_id" && config[config_key].to_s == DatabaseView::NAME_SORT_KEY
 
         mapped_value = property_id_map[config[config_key].to_s]
         mapped_value.present? ? config[config_key] = mapped_value : config.delete(config_key)

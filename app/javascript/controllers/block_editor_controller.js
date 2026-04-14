@@ -390,6 +390,13 @@ export default class extends Controller {
   }
 
   handleEditorPaste(event) {
+    const graphPayload = this.graphEmbedPayloadFromClipboard(event)
+    if (graphPayload) {
+      event.preventDefault()
+      Promise.resolve(this.flushSave()).finally(() => this.insertGraphEmbedBlock(graphPayload))
+      return true
+    }
+
     const payload = this.ganttEmbedPayloadFromClipboard(event)
     if (!payload) return false
 
@@ -695,6 +702,78 @@ export default class extends Controller {
     return children.map((child) => this.flattenText(child)).join(" ")
   }
 
+  graphEmbedPayloadFromClipboard(event) {
+    const html = event.clipboardData?.getData("text/html")?.trim()
+    const htmlPayload = this.extractGraphEmbedPayloadFromHtml(html)
+    if (htmlPayload) return htmlPayload
+
+    const text = event.clipboardData?.getData("text/plain")?.trim()
+    return this.extractGraphEmbedPayloadFromText(text)
+  }
+
+  extractGraphEmbedPayloadFromHtml(html) {
+    if (!html) return null
+
+    const document = new window.DOMParser().parseFromString(html, "text/html")
+    const source = document.querySelector("[data-notae-graph-embed='1']")
+    if (!source) return null
+
+    const href = source.getAttribute("href")
+    const datasetPayload = {
+      workspaceSlug: source.dataset.notaeGraphWorkspaceSlug,
+      databaseId: source.dataset.notaeGraphDatabaseId,
+      viewId: source.dataset.notaeGraphViewId
+    }
+
+    return this.normalizeGraphEmbedPayload(datasetPayload, href)
+  }
+
+  extractGraphEmbedPayloadFromText(text) {
+    if (!text) return null
+
+    return this.normalizeGraphEmbedPayload({}, text)
+  }
+
+  normalizeGraphEmbedPayload(payload, href) {
+    const normalized = {
+      workspaceSlug: String(payload.workspaceSlug || "").trim(),
+      databaseId: String(payload.databaseId || "").trim(),
+      viewId: String(payload.viewId || "").trim()
+    }
+
+    const parsedUrl = this.parseGraphEmbedUrl(href)
+    if (parsedUrl) {
+      normalized.workspaceSlug ||= parsedUrl.workspaceSlug
+      normalized.databaseId ||= parsedUrl.databaseId
+      normalized.viewId ||= parsedUrl.viewId
+    }
+
+    if (!normalized.workspaceSlug || !normalized.databaseId) return null
+    return normalized
+  }
+
+  parseGraphEmbedUrl(rawUrl) {
+    if (!rawUrl) return null
+
+    let url
+    try {
+      url = new URL(rawUrl, window.location.origin)
+    } catch (_error) {
+      return null
+    }
+
+    if (url.origin !== window.location.origin) return null
+
+    const match = url.pathname.match(/^\/w\/([^/]+)\/databases\/([^/]+)\/graph_embed$/)
+    if (!match) return null
+
+    return {
+      workspaceSlug: decodeURIComponent(match[1]),
+      databaseId: decodeURIComponent(match[2]),
+      viewId: url.searchParams.get("view_id") || ""
+    }
+  }
+
   ganttEmbedPayloadFromClipboard(event) {
     const html = event.clipboardData?.getData("text/html")?.trim()
     const htmlPayload = this.extractGanttEmbedPayloadFromHtml(html)
@@ -777,6 +856,37 @@ export default class extends Controller {
     formData.append("block[content_json][notae_gantt_database_id]", payload.databaseId)
     if (payload.viewId) {
       formData.append("block[content_json][notae_gantt_view_id]", payload.viewId)
+    }
+
+    const response = await fetch(this.createUrlValue, {
+      method: "POST",
+      headers: {
+        "Accept": "text/vnd.turbo-stream.html, text/html",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
+      },
+      body: formData
+    })
+
+    const responseText = await response.text()
+    if (responseText && window.Turbo?.renderStreamMessage) {
+      window.Turbo.renderStreamMessage(responseText)
+    }
+
+    if (!response.ok) return false
+    if (!window.Turbo?.renderStreamMessage) window.location.reload()
+    return true
+  }
+
+  async insertGraphEmbedBlock(payload) {
+    if (!this.hasCreateUrlValue || !this.hasBlockIdValue) return false
+
+    const formData = new window.FormData()
+    formData.append("insert_after_id", this.blockIdValue)
+    formData.append("block[block_type]", "graph_embed")
+    formData.append("block[content_json][notae_graph_workspace_slug]", payload.workspaceSlug)
+    formData.append("block[content_json][notae_graph_database_id]", payload.databaseId)
+    if (payload.viewId) {
+      formData.append("block[content_json][notae_graph_view_id]", payload.viewId)
     }
 
     const response = await fetch(this.createUrlValue, {
