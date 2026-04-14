@@ -19,6 +19,7 @@ RSpec.describe "RowMenuController JavaScript syntax" do
   it "keeps floating row menus inside open dialogs when needed" do
     source = Rails.root.join("app/javascript/controllers/row_menu_controller.js").read
 
+    expect(source).to include(".notae-db-row-hover-controls, .notae-db-column-hover-controls")
     expect(source).to include("closest(\"dialog[open]\") || document.body")
     expect(source).to include("this.portalRoot = nextPortalRoot")
     expect(source).to include("this.portalRoot = null")

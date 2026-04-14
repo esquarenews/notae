@@ -54,6 +54,7 @@
           <span class="notae-db-row-menu-label"><%= row.row_italic? ? "Unitalic row" : "Italic row" %></span>
         </button>
       <% end %>
+      <div class="notae-db-row-menu-section-label">Text colour</div>
       <div class="notae-db-row-menu-color-grid">
         <% row_color_options.each do |label, color_key| %>
           <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
@@ -61,6 +62,19 @@
             <%= form.hidden_field :text_color, value: color_key %>
             <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_text_color == color_key %>">
               <span class="notae-db-row-menu-color-swatch is-<%= color_key %>"></span>
+              <span class="notae-db-row-menu-label"><%= label %></span>
+            </button>
+          <% end %>
+        <% end %>
+      </div>
+      <div class="notae-db-row-menu-section-label">Background colour</div>
+      <div class="notae-db-row-menu-color-grid">
+        <% DbRow::BACKGROUND_COLOR_OPTIONS.each do |label, color_key| %>
+          <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+            <%= form.hidden_field :style_action, value: "set_background_color" %>
+            <%= form.hidden_field :background_color, value: color_key %>
+            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_background_color == color_key %>">
+              <span class="notae-db-row-menu-color-swatch notae-menu-highlight-swatch is-<%= color_key %>"></span>
               <span class="notae-db-row-menu-label"><%= label %></span>
             </button>
           <% end %>

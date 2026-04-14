@@ -341,7 +341,7 @@ class DbRowsController < ApplicationController
   end
 
   def db_row_style_params
-    params.fetch(:db_row, ActionController::Parameters.new).permit(:style_action, :text_color, :gantt_color_hex)
+    params.fetch(:db_row, ActionController::Parameters.new).permit(:style_action, :text_color, :background_color, :gantt_color_hex)
   end
 
   def create_next_row_requested?
@@ -700,6 +700,7 @@ class DbRowsController < ApplicationController
     @db_row.apply_row_style_action!(
       action: payload[:style_action],
       text_color: payload[:text_color],
+      background_color: payload[:background_color],
       gantt_color_hex: payload[:gantt_color_hex]
     )
   end

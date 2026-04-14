@@ -5,8 +5,19 @@ class DbRow < ApplicationRecord
   ROW_STYLE_BOLD_KEY = "__notae_row_bold".freeze
   ROW_STYLE_ITALIC_KEY = "__notae_row_italic".freeze
   ROW_STYLE_COLOR_KEY = "__notae_row_text_color".freeze
+  ROW_STYLE_BACKGROUND_COLOR_KEY = "__notae_row_background_color".freeze
   ROW_STYLE_GANTT_COLOR_KEY = "__notae_gantt_color_hex".freeze
   ROW_TEXT_COLORS = %w[default gray brown orange yellow green blue purple pink red].freeze
+  BACKGROUND_COLORS = %w[default peach lemon mint sky lavender rose].freeze
+  BACKGROUND_COLOR_OPTIONS = [
+    [ "Default", "default" ],
+    [ "Peach", "peach" ],
+    [ "Lemon", "lemon" ],
+    [ "Mint", "mint" ],
+    [ "Sky", "sky" ],
+    [ "Lavender", "lavender" ],
+    [ "Rose", "rose" ]
+  ].freeze
   GANTT_COLOR_HEX_PATTERN = /\A#[0-9A-F]{6}\z/.freeze
 
   has_paper_trail
@@ -67,6 +78,11 @@ class DbRow < ApplicationRecord
     ROW_TEXT_COLORS.include?(color) ? color : "default"
   end
 
+  def row_background_color
+    color = data_json[ROW_STYLE_BACKGROUND_COLOR_KEY].to_s
+    BACKGROUND_COLORS.include?(color) ? color : "default"
+  end
+
   def gantt_color_hex
     color = data_json[ROW_STYLE_GANTT_COLOR_KEY].to_s.strip.upcase
     color.match?(GANTT_COLOR_HEX_PATTERN) ? color : nil
@@ -79,12 +95,14 @@ class DbRow < ApplicationRecord
     metadata[ROW_STYLE_ITALIC_KEY] = true if ActiveModel::Type::Boolean.new.cast(json[ROW_STYLE_ITALIC_KEY])
     color = json[ROW_STYLE_COLOR_KEY].to_s
     metadata[ROW_STYLE_COLOR_KEY] = color if ROW_TEXT_COLORS.include?(color) && color != "default"
+    background_color = json[ROW_STYLE_BACKGROUND_COLOR_KEY].to_s
+    metadata[ROW_STYLE_BACKGROUND_COLOR_KEY] = background_color if BACKGROUND_COLORS.include?(background_color) && background_color != "default"
     gantt_color = json[ROW_STYLE_GANTT_COLOR_KEY].to_s.strip.upcase
     metadata[ROW_STYLE_GANTT_COLOR_KEY] = gantt_color if gantt_color.match?(GANTT_COLOR_HEX_PATTERN)
     metadata
   end
 
-  def apply_row_style_action!(action:, text_color: nil, gantt_color_hex: nil)
+  def apply_row_style_action!(action:, text_color: nil, background_color: nil, gantt_color_hex: nil)
     metadata = style_metadata.deep_dup
 
     case action.to_s
@@ -107,6 +125,13 @@ class DbRow < ApplicationRecord
       else
         metadata[ROW_STYLE_COLOR_KEY] = normalized
       end
+    when "set_background_color"
+      normalized = normalize_row_background_color(background_color)
+      if normalized == "default"
+        metadata.delete(ROW_STYLE_BACKGROUND_COLOR_KEY)
+      else
+        metadata[ROW_STYLE_BACKGROUND_COLOR_KEY] = normalized
+      end
     when "set_gantt_color"
       normalized = normalize_gantt_color_hex(gantt_color_hex)
       if normalized.present?
@@ -122,7 +147,13 @@ class DbRow < ApplicationRecord
       return
     end
 
-    payload = data_json.to_h.except(ROW_STYLE_BOLD_KEY, ROW_STYLE_ITALIC_KEY, ROW_STYLE_COLOR_KEY, ROW_STYLE_GANTT_COLOR_KEY).merge(metadata)
+    payload = data_json.to_h.except(
+      ROW_STYLE_BOLD_KEY,
+      ROW_STYLE_ITALIC_KEY,
+      ROW_STYLE_COLOR_KEY,
+      ROW_STYLE_BACKGROUND_COLOR_KEY,
+      ROW_STYLE_GANTT_COLOR_KEY
+    ).merge(metadata)
     self.data_json = payload
   end
 
@@ -159,6 +190,11 @@ class DbRow < ApplicationRecord
   def normalize_row_text_color(value)
     color = value.to_s
     ROW_TEXT_COLORS.include?(color) ? color : "default"
+  end
+
+  def normalize_row_background_color(value)
+    color = value.to_s
+    BACKGROUND_COLORS.include?(color) ? color : "default"
   end
 
   def normalize_gantt_color_hex(value)

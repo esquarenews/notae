@@ -43,6 +43,7 @@ end %>
 <% highlight_row_id = params[:highlight_row_id].presence %>
 <% name_is_sorted = @sort_by_name %>
 <% name_next_direction = name_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
+<% name_column_style_classes = name_column_style_classes_for(@database) %>
 
 <div class="notae-db-grid-wrap"
      data-controller="db-column-resize"
@@ -67,90 +68,14 @@ end %>
     <thead>
       <tr>
         <% name_width = column_widths["name"].to_i %>
-        <th class="notae-db-grid-name-col"
+        <th class="<%= [ "notae-db-grid-name-col", name_column_style_classes ].reject(&:blank?).join(" ") %>"
             data-db-column-resize-target="header"
             data-column-key="name"
             <% if name_width.positive? %>style="width: <%= name_width %>px; min-width: <%= name_width %>px;"<% end %>>
           <div class="notae-db-grid-property-header">
-            <% if can_persist_sort %>
-              <%= button_to database_database_view_path(
-                              workspace_slug: @workspace.slug,
-                              database_id: @database.id,
-                              id: @current_view.id,
-                              month: row_params[:month],
-                              sort_mode: row_params[:sort_mode],
-                              filter_property_id: row_params[:filter_property_id],
-                              filter_value: row_params[:filter_value],
-                              filter_operator: row_params[:filter_operator],
-                              rows_page: row_params[:rows_page],
-                              split_panel: row_params[:split_panel],
-                              split_page_id: row_params[:split_page_id],
-                              split_source: row_params[:split_source],
-                              split_row_id: row_params[:split_row_id]
-                            ),
-                            method: :patch,
-                            params: {
-                              database_view: {
-                                sort_property_id: DatabaseView::NAME_SORT_KEY,
-                                sort_direction: name_next_direction
-                              }
-                            },
-                            form: {
-                              data: { preserve_database_scroll: true }
-                            },
-                            form_class: "notae-db-grid-property-sort-form",
-                            class: "notae-db-grid-property-link",
-                            title: "Sort by Name" do %>
-                <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
-              <% end %>
-            <% else %>
-              <%= link_to database_path(
-                            workspace_slug: @workspace.slug,
-                            id: @database.id,
-                            view_id: @current_view&.id,
-                            month: row_params[:month],
-                            sort_property_id: DatabaseView::NAME_SORT_KEY,
-                            sort_direction: name_next_direction,
-                            sort_mode: row_params[:sort_mode],
-                            filter_property_id: params[:filter_property_id],
-                            filter_value: params[:filter_value],
-                            filter_operator: params[:filter_operator],
-                            rows_page: row_params[:rows_page],
-                            split_panel: row_params[:split_panel],
-                            split_page_id: row_params[:split_page_id],
-                            split_source: row_params[:split_source],
-                            split_row_id: row_params[:split_row_id]
-                          ),
-                          data: { preserve_database_scroll: true },
-                          class: "notae-db-grid-property-link",
-                          title: "Sort by Name" do %>
-                <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
-              <% end %>
-            <% end %>
-            <% if name_is_sorted %>
-              <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
-            <% end %>
-          </div>
-          <% if column_resize_enabled %>
-            <button type="button"
-                    class="notae-db-col-resize-handle"
-                    data-action="pointerdown->db-column-resize#startResize"
-                    aria-label="Resize Name column"
-                    title="Drag to resize column"></button>
-          <% end %>
-        </th>
-        <% visible_properties.each do |db_property| %>
-          <% property_is_sorted = @sort_property&.id == db_property.id %>
-          <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
-          <% property_key = "property_#{db_property.id}" %>
-          <% property_width = column_widths[property_key].to_i %>
-          <th data-db-column-resize-target="header"
-              data-column-key="<%= property_key %>"
-              <% if property_width.positive? %>style="width: <%= property_width %>px; min-width: <%= property_width %>px;"<% end %>>
-            <div class="notae-db-grid-property-header">
+            <div class="notae-db-grid-property-main">
               <% if can_persist_sort %>
-                <%= button_to db_property.name,
-                              database_database_view_path(
+                <%= button_to database_database_view_path(
                                 workspace_slug: @workspace.slug,
                                 database_id: @database.id,
                                 id: @current_view.id,
@@ -168,8 +93,8 @@ end %>
                               method: :patch,
                               params: {
                                 database_view: {
-                                  sort_property_id: db_property.id,
-                                  sort_direction: next_direction
+                                  sort_property_id: DatabaseView::NAME_SORT_KEY,
+                                  sort_direction: name_next_direction
                                 }
                               },
                               form: {
@@ -177,16 +102,17 @@ end %>
                               },
                               form_class: "notae-db-grid-property-sort-form",
                               class: "notae-db-grid-property-link",
-                              title: "Sort by #{db_property.name}" %>
+                              title: "Sort by Name" do %>
+                  <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
+                <% end %>
               <% else %>
-                <%= link_to db_property.name,
-                            database_path(
+                <%= link_to database_path(
                               workspace_slug: @workspace.slug,
                               id: @database.id,
                               view_id: @current_view&.id,
-                              month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
-                              sort_property_id: db_property.id,
-                              sort_direction: next_direction,
+                              month: row_params[:month],
+                              sort_property_id: DatabaseView::NAME_SORT_KEY,
+                              sort_direction: name_next_direction,
                               sort_mode: row_params[:sort_mode],
                               filter_property_id: params[:filter_property_id],
                               filter_value: params[:filter_value],
@@ -198,48 +124,106 @@ end %>
                               split_row_id: row_params[:split_row_id]
                             ),
                             data: { preserve_database_scroll: true },
-                            class: "notae-db-grid-property-link" %>
+                            class: "notae-db-grid-property-link",
+                            title: "Sort by Name" do %>
+                  <span class="notae-db-grid-heading"><span class="notae-db-grid-heading-icon">Aa</span> Name</span>
+                <% end %>
               <% end %>
-              <% if property_is_sorted %>
+              <% if name_is_sorted %>
                 <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
               <% end %>
+            </div>
+            <% if can_edit_properties %>
+              <%= render "databases/name_column_context_menu",
+                         workspace: @workspace,
+                         database: @database,
+                         row_params: row_params,
+                         row_color_options: row_color_options %>
+            <% end %>
+          </div>
+          <% if column_resize_enabled %>
+            <button type="button"
+                    class="notae-db-col-resize-handle"
+                    data-action="pointerdown->db-column-resize#startResize"
+                    aria-label="Resize Name column"
+                    title="Drag to resize column"></button>
+          <% end %>
+        </th>
+        <% visible_properties.each do |db_property| %>
+          <% property_is_sorted = @sort_property&.id == db_property.id %>
+          <% next_direction = property_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
+          <% property_key = "property_#{db_property.id}" %>
+          <% property_width = column_widths[property_key].to_i %>
+          <% property_style_classes = column_style_classes_for(db_property) %>
+          <th class="<%= property_style_classes %>"
+              data-db-column-resize-target="header"
+              data-column-key="<%= property_key %>"
+              <% if property_width.positive? %>style="width: <%= property_width %>px; min-width: <%= property_width %>px;"<% end %>>
+            <div class="notae-db-grid-property-header">
+              <div class="notae-db-grid-property-main">
+                <% if can_persist_sort %>
+                  <%= button_to db_property.name,
+                                database_database_view_path(
+                                  workspace_slug: @workspace.slug,
+                                  database_id: @database.id,
+                                  id: @current_view.id,
+                                  month: row_params[:month],
+                                  sort_mode: row_params[:sort_mode],
+                                  filter_property_id: row_params[:filter_property_id],
+                                  filter_value: row_params[:filter_value],
+                                  filter_operator: row_params[:filter_operator],
+                                  rows_page: row_params[:rows_page],
+                                  split_panel: row_params[:split_panel],
+                                  split_page_id: row_params[:split_page_id],
+                                  split_source: row_params[:split_source],
+                                  split_row_id: row_params[:split_row_id]
+                                ),
+                                method: :patch,
+                                params: {
+                                  database_view: {
+                                    sort_property_id: db_property.id,
+                                    sort_direction: next_direction
+                                  }
+                                },
+                                form: {
+                                  data: { preserve_database_scroll: true }
+                                },
+                                form_class: "notae-db-grid-property-sort-form",
+                                class: "notae-db-grid-property-link",
+                                title: "Sort by #{db_property.name}" %>
+                <% else %>
+                  <%= link_to db_property.name,
+                              database_path(
+                                workspace_slug: @workspace.slug,
+                                id: @database.id,
+                                view_id: @current_view&.id,
+                                month: (@view_type == "calendar" ? @calendar_month&.to_s : nil),
+                                sort_property_id: db_property.id,
+                                sort_direction: next_direction,
+                                sort_mode: row_params[:sort_mode],
+                                filter_property_id: params[:filter_property_id],
+                                filter_value: params[:filter_value],
+                                filter_operator: params[:filter_operator],
+                                rows_page: row_params[:rows_page],
+                                split_panel: row_params[:split_panel],
+                                split_page_id: row_params[:split_page_id],
+                                split_source: row_params[:split_source],
+                                split_row_id: row_params[:split_row_id]
+                              ),
+                              data: { preserve_database_scroll: true },
+                              class: "notae-db-grid-property-link" %>
+                <% end %>
+                <% if property_is_sorted %>
+                  <span class="notae-db-sort-indicator"><%= @sort_direction == "asc" ? "↑" : "↓" %></span>
+                <% end %>
+              </div>
               <% if can_edit_properties %>
-                <details class="notae-db-inline-details notae-db-column-rename-menu">
-                  <summary class="notae-db-grid-property-edit"
-                           aria-label="Rename <%= db_property.name %> column"
-                           title="Rename column">✎</summary>
-                  <div class="notae-db-inline-panel notae-db-column-rename-panel">
-                    <%= form_with model: db_property,
-                                  url: database_db_property_path(
-                                    workspace_slug: @workspace.slug,
-                                    database_id: @database.id,
-                                    id: db_property.id,
-                                    view_id: row_params[:view_id],
-                                    month: row_params[:month],
-                                    sort_property_id: row_params[:sort_property_id],
-                                    sort_direction: row_params[:sort_direction],
-                                    sort_mode: row_params[:sort_mode],
-                                    filter_property_id: row_params[:filter_property_id],
-                                    filter_value: row_params[:filter_value],
-                                    filter_operator: row_params[:filter_operator],
-                                    rows_page: row_params[:rows_page],
-                                    split_panel: row_params[:split_panel],
-                                    split_page_id: row_params[:split_page_id],
-                                    split_source: row_params[:split_source],
-                                    split_row_id: row_params[:split_row_id]
-                                  ),
-                                  method: :patch,
-                                  class: "notae-db-inline-form" do |form| %>
-                      <%= form.text_field :name,
-                                          value: db_property.name,
-                                          placeholder: "Column name",
-                                          required: true,
-                                          class: "notae-options-input",
-                                          aria: { label: "Column name" } %>
-                      <%= form.submit "Save", class: "notae-chip-button" %>
-                    <% end %>
-                  </div>
-                </details>
+                <%= render "databases/column_context_menu",
+                           db_property: db_property,
+                           workspace: @workspace,
+                           database: @database,
+                           row_params: row_params,
+                           row_color_options: row_color_options %>
               <% end %>
             </div>
             <% if column_resize_enabled %>

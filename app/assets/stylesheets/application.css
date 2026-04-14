@@ -4180,43 +4180,56 @@ turbo-frame#notae_sidebar_sections {
 .notae-db-grid-property-sort-form {
   margin: 0;
   display: inline-flex;
+  min-width: 0;
 }
 
 .notae-db-grid-property-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+  padding-right: 0.45rem;
+}
+
+.notae-db-grid-property-main {
+  min-width: 0;
+  flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
   gap: 0.24rem;
 }
 
-.notae-db-grid-property-edit {
-  list-style: none;
+.notae-db-column-hover-controls {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 1.2rem;
-  height: 1.2rem;
-  border: 1px solid color-mix(in srgb, var(--notae-border) 84%, transparent);
-  border-radius: 0.35rem;
-  background: color-mix(in srgb, var(--notae-surface-raised) 94%, transparent);
-  color: var(--notae-muted);
-  font-size: 0.72rem;
-  line-height: 1;
-  cursor: pointer;
+  flex: 0 0 auto;
+  opacity: 0;
+  pointer-events: none;
+  position: relative;
+  z-index: 6;
+  transition: opacity 120ms ease;
 }
 
-.notae-db-grid-property-edit::-webkit-details-marker {
-  display: none;
+.notae-db-grid th:hover .notae-db-column-hover-controls,
+.notae-db-grid th:focus-within .notae-db-column-hover-controls,
+.notae-db-column-hover-controls.is-menu-open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.notae-db-grid-property-edit:hover {
-  color: var(--notae-text);
-  border-color: color-mix(in srgb, var(--notae-accent) 26%, var(--notae-border));
+.notae-db-column-hover-control {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 7;
 }
 
-.notae-db-column-rename-panel {
-  left: auto;
-  right: 0;
-  min-width: 190px;
+.notae-db-grid-property-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notae-db-property-visibility-form {
@@ -4375,6 +4388,122 @@ turbo-frame#notae_sidebar_sections {
   box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--notae-accent) 65%, transparent);
 }
 
+.notae-db-grid th.is-column-bold,
+.notae-db-grid td.is-column-bold {
+  font-weight: 650;
+}
+
+.notae-db-grid th.is-column-bold .notae-db-grid-property-link,
+.notae-db-grid td.is-column-bold .notae-db-title-input,
+.notae-db-grid td.is-column-bold .notae-db-title-text,
+.notae-db-grid td.is-column-bold .notae-db-cell-input {
+  font-weight: 650;
+}
+
+.notae-db-grid th.is-column-italic,
+.notae-db-grid td.is-column-italic {
+  font-style: italic;
+}
+
+.notae-db-grid th.is-column-italic .notae-db-grid-property-link,
+.notae-db-grid td.is-column-italic .notae-db-title-input,
+.notae-db-grid td.is-column-italic .notae-db-title-text,
+.notae-db-grid td.is-column-italic .notae-db-cell-input {
+  font-style: italic;
+}
+
+.notae-db-grid th[class*="is-column-color-"],
+.notae-db-grid td[class*="is-column-color-"] {
+  color: var(--notae-db-column-text-color);
+}
+
+.notae-db-grid th[class*="is-column-color-"] .notae-db-grid-property-link,
+.notae-db-grid td[class*="is-column-color-"] .notae-db-title-input,
+.notae-db-grid td[class*="is-column-color-"] .notae-db-title-text,
+.notae-db-grid td[class*="is-column-color-"] .notae-db-cell-input {
+  color: var(--notae-db-column-text-color);
+}
+
+.notae-db-grid th.is-column-color-gray,
+.notae-db-grid td.is-column-color-gray {
+  --notae-db-column-text-color: #6b7280;
+}
+
+.notae-db-grid th.is-column-color-brown,
+.notae-db-grid td.is-column-color-brown {
+  --notae-db-column-text-color: #92400e;
+}
+
+.notae-db-grid th.is-column-color-orange,
+.notae-db-grid td.is-column-color-orange {
+  --notae-db-column-text-color: #ea580c;
+}
+
+.notae-db-grid th.is-column-color-yellow,
+.notae-db-grid td.is-column-color-yellow {
+  --notae-db-column-text-color: #ca8a04;
+}
+
+.notae-db-grid th.is-column-color-green,
+.notae-db-grid td.is-column-color-green {
+  --notae-db-column-text-color: #16a34a;
+}
+
+.notae-db-grid th.is-column-color-blue,
+.notae-db-grid td.is-column-color-blue {
+  --notae-db-column-text-color: #2563eb;
+}
+
+.notae-db-grid th.is-column-color-purple,
+.notae-db-grid td.is-column-color-purple {
+  --notae-db-column-text-color: #7c3aed;
+}
+
+.notae-db-grid th.is-column-color-pink,
+.notae-db-grid td.is-column-color-pink {
+  --notae-db-column-text-color: #db2777;
+}
+
+.notae-db-grid th.is-column-color-red,
+.notae-db-grid td.is-column-color-red {
+  --notae-db-column-text-color: #dc2626;
+}
+
+.notae-db-grid th[class*="is-column-bg-"],
+.notae-db-grid td[class*="is-column-bg-"] {
+  background: var(--notae-db-column-bg-color);
+}
+
+.notae-db-grid th.is-column-bg-peach,
+.notae-db-grid td.is-column-bg-peach {
+  --notae-db-column-bg-color: #fff1eb;
+}
+
+.notae-db-grid th.is-column-bg-lemon,
+.notae-db-grid td.is-column-bg-lemon {
+  --notae-db-column-bg-color: #fff9db;
+}
+
+.notae-db-grid th.is-column-bg-mint,
+.notae-db-grid td.is-column-bg-mint {
+  --notae-db-column-bg-color: #e8fbf2;
+}
+
+.notae-db-grid th.is-column-bg-sky,
+.notae-db-grid td.is-column-bg-sky {
+  --notae-db-column-bg-color: #edf6ff;
+}
+
+.notae-db-grid th.is-column-bg-lavender,
+.notae-db-grid td.is-column-bg-lavender {
+  --notae-db-column-bg-color: #f3efff;
+}
+
+.notae-db-grid th.is-column-bg-rose,
+.notae-db-grid td.is-column-bg-rose {
+  --notae-db-column-bg-color: #fff0f7;
+}
+
 .notae-db-grid-data-row.is-row-bold td {
   font-weight: 650;
 }
@@ -4445,6 +4574,34 @@ turbo-frame#notae_sidebar_sections {
 .notae-db-grid-data-row.is-row-color-red .notae-db-title-input,
 .notae-db-grid-data-row.is-row-color-red .notae-db-cell-input {
   color: #dc2626;
+}
+
+.notae-db-grid-data-row[class*="is-row-bg-"] td {
+  background: var(--notae-db-row-bg-color);
+}
+
+.notae-db-grid-data-row.is-row-bg-peach td {
+  --notae-db-row-bg-color: #fff1eb;
+}
+
+.notae-db-grid-data-row.is-row-bg-lemon td {
+  --notae-db-row-bg-color: #fff9db;
+}
+
+.notae-db-grid-data-row.is-row-bg-mint td {
+  --notae-db-row-bg-color: #e8fbf2;
+}
+
+.notae-db-grid-data-row.is-row-bg-sky td {
+  --notae-db-row-bg-color: #edf6ff;
+}
+
+.notae-db-grid-data-row.is-row-bg-lavender td {
+  --notae-db-row-bg-color: #f3efff;
+}
+
+.notae-db-grid-data-row.is-row-bg-rose td {
+  --notae-db-row-bg-color: #fff0f7;
 }
 
 .notae-db-grid-placeholder-row td {
@@ -4551,11 +4708,30 @@ turbo-frame#notae_sidebar_sections {
   position: fixed;
 }
 
+.notae-db-column-more-panel {
+  width: min(260px, 72vw);
+}
+
 .notae-db-row-more-actions {
   display: grid;
   gap: 0.3rem;
   position: relative;
   z-index: 1;
+}
+
+.notae-db-column-menu-rename-form {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.08rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--notae-border) 82%, transparent);
+}
+
+.notae-db-column-menu-save {
+  min-width: 4.2rem;
+  justify-content: center;
 }
 
 .notae-db-row-menu-form {
@@ -4627,6 +4803,12 @@ turbo-frame#notae_sidebar_sections {
   flex-shrink: 0;
 }
 
+.notae-db-row-menu-color-swatch.notae-menu-highlight-swatch {
+  width: 1.16rem;
+  height: 1.16rem;
+  border-radius: 0.3rem;
+}
+
 .notae-db-row-menu-color-swatch.is-default {
   background: #f5f5f4;
 }
@@ -4671,6 +4853,102 @@ turbo-frame#notae_sidebar_sections {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.26rem;
+}
+
+.notae-db-row-menu-section-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--notae-muted);
+  margin-top: 0.12rem;
+  margin-bottom: -0.06rem;
+}
+
+body.notae-theme-dark .notae-db-grid th.is-column-bg-peach,
+body.notae-theme-dark .notae-db-grid td.is-column-bg-peach,
+body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-peach td {
+  --notae-db-column-bg-color: #4a2f2a;
+  --notae-db-row-bg-color: #4a2f2a;
+}
+
+body.notae-theme-dark .notae-db-grid th.is-column-bg-lemon,
+body.notae-theme-dark .notae-db-grid td.is-column-bg-lemon,
+body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-lemon td {
+  --notae-db-column-bg-color: #4b4124;
+  --notae-db-row-bg-color: #4b4124;
+}
+
+body.notae-theme-dark .notae-db-grid th.is-column-bg-mint,
+body.notae-theme-dark .notae-db-grid td.is-column-bg-mint,
+body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-mint td {
+  --notae-db-column-bg-color: #1f3a33;
+  --notae-db-row-bg-color: #1f3a33;
+}
+
+body.notae-theme-dark .notae-db-grid th.is-column-bg-sky,
+body.notae-theme-dark .notae-db-grid td.is-column-bg-sky,
+body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-sky td {
+  --notae-db-column-bg-color: #1f344b;
+  --notae-db-row-bg-color: #1f344b;
+}
+
+body.notae-theme-dark .notae-db-grid th.is-column-bg-lavender,
+body.notae-theme-dark .notae-db-grid td.is-column-bg-lavender,
+body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-lavender td {
+  --notae-db-column-bg-color: #33294d;
+  --notae-db-row-bg-color: #33294d;
+}
+
+body.notae-theme-dark .notae-db-grid th.is-column-bg-rose,
+body.notae-theme-dark .notae-db-grid td.is-column-bg-rose,
+body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
+  --notae-db-column-bg-color: #4a2538;
+  --notae-db-row-bg-color: #4a2538;
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-db-grid th.is-column-bg-peach,
+  body.notae-theme-system .notae-db-grid td.is-column-bg-peach,
+  body.notae-theme-system .notae-db-grid-data-row.is-row-bg-peach td {
+    --notae-db-column-bg-color: #4a2f2a;
+    --notae-db-row-bg-color: #4a2f2a;
+  }
+
+  body.notae-theme-system .notae-db-grid th.is-column-bg-lemon,
+  body.notae-theme-system .notae-db-grid td.is-column-bg-lemon,
+  body.notae-theme-system .notae-db-grid-data-row.is-row-bg-lemon td {
+    --notae-db-column-bg-color: #4b4124;
+    --notae-db-row-bg-color: #4b4124;
+  }
+
+  body.notae-theme-system .notae-db-grid th.is-column-bg-mint,
+  body.notae-theme-system .notae-db-grid td.is-column-bg-mint,
+  body.notae-theme-system .notae-db-grid-data-row.is-row-bg-mint td {
+    --notae-db-column-bg-color: #1f3a33;
+    --notae-db-row-bg-color: #1f3a33;
+  }
+
+  body.notae-theme-system .notae-db-grid th.is-column-bg-sky,
+  body.notae-theme-system .notae-db-grid td.is-column-bg-sky,
+  body.notae-theme-system .notae-db-grid-data-row.is-row-bg-sky td {
+    --notae-db-column-bg-color: #1f344b;
+    --notae-db-row-bg-color: #1f344b;
+  }
+
+  body.notae-theme-system .notae-db-grid th.is-column-bg-lavender,
+  body.notae-theme-system .notae-db-grid td.is-column-bg-lavender,
+  body.notae-theme-system .notae-db-grid-data-row.is-row-bg-lavender td {
+    --notae-db-column-bg-color: #33294d;
+    --notae-db-row-bg-color: #33294d;
+  }
+
+  body.notae-theme-system .notae-db-grid th.is-column-bg-rose,
+  body.notae-theme-system .notae-db-grid td.is-column-bg-rose,
+  body.notae-theme-system .notae-db-grid-data-row.is-row-bg-rose td {
+    --notae-db-column-bg-color: #4a2538;
+    --notae-db-row-bg-color: #4a2538;
+  }
 }
 
 .notae-db-row-more-panel[hidden] {

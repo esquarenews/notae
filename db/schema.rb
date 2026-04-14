@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_14_093000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_14_123000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -324,6 +324,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_093000) do
     t.uuid "linked_page_id"
     t.boolean "locked", default: false, null: false
     t.string "name", null: false
+    t.string "name_column_background_color", default: "default", null: false
+    t.boolean "name_column_text_bold", default: false, null: false
+    t.string "name_column_text_color", default: "default", null: false
+    t.boolean "name_column_text_italic", default: false, null: false
     t.integer "permission_mode", default: 0, null: false
     t.boolean "small_text", default: false, null: false
     t.datetime "updated_at", null: false
@@ -353,11 +357,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_093000) do
   end
 
   create_table "db_properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "background_color", default: "default", null: false
     t.datetime "created_at", null: false
     t.uuid "database_id", null: false
     t.string "name", null: false
     t.integer "position", default: 1024, null: false
     t.integer "property_type", default: 0, null: false
+    t.boolean "text_bold", default: false, null: false
+    t.string "text_color", default: "default", null: false
+    t.boolean "text_italic", default: false, null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
     t.index ["database_id", "name"], name: "index_db_properties_on_database_id_and_name", unique: true

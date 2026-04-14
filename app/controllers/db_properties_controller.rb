@@ -27,8 +27,11 @@ class DbPropertiesController < ApplicationController
   def update
     authorize @db_property
 
-    if @db_property.update(db_property_update_params)
-      redirect_to database_redirect_location, notice: "Column renamed."
+    @db_property.assign_attributes(db_property_update_params)
+    apply_db_property_style_update!
+
+    if @db_property.save
+      redirect_to database_redirect_location, notice: db_property_update_notice
     else
       redirect_to database_redirect_location, alert: @db_property.errors.full_messages.to_sentence
     end
@@ -53,7 +56,26 @@ class DbPropertiesController < ApplicationController
   end
 
   def db_property_update_params
-    params.require(:db_property).permit(:name)
+    params.fetch(:db_property, ActionController::Parameters.new).permit(:name)
+  end
+
+  def db_property_style_params
+    params.fetch(:db_property, ActionController::Parameters.new).permit(:style_action, :text_color, :background_color)
+  end
+
+  def apply_db_property_style_update!
+    payload = db_property_style_params
+    return if payload[:style_action].blank?
+
+    @db_property.apply_column_style_action!(
+      action: payload[:style_action],
+      text_color: payload[:text_color],
+      background_color: payload[:background_color]
+    )
+  end
+
+  def db_property_update_notice
+    db_property_style_params[:style_action].present? ? "Column updated." : "Column renamed."
   end
 
   def seed_cells_for_existing_rows(db_property)

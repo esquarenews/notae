@@ -333,6 +333,7 @@ class DatabasesController < ApplicationController
       @database.errors.add(:base, "Grid is locked. Unlock to make changes.")
     else
       @database.assign_attributes(database_update_params)
+      apply_name_column_style_update!
       apply_header_customizations!
       apply_linked_page_update!
     end
@@ -518,6 +519,10 @@ class DatabasesController < ApplicationController
     permitted
   end
 
+  def database_style_params
+    params.fetch(:database, ActionController::Parameters.new).permit(:style_action, :text_color, :background_color)
+  end
+
   def database_link_params
     params.fetch(:database, ActionController::Parameters.new).permit(:linked_page_id, :linked_page_action)
   end
@@ -555,6 +560,17 @@ class DatabasesController < ApplicationController
     when "clear"
       @database.description = nil
     end
+  end
+
+  def apply_name_column_style_update!
+    payload = database_style_params
+    return if payload[:style_action].blank?
+
+    @database.apply_name_column_style_action!(
+      action: payload[:style_action],
+      text_color: payload[:text_color],
+      background_color: payload[:background_color]
+    )
   end
 
   def apply_linked_page_update!

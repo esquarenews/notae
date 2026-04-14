@@ -726,6 +726,134 @@ RSpec.describe "Databases", type: :request do
     expect(db_property.reload.name).to eq("Company")
   end
 
+  it "renders a hover column menu and applies column style actions" do
+    owner = User.create!(email: "database-column-style-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables Column Style", slug: "tables-column-style")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    db_property = DbProperty.create!(workspace: workspace, database: database, name: "Priority", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Q1")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: db_property, value_text: "High")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    column_header = html.at_css("th[data-column-key='property_#{db_property.id}']")
+    expect(column_header).to be_present
+    expect(column_header.at_css(".notae-db-column-hover-controls")).to be_present
+    expect(column_header.at_css("[aria-label='Column options for Priority']")).to be_present
+    expect(column_header.at_css(".notae-db-grid-property-edit")).to be_nil
+    expect(response.body).to include("Rename Priority column")
+    expect(response.body).to include("Bold column")
+    expect(response.body).to include("Italic column")
+    expect(response.body).to include("Background colour")
+
+    patch database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: db_property.id, view_id: view.id),
+          params: { db_property: { style_action: "toggle_bold" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id))
+
+    patch database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: db_property.id, view_id: view.id),
+          params: { db_property: { style_action: "toggle_italic" } }
+    patch database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: db_property.id, view_id: view.id),
+          params: { db_property: { style_action: "set_color", text_color: "blue" } }
+    patch database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: db_property.id, view_id: view.id),
+          params: { db_property: { style_action: "set_background_color", background_color: "mint" } }
+
+    db_property.reload
+    expect(db_property.column_bold?).to eq(true)
+    expect(db_property.column_italic?).to eq(true)
+    expect(db_property.column_text_color).to eq("blue")
+    expect(db_property.column_background_color).to eq("mint")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    column_header = html.at_css("th[data-column-key='property_#{db_property.id}']")
+    expect(column_header["class"]).to include("is-column-bold")
+    expect(column_header["class"]).to include("is-column-italic")
+    expect(column_header["class"]).to include("is-column-color-blue")
+    expect(column_header["class"]).to include("is-column-bg-mint")
+
+    styled_cell = html.at_css("#row_#{row.id} td.is-column-color-blue.is-column-bg-mint")
+    expect(styled_cell).to be_present
+    expect(styled_cell["class"]).to include("is-column-bold")
+    expect(styled_cell["class"]).to include("is-column-italic")
+  end
+
+  it "renders a hover menu for the name column and applies name column style actions" do
+    owner = User.create!(email: "database-name-column-style-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables Name Column Style", slug: "tables-name-column-style")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Q1")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    name_header = html.at_css("th[data-column-key='name']")
+    expect(name_header).to be_present
+    expect(name_header.at_css(".notae-db-column-hover-controls")).to be_present
+    expect(name_header.at_css("[aria-label='Column options for Name']")).to be_present
+    expect(response.body).to include("Bold column")
+    expect(response.body).to include("Italic column")
+    expect(response.body).to include("Background colour")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id),
+          params: { database: { style_action: "toggle_bold" } }
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id))
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id),
+          params: { database: { style_action: "toggle_italic" } }
+    patch database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id),
+          params: { database: { style_action: "set_color", text_color: "purple" } }
+    patch database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id),
+          params: { database: { style_action: "set_background_color", background_color: "rose" } }
+
+    database.reload
+    expect(database.name_column_text_bold?).to eq(true)
+    expect(database.name_column_text_italic?).to eq(true)
+    expect(database.name_column_text_color).to eq("purple")
+    expect(database.name_column_background_color).to eq("rose")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    name_header = html.at_css("th[data-column-key='name']")
+    expect(name_header["class"]).to include("is-column-bold")
+    expect(name_header["class"]).to include("is-column-italic")
+    expect(name_header["class"]).to include("is-column-color-purple")
+    expect(name_header["class"]).to include("is-column-bg-rose")
+
+    name_cell = html.at_css("#row_#{row.id} > td:first-child")
+    expect(name_cell).to be_present
+    expect(name_cell["class"]).to include("is-column-bold")
+    expect(name_cell["class"]).to include("is-column-italic")
+    expect(name_cell["class"]).to include("is-column-color-purple")
+    expect(name_cell["class"]).to include("is-column-bg-rose")
+  end
+
   it "sorts rows by column values" do
     owner = User.create!(email: "database-sort-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables Sort", slug: "tables-sort")
@@ -2394,7 +2522,8 @@ RSpec.describe "Databases", type: :request do
       data_json: {
         DbRow::ROW_STYLE_BOLD_KEY => true,
         DbRow::ROW_STYLE_ITALIC_KEY => true,
-        DbRow::ROW_STYLE_COLOR_KEY => "purple"
+        DbRow::ROW_STYLE_COLOR_KEY => "purple",
+        DbRow::ROW_STYLE_BACKGROUND_COLOR_KEY => "mint"
       }
     )
     tail_row = DbRow.create!(workspace: workspace, database: database, title: "Tail row")
@@ -2418,6 +2547,7 @@ RSpec.describe "Databases", type: :request do
     expect(duplicate_row.row_bold?).to eq(true)
     expect(duplicate_row.row_italic?).to eq(true)
     expect(duplicate_row.row_text_color).to eq("purple")
+    expect(duplicate_row.row_background_color).to eq("mint")
     expect(duplicate_row.db_cells.find_by!(db_property: status_property).value_text).to eq("In progress")
 
     ordered_ids = DbRow.for_database(database).active.ordered.pluck(:id)
@@ -2440,11 +2570,14 @@ RSpec.describe "Databases", type: :request do
           params: { db_row: { style_action: "toggle_italic" } }
     patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
           params: { db_row: { style_action: "set_color", text_color: "blue" } }
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
+          params: { db_row: { style_action: "set_background_color", background_color: "lemon" } }
 
     row.reload
     expect(row.row_bold?).to eq(true)
     expect(row.row_italic?).to eq(true)
     expect(row.row_text_color).to eq("blue")
+    expect(row.row_background_color).to eq("lemon")
 
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: cell.id),
           params: { db_cell: { value_text: "Done" } }
@@ -2453,6 +2586,7 @@ RSpec.describe "Databases", type: :request do
     expect(row.row_bold?).to eq(true)
     expect(row.row_italic?).to eq(true)
     expect(row.row_text_color).to eq("blue")
+    expect(row.row_background_color).to eq("lemon")
     expect(row.data_json["Status"]).to eq("Done")
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
@@ -2462,6 +2596,7 @@ RSpec.describe "Databases", type: :request do
     expect(styled_row).to be_present
     expect(styled_row["class"]).to include("is-row-bold")
     expect(styled_row["class"]).to include("is-row-italic")
+    expect(styled_row["class"]).to include("is-row-bg-lemon")
   end
 
   it "clears active sorting config when manually reordering rows" do
@@ -3126,6 +3261,21 @@ RSpec.describe "Databases", type: :request do
     expect(stylesheet).to include("  font-family: inherit;")
     expect(stylesheet).to include(".notae-db-template-button,\n.notae-db-toolbar-icon,\n.notae-page-tab-create-button {\n  min-height: 2.25rem;")
     expect(stylesheet).not_to include(".notae-db-gantt-toolbar-form .notae-chip-button.notae-db-gantt-toolbar-button {\n  appearance: none;\n  -webkit-appearance: none;\n  text-decoration: none;\n  cursor: pointer;\n  font: inherit;")
+  end
+
+  it "shows column hover controls and persistent column styling rules in the stylesheet" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-db-grid th:hover .notae-db-column-hover-controls,")
+    expect(stylesheet).to include(".notae-db-column-hover-controls {\n  display: inline-flex;\n  align-items: center;\n  flex: 0 0 auto;\n  opacity: 0;\n  pointer-events: none;\n  position: relative;\n  z-index: 6;")
+    expect(stylesheet).to include(".notae-db-column-hover-control {\n  flex-shrink: 0;\n  position: relative;\n  z-index: 7;")
+    expect(stylesheet).to include(".notae-db-grid th.is-column-bold,\n.notae-db-grid td.is-column-bold {")
+    expect(stylesheet).to include(".notae-db-grid th.is-column-color-blue,\n.notae-db-grid td.is-column-color-blue {")
+    expect(stylesheet).to include(".notae-db-grid th.is-column-bg-sky,\n.notae-db-grid td.is-column-bg-sky {")
+    expect(stylesheet).to include(".notae-db-grid-data-row.is-row-bg-lemon td {")
+    expect(stylesheet).to include(".notae-db-grid td[class*=\"is-column-color-\"] .notae-db-title-input,")
+    expect(stylesheet).to include(".notae-db-column-menu-rename-form {\n  margin: 0;")
+    expect(stylesheet).to include(".notae-db-row-menu-section-label {")
   end
 
   it "keeps split-view export buttons width-stable while feedback text changes" do

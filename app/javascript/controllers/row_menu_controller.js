@@ -9,7 +9,7 @@ export default class extends Controller {
 
   connect() {
     this.isOpen = false
-    this.controlsElement = this.element.closest(".notae-db-row-hover-controls")
+    this.controlsElement = this.element.closest(".notae-db-row-hover-controls, .notae-db-column-hover-controls")
     this.placeholder = null
     this.portalRoot = null
     this.buttonElement = this.buttonTarget

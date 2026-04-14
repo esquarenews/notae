@@ -99,4 +99,21 @@ RSpec.describe Database, type: :model do
     expect(database.cover_focal_y).to eq(50)
     expect(database.description).to be_nil
   end
+
+  it "applies persistent name column style actions" do
+    workspace = Workspace.create!(name: "Database model workspace name column", slug: "database-model-workspace-name-column")
+    database = described_class.create!(workspace: workspace, name: "Specs")
+
+    database.apply_name_column_style_action!(action: "toggle_bold")
+    database.apply_name_column_style_action!(action: "toggle_italic")
+    database.apply_name_column_style_action!(action: "set_color", text_color: "green")
+    database.apply_name_column_style_action!(action: "set_background_color", background_color: "sky")
+    database.save!
+
+    database.reload
+    expect(database.name_column_text_bold?).to eq(true)
+    expect(database.name_column_text_italic?).to eq(true)
+    expect(database.name_column_text_color).to eq("green")
+    expect(database.name_column_background_color).to eq("sky")
+  end
 end

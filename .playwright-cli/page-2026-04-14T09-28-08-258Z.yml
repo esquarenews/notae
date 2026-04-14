@@ -1,0 +1,143 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Codex Playwright
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/codex-playwright
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/codex-playwright/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/codex-playwright/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/codex-playwright/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/codex-playwright/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/codex-playwright/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/codex-playwright/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/codex-playwright/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "Codex Playwright" [ref=e82] [cursor=pointer]:
+                  - /url: /w/codex-playwright
+                  - generic [ref=e83]: Codex Playwright
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - button "Notarum" [expanded] [ref=e87] [cursor=pointer]:
+                - generic [ref=e88]: ▾
+                - generic [ref=e89]: Notarum
+              - button "Create new Nota" [ref=e91] [cursor=pointer]: "[+]"
+            - paragraph [ref=e93]: No Notarum yet.
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Column Menu Check Column Menu Check" [ref=e104] [cursor=pointer]:
+                  - /url: /w/codex-playwright/databases/c3f049e9-3d47-4618-a4cd-1457fdeeaa68
+                  - generic [ref=e105]:
+                    - generic "Column Menu Check" [ref=e106]:
+                      - generic [ref=e107]: 🗃️
+                    - text: Column Menu Check
+          - generic [ref=e108]:
+            - generic [ref=e109]:
+              - button "Meetings" [expanded] [ref=e110] [cursor=pointer]:
+                - generic [ref=e111]: ▾
+                - generic [ref=e112]: Meetings
+              - button "Create new Meeting" [ref=e114] [cursor=pointer]: "[+]"
+            - paragraph [ref=e116]: No meetings yet.
+          - generic [ref=e117]:
+            - button "Favorites" [expanded] [ref=e119] [cursor=pointer]:
+              - generic [ref=e120]: ▾
+              - generic [ref=e121]: Favorites
+            - paragraph [ref=e123]: No favorites yet.
+      - generic [ref=e124]:
+        - link "Settings" [ref=e125] [cursor=pointer]:
+          - /url: /w/codex-playwright/settings/preferences
+          - generic [ref=e126]:
+            - img [ref=e128]
+            - generic [ref=e131]: Settings
+        - link "Trash" [ref=e132] [cursor=pointer]:
+          - /url: /w/codex-playwright/trash
+          - generic [ref=e133]:
+            - img [ref=e135]
+            - generic [ref=e138]: Trash
+        - button "Sign out" [ref=e140] [cursor=pointer]:
+          - generic [ref=e141]:
+            - img [ref=e143]
+            - generic [ref=e146]: Sign out
+  - generic [ref=e147]:
+    - banner [ref=e148]:
+      - generic [ref=e150]:
+        - generic [ref=e151]: 📄
+        - generic [ref=e152]: Notae
+        - generic [ref=e153]: Private
+    - main [ref=e154]:
+      - paragraph [ref=e155]: Signed in successfully.
+      - generic [ref=e156]:
+        - generic [ref=e157]:
+          - img "Notae icon" [ref=e158]
+          - generic [ref=e159]:
+            - heading "Notae" [level=1] [ref=e160]
+            - paragraph [ref=e161]: Welcome back, codex-playwright@example.com.
+        - generic [ref=e162]:
+          - generic [ref=e163]:
+            - heading "Your workspaces" [level=2] [ref=e164]
+            - link "New workspace" [ref=e165] [cursor=pointer]:
+              - /url: /workspaces/new
+          - link "Codex Playwright codex-playwright" [ref=e167] [cursor=pointer]:
+            - /url: /w/codex-playwright
+            - strong [ref=e168]: Codex Playwright
+            - generic [ref=e169]: codex-playwright
+  - complementary [ref=e172]:
+    - generic [ref=e173]:
+      - generic [ref=e174]: New AI chat
+      - generic [ref=e175]:
+        - generic [ref=e176]: Auto
+        - button "Minimize AI assistant rail" [ref=e177] [cursor=pointer]: ▸
+    - generic [ref=e178]:
+      - paragraph [ref=e179]: Notae AI assistant
+      - paragraph [ref=e180]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - paragraph [ref=e183]: Join a workspace to use Notae AI assistant prompts.

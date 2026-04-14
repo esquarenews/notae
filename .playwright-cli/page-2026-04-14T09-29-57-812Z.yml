@@ -1,0 +1,273 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Codex Playwright
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/codex-playwright
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/codex-playwright/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/codex-playwright/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/codex-playwright/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/codex-playwright/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/codex-playwright/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/codex-playwright/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/codex-playwright/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "Codex Playwright" [ref=e82] [cursor=pointer]:
+                  - /url: /w/codex-playwright
+                  - generic [ref=e83]: Codex Playwright
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - button "Notarum" [expanded] [ref=e87] [cursor=pointer]:
+                - generic [ref=e88]: ▾
+                - generic [ref=e89]: Notarum
+              - button "Create new Nota" [ref=e91] [cursor=pointer]: "[+]"
+            - paragraph [ref=e93]: No Notarum yet.
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Column Menu Check Column Menu Check" [ref=e104] [cursor=pointer]:
+                  - /url: /w/codex-playwright/databases/c3f049e9-3d47-4618-a4cd-1457fdeeaa68
+                  - generic [ref=e105]:
+                    - generic "Column Menu Check" [ref=e106]:
+                      - generic [ref=e107]: 🗃️
+                    - text: Column Menu Check
+          - generic [ref=e108]:
+            - generic [ref=e109]:
+              - button "Meetings" [expanded] [ref=e110] [cursor=pointer]:
+                - generic [ref=e111]: ▾
+                - generic [ref=e112]: Meetings
+              - button "Create new Meeting" [ref=e114] [cursor=pointer]: "[+]"
+            - paragraph [ref=e116]: No meetings yet.
+          - generic [ref=e117]:
+            - button "Favorites" [expanded] [ref=e119] [cursor=pointer]:
+              - generic [ref=e120]: ▾
+              - generic [ref=e121]: Favorites
+            - paragraph [ref=e123]: No favorites yet.
+      - generic [ref=e124]:
+        - link "Settings" [ref=e125] [cursor=pointer]:
+          - /url: /w/codex-playwright/settings/preferences
+          - generic [ref=e126]:
+            - img [ref=e128]
+            - generic [ref=e131]: Settings
+        - link "Trash" [ref=e132] [cursor=pointer]:
+          - /url: /w/codex-playwright/trash
+          - generic [ref=e133]:
+            - img [ref=e135]
+            - generic [ref=e138]: Trash
+        - button "Sign out" [ref=e140] [cursor=pointer]:
+          - generic [ref=e141]:
+            - img [ref=e143]
+            - generic [ref=e146]: Sign out
+  - generic [ref=e147]:
+    - banner [ref=e148]:
+      - generic [ref=e150]:
+        - generic "Grid icon" [ref=e152]:
+          - generic [ref=e153]: 🗃️
+        - generic [ref=e154]: Column Menu Check
+        - generic [ref=e155]: Shared to workspace
+      - generic [ref=e156]:
+        - generic [ref=e157]: Edited 18 minutes ago
+        - button "Add to favorites" [ref=e159] [cursor=pointer]: ☆
+        - group [ref=e160]:
+          - generic "Grid comments" [ref=e161] [cursor=pointer]: 💬
+        - group [ref=e162]:
+          - generic "Options" [ref=e163] [cursor=pointer]:
+            - generic [ref=e164]: ⚙
+            - generic [ref=e165]: Options
+    - main [ref=e166]:
+      - generic [ref=e168]:
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - group [ref=e171]:
+              - generic "Add icon" [ref=e172] [cursor=pointer]:
+                - generic [ref=e173]: ◌
+                - generic [ref=e174]: Add icon
+            - group [ref=e175]:
+              - generic "Add cover" [ref=e176] [cursor=pointer]:
+                - generic [ref=e177]: ▭
+                - generic [ref=e178]: Add cover
+            - group [ref=e179]:
+              - generic "Add description" [ref=e180] [cursor=pointer]:
+                - generic [ref=e181]: ℹ
+                - generic [ref=e182]: Add description
+          - generic [ref=e183]:
+            - textbox "Grid title" [ref=e184]: Column Menu Check
+            - text: Saved
+          - region "Linked tabs" [ref=e185]:
+            - navigation [ref=e186]:
+              - generic [ref=e187]:
+                - link "Tab 1" [ref=e188] [cursor=pointer]:
+                  - /url: /w/codex-playwright/databases/c3f049e9-3d47-4618-a4cd-1457fdeeaa68
+                  - generic [ref=e189]: Tab 1
+                - group [ref=e190]:
+                  - generic "Tab options" [ref=e191] [cursor=pointer]: ⋯
+            - button "+ New tab" [ref=e193] [cursor=pointer]
+        - generic [ref=e194]:
+          - generic [ref=e196]:
+            - generic [ref=e197]: ⊞
+            - text: Grid
+          - generic [ref=e198]:
+            - generic [ref=e199]:
+              - group [ref=e200]:
+                - generic "Templates" [ref=e201] [cursor=pointer]:
+                  - generic [ref=e202]: Templates
+                  - generic [ref=e203]: ▾
+              - group [ref=e204]:
+                - generic "Views" [ref=e205] [cursor=pointer]:
+                  - generic [ref=e206]: Views
+                  - generic [ref=e207]: ▾
+            - group [ref=e208]:
+              - generic "⚡" [ref=e209] [cursor=pointer]
+            - group [ref=e210]:
+              - generic "⚙" [ref=e211] [cursor=pointer]
+        - paragraph [ref=e212]: 1 row
+        - generic [ref=e213]:
+          - link "Column Menu Check" [ref=e214] [cursor=pointer]:
+            - /url: /w/codex-playwright/databases/c3f049e9-3d47-4618-a4cd-1457fdeeaa68?split_page_id=2b6f68bb-4785-4ed5-8339-c4e493b9285e&split_source=database&view_id=9d35ade4-318f-4eb9-b6bf-33f426b29aff
+          - button "Unlink" [ref=e216]
+        - table [ref=e218]:
+          - rowgroup [ref=e223]:
+            - row "Aa Name Column options for Name Resize Name column Priority Column options for Priority Resize Priority column" [ref=e224]:
+              - columnheader "Aa Name Column options for Name Resize Name column" [ref=e225]:
+                - generic [ref=e226]:
+                  - button "Aa Name" [ref=e229] [cursor=pointer]:
+                    - generic [ref=e230]:
+                      - generic [ref=e231]: Aa
+                      - text: Name
+                  - generic:
+                    - button "Column options for Name": ⋯
+                - button "Resize Name column" [ref=e232]
+              - columnheader "Priority Column options for Priority Resize Priority column" [ref=e233]:
+                - generic [ref=e234]:
+                  - button "Priority" [ref=e237] [cursor=pointer]
+                  - button "Column options for Priority" [ref=e313] [cursor=pointer]: ⋯
+                - button "Resize Priority column" [ref=e238]
+              - columnheader [ref=e239]:
+                - group [ref=e240]:
+                  - generic "+ Add property" [ref=e241] [cursor=pointer]
+                  - option "Text" [selected]
+                  - option "Number"
+                  - option "Date"
+                  - option "Checkbox"
+                  - option "Select"
+          - rowgroup [ref=e242]:
+            - row "Insert row below Drag to reorder Row options Row one Create linked Nota High" [ref=e243]:
+              - cell "Insert row below Drag to reorder Row options Row one Create linked Nota" [ref=e244]:
+                - generic [ref=e245]:
+                  - generic:
+                    - generic:
+                      - button "Insert row below": +
+                    - button "Drag to reorder": ⠿
+                    - generic:
+                      - button "Row options": ⋯
+                  - generic [ref=e247]:
+                    - generic [ref=e248]:
+                      - textbox "Enter name" [ref=e249]: Row one
+                      - button [ref=e250]
+                    - button "Create linked Nota" [ref=e252] [cursor=pointer]: +
+                    - group [ref=e253]:
+                      - generic "Choose linked Nota" [ref=e254] [cursor=pointer]: 🔗
+              - cell "High" [ref=e255]:
+                - textbox [ref=e257]: High
+              - cell [ref=e258]
+          - rowgroup [ref=e259]:
+            - row [ref=e260]:
+              - cell [ref=e261]
+              - cell [ref=e262]
+              - cell [ref=e263]
+            - row [ref=e264]:
+              - cell [ref=e265]
+              - cell [ref=e266]
+              - cell [ref=e267]
+            - row [ref=e268]:
+              - cell [ref=e269]
+              - cell [ref=e270]
+              - cell [ref=e271]
+            - row [ref=e272]:
+              - cell [ref=e273]
+              - cell [ref=e274]
+              - cell [ref=e275]
+            - row [ref=e276]:
+              - cell [ref=e277]
+              - cell [ref=e278]
+              - cell [ref=e279]
+          - rowgroup [ref=e280]:
+            - row "+ New row" [ref=e281]:
+              - cell "+ New row" [ref=e282]:
+                - button "+ New row" [ref=e284] [cursor=pointer]
+              - cell [ref=e285]
+              - cell [ref=e286]
+        - generic [ref=e287]:
+          - heading "Backlinks" [level=2] [ref=e288]
+          - paragraph [ref=e289]: No backlinks yet.
+  - complementary "Workspace notification bar" [ref=e290]:
+    - generic [ref=e291]: Tue 14 Apr · 9:29
+  - complementary [ref=e294]:
+    - generic [ref=e295]:
+      - generic [ref=e296]: New AI chat
+      - generic [ref=e297]:
+        - combobox [ref=e298]:
+          - option "Auto" [selected]
+          - option "This document only"
+          - option "This workspace only"
+          - option "Whole account"
+        - button "Minimize AI assistant rail" [ref=e299] [cursor=pointer]: ▸
+    - generic [ref=e300]:
+      - paragraph [ref=e301]: Notae AI assistant
+      - paragraph [ref=e302]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - generic [ref=e304]:
+      - generic [ref=e305]: Prompt
+      - textbox "Prompt" [ref=e307]:
+        - /placeholder: Ask a question or request a draft action for review.
+      - button "Send" [ref=e309] [cursor=pointer]
+    - button "Usage" [ref=e311] [cursor=pointer]

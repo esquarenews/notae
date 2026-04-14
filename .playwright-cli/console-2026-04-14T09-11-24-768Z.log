@@ -1,0 +1,24 @@
+[     928ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[  556442ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  571414ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  586459ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  601398ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  616385ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  631405ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  646388ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  661422ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  676402ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  691399ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  706554ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  721394ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  736613ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  751452ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  766402ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  781561ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  796405ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  811400ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  826392ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  841399ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  856501ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  871399ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0
+[  916315ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:4000/w/codex-playwright/ai-assistant/updates:0

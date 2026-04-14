@@ -1,0 +1,141 @@
+<% column_update_path = database_db_property_path(
+  workspace_slug: workspace.slug,
+  database_id: database.id,
+  id: db_property.id,
+  view_id: row_params[:view_id],
+  month: row_params[:month],
+  sort_property_id: row_params[:sort_property_id],
+  sort_direction: row_params[:sort_direction],
+  sort_mode: row_params[:sort_mode],
+  filter_property_id: row_params[:filter_property_id],
+  filter_value: row_params[:filter_value],
+  filter_operator: row_params[:filter_operator],
+  rows_page: row_params[:rows_page],
+  split_panel: row_params[:split_panel],
+  split_page_id: row_params[:split_page_id],
+  split_source: row_params[:split_source],
+  split_row_id: row_params[:split_row_id]
+) %>
+<% column_can_destroy = policy(db_property).destroy? && !database.locked? %>
+
+<div class="notae-db-column-hover-controls"
+     data-controller="row-menu"
+     data-row-menu-gap-value="6"
+     data-row-menu-margin-value="12">
+  <button type="button"
+          class="notae-db-row-hover-control notae-db-column-hover-control"
+          title="Column options"
+          aria-label="Column options for <%= db_property.name %>"
+          aria-expanded="false"
+          data-row-menu-target="button"
+          data-action="click->row-menu#toggle">⋯</button>
+  <div class="notae-db-inline-panel notae-db-row-more-panel notae-db-column-more-panel"
+       data-row-menu-target="panel"
+       hidden>
+    <div class="notae-db-row-more-actions">
+      <%= form_with model: db_property,
+                    url: column_update_path,
+                    method: :patch,
+                    class: "notae-db-inline-form notae-db-column-menu-rename-form",
+                    data: { preserve_database_scroll: true } do |form| %>
+        <%= form.text_field :name,
+                            value: db_property.name,
+                            placeholder: "Column name",
+                            required: true,
+                            class: "notae-options-input",
+                            aria: { label: "Rename #{db_property.name} column" } %>
+        <%= form.submit "Save", class: "notae-chip-button notae-db-column-menu-save" %>
+      <% end %>
+
+      <%= form_with model: db_property,
+                    url: column_update_path,
+                    method: :patch,
+                    class: "notae-db-row-menu-form",
+                    data: { preserve_database_scroll: true } do |form| %>
+        <%= form.hidden_field :style_action, value: "toggle_bold" %>
+        <button type="submit" class="notae-db-row-menu-button">
+          <span class="notae-db-row-menu-icon">B</span>
+          <span class="notae-db-row-menu-label"><%= db_property.column_bold? ? "Unbold column" : "Bold column" %></span>
+        </button>
+      <% end %>
+
+      <%= form_with model: db_property,
+                    url: column_update_path,
+                    method: :patch,
+                    class: "notae-db-row-menu-form",
+                    data: { preserve_database_scroll: true } do |form| %>
+        <%= form.hidden_field :style_action, value: "toggle_italic" %>
+        <button type="submit" class="notae-db-row-menu-button">
+          <span class="notae-db-row-menu-icon">I</span>
+          <span class="notae-db-row-menu-label"><%= db_property.column_italic? ? "Unitalic column" : "Italic column" %></span>
+        </button>
+      <% end %>
+
+      <div class="notae-db-row-menu-section-label">Text colour</div>
+      <div class="notae-db-row-menu-color-grid">
+        <% row_color_options.each do |label, color_key| %>
+          <%= form_with model: db_property,
+                        url: column_update_path,
+                        method: :patch,
+                        class: "notae-db-row-menu-form",
+                        data: { preserve_database_scroll: true } do |form| %>
+            <%= form.hidden_field :style_action, value: "set_color" %>
+            <%= form.hidden_field :text_color, value: color_key %>
+            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if db_property.column_text_color == color_key %>">
+              <span class="notae-db-row-menu-color-swatch is-<%= color_key %>"></span>
+              <span class="notae-db-row-menu-label"><%= label %></span>
+            </button>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="notae-db-row-menu-section-label">Background colour</div>
+      <div class="notae-db-row-menu-color-grid">
+        <% DbRow::BACKGROUND_COLOR_OPTIONS.each do |label, color_key| %>
+          <%= form_with model: db_property,
+                        url: column_update_path,
+                        method: :patch,
+                        class: "notae-db-row-menu-form",
+                        data: { preserve_database_scroll: true } do |form| %>
+            <%= form.hidden_field :style_action, value: "set_background_color" %>
+            <%= form.hidden_field :background_color, value: color_key %>
+            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if db_property.column_background_color == color_key %>">
+              <span class="notae-db-row-menu-color-swatch notae-menu-highlight-swatch is-<%= color_key %>"></span>
+              <span class="notae-db-row-menu-label"><%= label %></span>
+            </button>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% if column_can_destroy %>
+        <%= button_to database_db_property_path(
+                        workspace_slug: workspace.slug,
+                        database_id: database.id,
+                        id: db_property.id,
+                        view_id: row_params[:view_id],
+                        month: row_params[:month],
+                        sort_property_id: row_params[:sort_property_id],
+                        sort_direction: row_params[:sort_direction],
+                        sort_mode: row_params[:sort_mode],
+                        filter_property_id: row_params[:filter_property_id],
+                        filter_value: row_params[:filter_value],
+                        filter_operator: row_params[:filter_operator],
+                        rows_page: row_params[:rows_page],
+                        split_panel: row_params[:split_panel],
+                        split_page_id: row_params[:split_page_id],
+                        split_source: row_params[:split_source],
+                        split_row_id: row_params[:split_row_id]
+                      ),
+                      method: :delete,
+                      class: "notae-db-row-menu-button is-danger",
+                      form: {
+                        class: "notae-db-row-menu-form",
+                        data: { preserve_database_scroll: true }
+                      } do %>
+          <span class="notae-db-row-menu-icon">x</span>
+          <span class="notae-db-row-menu-label">Delete column</span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

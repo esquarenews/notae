@@ -9,6 +9,8 @@
 <% row_style_classes << "is-row-italic" if row.row_italic? %>
 <% row_color_class = row.row_text_color %>
 <% row_style_classes << "is-row-color-#{row_color_class}" unless row_color_class == "default" %>
+<% row_background_class = row.row_background_color %>
+<% row_style_classes << "is-row-bg-#{row_background_class}" unless row_background_class == "default" %>
 <% page_search_url = workspace_document_targets_path(workspace_slug: workspace.slug, kind: "page") %>
 <% row_split_params = row_params.merge(
   workspace_slug: workspace.slug,
@@ -23,7 +25,8 @@
     data-db-table-reorder-target="row"
     data-db-table-reorder-row-id="<%= row.id %>"
     data-action="dragover->db-table-reorder#dragover drop->db-table-reorder#drop dragleave->db-table-reorder#dragleave">
-  <td>
+  <% name_column_style_classes = name_column_style_classes_for(database) %>
+  <td class="<%= name_column_style_classes %>">
     <% row_update_path = database_db_row_path(
       {
         workspace_slug: workspace.slug,
@@ -182,7 +185,8 @@
   </td>
   <% visible_properties.each do |db_property| %>
     <% db_cell = cells_by_key[[row.id, db_property.id]] %>
-    <td>
+    <% property_style_classes = column_style_classes_for(db_property) %>
+    <td class="<%= property_style_classes %>">
       <% if db_cell && policy(db_cell).update? && !database.locked? %>
         <%= form_with model: db_cell,
                       url: database_db_cell_path(

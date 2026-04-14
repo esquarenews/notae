@@ -36,6 +36,8 @@ class Database < ApplicationRecord
   validates :locked, inclusion: { in: [ true, false ] }, if: -> { self.class.has_column?(:locked) }
   validates :small_text, inclusion: { in: [ true, false ] }, if: -> { self.class.has_column?(:small_text) }
   validates :font_style, inclusion: { in: FONT_STYLES }, if: -> { self.class.has_column?(:font_style) }
+  validates :name_column_text_color, inclusion: { in: DbRow::ROW_TEXT_COLORS }, if: -> { self.class.has_column?(:name_column_text_color) }
+  validates :name_column_background_color, inclusion: { in: DbRow::BACKGROUND_COLORS }, if: -> { self.class.has_column?(:name_column_background_color) }
   validate :icon_must_be_short_or_custom, if: -> { self.class.has_column?(:icon) }
   validates :cover_preset_key, inclusion: { in: COVER_PRESET_KEYS }, allow_blank: true, if: -> { self.class.has_column?(:cover_preset_key) }
   validates :cover_focal_y,
@@ -60,6 +62,8 @@ class Database < ApplicationRecord
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
 
   before_validation :normalize_icon
+  before_validation :normalize_name_column_text_color!, if: -> { self.class.has_column?(:name_column_text_color) }
+  before_validation :normalize_name_column_background_color!, if: -> { self.class.has_column?(:name_column_background_color) }
 
   def cover?
     cover_image.attached? || cover_preset_key.present? || cover_remote_url.present?
@@ -247,6 +251,82 @@ class Database < ApplicationRecord
     ActiveModel::Type::Boolean.new.cast(locked)
   end
 
+  def name_column_text_bold
+    return false unless self.class.has_column?(:name_column_text_bold)
+
+    self[:name_column_text_bold]
+  end
+
+  def name_column_text_bold=(value)
+    return unless self.class.has_column?(:name_column_text_bold)
+
+    self[:name_column_text_bold] = ActiveModel::Type::Boolean.new.cast(value)
+  end
+
+  def name_column_text_bold?
+    ActiveModel::Type::Boolean.new.cast(name_column_text_bold)
+  end
+
+  def name_column_text_italic
+    return false unless self.class.has_column?(:name_column_text_italic)
+
+    self[:name_column_text_italic]
+  end
+
+  def name_column_text_italic=(value)
+    return unless self.class.has_column?(:name_column_text_italic)
+
+    self[:name_column_text_italic] = ActiveModel::Type::Boolean.new.cast(value)
+  end
+
+  def name_column_text_italic?
+    ActiveModel::Type::Boolean.new.cast(name_column_text_italic)
+  end
+
+  def name_column_text_color
+    return "default" unless self.class.has_column?(:name_column_text_color)
+
+    color = self[:name_column_text_color].presence || "default"
+    DbRow::ROW_TEXT_COLORS.include?(color) ? color : "default"
+  end
+
+  def name_column_text_color=(value)
+    return unless self.class.has_column?(:name_column_text_color)
+
+    self[:name_column_text_color] = normalize_name_column_text_color(value)
+  end
+
+  def name_column_background_color
+    return "default" unless self.class.has_column?(:name_column_background_color)
+
+    color = self[:name_column_background_color].presence || "default"
+    DbRow::BACKGROUND_COLORS.include?(color) ? color : "default"
+  end
+
+  def name_column_background_color=(value)
+    return unless self.class.has_column?(:name_column_background_color)
+
+    self[:name_column_background_color] = normalize_name_column_background_color(value)
+  end
+
+  def apply_name_column_style_action!(action:, text_color: nil, background_color: nil)
+    case action.to_s
+    when "toggle_bold"
+      self.name_column_text_bold = !name_column_text_bold?
+    when "toggle_italic"
+      self.name_column_text_italic = !name_column_text_italic?
+    when "set_color"
+      self.name_column_text_color = text_color
+    when "set_background_color"
+      self.name_column_background_color = background_color
+    when "clear_styles"
+      self.name_column_text_bold = false
+      self.name_column_text_italic = false
+      self.name_column_text_color = "default"
+      self.name_column_background_color = "default"
+    end
+  end
+
   def visible_to_specific_user?(user)
     return false unless user
     return true if created_by_id == user.id
@@ -288,6 +368,24 @@ class Database < ApplicationRecord
     return unless self.class.has_column?(:icon)
 
     self.icon = normalize_icon_token(icon)
+  end
+
+  def normalize_name_column_text_color!(value = self[:name_column_text_color])
+    self[:name_column_text_color] = normalize_name_column_text_color(value)
+  end
+
+  def normalize_name_column_text_color(value)
+    color = value.to_s
+    DbRow::ROW_TEXT_COLORS.include?(color) ? color : "default"
+  end
+
+  def normalize_name_column_background_color!(value = self[:name_column_background_color])
+    self[:name_column_background_color] = normalize_name_column_background_color(value)
+  end
+
+  def normalize_name_column_background_color(value)
+    color = value.to_s
+    DbRow::BACKGROUND_COLORS.include?(color) ? color : "default"
   end
 
   def linked_page_workspace_matches

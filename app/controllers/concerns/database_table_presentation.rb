@@ -18,7 +18,7 @@ module DatabaseTablePresentation
   }.freeze
 
   included do
-    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for
+    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for, :column_style_classes_for, :name_column_style_classes_for
   end
 
   private
@@ -64,6 +64,32 @@ module DatabaseTablePresentation
     return nil unless due_date < Date.current
 
     "is-overdue-highlight"
+  end
+
+  def column_style_classes_for(property)
+    return "" if property.blank?
+
+    classes = []
+    classes << "is-column-bold" if property.column_bold?
+    classes << "is-column-italic" if property.column_italic?
+    color = property.column_text_color
+    classes << "is-column-color-#{color}" unless color == "default"
+    background_color = property.column_background_color
+    classes << "is-column-bg-#{background_color}" unless background_color == "default"
+    classes.join(" ")
+  end
+
+  def name_column_style_classes_for(database)
+    return "" if database.blank?
+
+    classes = []
+    classes << "is-column-bold" if database.name_column_text_bold?
+    classes << "is-column-italic" if database.name_column_text_italic?
+    color = database.name_column_text_color
+    classes << "is-column-color-#{color}" unless color == "default"
+    background_color = database.name_column_background_color
+    classes << "is-column-bg-#{background_color}" unless background_color == "default"
+    classes.join(" ")
   end
 
   def task_status_property?(property)
