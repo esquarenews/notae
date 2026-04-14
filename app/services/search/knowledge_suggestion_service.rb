@@ -23,6 +23,7 @@ module Search
     MODE_DELTA = "delta".freeze
     EMAIL_ACTIONABLE_WINDOW = 30.days
     RECENT_PRIORITY_WINDOW = 7.days
+    CALENDAR_ROUTINE_TITLE_PATTERN = /\b(blockout|focus|hold|busy|commute|travel|leave|arrive|school|pickup|dropoff|lunch|gym|workout)\b/i
 
     attr_reader :unavailable_reason
 
@@ -161,6 +162,10 @@ module Search
         - Do not invent owners or tasks.
         - Keep the response concise and actionable.
         - Prefer concrete next-step suggestions over generic advice.
+        - If the context includes calendar events labelled DayFocus=today_upcoming or Signal=important_one_off, mention the concrete appointment titles and times that still matter today.
+        - Give special weight to one-off, externally sourced, attendee-bearing, or meeting-link calendar events.
+        - Treat recurring blockouts, routine internal holds, and Tasks project holds as low priority unless they create a conflict or require action.
+        - Avoid generic calendar boilerplate such as saying the calendar simply confirms availability or that scheduled engagements exist.
         - Prioritize the freshest evidence first, especially items from the last 7 days.
         - Treat emails older than #{EMAIL_ACTIONABLE_WINDOW / 1.day} days as historical context unless newer evidence clearly re-opens the work.
         - When the current user is the owner, assignee, or person being asked to act, refer to them as "you" rather than by name.
@@ -205,6 +210,10 @@ module Search
         - Every summary, insight, suggestion rationale, and related note reason must be grounded in citations.
         - Do not invent owners or tasks.
         - Keep the response concise and actionable.
+        - If the changed context includes calendar events labelled DayFocus=today_upcoming or Signal=important_one_off, mention the concrete appointment titles and times that still matter today.
+        - Give special weight to one-off, externally sourced, attendee-bearing, or meeting-link calendar events.
+        - Treat recurring blockouts, routine internal holds, and Tasks project holds as low priority unless they create a conflict or require action.
+        - Avoid generic calendar boilerplate such as saying the calendar simply confirms availability or that scheduled engagements exist.
         - Prioritize the freshest evidence first, especially items from the last 7 days.
         - Treat emails older than #{EMAIL_ACTIONABLE_WINDOW / 1.day} days as historical context unless newer evidence clearly re-opens the work.
         - When the current user is the owner, assignee, or person being asked to act, refer to them as "you" rather than by name.
@@ -408,6 +417,8 @@ module Search
     def context_priority(chunk)
       timestamp = context_sort_timestamp(chunk)
       return 0 if timestamp.blank?
+      return 6 if high_signal_calendar_chunk?(chunk)
+      return 5 if upcoming_calendar_chunk?(chunk)
       return 4 if chunk.source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE && timestamp >= RECENT_PRIORITY_WINDOW.ago
       return 3 if timestamp >= RECENT_PRIORITY_WINDOW.ago
       return 2 unless chunk.source_type == SearchChunk::SOURCE_EPISTULARIUM_MESSAGE
@@ -443,6 +454,8 @@ module Search
 
     def context_lines_for(context_chunks)
       context_chunks.map.with_index do |chunk, index|
+        next calendar_context_line_for(chunk, index) if chunk.source_type == SearchChunk::SOURCE_KALENDARIUM_EVENT
+
         entities = Array(chunk.metadata_json.to_h["entities"]&.values).flatten.uniq.first(8).join(", ")
         timestamp = context_sort_timestamp(chunk)
         "[#{index + 1}] Kind=#{chunk.source_type}; Title=#{chunk.source_title}; URI=#{chunk.source_uri}; Timestamp=#{timestamp&.iso8601 || 'unknown'}; Freshness=#{freshness_label_for(chunk, timestamp)}; Entities=#{entities}; Excerpt=#{chunk.text}"
@@ -458,7 +471,7 @@ module Search
     end
 
     def current_time_label
-      Time.use_zone(user.time_zone.presence || Time.zone) { Time.current.iso8601 }
+      current_time_in_user_zone.iso8601
     end
 
     def viewer_prompt_context
@@ -525,6 +538,115 @@ module Search
           normalized_owner.end_with?(" #{normalized_alias}") ||
           normalized_alias.start_with?("#{normalized_owner} ")
       end
+    end
+
+    def high_signal_calendar_chunk?(chunk)
+      event = chunk.kalendarium_event
+      event.present? && calendar_event_signal(event) == "important_one_off"
+    end
+
+    def upcoming_calendar_chunk?(chunk)
+      event = chunk.kalendarium_event
+      return false if event.blank?
+
+      %w[today_upcoming tomorrow].include?(calendar_event_day_focus(event))
+    end
+
+    def calendar_context_line_for(chunk, index)
+      event = chunk.kalendarium_event
+      timestamp = context_sort_timestamp(chunk)
+      entities = Array(chunk.metadata_json.to_h["entities"]&.values).flatten.uniq.first(8).join(", ")
+
+      "[#{index + 1}] Kind=#{chunk.source_type}; Title=#{chunk.source_title}; URI=#{chunk.source_uri}; " \
+        "Timestamp=#{timestamp&.iso8601 || 'unknown'}; Freshness=#{freshness_label_for(chunk, timestamp)}; " \
+        "DayFocus=#{calendar_event_day_focus(event)}; Signal=#{calendar_event_signal(event)}; " \
+        "TimeWindow=#{calendar_event_time_window(event)}; Calendar=#{event&.kalendarium_calendar&.name}; " \
+        "CalendarSource=#{event&.kalendarium_calendar&.source_kind}; EventSource=#{event&.source_kind}; " \
+        "Recurring=#{event&.rrule.present?}; MeetingLink=#{event&.meeting_join_url.present?}; " \
+        "Invitees=#{calendar_event_invitee_summary(event)}; Location=#{event&.location.to_s.strip.presence || 'none'}; " \
+        "Entities=#{entities}; Excerpt=#{calendar_event_excerpt(event, fallback_text: chunk.text)}"
+    end
+
+    def calendar_event_day_focus(event)
+      return "unknown" if event.blank?
+
+      starts_local = event.starts_at_utc.in_time_zone(user_time_zone)
+      ends_local = event.ends_at_utc.in_time_zone(user_time_zone)
+      today = current_time_in_user_zone.to_date
+      tomorrow = today + 1.day
+
+      return "today_upcoming" if starts_local.to_date == today && ends_local >= current_time_in_user_zone
+      return "today_elapsed" if starts_local.to_date == today
+      return "tomorrow" if starts_local.to_date == tomorrow
+      return "future" if starts_local > current_time_in_user_zone
+
+      "past"
+    end
+
+    def calendar_event_signal(event)
+      return "unknown" if event.blank?
+      return "routine_blockout" if routine_calendar_event?(event)
+      return "important_one_off" if important_calendar_event?(event)
+
+      "standard"
+    end
+
+    def important_calendar_event?(event)
+      return false if event.blank? || routine_calendar_event?(event)
+
+      one_off = event.rrule.blank?
+      externally_sourced = event.source_kind == "provider" || event.metadata_json.to_h["organizer_email"].to_s.strip.present?
+      collaborative = event.invitees.any? || event.meeting_join_url.present?
+      located = event.location.to_s.strip.present?
+
+      one_off && (externally_sourced || collaborative || located)
+    end
+
+    def routine_calendar_event?(event)
+      return false if event.blank?
+      return true if event.kalendarium_project&.slug == Kalendarium::TasksProjectEnsurer::PROJECT_SLUG
+      return true if event.kalendarium_calendar&.source_kind == "project"
+
+      event.rrule.present? &&
+        event.invitees.empty? &&
+        event.meeting_join_url.blank? &&
+        event.location.to_s.strip.blank? &&
+        event.title.to_s.match?(CALENDAR_ROUTINE_TITLE_PATTERN)
+    end
+
+    def calendar_event_time_window(event)
+      return "unknown" if event.blank?
+
+      starts_local = event.starts_at_utc.in_time_zone(user_time_zone)
+      ends_local = event.ends_at_utc.in_time_zone(user_time_zone)
+      return "#{starts_local.strftime('%a %-d %b')} all day" if event.all_day?
+
+      "#{starts_local.strftime('%a %-d %b %-I:%M %p')} - #{ends_local.strftime('%-I:%M %p')}"
+    end
+
+    def calendar_event_invitee_summary(event)
+      labels = Array(event&.invitees).map { |invitee| invitee["name"].presence || invitee["email"].presence }.compact.first(4)
+      labels.present? ? labels.join(", ") : "none"
+    end
+
+    def calendar_event_excerpt(event, fallback_text:)
+      return fallback_text if event.blank?
+
+      details = []
+      details << event.description.to_s.strip.presence
+      details << "Join via link" if event.meeting_join_url.present?
+      details << "Invitees: #{calendar_event_invitee_summary(event)}" if event.invitees.any?
+      details << "Project: #{event.kalendarium_project.name}" if event.kalendarium_project.present?
+
+      [ event.title, details.compact.join("; ").presence ].compact.join(" — ")
+    end
+
+    def current_time_in_user_zone
+      Time.current.in_time_zone(user_time_zone)
+    end
+
+    def user_time_zone
+      @user_time_zone ||= ActiveSupport::TimeZone[user.time_zone.presence] || Time.zone
     end
 
     def previous_snapshot_index

@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Search::KnowledgeSuggestionService do
+  include ActiveSupport::Testing::TimeHelpers
+
   it "returns cited suggestions with provenance-backed sources" do
     user = User.create!(email: "knowledge-suggest@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge suggest", slug: "knowledge-suggest")
@@ -247,6 +249,118 @@ RSpec.describe Search::KnowledgeSuggestionService do
     expect(response.task_suggestions.first.fetch("owner")).to eq("You")
     expect(response.task_suggestions.first.fetch("rationale")).to include("You should confirm")
     expect(response.sources.first[:title]).to eq(page.title)
+  end
+
+  it "prioritizes concrete upcoming calendar appointments over routine blockouts in the prompt" do
+    user = User.create!(email: "knowledge-calendar@example.com", password: "password123", openai_api_key: "sk-test", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "Knowledge calendar", slug: "knowledge-calendar")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    provider_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Work",
+      color_hex: "#2563eb",
+      time_zone: "Australia/Melbourne",
+      source_kind: "provider"
+    )
+    local_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Personal",
+      color_hex: "#10b981",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local"
+    )
+
+    travel_to(Time.find_zone!("Australia/Melbourne").parse("2026-04-14 08:00:00")) do
+      important_event = KalendariumEvent.create!(
+        workspace: workspace,
+        kalendarium_calendar: provider_calendar,
+        title: "Client review",
+        description: "Final decision meeting with the client.",
+        starts_at_utc: Time.find_zone!("Australia/Melbourne").parse("2026-04-14 14:00:00").utc,
+        ends_at_utc: Time.find_zone!("Australia/Melbourne").parse("2026-04-14 15:00:00").utc,
+        created_by: user,
+        updated_by: user,
+        source_kind: "provider",
+        metadata_json: {
+          "meeting_join_url" => "https://meet.example.com/client-review",
+          "invitees" => [
+            { "name" => "Alex" },
+            { "name" => "Priya" }
+          ],
+          "organizer_email" => "client@example.com"
+        }
+      )
+      routine_event = KalendariumEvent.create!(
+        workspace: workspace,
+        kalendarium_calendar: local_calendar,
+        title: "Daily blockout",
+        starts_at_utc: Time.find_zone!("Australia/Melbourne").parse("2026-04-14 09:00:00").utc,
+        ends_at_utc: Time.find_zone!("Australia/Melbourne").parse("2026-04-14 09:30:00").utc,
+        created_by: user,
+        updated_by: user,
+        rrule: "FREQ=DAILY",
+        metadata_json: {}
+      )
+
+      SearchChunk.create!(
+        workspace: workspace,
+        source_type: SearchChunk::SOURCE_KALENDARIUM_EVENT,
+        source_id: important_event.id,
+        kalendarium_event: important_event,
+        chunk_index: 0,
+        text: important_event.search_source_text,
+        token_count: important_event.search_source_text.split.size,
+        content_hash: "knowledge-calendar-important",
+        source_content_hash: "knowledge-calendar-important-source",
+        source_uri: "/w/#{workspace.slug}/kalendarium?anchor=kalendarium_event_#{important_event.id}",
+        source_title: important_event.title,
+        metadata_json: {}
+      )
+      SearchChunk.create!(
+        workspace: workspace,
+        source_type: SearchChunk::SOURCE_KALENDARIUM_EVENT,
+        source_id: routine_event.id,
+        kalendarium_event: routine_event,
+        chunk_index: 0,
+        text: routine_event.search_source_text,
+        token_count: [ routine_event.search_source_text.split.size, 1 ].max,
+        content_hash: "knowledge-calendar-routine",
+        source_content_hash: "knowledge-calendar-routine-source",
+        source_uri: "/w/#{workspace.slug}/kalendarium?anchor=kalendarium_event_#{routine_event.id}",
+        source_title: routine_event.title,
+        metadata_json: {}
+      )
+
+      expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
+        prompt = args.fetch(:prompt)
+
+        expect(prompt).to include("Avoid generic calendar boilerplate")
+        expect(prompt).to include("DayFocus=today_upcoming")
+        expect(prompt).to include("Signal=important_one_off")
+        expect(prompt).to include("Signal=routine_blockout")
+        expect(prompt).to include("Client review")
+        expect(prompt).to include("Invitees=Alex, Priya")
+        expect(prompt.index("Client review")).to be < prompt.index("Daily blockout")
+
+        {
+          text: {
+            summary: "You have Client review at 2:00 PM today. [1]",
+            insights: [ "The daily blockout is routine and lower priority. [2]" ],
+            task_suggestions: [],
+            related_notes: []
+          }.to_json,
+          usage: { prompt_tokens: 60, completion_tokens: 20, total_tokens: 80 }
+        }
+      end
+
+      response = described_class.new(user: user, workspace: workspace).call
+
+      expect(response.summary).to include("Client review")
+      expect(response.sources.map { |source| source[:title] }).to include("Client review", "Daily blockout")
+    end
   end
 
   it "logs a miss outcome when no indexed context is available" do
