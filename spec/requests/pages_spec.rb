@@ -14,9 +14,9 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-page-tabs-list {\n  display: flex;\n  align-items: center;\n  flex: 1 1 auto;\n  min-width: 0;")
     expect(stylesheet).to include(".notae-page-tab-create-form {\n  margin: 0 0 0 auto;\n  flex: 0 0 auto;")
     expect(stylesheet).to include(".notae-page-tab-shell {\n  --notae-tab-accent: #94a3b8;\n  position: relative;")
-    expect(stylesheet).to include("  padding: 0.14rem 0.18rem 0.14rem 0.38rem;")
+    expect(stylesheet).to include("  padding: 0.14rem 0.18rem 0.14rem 0.56rem;")
     expect(stylesheet).to include(".notae-page-tab {\n  display: inline-flex;")
-    expect(stylesheet).to include("  padding: 0.24rem 0.18rem 0.24rem 0.04rem;")
+    expect(stylesheet).to include("  padding: 0.24rem 0.18rem 0.24rem 0.16rem;")
   end
 
   it "renders the shared topbar as a translucent blurred surface" do

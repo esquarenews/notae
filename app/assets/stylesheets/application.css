@@ -3429,7 +3429,7 @@ turbo-frame#notae_sidebar_sections {
   display: inline-flex;
   align-items: center;
   gap: 0.28rem;
-  padding: 0.14rem 0.18rem 0.14rem 0.38rem;
+  padding: 0.14rem 0.18rem 0.14rem 0.56rem;
   border: 1px solid color-mix(in srgb, var(--notae-tab-accent) 26%, var(--notae-border));
   border-radius: 999px;
   background: color-mix(in srgb, var(--notae-tab-accent) 10%, var(--notae-surface-raised));
@@ -3488,7 +3488,7 @@ turbo-frame#notae_sidebar_sections {
   align-items: center;
   gap: 0.4rem;
   min-height: 1.92rem;
-  padding: 0.24rem 0.18rem 0.24rem 0.04rem;
+  padding: 0.24rem 0.18rem 0.24rem 0.16rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -4048,9 +4048,10 @@ turbo-frame#notae_sidebar_sections {
 }
 
 .notae-db-view-pill.is-active {
-  border-color: #3b82f6;
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.24);
-  background: color-mix(in srgb, #eff6ff 78%, var(--notae-surface-muted));
+  color: var(--notae-text-strong);
+  border-color: color-mix(in srgb, var(--notae-accent) 62%, var(--notae-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--notae-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--notae-accent) 18%, var(--notae-surface-raised));
 }
 
 .notae-db-view-submenu-form {

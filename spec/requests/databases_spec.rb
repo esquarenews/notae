@@ -3266,6 +3266,7 @@ RSpec.describe "Databases", type: :request do
   it "shows column hover controls and persistent column styling rules in the stylesheet" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
+    expect(stylesheet).to include(".notae-db-view-pill.is-active {\n  color: var(--notae-text-strong);")
     expect(stylesheet).to include(".notae-db-grid th:hover .notae-db-column-hover-controls,")
     expect(stylesheet).to include(".notae-db-column-hover-controls {\n  display: inline-flex;\n  align-items: center;\n  flex: 0 0 auto;\n  opacity: 0;\n  pointer-events: none;\n  position: relative;\n  z-index: 6;")
     expect(stylesheet).to include(".notae-db-column-hover-control {\n  flex-shrink: 0;\n  position: relative;\n  z-index: 7;")
