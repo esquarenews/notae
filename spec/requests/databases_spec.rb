@@ -357,6 +357,33 @@ RSpec.describe "Databases", type: :request do
     expect(property.reload.select_options_list).to eq(["Low"])
   end
 
+  it "creates a dropdown property with configured options from the add-property form" do
+    owner = User.create!(email: "database-dropdown-create-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Dropdown create tables", slug: "dropdown-create-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Task board")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('data-controller="dropdown-property-form"')
+    expect(response.body).to include('data-dropdown-property-form-target="draftInput"')
+
+    post database_db_properties_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: {
+           db_property: {
+             name: "Priority",
+             property_type: "select",
+             select_options_json: ["High", "Low", "Medium"]
+           }
+         }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    property = database.db_properties.find_by!(name: "Priority")
+    expect(property.select_options_list).to eq(["High", "Low", "Medium"])
+  end
+
   it "disables taskify for custom grids and rejects direct taskify requests" do
     owner = User.create!(email: "database-taskify-custom-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Taskify custom tables", slug: "taskify-custom-tables")

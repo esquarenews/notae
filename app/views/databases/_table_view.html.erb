@@ -261,12 +261,40 @@ end %>
                                 split_source: row_params[:split_source],
                                 split_row_id: row_params[:split_row_id]
                               ),
-                              class: "notae-db-inline-form" do |form| %>
+                              class: "notae-db-inline-form",
+                              data: {
+                                controller: "dropdown-property-form",
+                                dropdown_property_form_dropdown_value: "select"
+                              } do |form| %>
                   <%= form.text_field :name, placeholder: "Property name", required: true, class: "notae-options-input" %>
                   <%= form.select :property_type,
                                   property_type_options,
                                   {},
-                                  class: "notae-options-input" %>
+                                  class: "notae-options-input",
+                                  data: {
+                                    dropdown_property_form_target: "typeSelect",
+                                    action: "change->dropdown-property-form#typeChanged"
+                                  } %>
+                  <div class="notae-db-dropdown-create-panel"
+                       data-dropdown-property-form-target="panel"
+                       hidden>
+                    <div class="notae-db-row-menu-section-label">Dropdown items</div>
+                    <div class="notae-db-column-option-form">
+                      <input type="text"
+                             class="notae-options-input"
+                             placeholder="Add dropdown item"
+                             aria-label="Add dropdown item"
+                             data-dropdown-property-form-target="draftInput"
+                             data-action="keydown->dropdown-property-form#handleKeydown">
+                      <button type="button"
+                              class="notae-chip-button notae-db-column-option-add"
+                              aria-label="Add dropdown item"
+                              data-action="click->dropdown-property-form#addOption">+</button>
+                    </div>
+                    <div class="notae-db-column-option-list"
+                         data-dropdown-property-form-target="list"></div>
+                    <div data-dropdown-property-form-target="hiddenInputs"></div>
+                  </div>
                   <%= form.submit "Add", class: "notae-chip-button" %>
                 <% end %>
               </div>

@@ -53,7 +53,7 @@ class DbPropertiesController < ApplicationController
   end
 
   def db_property_params
-    params.require(:db_property).permit(:name, :property_type)
+    params.require(:db_property).permit(:name, :property_type, select_options_json: [])
   end
 
   def db_property_update_params
