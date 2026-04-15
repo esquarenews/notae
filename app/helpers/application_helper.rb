@@ -185,29 +185,32 @@ module ApplicationHelper
     workspace = ui_current_workspace
     return [] unless workspace
 
-    policy_scope(Favorite)
-      .for_workspace(workspace)
-      .for_user(current_user)
-      .recent
-      .includes(:favoritable)
-      .limit(limit * 2)
-      .filter_map do |favorite|
-        record = favorite.favoritable
-        next if record.blank?
-        next if record.respond_to?(:archived?) && record.archived?
+    @ui_sidebar_recent_favorites ||= {}
+    @ui_sidebar_recent_favorites[[workspace.id, limit]] ||= begin
+      policy_scope(Favorite)
+        .for_workspace(workspace)
+        .for_user(current_user)
+        .recent
+        .includes(:favoritable)
+        .limit(limit * 2)
+        .filter_map do |favorite|
+          record = favorite.favoritable
+          next if record.blank?
+          next if record.respond_to?(:archived?) && record.archived?
 
-        type =
-          case favorite.favoritable_type
-          when "Page"
-            :page
-          when "Database"
-            :database
-          end
-        next if type.blank?
+          type =
+            case favorite.favoritable_type
+            when "Page"
+              :page
+            when "Database"
+              :database
+            end
+          next if type.blank?
 
-        { type: type, record: record, updated_at: favorite.created_at }
-      end
-      .first(limit)
+          { type: type, record: record, updated_at: favorite.created_at }
+        end
+        .first(limit)
+    end
   end
 
   def notae_sidebar_link_classes(path = nil, active: false)

@@ -43,16 +43,22 @@ class LibrariesController < ApplicationController
 
     owner_email_lookup = owner_email_by_workspace_id(selected_workspace_ids)
     favorite_lookup = favorite_lookup_for(selected_workspace_ids)
-    last_visited_ids = last_page_visit_store.values
+    last_visited_lookup = last_page_visit_store.each_value.with_object({}) { |page_id, memo| memo[page_id] = true }
+    page_scope = filtered_page_scope(selected_workspace_ids)
+    database_scope = filtered_database_scope(selected_workspace_ids)
 
-    @library_rows = []
-    @library_rows.concat(page_rows(filtered_page_scope(selected_workspace_ids), owner_email_lookup, favorite_lookup, last_visited_ids))
-    @library_rows.concat(database_rows(filtered_database_scope(selected_workspace_ids), owner_email_lookup, favorite_lookup))
+    if fast_path_applicable?
+      build_fast_library_rows(page_scope, database_scope, owner_email_lookup, favorite_lookup, last_visited_lookup)
+    else
+      @library_rows = []
+      @library_rows.concat(page_rows(page_scope, owner_email_lookup, favorite_lookup, last_visited_lookup))
+      @library_rows.concat(database_rows(database_scope, owner_email_lookup, favorite_lookup))
 
-    apply_property_filter!
-    apply_search_filter!
-    apply_sort!
-    apply_pagination!
+      apply_property_filter!
+      apply_search_filter!
+      apply_sort!
+      apply_pagination!
+    end
   end
 
   private
@@ -115,10 +121,11 @@ class LibrariesController < ApplicationController
   def owner_email_by_workspace_id(workspace_ids)
     policy_scope(Membership)
       .where(workspace_id: workspace_ids, role: Membership.roles.fetch("owner"))
-      .includes(:user)
-      .order(:created_at)
-      .each_with_object({}) do |membership, memo|
-        memo[membership.workspace_id] ||= membership.user.email
+      .joins(:user)
+      .order(:workspace_id, :created_at)
+      .pluck(:workspace_id, "users.email")
+      .each_with_object({}) do |(workspace_id, email), memo|
+        memo[workspace_id] ||= email
       end
   end
 
@@ -134,12 +141,10 @@ class LibrariesController < ApplicationController
     lookup
   end
 
-  def page_rows(scope, owner_email_lookup, favorite_lookup, last_visited_ids)
+  def page_rows(scope, owner_email_lookup, favorite_lookup, last_visited_lookup)
     scope
       .to_a
       .filter_map do |page|
-        next if page.linked_database.present?
-
         meeting = page.page_kind == "meeting_note"
         creator_email = page.created_by&.email || owner_email_lookup[page.workspace_id] || "—"
         {
@@ -150,7 +155,7 @@ class LibrariesController < ApplicationController
           created_time: page.created_at,
           last_edited_by: creator_email,
           last_edited_time: page.updated_at,
-          last_visited_time: last_visited_ids.include?(page.id.to_s) ? page.updated_at : nil,
+          last_visited_time: last_visited_lookup[page.id.to_s] ? page.updated_at : nil,
           visibility: page.permission_mode == "private_page" ? "private" : "shared",
           favorited: favorite_lookup["Page:#{page.id}"] == true,
           workspace_name: page.workspace.name,
@@ -187,9 +192,9 @@ class LibrariesController < ApplicationController
     scope = policy_scope(Page)
               .where(workspace_id: workspace_ids)
               .active
-              .excluding_top_level_linked_database_shells
+              .where.missing(:linked_database)
               .select(:id, :title, :icon, :created_by_id, :created_at, :updated_at, :workspace_id, :page_kind, :permission_mode, :parent_page_id)
-              .includes(:workspace, :created_by, :parent_page, :linked_database)
+              .includes(:workspace, :created_by, :parent_page)
 
     scope = apply_page_source_filter(scope)
     scope = apply_page_tab_filter(scope, workspace_ids)
@@ -298,6 +303,71 @@ class LibrariesController < ApplicationController
       .for_user(current_user)
       .where(workspace_id: workspace_ids, favoritable_type: favoritable_type)
       .select(:favoritable_id)
+  end
+
+  def fast_path_applicable?
+    @search_query.blank? && @property_filter.blank? && @property_filter_value.blank?
+  end
+
+  def build_fast_library_rows(page_scope, database_scope, owner_email_lookup, favorite_lookup, last_visited_lookup)
+    @per_page = LIBRARY_PAGE_SIZE
+    @total_rows = scoped_count(page_scope) + scoped_count(database_scope)
+    @total_pages = [ (@total_rows.to_f / @per_page).ceil, 1 ].max
+    @current_page = [ resolved_page, @total_pages ].min
+
+    merge_limit = @current_page * @per_page
+    @library_rows = []
+    @library_rows.concat(
+      page_rows(
+        ordered_page_scope(page_scope).limit(merge_limit),
+        owner_email_lookup,
+        favorite_lookup,
+        last_visited_lookup
+      )
+    )
+    @library_rows.concat(
+      database_rows(
+        ordered_database_scope(database_scope).limit(merge_limit),
+        owner_email_lookup,
+        favorite_lookup
+      )
+    )
+
+    apply_sort!
+
+    start_index = (@current_page - 1) * @per_page
+    @library_rows = @library_rows.slice(start_index, @per_page) || []
+    @page_start = @total_rows.zero? ? 0 : start_index + 1
+    @page_end = @total_rows.zero? ? 0 : start_index + @library_rows.length
+  end
+
+  def ordered_page_scope(scope)
+    ordered_library_scope(scope, table_name: "pages", name_column: "title")
+  end
+
+  def ordered_database_scope(scope)
+    ordered_library_scope(scope, table_name: "databases", name_column: "name")
+  end
+
+  def ordered_library_scope(scope, table_name:, name_column:)
+    case @sort
+    when "last_edited_asc"
+      scope.order(updated_at: :asc, id: :asc)
+    when "created_desc"
+      scope.order(created_at: :desc, id: :desc)
+    when "created_asc"
+      scope.order(created_at: :asc, id: :asc)
+    when "page_name_asc"
+      scope.order(Arel.sql("LOWER(#{table_name}.#{name_column}) ASC"), id: :asc)
+    when "page_name_desc"
+      scope.order(Arel.sql("LOWER(#{table_name}.#{name_column}) DESC"), id: :desc)
+    else
+      scope.order(updated_at: :desc, id: :desc)
+    end
+  end
+
+  def scoped_count(scope)
+    scope.except(:select, :includes, :preload, :eager_load, :order).count(:all)
   end
 
   def apply_property_filter!
