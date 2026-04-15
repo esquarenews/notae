@@ -105,17 +105,38 @@ function saveLikeForm(form) {
   return form.method.toLowerCase() !== "get"
 }
 
+function preserveScrollRequested(element) {
+  if (!(element instanceof HTMLElement)) return false
+  if (element.dataset.preserveScroll === "false") return false
+
+  return element.dataset.preserveScroll === "true" || element.dataset.preserveDatabaseScroll === "true"
+}
+
 function shouldPreserveSaveScroll(form) {
   if (!saveLikeForm(form)) return false
 
-  return form.dataset.preserveScroll !== "false"
+  return preserveScrollRequested(form)
+}
+
+function responseForEvent(event) {
+  const response = event.detail?.fetchResponse?.response
+  return response instanceof Response ? response : null
 }
 
 function responseContentType(event) {
-  const response = event.detail?.fetchResponse?.response
-  if (!(response instanceof Response)) return ""
+  const response = responseForEvent(event)
+  if (!response) return ""
 
   return response.headers.get("content-type") || ""
+}
+
+function shouldDeferPreservedSaveScrollRestore(event) {
+  const response = responseForEvent(event)
+  if (!response) return false
+  if (response.redirected) return true
+
+  const contentType = responseContentType(event)
+  return contentType.length > 0 && !contentType.includes("turbo-stream")
 }
 
 function submitterForEvent(event, fallbackForm) {
@@ -218,7 +239,42 @@ function syncAiRailCollapsedState(root) {
   })
 }
 
+function aiRailContextDataset(root = document) {
+  if (root instanceof HTMLBodyElement) return root.dataset
+  if (root instanceof Document) return root.body?.dataset || {}
+  if (root instanceof HTMLElement) return root.ownerDocument?.body?.dataset || {}
+
+  return document.body?.dataset || {}
+}
+
+function syncPreservedAiRailContext(root = document) {
+  const dataset = aiRailContextDataset(root)
+  const currentPageId = dataset.aiRailCurrentPageIdValue || ""
+  const panelSrc = dataset.aiRailPanelSrcValue || ""
+  const currentPageInput = document.querySelector('input[name="ai_assistant[current_page_id]"]')
+
+  if (currentPageInput instanceof HTMLInputElement) {
+    currentPageInput.value = currentPageId
+  }
+
+  const loaderFrame = document.querySelector('turbo-frame#ai_rail_panel[data-controller~="ai-rail-loader"]')
+  if (!(loaderFrame instanceof HTMLElement)) return
+  const railAlreadyLoaded = loaderFrame.querySelector(".notae-ai-rail-shell") instanceof HTMLElement
+
+  if (panelSrc.length > 0) {
+    loaderFrame.dataset.aiRailLoaderSrcValue = panelSrc
+
+    if (!railAlreadyLoaded && loaderFrame.hasAttribute("src") && loaderFrame.getAttribute("src") !== panelSrc) {
+      loaderFrame.setAttribute("src", panelSrc)
+    }
+  } else {
+    loaderFrame.removeAttribute("src")
+    delete loaderFrame.dataset.aiRailLoaderSrcValue
+  }
+}
+
 syncAiRailCollapsedState(document)
+syncPreservedAiRailContext(document)
 restoreStoredSaveScroll()
 
 document.addEventListener("submit", (event) => {
@@ -239,6 +295,7 @@ document.addEventListener("turbo:submit-end", (event) => {
   const form = event.target
   if (!shouldPreserveSaveScroll(form)) return
   if (!event.detail?.success) return
+  if (shouldDeferPreservedSaveScrollRestore(event)) return
 
   restoreStoredSaveScroll()
 }, true)
@@ -246,6 +303,7 @@ document.addEventListener("turbo:submit-end", (event) => {
 document.addEventListener("turbo:load", () => {
   restoreStoredSaveScroll()
   syncAiRailCollapsedState(document)
+  syncPreservedAiRailContext(document)
   registerPwaServiceWorker()
 })
 
@@ -254,6 +312,7 @@ document.addEventListener("turbo:before-render", (event) => {
   if (!(newBody instanceof HTMLBodyElement)) return
 
   syncAiRailCollapsedState(newBody)
+  syncPreservedAiRailContext(newBody)
 })
 
 document.addEventListener("turbo:render", () => {

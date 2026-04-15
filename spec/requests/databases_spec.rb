@@ -937,6 +937,47 @@ RSpec.describe "Databases", type: :request do
     expect(name_cell["class"]).to include("is-column-bg-rose")
   end
 
+  it "marks row context style actions to preserve database scroll" do
+    owner = User.create!(email: "database-row-menu-scroll-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables Row Menu Scroll", slug: "tables-row-menu-scroll")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    row = DbRow.create!(workspace: workspace, database: database, title: "Q1")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    row_menu = html.at_css("#row_#{row.id} .notae-db-row-more-menu")
+    expect(row_menu).to be_present
+
+    bold_form = row_menu.css("form").find do |form|
+      form.at_css("input[name='db_row[style_action]'][value='toggle_bold']").present?
+    end
+    italic_form = row_menu.css("form").find do |form|
+      form.at_css("input[name='db_row[style_action]'][value='toggle_italic']").present?
+    end
+    background_form = row_menu.css("form").find do |form|
+      form.at_css("input[name='db_row[style_action]'][value='set_background_color']").present?
+    end
+
+    expect(bold_form).to be_present
+    expect(italic_form).to be_present
+    expect(background_form).to be_present
+    expect(bold_form["data-preserve-database-scroll"]).to eq("true")
+    expect(italic_form["data-preserve-database-scroll"]).to eq("true")
+    expect(background_form["data-preserve-database-scroll"]).to eq("true")
+  end
+
   it "renders progress properties with step controls and updates them inline" do
     owner = User.create!(email: "database-progress-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables Progress", slug: "tables-progress")
@@ -3389,6 +3430,15 @@ RSpec.describe "Databases", type: :request do
     expect(stylesheet).to include("  font-family: inherit;")
     expect(stylesheet).to include(".notae-db-template-button,\n.notae-db-toolbar-icon,\n.notae-page-tab-create-button {\n  min-height: 2.25rem;")
     expect(stylesheet).not_to include(".notae-db-gantt-toolbar-form .notae-chip-button.notae-db-gantt-toolbar-button {\n  appearance: none;\n  -webkit-appearance: none;\n  text-decoration: none;\n  cursor: pointer;\n  font: inherit;")
+  end
+
+  it "keeps mobile grid menus wide enough to render labels horizontally" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-panel,\n.notae-shell.is-mobile-viewport .notae-cover-picker-panel:not(.is-embedded),\n.notae-shell.is-mobile-viewport .notae-db-inline-panel,\n.notae-shell.is-mobile-viewport .notae-db-settings-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);\n  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);\n  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);")
+    expect(stylesheet).to include("  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 6.4rem);\n  box-sizing: border-box;\n  overflow: auto;\n  top: calc(env(safe-area-inset-top, 0px) + 6rem);\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-db-row-more-panel.is-floating {\n  width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-create-menu,\n.notae-shell.is-mobile-viewport .notae-library-popover-panel,\n.notae-shell.is-mobile-viewport .notae-people-add-panel,\n.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,\n.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,\n.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {\n  min-width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));")
   end
 
   it "shows column hover controls and persistent column styling rules in the stylesheet" do

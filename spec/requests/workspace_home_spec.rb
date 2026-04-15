@@ -81,6 +81,14 @@ RSpec.describe "Workspace home", type: :request do
     expect(ai_rail_frame).to be_present
     expect(ai_rail_frame["data-controller"]).to include("ai-rail-loader")
     expect(ai_rail_frame["data-ai-rail-loader-src-value"]).to eq(workspace_ai_assistant_panel_path(workspace_slug: workspace.slug))
+    ai_rail_shell = html.at_css("#notae_ai_rail_shell_#{workspace.slug}")
+    expect(ai_rail_shell).to be_present
+    expect(ai_rail_shell["data-turbo-permanent"]).to eq("")
+    expect(ai_rail_shell["data-ai-rail-workspace-slug"]).to eq(workspace.slug)
+    body = html.at_css("body")
+    expect(body["data-ai-rail-workspace-slug-value"]).to eq(workspace.slug)
+    expect(body["data-ai-rail-current-page-id-value"].to_s).to eq("")
+    expect(body["data-ai-rail-panel-src-value"]).to eq(workspace_ai_assistant_panel_path(workspace_slug: workspace.slug))
 
     page_titles = html.css(".notae-workspace-page-grid .notae-workspace-page-card-text strong").map(&:text)
     expect(page_titles).to eq([ "Page 4 latest", "Page 3 newer", "Page 2 mid" ])

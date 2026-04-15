@@ -32,7 +32,11 @@
         <span class="notae-db-row-menu-label">Find space in my calendar</span>
       <% end %>
       <% if linked_page.present? %>
-        <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+        <%= form_with model: row,
+                      url: row_update_path,
+                      method: :patch,
+                      class: "notae-db-row-menu-form",
+                      data: { preserve_database_scroll: true } do |form| %>
           <%= form.hidden_field :linked_page_id, value: "" %>
           <button type="submit" class="notae-db-row-menu-button">
             <span class="notae-db-row-menu-icon">⤬</span>
@@ -40,14 +44,22 @@
           </button>
         <% end %>
       <% end %>
-      <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+      <%= form_with model: row,
+                    url: row_update_path,
+                    method: :patch,
+                    class: "notae-db-row-menu-form",
+                    data: { preserve_database_scroll: true } do |form| %>
         <%= form.hidden_field :style_action, value: "toggle_bold" %>
         <button type="submit" class="notae-db-row-menu-button">
           <span class="notae-db-row-menu-icon">B</span>
           <span class="notae-db-row-menu-label"><%= row.row_bold? ? "Unbold row" : "Bold row" %></span>
         </button>
       <% end %>
-      <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+      <%= form_with model: row,
+                    url: row_update_path,
+                    method: :patch,
+                    class: "notae-db-row-menu-form",
+                    data: { preserve_database_scroll: true } do |form| %>
         <%= form.hidden_field :style_action, value: "toggle_italic" %>
         <button type="submit" class="notae-db-row-menu-button">
           <span class="notae-db-row-menu-icon">I</span>
@@ -57,7 +69,11 @@
       <div class="notae-db-row-menu-section-label">Text colour</div>
       <div class="notae-db-row-menu-color-grid">
         <% row_color_options.each do |label, color_key| %>
-          <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+          <%= form_with model: row,
+                        url: row_update_path,
+                        method: :patch,
+                        class: "notae-db-row-menu-form",
+                        data: { preserve_database_scroll: true } do |form| %>
             <%= form.hidden_field :style_action, value: "set_color" %>
             <%= form.hidden_field :text_color, value: color_key %>
             <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_text_color == color_key %>">
@@ -70,7 +86,11 @@
       <div class="notae-db-row-menu-section-label">Background colour</div>
       <div class="notae-db-row-menu-color-grid">
         <% DbRow::BACKGROUND_COLOR_OPTIONS.each do |label, color_key| %>
-          <%= form_with model: row, url: row_update_path, method: :patch, class: "notae-db-row-menu-form" do |form| %>
+          <%= form_with model: row,
+                        url: row_update_path,
+                        method: :patch,
+                        class: "notae-db-row-menu-form",
+                        data: { preserve_database_scroll: true } do |form| %>
             <%= form.hidden_field :style_action, value: "set_background_color" %>
             <%= form.hidden_field :background_color, value: color_key %>
             <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_background_color == color_key %>">

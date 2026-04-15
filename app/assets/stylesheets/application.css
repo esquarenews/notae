@@ -11366,8 +11366,10 @@ body.notae-theme-dark .notae-doc-muted {
   position: fixed;
   left: calc(env(safe-area-inset-left, 0px) + 0.72rem);
   right: calc(env(safe-area-inset-right, 0px) + 0.72rem);
-  width: auto;
-  max-width: none;
+  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  box-sizing: border-box;
   top: calc(env(safe-area-inset-top, 0px) + 3.05rem);
   max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);
 }
@@ -11456,6 +11458,42 @@ body.notae-theme-dark .notae-doc-muted {
 
 .notae-shell.is-mobile-viewport .notae-actions-panel {
   z-index: 124;
+}
+
+.notae-shell.is-mobile-viewport .notae-page-header-panel,
+.notae-shell.is-mobile-viewport .notae-cover-picker-panel:not(.is-embedded),
+.notae-shell.is-mobile-viewport .notae-db-inline-panel,
+.notae-shell.is-mobile-viewport .notae-db-settings-panel {
+  position: fixed;
+  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);
+  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);
+  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 6.4rem);
+  box-sizing: border-box;
+  overflow: auto;
+  top: calc(env(safe-area-inset-top, 0px) + 6rem);
+}
+
+.notae-shell.is-mobile-viewport .notae-db-row-more-panel.is-floating {
+  width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  box-sizing: border-box;
+}
+
+.notae-shell.is-mobile-viewport .notae-create-menu,
+.notae-shell.is-mobile-viewport .notae-library-popover-panel,
+.notae-shell.is-mobile-viewport .notae-people-add-panel,
+.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,
+.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,
+.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {
+  min-width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 6.4rem);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .notae-shell.is-mobile-viewport .notae-actions-panel .notae-actions-move-form {

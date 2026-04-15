@@ -40,12 +40,16 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include('const PRESERVED_SAVE_SCROLL_KEY = "notae-preserved-save-scroll"')
     expect(source).to include("function primaryScrollContainer()")
     expect(source).to include("document.querySelector(\".notae-content-scroll\")")
+    expect(source).to include("function preserveScrollRequested(element)")
+    expect(source).to include("preserveDatabaseScroll")
     expect(source).to include("window.sessionStorage.setItem(PRESERVED_SAVE_SCROLL_KEY")
     expect(source).to include("trackedViewportTop")
     expect(source).to include("document.addEventListener(\"submit\", (event) => {")
     expect(source).to include("document.addEventListener(\"turbo:submit-start\", (event) => {")
     expect(source).to include("document.addEventListener(\"turbo:submit-end\", (event) => {")
     expect(source).to include("document.addEventListener(\"turbo:render\", () => {")
+    expect(source).to include("shouldDeferPreservedSaveScrollRestore(event)")
+    expect(source).to include("response.redirected")
     expect(source).to include("restoreStoredSaveScroll()")
     expect(source).not_to include('if (!contentType.includes("turbo-stream")) return')
   end
@@ -56,5 +60,19 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include("sourceElement.closest(\"[data-scroll-preserve-key]\")")
     expect(source).to include("function uniqueIdSelectorFor(element)")
     expect(source).to include("document.querySelectorAll(selector).length !== 1")
+  end
+
+  it "keeps a preserved ai rail in sync with turbo page changes without replacing the rail" do
+    source = Rails.root.join("app/javascript/application.js").read
+
+    expect(source).to include("function syncPreservedAiRailContext(root = document)")
+    expect(source).to include('input[name="ai_assistant[current_page_id]"]')
+    expect(source).to include("dataset.aiRailCurrentPageIdValue")
+    expect(source).to include("dataset.aiRailPanelSrcValue")
+    expect(source).to include('turbo-frame#ai_rail_panel[data-controller~="ai-rail-loader"]')
+    expect(source).to include('loaderFrame.querySelector(".notae-ai-rail-shell")')
+    expect(source).to include("loaderFrame.hasAttribute(\"src\")")
+    expect(source).to include("syncPreservedAiRailContext(document)")
+    expect(source).to include("syncPreservedAiRailContext(newBody)")
   end
 end

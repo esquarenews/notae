@@ -16,8 +16,7 @@ export default class extends Controller {
 
   capture(event) {
     const form = event.target
-    if (!(form instanceof HTMLFormElement)) return
-    if (form.dataset.preserveScroll === "false") return
+    if (!this.shouldCaptureForm(form)) return
 
     this.pendingSubmitState = this.currentStateFor(this.submitterFor(event, form))
     this.storeScrollPosition(this.pendingSubmitState)
@@ -25,14 +24,14 @@ export default class extends Controller {
 
   restoreAfterSubmit(event) {
     const form = event.target
-    if (!(form instanceof HTMLFormElement)) return
-    if (form.dataset.preserveScroll === "false") return
+    if (!this.shouldCaptureForm(form)) return
 
     const state = this.pendingSubmitState
     this.pendingSubmitState = null
 
     if (!state) return
     if (!event.detail?.success) return
+    if (this.shouldDeferRestore(event)) return
 
     this.clearStoredPosition()
     this.restoreSubmitScrollPosition(state)
@@ -152,11 +151,41 @@ export default class extends Controller {
     this.restoreStoredPosition(scrollContainer, state)
   }
 
-  shouldCaptureLink(link) {
-    if (link.dataset.preserveScroll === "false") return false
-    if (link.dataset.preserveDatabaseScroll === "true") return true
+  shouldCaptureForm(form) {
+    if (!(form instanceof HTMLFormElement)) return false
 
-    return false
+    return this.preserveRequested(form)
+  }
+
+  shouldCaptureLink(link) {
+    if (!this.preserveRequested(link)) return false
+
+    return true
+  }
+
+  preserveRequested(element) {
+    if (!(element instanceof HTMLElement)) return false
+    if (element.dataset.preserveScroll === "false") return false
+
+    return element.dataset.preserveScroll === "true" || element.dataset.preserveDatabaseScroll === "true"
+  }
+
+  responseFor(event) {
+    const response = event.detail?.fetchResponse?.response
+    return response instanceof Response ? response : null
+  }
+
+  responseContentType(event) {
+    return this.responseFor(event)?.headers.get("content-type") || ""
+  }
+
+  shouldDeferRestore(event) {
+    const response = this.responseFor(event)
+    if (!response) return false
+    if (response.redirected) return true
+
+    const contentType = this.responseContentType(event)
+    return contentType.length > 0 && !contentType.includes("turbo-stream")
   }
 
   submitterFor(event, fallbackForm) {

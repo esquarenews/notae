@@ -551,6 +551,34 @@ RSpec.describe "Pages", type: :request do
     expect(sidebar.at_css("[data-shell-target='workspaceDialog']")).to be_nil
   end
 
+  it "keeps the ai rail workspace shell stable and updates page context in layout metadata" do
+    owner = User.create!(email: "page-ai-rail-context-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page AI rail context", slug: "page-ai-rail-context")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Page AI rail context")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    body = html.at_css("body")
+    ai_rail_shell = html.at_css("#notae_ai_rail_shell_#{workspace.slug}")
+    ai_rail_frame = ai_rail_shell&.at_css("turbo-frame#ai_rail_panel")
+
+    expect(body["data-ai-rail-workspace-slug-value"]).to eq(workspace.slug)
+    expect(body["data-ai-rail-current-page-id-value"]).to eq(page.id.to_s)
+    expect(body["data-ai-rail-panel-src-value"]).to eq(
+      workspace_ai_assistant_panel_path(workspace_slug: workspace.slug, current_page_id: page.id)
+    )
+    expect(ai_rail_shell).to be_present
+    expect(ai_rail_shell["data-turbo-permanent"]).to eq("")
+    expect(ai_rail_frame).to be_present
+    expect(ai_rail_frame["data-ai-rail-loader-src-value"]).to eq(
+      workspace_ai_assistant_panel_path(workspace_slug: workspace.slug, current_page_id: page.id)
+    )
+  end
+
   it "renders mobile-ready page header action labels for icon-only controls" do
     owner = User.create!(email: "page-mobile-header-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Mobile page header", slug: "mobile-page-header")
@@ -592,11 +620,13 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {\n  max-width: 100%;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
     expect(stylesheet).to include(".notae-actions-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
     expect(stylesheet).to include(".notae-options-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel,\n.notae-shell.is-mobile-viewport .notae-options-panel,\n.notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);\n  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);\n  width: auto;\n  max-width: none;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel,\n.notae-shell.is-mobile-viewport .notae-options-panel,\n.notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);\n  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);\n  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);\n  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);\n  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);\n  box-sizing: border-box;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel {\n  overflow-x: hidden;\n  z-index: 124;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-link[data-action*=\"openCommentsMenu\"] {\n  display: none;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-panes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  width: 200%;")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-panes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  width: 200%;")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-create-menu,\n.notae-shell.is-mobile-viewport .notae-library-popover-panel,\n.notae-shell.is-mobile-viewport .notae-people-add-panel,\n.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,\n.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,\n.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {\n  min-width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));")
+    expect(stylesheet).to include("  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 6.4rem);\n  box-sizing: border-box;\n  overflow-x: hidden;\n  overflow-y: auto;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown {\n  display: block;\n  overflow-x: clip;\n  overflow-y: auto;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown {\n  display: block;\n  overflow-x: clip;\n  overflow-y: auto;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-pane {\n  display: block;\n  min-width: 0;\n  max-width: 100%;\n  box-sizing: border-box;\n  overflow-x: hidden;\n}")

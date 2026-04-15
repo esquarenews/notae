@@ -30,13 +30,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <%= javascript_importmap_tags %>
-  </head>
+</head>
 
+  <% layout_workspace_slug = params[:workspace_slug].to_s.strip.presence %>
+  <% layout_ai_rail_current_page_id = controller_name == "pages" && action_name == "show" ? params[:id].to_s.presence : nil %>
+  <% layout_ai_rail_panel_src = if layout_workspace_slug.present?
+                                  workspace_ai_assistant_panel_path(
+                                    workspace_slug: layout_workspace_slug,
+                                    current_page_id: layout_ai_rail_current_page_id
+                                  )
+                                end %>
+  <% layout_ai_rail_shell_id = "notae_ai_rail_shell_#{layout_workspace_slug.to_s.gsub(/[^a-zA-Z0-9_-]/, "_")}" %>
   <body class="notae-theme <%= notae_theme_body_class %>"
         data-controller="<%= [("pwa"), ("link-preferences" if user_signed_in?)].compact.join(" ") %>"
         data-pwa-authenticated-value="<%= user_signed_in? ? "true" : "false" %>"
         data-pwa-web-push-public-key-value="<%= notae_web_push_public_key %>"
-        data-link-preferences-open-links-in-new-window-value="<%= user_signed_in? ? current_user.open_links_in_desktop_app? : false %>">
+        data-link-preferences-open-links-in-new-window-value="<%= user_signed_in? ? current_user.open_links_in_desktop_app? : false %>"
+        data-ai-rail-workspace-slug-value="<%= layout_workspace_slug %>"
+        data-ai-rail-current-page-id-value="<%= layout_ai_rail_current_page_id %>"
+        data-ai-rail-panel-src-value="<%= layout_ai_rail_panel_src %>">
     <% if user_signed_in? %>
       <% embedded_shell = params[:embedded].to_s == "1" %>
       <div class="notae-shell is-layout-hydrating <%= "notae-shell-embedded" if embedded_shell %>"
@@ -81,10 +93,21 @@
             <%= render "shared/workspace_notification_bar", presenter: notification_bar, workspace: notification_bar.workspace %>
           <% end %>
           <%= render "shared/app_mobile_tabbar" %>
-          <%= render "shared/app_ai_rail_panel",
-                     lazy: true,
-                     workspace_slug: params[:workspace_slug],
-                     current_page_id: (controller_name == "pages" && action_name == "show" ? params[:id] : nil) %>
+          <% if layout_workspace_slug.present? %>
+            <div id="<%= layout_ai_rail_shell_id %>"
+                 data-turbo-permanent
+                 data-ai-rail-workspace-slug="<%= layout_workspace_slug %>">
+              <%= render "shared/app_ai_rail_panel",
+                         lazy: true,
+                         workspace_slug: layout_workspace_slug,
+                         current_page_id: layout_ai_rail_current_page_id %>
+            </div>
+          <% else %>
+            <%= render "shared/app_ai_rail_panel",
+                       lazy: true,
+                       workspace_slug: layout_workspace_slug,
+                       current_page_id: layout_ai_rail_current_page_id %>
+          <% end %>
 
           <div class="notae-modal is-hidden" data-global-shortcuts-target="quickSwitcher" data-action="click->global-shortcuts#closeAll">
             <div class="notae-modal-panel" data-action="click->global-shortcuts#noop">
