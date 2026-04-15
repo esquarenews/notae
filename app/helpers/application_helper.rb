@@ -585,7 +585,9 @@ module ApplicationHelper
   end
 
   def workspace_notification_bar_workspace
-    return @workspace if defined?(@workspace) && @workspace.present?
+    if defined?(@workspace) && @workspace.present?
+      return @workspace if @workspace.respond_to?(:persisted?) && @workspace.persisted? && @workspace.slug.present?
+    end
     return nil if params[:workspace_slug].blank?
 
     ui_current_workspace

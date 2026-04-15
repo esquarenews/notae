@@ -30,5 +30,16 @@ RSpec.describe MeetingSession, type: :model do
     expect(active_session).to be_processing
     expect(completed_session).to be_completed
     expect(completed_session).not_to be_failed
+    extension_session = described_class.new(
+      workspace: workspace,
+      title: "Extension meeting",
+      capture_mode: "browser_extension",
+      provider: "google_meet",
+      status: "recording",
+      created_by: user,
+      updated_by: user
+    )
+    expect(extension_session).to be_valid
+    expect(extension_session.capture_mode_label).to eq("Google Meet extension")
   end
 end

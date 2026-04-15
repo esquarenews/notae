@@ -206,6 +206,7 @@ class KalendariumEventsController < ApplicationController
     redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     redirect_params[:window_start] = params[:window_start].presence if params[:window_start].present?
     redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
+    redirect_params[:widget] = "1" if params[:widget].to_s == "1"
     redirect_params[:task_row_id] = params[:task_row_id].presence if params[:task_row_id].present?
     kalendarium_path(redirect_params)
   end

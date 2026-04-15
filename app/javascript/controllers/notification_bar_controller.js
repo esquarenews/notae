@@ -1,17 +1,21 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["clock", "alerts", "alert"]
+  static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel"]
   static values = { timeZone: String, workspaceKey: String }
 
   connect() {
     this.renderClock()
     this.startClock()
     this.applyStoredAlertState()
+    this.handleWidgetMessage = this.handleWidgetMessage.bind(this)
+    window.addEventListener("message", this.handleWidgetMessage)
+    this.refreshCalendarState()
   }
 
   disconnect() {
     this.stopClock()
+    window.removeEventListener("message", this.handleWidgetMessage)
   }
 
   startClock() {
@@ -44,6 +48,36 @@ export default class extends Controller {
     }).format(now)
 
     this.clockTarget.textContent = `${dateLabel} · ${timeLabel}`
+  }
+
+  toggleCalendar(event) {
+    event?.preventDefault()
+
+    if (!this.hasCalendarPanelTarget) return
+
+    if (this.calendarPanelTarget.hidden) {
+      this.openCalendar()
+    } else {
+      this.closeCalendar()
+    }
+  }
+
+  openCalendar() {
+    if (!this.hasCalendarPanelTarget) return
+
+    this.calendarPanelTarget.hidden = false
+    this.element.classList.add("is-calendar-open")
+    this.refreshCalendarState()
+  }
+
+  closeCalendar(event) {
+    event?.preventDefault()
+
+    if (!this.hasCalendarPanelTarget) return
+
+    this.calendarPanelTarget.hidden = true
+    this.element.classList.remove("is-calendar-open")
+    this.refreshCalendarState()
   }
 
   dismissAlert(event) {
@@ -103,6 +137,23 @@ export default class extends Controller {
     const clockVisible = this.hasClockTarget && !this.clockTarget.hidden
     const alertsVisible = this.hasAlertsTarget && !this.alertsTarget.hidden
     this.element.hidden = !(clockVisible || alertsVisible)
+  }
+
+  refreshCalendarState() {
+    if (!this.hasClockButtonTarget) return
+
+    const expanded = this.hasCalendarPanelTarget && !this.calendarPanelTarget.hidden
+    this.clockButtonTarget.setAttribute("aria-expanded", expanded ? "true" : "false")
+    this.clockButtonTarget.setAttribute("aria-label", expanded ? "Close compact Kalendārium" : "Open compact Kalendārium")
+  }
+
+  handleWidgetMessage(event) {
+    if (event.origin !== window.location.origin) return
+
+    const messageType = event.data?.type
+    if (messageType === "notae:kalendarium-widget:minimize") {
+      this.closeCalendar()
+    }
   }
 
   alertForEvent(event) {

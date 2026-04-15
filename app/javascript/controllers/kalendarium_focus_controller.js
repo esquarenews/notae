@@ -1,11 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["viewLink", "dateInput", "dateLabel", "dayLink", "weekTrack", "monthCell", "createAccordion", "createTitleInput", "createStartInput", "createEndInput", "createAllDayInput"]
+  static targets = ["viewLink", "dateInput", "dateLabel", "dayLink", "weekTrack", "monthCell", "createAccordion", "createDialog", "createTitleInput", "createStartInput", "createEndInput", "createAllDayInput"]
   static values = {
     selectedDate: String,
     view: String,
-    windowStart: String
+    windowStart: String,
+    widget: { type: Boolean, default: false }
   }
 
   connect() {
@@ -34,11 +35,6 @@ export default class extends Controller {
     this.selectedDateValue = dateString
     this.applySelectedDate(dateString)
 
-    if (this.hasCreateAccordionTarget) {
-      this.createAccordionTarget.open = true
-      this.createAccordionTarget.scrollIntoView({ block: "nearest" })
-    }
-
     if (this.hasCreateAllDayInputTarget && this.createAllDayInputTarget.checked) {
       this.createAllDayInputTarget.checked = false
       this.dispatchChange(this.createAllDayInputTarget)
@@ -54,11 +50,46 @@ export default class extends Controller {
       this.dispatchChange(this.createEndInputTarget)
     }
 
-    if (this.hasCreateTitleInputTarget) {
-      window.requestAnimationFrame(() => {
-        this.createTitleInputTarget.focus()
-        this.createTitleInputTarget.select()
-      })
+    this.openCreateSurface()
+    this.focusCreateTitleInput()
+  }
+
+  quickCreateDay(event) {
+    if (this.interactiveTarget(event.target)) return
+
+    const dateString = event.currentTarget?.dataset?.dayDate
+    if (!dateString) return
+
+    event.preventDefault()
+    this.prepareNewEvent({ detail: this.defaultQuickCreateDetail(dateString) })
+  }
+
+  openCreateModal(event) {
+    event?.preventDefault()
+
+    const dateString = this.hasSelectedDateValue && this.selectedDateValue ? this.selectedDateValue : this.todayDateString()
+    this.prepareNewEvent({ detail: this.defaultQuickCreateDetail(dateString) })
+  }
+
+  closeCreateDialog(event) {
+    event?.preventDefault()
+    if (!this.hasCreateDialogTarget) return
+
+    this.createDialogTarget.close()
+  }
+
+  backdropCloseCreateDialog(event) {
+    if (!this.hasCreateDialogTarget) return
+    if (event.target !== this.createDialogTarget) return
+
+    this.createDialogTarget.close()
+  }
+
+  minimizeWidget(event) {
+    event?.preventDefault()
+
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "notae:kalendarium-widget:minimize" }, window.location.origin)
     }
   }
 
@@ -140,6 +171,29 @@ export default class extends Controller {
     element.dispatchEvent(new Event("change", { bubbles: true }))
   }
 
+  openCreateSurface() {
+    if (this.hasCreateDialogTarget) {
+      if (!this.createDialogTarget.open) {
+        this.createDialogTarget.showModal()
+      }
+      return
+    }
+
+    if (this.hasCreateAccordionTarget) {
+      this.createAccordionTarget.open = true
+      this.createAccordionTarget.scrollIntoView({ block: "nearest" })
+    }
+  }
+
+  focusCreateTitleInput() {
+    if (!this.hasCreateTitleInputTarget) return
+
+    window.requestAnimationFrame(() => {
+      this.createTitleInputTarget.focus()
+      this.createTitleInputTarget.select()
+    })
+  }
+
   parseIsoDate(dateString) {
     const [year, month, day] = dateString.split("-").map((part) => Number.parseInt(part, 10))
     if (!year || !month || !day) return null
@@ -193,5 +247,28 @@ export default class extends Controller {
       year: "numeric",
       timeZone: "UTC"
     }).format(dateObject)
+  }
+
+  defaultQuickCreateDetail(dateString) {
+    return {
+      date: dateString,
+      startLocal: `${dateString}T09:00`,
+      endLocal: `${dateString}T10:00`
+    }
+  }
+
+  todayDateString() {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0")
+    const day = String(now.getDate()).padStart(2, "0")
+
+    return `${year}-${month}-${day}`
+  }
+
+  interactiveTarget(target) {
+    if (!(target instanceof Element)) return false
+
+    return target.closest("a, button, input, textarea, select, label, summary, details, form, .notae-kalendarium-event-card") !== null
   }
 }

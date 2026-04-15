@@ -42,5 +42,8 @@ RSpec.describe "KalendariumEventFormController JavaScript syntax" do
     expect(source).to include('this.startInputTarget.value = `${selectedDate}T09:00`')
     expect(source).to include('this.endInputTarget.value = `${selectedDate}T10:00`')
     expect(source).to include("this.accordionElement.open = false")
+    expect(source).to include("this.dialogElement = this.element.closest(\"dialog\")")
+    expect(source).to include("this.dialogElement?.open")
+    expect(source).to include("this.dialogElement.close()")
   end
 end

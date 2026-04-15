@@ -24,6 +24,7 @@ Rails.application.routes.draw do
     get "/", to: "workspace_home#show", as: :workspace
     get "meetings", to: "meetings#show", as: :workspace_meetings
     get "meetings/status", to: "meetings#status", as: :workspace_meetings_status
+    resource :meeting_extension_token, path: "meetings/extension-token", only: %i[create destroy]
     get "search", to: "searches#index", as: :workspace_search
     get "ai-conversation-history", to: "ai_conversation_histories#show", as: :workspace_ai_conversation_history
     get "library", to: "libraries#show", as: :workspace_library
@@ -236,9 +237,11 @@ Rails.application.routes.draw do
           end
         end
         namespace :meetings do
-          resources :sessions, only: %i[index show] do
+          resources :sessions, only: %i[index show create] do
             member do
               get :transcript
+              post :ingest_transcript
+              post :cancel
             end
           end
         end

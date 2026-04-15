@@ -12,7 +12,7 @@ class WorkspaceNotificationBarPresenter
   end
 
   def render?
-    return false if workspace.blank? || mode == Workspace::SHELL_STATUS_BAR_MODE_OFF
+    return false if workspace.blank? || workspace.slug.blank? || mode == Workspace::SHELL_STATUS_BAR_MODE_OFF
 
     show_clock? || has_alerts?
   end
@@ -36,6 +36,10 @@ class WorkspaceNotificationBarPresenter
   def initial_clock_label
     local_time = reference_time.in_time_zone(resolved_time_zone)
     "#{local_time.strftime('%a %-d %b')} · #{local_time.strftime('%-l:%M %p').strip}"
+  end
+
+  def calendar_widget_date
+    reference_time.in_time_zone(resolved_time_zone).to_date.iso8601
   end
 
   def event_alert

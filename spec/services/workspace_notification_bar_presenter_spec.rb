@@ -83,6 +83,7 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.show_clock?).to be(true)
     expect(presenter.show_alerts?).to be(true)
     expect(presenter.initial_clock_label).to include("Sat 11 Apr")
+    expect(presenter.calendar_widget_date).to eq("2026-04-11")
     expect(presenter.event_alert&.title).to eq("Stand-up")
     expect(presenter.event_timing_label).to eq("Starts in 10 min")
     expect(presenter.recent_email_count).to eq(1)
@@ -110,6 +111,15 @@ RSpec.describe WorkspaceNotificationBarPresenter do
   it "does not render for alerts-only mode when nothing recent has arrived" do
     user = User.create!(email: "notification-bar-empty@example.com", password: "password123")
     workspace = Workspace.create!(name: "Alerts only", slug: "alerts-only", shell_status_bar_mode: "alerts_only")
+
+    presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
+
+    expect(presenter.render?).to be(false)
+  end
+
+  it "does not render for a workspace without a slug" do
+    user = User.create!(email: "notification-bar-unsaved@example.com", password: "password123")
+    workspace = Workspace.new(name: "Draft workspace")
 
     presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
 

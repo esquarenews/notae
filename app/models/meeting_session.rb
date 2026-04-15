@@ -3,7 +3,7 @@ require "digest"
 class MeetingSession < ApplicationRecord
   include PgSearch::Model
 
-  CAPTURE_MODES = %w[online_bot in_person_mic upload].freeze
+  CAPTURE_MODES = %w[online_bot browser_extension in_person_mic upload].freeze
   PROVIDERS = %w[google_meet zoom teams local].freeze
   STATUSES = %w[scheduled joining recording uploading processing summarizing proposing completed failed cancelled].freeze
   ACTIVE_STATUSES = %w[scheduled joining recording uploading processing summarizing proposing].freeze
@@ -49,6 +49,19 @@ class MeetingSession < ApplicationRecord
 
   def processing?
     %w[processing summarizing proposing].include?(status)
+  end
+
+  def capture_mode_label
+    case capture_mode
+    when "browser_extension"
+      "Google Meet extension"
+    when "in_person_mic"
+      "Microphone"
+    when "online_bot"
+      "Legacy browser bot"
+    else
+      capture_mode.to_s.humanize
+    end
   end
 
   def transcript_text_from_utterances

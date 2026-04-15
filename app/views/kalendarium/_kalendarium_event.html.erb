@@ -138,7 +138,7 @@
           <% end %>
           <% if event.meeting_capture_enabled? %>
             <div>
-              <dt>Capture</dt>
+              <dt>Meet extension</dt>
               <dd>
                 Enabled
                 <% if event.latest_meeting_session.present? %>
@@ -211,7 +211,7 @@
           </label>
           <label class="notae-options-checkbox">
             <%= form.check_box :meeting_capture_enabled %>
-            <span>Record &amp; transcribe this event</span>
+            <span>Prefer this event when the Google Meet extension starts a transcript</span>
           </label>
           <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
           <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>

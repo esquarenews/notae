@@ -3,13 +3,16 @@
   <%= notae_icon_svg(:kalendarium, css_class: "notae-topbar-page-icon-glyph") %>
 <% end %>
 <% content_for :topbar_privacy, @workspace.name %>
-<% content_for :content_class, "notae-content-wide notae-content-kalendarium" %>
+<% widget_view = @widget_mode %>
+<% content_for :content_class, ["notae-content-wide", "notae-content-kalendarium", ("notae-content-kalendarium-widget" if widget_view)].compact.join(" ") %>
 <% content_for :topbar_actions do %>
   <%= link_to "Settings", workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
 <% end %>
 <% project_scope_params = @scoped_project_id.present? ? { project_scope_id: @scoped_project_id } : {} %>
 <% embedded_params = params[:embedded].to_s == "1" ? { embedded: "1" } : {} %>
-<% embedded_split_view = embedded_params[:embedded] == "1" %>
+<% widget_params = widget_view ? { widget: "1" } : {} %>
+<% embedded_split_view = embedded_params[:embedded] == "1" && !widget_view %>
+<% embedded_compact_view = embedded_split_view || widget_view %>
 <% task_schedule_params = @task_schedule_row.present? ? { task_row_id: @task_schedule_row.id } : {} %>
 <% window_start_value = params[:window_start].presence || (@view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : nil) %>
 <% window_start_params = window_start_value.present? ? { window_start: window_start_value } : {} %>
@@ -35,50 +38,69 @@
   actions_menu: params[:actions_menu].presence,
   options_menu: params[:options_menu].presence
 }.compact %>
-<% kalendarium_base_params = { workspace_slug: @workspace.slug }.merge(embedded_params).merge(task_schedule_params).merge(window_start_params).merge(database_return_params) %>
+<% kalendarium_base_params = { workspace_slug: @workspace.slug }.merge(embedded_params).merge(widget_params).merge(task_schedule_params).merge(window_start_params).merge(database_return_params) %>
 
-<section class="<%= ["notae-kalendarium", ("is-embedded-split" if embedded_split_view)].compact.join(" ") %>"
+<section class="<%= ["notae-kalendarium", ("is-embedded-split" if embedded_split_view), ("is-widget" if widget_view)].compact.join(" ") %>"
          data-controller="<%= kalendarium_controllers.join(" ") %>"
          data-action="<%= kalendarium_actions.join(" ") %>"
          data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
          data-kalendarium-focus-view-value="<%= @view %>"
          data-kalendarium-focus-window-start-value="<%= @view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : "" %>"
+         data-kalendarium-focus-widget-value="<%= widget_view ? "true" : "false" %>"
          <% if @task_schedule_row.present? %>
          data-kalendarium-task-slot-task-title-value="<%= @task_schedule_row.title %>"
          data-kalendarium-task-slot-default-duration-minutes-value="<%= Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES %>"
          <% end %>>
+  <% year_daily_events_param = @show_year_daily_events ? "1" : nil %>
+  <% selected_offset_days = @view == "next_7_days" ? (@selected_date - @next_seven_days_start).to_i : 0 %>
+  <% previous_window_start = @view == "next_7_days" ? @next_seven_days_start - 7.days : nil %>
+  <% next_window_start = @view == "next_7_days" ? @next_seven_days_start + 7.days : nil %>
+  <% previous_date = case @view
+                    when "day" then @selected_date - 1.day
+                    when "next_7_days" then previous_window_start + selected_offset_days.days
+                    when "week" then @selected_date - 1.week
+                    when "year" then @selected_date - 1.year
+                    else @selected_date - 1.month
+                    end %>
+  <% next_date = case @view
+                when "day" then @selected_date + 1.day
+                when "next_7_days" then next_window_start + selected_offset_days.days
+                when "week" then @selected_date + 1.week
+                when "year" then @selected_date + 1.year
+                else @selected_date + 1.month
+                end %>
+  <% selected_date_label = case @view
+                           when "day"
+                             @selected_date.strftime("%A, %-d %B %Y")
+                           when "next_7_days"
+                             "#{@next_seven_days_start.strftime("%b %-d")} - #{(@next_seven_days_start + 6.days).strftime("%b %-d, %Y")}"
+                           when "year"
+                             @selected_date.strftime("%Y")
+                           else
+                             @selected_date.strftime("%b %-d, %Y")
+                           end %>
   <header class="notae-kalendarium-head notae-auth-card">
-    <div class="notae-kalendarium-head-top">
-      <h1 class="notae-tool-page-title">Kalendārium</h1>
-      <div class="notae-kalendarium-nav-buttons">
-        <% year_daily_events_param = @show_year_daily_events ? "1" : nil %>
-        <% selected_offset_days = @view == "next_7_days" ? (@selected_date - @next_seven_days_start).to_i : 0 %>
-        <% previous_window_start = @view == "next_7_days" ? @next_seven_days_start - 7.days : nil %>
-        <% next_window_start = @view == "next_7_days" ? @next_seven_days_start + 7.days : nil %>
-        <% previous_date = case @view
-                          when "day" then @selected_date - 1.day
-                          when "next_7_days" then previous_window_start + selected_offset_days.days
-                          when "week" then @selected_date - 1.week
-                          when "year" then @selected_date - 1.year
-                          else @selected_date - 1.month
-                          end %>
-        <% next_date = case @view
-                      when "day" then @selected_date + 1.day
-                      when "next_7_days" then next_window_start + selected_offset_days.days
-                      when "week" then @selected_date + 1.week
-                      when "year" then @selected_date + 1.year
-                      else @selected_date + 1.month
-                      end %>
-        <% selected_date_label = case @view
-                                 when "day"
-                                   @selected_date.strftime("%A, %-d %B %Y")
-                                 when "next_7_days"
-                                   "#{@next_seven_days_start.strftime("%b %-d")} - #{(@next_seven_days_start + 6.days).strftime("%b %-d, %Y")}"
-                                 when "year"
-                                   @selected_date.strftime("%Y")
-                                 else
-                                   @selected_date.strftime("%b %-d, %Y")
-                                 end %>
+    <% if widget_view %>
+      <div class="notae-kalendarium-widget-head">
+        <div class="notae-kalendarium-widget-title-wrap">
+          <p class="notae-kalendarium-widget-eyebrow">Kalendārium</p>
+          <h1 class="notae-kalendarium-widget-title">Quick calendar</h1>
+        </div>
+        <div class="notae-kalendarium-widget-controls">
+          <button type="button"
+                  class="notae-kalendarium-widget-control"
+                  aria-label="Add event"
+                  title="Add event"
+                  data-action="kalendarium-focus#openCreateModal">+</button>
+          <button type="button"
+                  class="notae-kalendarium-widget-control"
+                  aria-label="Minimise quick calendar"
+                  title="Minimise"
+                  data-action="kalendarium-focus#minimizeWidget">−</button>
+        </div>
+      </div>
+
+      <div class="notae-kalendarium-nav-buttons notae-kalendarium-widget-nav">
         <%= link_to "←",
                     kalendarium_path(
                       kalendarium_base_params.merge(
@@ -117,28 +139,70 @@
                     ),
                     class: "notae-chip-button" %>
       </div>
-    </div>
-
-    <div class="notae-kalendarium-head-row">
-      <div class="notae-kalendarium-view-switch">
-        <% KalendariumController::VIEW_OPTIONS.each do |view_option| %>
-          <% view_label = view_option == "next_7_days" ? "Next 7 days" : view_option.titleize %>
-          <%= link_to view_label,
+    <% else %>
+      <div class="notae-kalendarium-head-top">
+        <h1 class="notae-tool-page-title">Kalendārium</h1>
+        <div class="notae-kalendarium-nav-buttons">
+          <%= link_to "←",
                       kalendarium_path(
                         kalendarium_base_params.merge(
-                          view: view_option,
-                          date: @selected_date,
+                          view: @view,
+                          date: previous_date,
+                          window_start: previous_window_start&.strftime("%Y-%m-%d"),
                           project_id: @selected_project_id,
                           calendar_ids: @selected_calendar_ids,
                           year_daily_events: year_daily_events_param
                         ).merge(project_scope_params)
                       ),
-                      class: ["notae-chip-button", ("is-active" if @view == view_option)].compact.join(" "),
-                      data: { kalendarium_focus_target: "viewLink", view_option: view_option } %>
-        <% end %>
+                      class: "notae-chip-button" %>
+          <span class="notae-kalendarium-date-label" data-kalendarium-focus-target="dateLabel"><%= selected_date_label %></span>
+          <%= link_to "→",
+                      kalendarium_path(
+                        kalendarium_base_params.merge(
+                          view: @view,
+                          date: next_date,
+                          window_start: next_window_start&.strftime("%Y-%m-%d"),
+                          project_id: @selected_project_id,
+                          calendar_ids: @selected_calendar_ids,
+                          year_daily_events: year_daily_events_param
+                        ).merge(project_scope_params)
+                      ),
+                      class: "notae-chip-button" %>
+          <%= link_to "Today",
+                      kalendarium_path(
+                        kalendarium_base_params.merge(
+                          view: @view,
+                          date: Date.current,
+                          window_start: (@view == "next_7_days" ? Date.current.strftime("%Y-%m-%d") : nil),
+                          project_id: @selected_project_id,
+                          calendar_ids: @selected_calendar_ids,
+                          year_daily_events: year_daily_events_param
+                        ).merge(project_scope_params)
+                      ),
+                      class: "notae-chip-button" %>
+        </div>
       </div>
 
-      <div class="notae-kalendarium-filter-controls">
+      <div class="notae-kalendarium-head-row">
+        <div class="notae-kalendarium-view-switch">
+          <% KalendariumController::VIEW_OPTIONS.each do |view_option| %>
+            <% view_label = view_option == "next_7_days" ? "Next 7 days" : view_option.titleize %>
+            <%= link_to view_label,
+                        kalendarium_path(
+                          kalendarium_base_params.merge(
+                            view: view_option,
+                            date: @selected_date,
+                            project_id: @selected_project_id,
+                            calendar_ids: @selected_calendar_ids,
+                            year_daily_events: year_daily_events_param
+                          ).merge(project_scope_params)
+                        ),
+                        class: ["notae-chip-button", ("is-active" if @view == view_option)].compact.join(" "),
+                        data: { kalendarium_focus_target: "viewLink", view_option: view_option } %>
+          <% end %>
+        </div>
+
+        <div class="notae-kalendarium-filter-controls">
         <%= button_to refresh_kalendarium_path(workspace_slug: @workspace.slug),
                       method: :post,
                       params: {
@@ -151,6 +215,7 @@
                         calendar_filter_applied: "1",
                         year_daily_events: year_daily_events_param,
                         embedded: embedded_params[:embedded],
+                        widget: widget_params[:widget],
                         task_row_id: task_schedule_params[:task_row_id],
                         **database_return_params
                       },
@@ -330,11 +395,12 @@
           <% end %>
         <% end %>
       </div>
-    </div>
+      </div>
+    <% end %>
   </header>
 
   <section class="notae-kalendarium-grid">
-    <% unless embedded_split_view %>
+    <% unless embedded_compact_view %>
       <aside class="notae-kalendarium-sidebar notae-auth-card is-pinned">
         <% if @task_schedule_row.present? %>
           <section class="notae-kalendarium-task-schedule-panel">
@@ -352,77 +418,19 @@
           <summary class="notae-kalendarium-sidebar-accordion-summary">Create event</summary>
           <div class="notae-kalendarium-sidebar-accordion-body">
             <div class="notae-kalendarium-sidebar-accordion-body-inner">
-              <%= form_with model: @new_event,
-                            url: kalendarium_events_path(kalendarium_base_params),
-                            class: "notae-kalendarium-form",
-                            data: {
-                              controller: "kalendarium-event-form",
-                              kalendarium_event_form_enforce_future_end_value: true,
-                              kalendarium_event_form_preview_enabled_value: true
-                            } do |form| %>
-                <%= hidden_field_tag :view, @view %>
-                <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
-                <% if @scoped_project_id.present? %>
-                  <%= hidden_field_tag :project_scope_id, @scoped_project_id %>
-                <% end %>
-                <%= form.text_field :title,
-                                    placeholder: "Event title",
-                                    required: true,
-                                    class: "notae-auth-input",
-                                    data: {
-                                      kalendarium_focus_target: "createTitleInput",
-                                      kalendarium_event_form_target: "titleInput",
-                                      action: "input->kalendarium-event-form#titleChanged"
-                                    } %>
-                <%= form.select :kalendarium_calendar_id,
-                                options_from_collection_for_select(@visible_calendars, :id, :name),
-                                {},
-                                class: "notae-auth-input" %>
-                <%= form.select :kalendarium_project_id,
-                                options_for_select([["No project", ""]] + @projects.map { |project| [project.name, project.id] }, @selected_project_id),
-                                {},
-                                class: "notae-auth-input" %>
-                <%= form.datetime_local_field :starts_at_local,
-                                              value: @selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"),
-                                              class: "notae-auth-input",
-                                              data: {
-                                                kalendarium_focus_target: "createStartInput",
-                                                kalendarium_event_form_target: "startInput",
-                                                action: "change->kalendarium-event-form#startChanged"
-                                              } %>
-                <%= form.datetime_local_field :ends_at_local,
-                                              value: @selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"),
-                                              min: Time.current.in_time_zone(current_user.time_zone).strftime("%Y-%m-%dT%H:%M"),
-                                              class: "notae-auth-input",
-                                              data: {
-                                                kalendarium_focus_target: "createEndInput",
-                                                kalendarium_event_form_target: "endInput",
-                                                action: "change->kalendarium-event-form#endChanged"
-                                              } %>
-                <label class="notae-options-checkbox">
-                  <%= form.check_box :all_day,
-                                     data: {
-                                       kalendarium_focus_target: "createAllDayInput",
-                                       kalendarium_event_form_target: "allDayInput",
-                                       action: "change->kalendarium-event-form#toggleAllDay"
-                                     } %>
-                  <span>All day</span>
-                </label>
-                <label class="notae-options-checkbox">
-                  <%= form.check_box :meeting_capture_enabled %>
-                  <span>Record &amp; transcribe this event</span>
-                </label>
-                <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
-                <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
-                <%= form.hidden_field :linked_page_action, value: "" %>
-                <div class="notae-kalendarium-form-actions">
-                  <%= button_tag "Cancel",
-                                 type: "button",
-                                 class: "notae-chip-button notae-chip-button-subtle",
-                                 data: { action: "kalendarium-event-form#cancel" } %>
-                  <%= form.submit "Create", class: "notae-chip-button" %>
-                </div>
-              <% end %>
+              <%= render "create_event_form",
+                         new_event: @new_event,
+                         kalendarium_base_params: kalendarium_base_params,
+                         selected_date: @selected_date,
+                         scoped_project_id: @scoped_project_id,
+                         visible_calendars: @visible_calendars,
+                         projects: @projects,
+                         selected_project_id: @selected_project_id,
+                         form_class: "notae-kalendarium-form",
+                         view_name: @view,
+                         preview_enabled: true,
+                         cancel_label: "Cancel",
+                         submit_label: "Create" %>
             </div>
           </div>
         </details>
@@ -904,6 +912,9 @@
             <% day_events = @events_by_day[day] || [] %>
             <section class="<%= ["notae-kalendarium-month-cell", ("is-today" if day == today_local), ("is-selected" if day == @selected_date)].compact.join(" ") %>"
                      data-kalendarium-focus-target="monthCell"
+                     <% if widget_view %>
+                     data-action="dblclick->kalendarium-focus#quickCreateDay"
+                     <% end %>
                      data-day-date="<%= day.strftime("%Y-%m-%d") %>">
               <header>
                 <strong>
@@ -985,6 +996,39 @@
       <% end %>
     </div>
   </section>
+
+  <% if widget_view %>
+    <dialog class="notae-danger-modal notae-kalendarium-event-modal"
+            data-kalendarium-focus-target="createDialog"
+            data-action="click->kalendarium-focus#backdropCloseCreateDialog">
+      <div class="notae-danger-modal-panel notae-kalendarium-event-modal-panel">
+        <div class="notae-danger-modal-header">
+          <div class="notae-kalendarium-event-modal-title">
+            <span class="notae-page-subtle">Quick calendar</span>
+            <h3>Create event</h3>
+          </div>
+          <button type="button"
+                  class="notae-inline-icon-button"
+                  aria-label="Close create event dialog"
+                  data-action="kalendarium-focus#closeCreateDialog">✕</button>
+        </div>
+
+        <%= render "create_event_form",
+                   new_event: @new_event,
+                   kalendarium_base_params: kalendarium_base_params,
+                   selected_date: @selected_date,
+                   scoped_project_id: @scoped_project_id,
+                   visible_calendars: @visible_calendars,
+                   projects: @projects,
+                   selected_project_id: @selected_project_id,
+                   form_class: "notae-kalendarium-event-modal-form",
+                   view_name: @view,
+                   preview_enabled: true,
+                   cancel_label: "Cancel",
+                   submit_label: "Create event" %>
+      </div>
+    </dialog>
+  <% end %>
 
   <% if @task_schedule_row.present? %>
     <dialog class="notae-danger-modal notae-kalendarium-task-slot-modal"

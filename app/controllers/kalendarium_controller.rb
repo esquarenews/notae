@@ -16,8 +16,9 @@ class KalendariumController < ApplicationController
   def show
     authorize @workspace, :show?
 
-    @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week"
-    persist_last_calendar_view!
+    @widget_mode = params[:widget].to_s == "1"
+    @view = @widget_mode ? "month" : (VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week")
+    persist_last_calendar_view! unless @widget_mode
     @project_return_view = resolve_project_return_view
     @selected_date = parse_selected_date
     @next_seven_days_start = resolve_next_seven_days_start
@@ -329,6 +330,7 @@ class KalendariumController < ApplicationController
       redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
       redirect_params[:project_scope_id] = params[:project_scope_id].to_s.presence if params[:project_scope_id].present?
       redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
+      redirect_params[:widget] = "1" if params[:widget].to_s == "1"
       redirect_params[:task_row_id] = params[:task_row_id].to_s.presence if params[:task_row_id].present?
       redirect_params[:window_start] = params[:window_start].to_s.presence if params[:window_start].present?
     end

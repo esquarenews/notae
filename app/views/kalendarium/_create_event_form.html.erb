@@ -1,0 +1,71 @@
+<%= form_with model: new_event,
+              url: kalendarium_events_path(kalendarium_base_params),
+              class: form_class,
+              data: {
+                controller: "kalendarium-event-form",
+                kalendarium_event_form_enforce_future_end_value: true,
+                kalendarium_event_form_preview_enabled_value: preview_enabled
+              } do |form| %>
+  <%= hidden_field_tag :view, view_name %>
+  <%= hidden_field_tag :date, selected_date, data: { kalendarium_focus_target: "dateInput" } %>
+  <% if scoped_project_id.present? %>
+    <%= hidden_field_tag :project_scope_id, scoped_project_id %>
+  <% end %>
+  <%= form.text_field :title,
+                      placeholder: "Event title",
+                      required: true,
+                      class: "notae-auth-input",
+                      data: {
+                        kalendarium_focus_target: "createTitleInput",
+                        kalendarium_event_form_target: "titleInput",
+                        action: "input->kalendarium-event-form#titleChanged"
+                      } %>
+  <%= form.select :kalendarium_calendar_id,
+                  options_from_collection_for_select(visible_calendars, :id, :name),
+                  {},
+                  class: "notae-auth-input" %>
+  <%= form.select :kalendarium_project_id,
+                  options_for_select([["No project", ""]] + projects.map { |project| [project.name, project.id] }, selected_project_id),
+                  {},
+                  class: "notae-auth-input" %>
+  <%= form.datetime_local_field :starts_at_local,
+                                value: selected_date.to_time.change(hour: 9).strftime("%Y-%m-%dT%H:%M"),
+                                class: "notae-auth-input",
+                                data: {
+                                  kalendarium_focus_target: "createStartInput",
+                                  kalendarium_event_form_target: "startInput",
+                                  action: "change->kalendarium-event-form#startChanged"
+                                } %>
+  <%= form.datetime_local_field :ends_at_local,
+                                value: selected_date.to_time.change(hour: 10).strftime("%Y-%m-%dT%H:%M"),
+                                min: Time.current.in_time_zone(current_user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+                                class: "notae-auth-input",
+                                data: {
+                                  kalendarium_focus_target: "createEndInput",
+                                  kalendarium_event_form_target: "endInput",
+                                  action: "change->kalendarium-event-form#endChanged"
+                                } %>
+  <label class="notae-options-checkbox">
+    <%= form.check_box :all_day,
+                       data: {
+                         kalendarium_focus_target: "createAllDayInput",
+                         kalendarium_event_form_target: "allDayInput",
+                         action: "change->kalendarium-event-form#toggleAllDay"
+                       } %>
+    <span>All day</span>
+  </label>
+  <label class="notae-options-checkbox">
+    <%= form.check_box :meeting_capture_enabled %>
+    <span>Prefer this event when the Google Meet extension starts a transcript</span>
+  </label>
+  <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
+  <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
+  <%= form.hidden_field :linked_page_action, value: "" %>
+  <div class="notae-kalendarium-form-actions">
+    <%= button_tag cancel_label,
+                   type: "button",
+                   class: "notae-chip-button notae-chip-button-subtle",
+                   data: { action: "kalendarium-event-form#cancel" } %>
+    <%= form.submit submit_label, class: "notae-chip-button" %>
+  </div>
+<% end %>

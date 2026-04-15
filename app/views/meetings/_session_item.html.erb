@@ -5,7 +5,7 @@
     <span class="notae-kalendarium-status-badge"><%= session.status.humanize %></span>
   </header>
   <p class="notae-doc-muted">
-    <%= session.capture_mode.humanize %> • <%= session.provider.humanize %> •
+    <%= session.capture_mode_label %> • <%= session.provider.humanize %> •
     Created <%= time_ago_in_words(session.created_at) %> ago
   </p>
   <% if session.kalendarium_event.present? %>
@@ -57,14 +57,16 @@
       </p>
     <% end %>
   <% end %>
+  <% if session.capture_mode == "browser_extension" %>
+    <% transcript_source = session.metadata_json.to_h["transcript_source"].to_s.presence %>
+    <% if transcript_source.present? %>
+      <p class="notae-doc-muted">
+        Transcript source: <strong><%= transcript_source.tr("_", " ").humanize %></strong>
+      </p>
+    <% end %>
+  <% end %>
 
   <div class="notae-meetings-session-actions">
-    <% if session.capture_mode == "online_bot" && session.status.in?(%w[failed cancelled]) %>
-      <%= button_to "Restart",
-                    start_meeting_session_path(workspace_slug: workspace.slug, id: session.id),
-                    method: :post,
-                    class: "notae-chip-button" %>
-    <% end %>
     <% if session.status.in?(%w[recording joining uploading processing summarizing proposing]) %>
       <%= button_to "Stop",
                     stop_meeting_session_path(workspace_slug: workspace.slug, id: session.id),

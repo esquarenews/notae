@@ -16,6 +16,9 @@ class MeetingsController < ApplicationController
     authorize @workspace, :show?
     load_meetings_dashboard_data!
     @meeting_session = MeetingSession.new(workspace: @workspace, capture_mode: "upload", provider: "local", status: "scheduled")
+    @meeting_extension_token = flash[:meeting_extension_token].to_s.presence
+    @meeting_extension_token_expires_at = Time.zone.parse(flash[:meeting_extension_token_expires_at].to_s) if flash[:meeting_extension_token_expires_at].present?
+    @active_meeting_extension_token = Meetings::ExtensionTokenService.new(user: current_user, workspace: @workspace).latest_active_token
   end
 
   def status
@@ -78,7 +81,7 @@ class MeetingsController < ApplicationController
     now = Time.current
     scope = meeting_sessions_scope
 
-    @active_recording_count = scope.where(capture_mode: %w[online_bot in_person_mic], status: ACTIVE_RECORDING_STATUSES).count
+    @active_recording_count = scope.where(capture_mode: %w[online_bot browser_extension in_person_mic], status: ACTIVE_RECORDING_STATUSES).count
     @scheduled_future_count = scope.joins(:kalendarium_event)
                                    .where(capture_mode: "online_bot", status: "scheduled")
                                    .where("kalendarium_events.starts_at_utc > ?", now)
@@ -87,7 +90,7 @@ class MeetingsController < ApplicationController
     @meetings_status_polling_active = scope.where(status: POLLING_STATUSES).exists?
 
     @active_recording_sessions = if @active_recording_count.positive?
-      scope.where(capture_mode: %w[online_bot in_person_mic], status: ACTIVE_RECORDING_STATUSES)
+      scope.where(capture_mode: %w[online_bot browser_extension in_person_mic], status: ACTIVE_RECORDING_STATUSES)
            .includes(:kalendarium_event, :page, :latest_meeting_bot_run)
            .recent_first
            .limit(SECTION_LIMIT)

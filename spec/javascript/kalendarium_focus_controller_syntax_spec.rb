@@ -21,11 +21,16 @@ RSpec.describe "kalendarium_focus_controller.js" do
 
     expect(source).to include("prepareNewEvent(event)")
     expect(source).to include("createAccordion")
+    expect(source).to include("createDialog")
     expect(source).to include("createStartInput")
     expect(source).to include("createEndInput")
     expect(source).to include("createTitleInput")
     expect(source).to include("dispatchChange(this.createStartInputTarget)")
     expect(source).to include("dispatchChange(this.createEndInputTarget)")
+    expect(source).to include("openCreateModal(event)")
+    expect(source).to include("quickCreateDay(event)")
+    expect(source).to include("minimizeWidget(event)")
+    expect(source).to include("window.parent.postMessage")
   end
 
   it "formats the rolling next-7-days label from the window start value" do

@@ -4,8 +4,24 @@
        data-notification-bar-time-zone-value="<%= presenter.time_zone_name %>"
        data-notification-bar-workspace-key-value="<%= workspace.slug %>">
   <% if presenter.show_clock? %>
-    <div class="notae-shell-status-bar-clock"
-         data-notification-bar-target="clock"><%= presenter.initial_clock_label %></div>
+    <% calendar_widget_path = kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "month", date: presenter.calendar_widget_date) %>
+    <button type="button"
+            class="notae-shell-status-bar-clock-button"
+            aria-label="Open compact Kalendārium"
+            aria-expanded="false"
+            data-notification-bar-target="clockButton"
+            data-action="dblclick->notification-bar#toggleCalendar">
+      <div class="notae-shell-status-bar-clock"
+           data-notification-bar-target="clock"><%= presenter.initial_clock_label %></div>
+    </button>
+    <section class="notae-shell-status-bar-calendar"
+             hidden
+             data-notification-bar-target="calendarPanel">
+      <iframe src="<%= calendar_widget_path %>"
+              title="Kalendārium quick calendar"
+              class="notae-shell-status-bar-calendar-frame"
+              loading="lazy"></iframe>
+    </section>
   <% end %>
 
   <% if presenter.show_alerts? %>

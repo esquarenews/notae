@@ -1,9 +1,9 @@
 namespace :meetings do
-  desc "Queue due meeting captures for events with capture enabled"
+  desc "Run legacy meeting bot maintenance for auto-stopping ended browser captures"
   task schedule_due: :environment do
     Meetings::ScheduleDueCapturesJob.perform_later
   rescue StandardError => error
-    Rails.logger.warn("Failed to enqueue due meeting captures: #{error.class}: #{error.message}")
+    Rails.logger.warn("Failed to enqueue legacy meeting maintenance: #{error.class}: #{error.message}")
   end
 
   desc "Reconcile stale bot runs and mark sessions failed when heartbeat is stale"

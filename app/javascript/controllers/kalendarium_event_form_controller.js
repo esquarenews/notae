@@ -10,6 +10,7 @@ export default class extends Controller {
   connect() {
     this.onAccordionToggle = () => this.accordionToggled()
     this.accordionElement = this.element.closest("details")
+    this.dialogElement = this.element.closest("dialog")
     if (this.previewEnabledValue && this.accordionElement) {
       this.accordionElement.addEventListener("toggle", this.onAccordionToggle)
     }
@@ -53,6 +54,10 @@ export default class extends Controller {
 
     if (this.accordionElement) {
       this.accordionElement.open = false
+    }
+
+    if (this.dialogElement?.open) {
+      this.dialogElement.close()
     }
   }
 

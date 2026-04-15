@@ -1,7 +1,7 @@
 <section class="notae-auth-card notae-meetings-card">
-  <h2>Live / Joining Sessions</h2>
+  <h2>Live / Active Sessions</h2>
   <div class="notae-meetings-live-controls">
-    <h3>Recording status</h3>
+    <h3>Microphone recorder</h3>
     <div class="notae-meetings-live-indicator<%= active_recording_sessions.any? { |session| session.capture_mode == "in_person_mic" } ? " is-active" : "" %>"
          role="status"
          aria-live="polite"
@@ -40,22 +40,20 @@
 </section>
 
 <div class="notae-meetings-layout notae-meetings-layout--session-split">
-  <section class="notae-auth-card notae-meetings-card">
-    <h2>Scheduled Future Recordings</h2>
-    <% if scheduled_future_sessions.any? %>
+  <% if scheduled_future_sessions.any? %>
+    <section class="notae-auth-card notae-meetings-card">
+      <h2>Legacy scheduled browser captures</h2>
       <div class="notae-meetings-sessions">
         <%= render partial: "session_item",
                    collection: scheduled_future_sessions,
                    as: :session,
                    locals: { workspace: workspace, show_speaker_mapping: false } %>
       </div>
-    <% else %>
-      <p class="notae-doc-muted">No future recordings are currently scheduled.</p>
-    <% end %>
-  </section>
+    </section>
+  <% end %>
 
   <section class="notae-auth-card notae-meetings-card">
-    <h2>Uploading to Processed</h2>
+    <h2>Transcribed / Processed Sessions</h2>
     <% if processing_completed_sessions.any? %>
       <div class="notae-meetings-sessions">
         <%= render partial: "session_item",
@@ -64,7 +62,7 @@
                    locals: { workspace: workspace, show_speaker_mapping: show_speaker_mapping } %>
       </div>
     <% else %>
-      <p class="notae-doc-muted">No sessions are currently in upload/processing/completed states.</p>
+      <p class="notae-doc-muted">No sessions are currently in transcription, processing, or completed states.</p>
     <% end %>
   </section>
 </div>

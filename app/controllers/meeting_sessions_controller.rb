@@ -4,6 +4,20 @@ class MeetingSessionsController < ApplicationController
   before_action :set_meeting_session, only: %i[update start stop reprocess speakers]
 
   def create
+    if normalized_capture_mode == "online_bot"
+      authorize MeetingSession.new(
+        workspace: @workspace,
+        created_by: current_user,
+        updated_by: current_user,
+        title: meeting_session_params[:title],
+        capture_mode: normalized_capture_mode,
+        provider: normalized_provider,
+        status: "scheduled"
+      )
+      redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Scheduled browser capture has been retired. Use the Google Meet transcript extension instead."
+      return
+    end
+
     event = find_selected_event
     authorize MeetingSession.new(
       workspace: @workspace,
@@ -64,26 +78,7 @@ class MeetingSessionsController < ApplicationController
 
   def start
     authorize @meeting_session
-    unless @meeting_session.capture_mode == "online_bot"
-      redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Only online bot sessions can be started."
-      return
-    end
-
-    if @meeting_session.join_url.to_s.strip.blank?
-      redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Meeting URL is required to start online capture."
-      return
-    end
-
-    if @meeting_session.status.in?(%w[joining recording uploading processing summarizing proposing completed])
-      redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Session is already active."
-      return
-    end
-
-    @meeting_session.update!(status: "scheduled", error_message: nil, ended_at: nil, updated_by: current_user)
-    handle_session_dispatch!(@meeting_session, force_online: true)
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Meeting capture start requested."
-  rescue ActiveRecord::RecordInvalid => error
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Scheduled browser capture has been retired. Use the Google Meet transcript extension instead."
   end
 
   def stop

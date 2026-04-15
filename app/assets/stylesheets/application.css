@@ -11301,9 +11301,10 @@ body.notae-theme-dark .notae-doc-muted {
   right: 0.5rem;
 }
 
-.notae-shell.is-mobile-viewport .notae-page-header-tools {
+.notae-shell.is-mobile-viewport .notae-page-header-tools,
+.notae-shell.is-mobile-viewport .notae-db-header-tools {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
   pointer-events: auto;
   flex-wrap: nowrap;
 }
@@ -12849,6 +12850,147 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 .notae-kalendarium.is-embedded-split .notae-kalendarium-head,
 .notae-kalendarium.is-embedded-split .notae-kalendarium-main {
   grid-column: 1;
+}
+
+.notae-content.notae-content-kalendarium.notae-content-kalendarium-widget {
+  padding: 0.45rem;
+}
+
+.notae-shell.notae-shell-embedded .notae-content.notae-content-kalendarium.notae-content-kalendarium-widget {
+  padding: 0.45rem;
+}
+
+.notae-kalendarium.is-widget {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-grid,
+.notae-kalendarium.is-widget .notae-kalendarium-head,
+.notae-kalendarium.is-widget .notae-kalendarium-main {
+  grid-column: 1;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-head {
+  padding: 0.78rem 0.82rem;
+  gap: 0.55rem;
+}
+
+.notae-kalendarium-widget-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.notae-kalendarium-widget-title-wrap {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.notae-kalendarium-widget-eyebrow {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--notae-text-soft);
+}
+
+.notae-kalendarium-widget-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--notae-heading-ink);
+}
+
+.notae-kalendarium-widget-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+}
+
+.notae-kalendarium-widget-control {
+  width: 1.92rem;
+  height: 1.92rem;
+  border: 1px solid var(--notae-border-muted);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--notae-panel-muted) 92%, transparent);
+  color: var(--notae-heading-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notae-kalendarium-widget-control:hover {
+  border-color: color-mix(in srgb, var(--notae-accent) 24%, var(--notae-border-muted));
+  background: color-mix(in srgb, var(--notae-accent-soft) 24%, transparent);
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-widget-nav {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 0.34rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-date-label {
+  font-size: 0.78rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-main {
+  min-width: 0;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-month-grid {
+  gap: 0.34rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-month-weekday {
+  padding-bottom: 0.16rem;
+  font-size: 0.62rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-month-cell {
+  min-height: 6.8rem;
+  padding: 0.42rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-month-cell[data-action] {
+  cursor: pointer;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-month-cell header {
+  margin-bottom: 0.24rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-month-day-focus-link {
+  font-size: 0.74rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-month-events {
+  gap: 0.18rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-event-card {
+  padding: 0.26rem 0.32rem;
+  border-radius: 0.64rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-event-card.is-compact .notae-kalendarium-event-links,
+.notae-kalendarium.is-widget .notae-kalendarium-event-card .notae-kalendarium-event-meta,
+.notae-kalendarium.is-widget .notae-kalendarium-event-card p {
+  display: none;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-event-header-compact strong {
+  font-size: 0.64rem;
+}
+
+.notae-kalendarium.is-widget .notae-kalendarium-event-time-line {
+  font-size: 0.56rem;
 }
 
 .notae-content.notae-content-kalendarium {
@@ -16563,8 +16705,34 @@ body.notae-theme-dark .notae-auth-submit {
   z-index: 135;
 }
 
+.notae-shell-status-bar.is-calendar-open {
+  width: min(32rem, calc(100vw - 2.5rem));
+}
+
 .notae-shell:not(.is-ai-rail-collapsed):not(.is-ai-compact-viewport) .notae-shell-status-bar {
   right: calc(308px + 1.25rem);
+}
+
+.notae-shell-status-bar-clock-button {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--notae-glass-border-soft);
+  border-radius: 0.98rem;
+  background: var(--notae-glass-surface-soft);
+  box-shadow: inset 0 1px 0 var(--notae-glass-highlight);
+  padding: 0.68rem 0.76rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notae-shell-status-bar-clock-button:hover {
+  border-color: color-mix(in srgb, var(--notae-accent) 24%, var(--notae-border-muted));
+  background: color-mix(in srgb, var(--notae-glass-surface) 76%, transparent);
+}
+
+.notae-shell-status-bar-clock-button[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--notae-accent) 22%, var(--notae-border-muted));
+  background: color-mix(in srgb, var(--notae-accent-soft) 24%, transparent);
 }
 
 .notae-shell-status-bar-clock {
@@ -16572,6 +16740,19 @@ body.notae-theme-dark .notae-auth-submit {
   font-weight: 800;
   color: var(--notae-heading-ink);
   letter-spacing: 0.01em;
+}
+
+.notae-shell-status-bar-calendar {
+  display: grid;
+}
+
+.notae-shell-status-bar-calendar-frame {
+  width: 100%;
+  height: min(28rem, 72vh);
+  border: 1px solid var(--notae-glass-border-soft);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--notae-panel-bg) 92%, transparent);
+  box-shadow: inset 0 1px 0 var(--notae-glass-highlight);
 }
 
 .notae-shell-status-bar-alerts {

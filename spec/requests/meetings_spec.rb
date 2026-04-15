@@ -40,18 +40,20 @@ RSpec.describe "Meetings", type: :request do
     get workspace_meetings_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Schedule a Meeting to Record")
+    expect(response.body).to include("Google Meet Transcript Extension")
     expect(response.body).to include("Live In-Person Recording")
     expect(response.body).to include("File Upload and Transcribe")
-    expect(response.body).to include("Scheduled Future Recordings")
-    expect(response.body).to include("Uploading to Processed")
-    expect(response.body).to include("Live / Joining Sessions")
-    expect(response.body).to include("Recording status")
+    expect(response.body).to include("Transcribed / Processed Sessions")
+    expect(response.body).to include("Live / Active Sessions")
+    expect(response.body).to include("Microphone recorder")
     expect(response.body).to include("Start mic recording")
     expect(response.body).to include("Stop recording")
     expect(response.body).to include("Submit for processing")
     expect(response.body).to include("Delete recording")
     expect(response.body).to include("Action Proposals")
+    expect(response.body).to include("Generate extension token")
+    expect(response.body).to include("Workspace slug")
+    expect(response.body).to include("browser_extensions/notae_google_meet_transcript")
     expect(response.body).to include("notae-sidebar-link-label\">Meetings")
     expect(response.body).to include("<h1 class=\"notae-tool-page-title\">Meetings</h1>")
     expect(response.body).to include("notae-topbar-page-icon-glyph")
@@ -68,6 +70,28 @@ RSpec.describe "Meetings", type: :request do
 
     expect(start_button["class"]).to include("notae-meetings-recorder-button-start")
     expect(stop_button["class"]).to include("notae-meetings-recorder-button-stop")
+  end
+
+  it "creates and revokes a Google Meet extension token for the current workspace" do
+    user, workspace, = build_stack(suffix: "extension-token")
+    sign_in user
+
+    expect do
+      post meeting_extension_token_path(workspace_slug: workspace.slug)
+    end.to change(ApiToken, :count).by(1)
+
+    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
+    created_token = ApiToken.order(:created_at).last
+    expect(created_token.name).to eq("Google Meet transcript extension (#{workspace.slug})")
+
+    follow_redirect!
+    expect(response.body).to include("New extension token")
+    expect(response.body).to include(created_token.token)
+
+    delete meeting_extension_token_path(workspace_slug: workspace.slug)
+
+    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
+    expect(created_token.reload.revoked_at).to be_present
   end
 
   it "shows a recording-in-progress indicator when a live session exists" do
@@ -99,7 +123,7 @@ RSpec.describe "Meetings", type: :request do
     get workspace_meetings_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Live / Joining Sessions")
+    expect(response.body).to include("Live / Active Sessions")
     expect(response.body).to include("Live capture")
     expect(response.body).to include("Bot run")
     expect(response.body).to include("Join stage")
@@ -140,9 +164,9 @@ RSpec.describe "Meetings", type: :request do
     document = Nokogiri::HTML(response.body)
     sections = document.css(".notae-meetings-layout--session-split > section")
     expect(sections.size).to eq(2)
-    expect(sections[0].text).to include("Scheduled Future Recordings")
+    expect(sections[0].text).to include("Legacy scheduled browser captures")
     expect(sections[0].text).to include("Future scheduled run")
-    expect(sections[1].text).to include("Uploading to Processed")
+    expect(sections[1].text).to include("Transcribed / Processed Sessions")
     expect(sections[1].text).to include("Uploaded session")
   end
 
@@ -230,11 +254,11 @@ RSpec.describe "Meetings", type: :request do
     expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::ProcessSessionJob)
   end
 
-  it "creates an online bot session and queues bot startup" do
+  it "rejects creation of retired online bot sessions from the html workflow" do
     user, workspace, = build_stack(suffix: "online-create")
     sign_in user
 
-    expect do
+    expect {
       post meeting_sessions_path(workspace_slug: workspace.slug), params: {
         meeting_session: {
           title: "Ops standup",
@@ -244,41 +268,12 @@ RSpec.describe "Meetings", type: :request do
           consent_warning_acknowledged: "1"
         }
       }
-    end.to change(MeetingSession, :count).by(1)
-       .and change(MeetingBotRun, :count).by(1)
+    }.not_to change(MeetingSession, :count)
+
+    expect(MeetingBotRun.count).to eq(0)
 
     expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
-    session = MeetingSession.order(:created_at).last
-    expect(session.status).to eq("joining")
-    expect(session.meeting_bot_runs.active.count).to eq(1)
-    expect(session.meeting_bot_runs.active.first.status).to eq("queued")
-    expect(enqueued_jobs.map { |job| job[:job] }).not_to include(Meetings::StartBotRunJob)
-  end
-
-  it "keeps a future online session scheduled when only an associated event provides the join URL" do
-    user, workspace, event = build_stack(suffix: "online-event-url")
-    sign_in user
-
-    expect do
-      post meeting_sessions_path(workspace_slug: workspace.slug), params: {
-        meeting_session: {
-          title: "Event-only URL session",
-          capture_mode: "online_bot",
-          provider: "google_meet",
-          kalendarium_event_id: event.id,
-          join_url: "",
-          consent_warning_acknowledged: "1"
-        }
-      }
-    end.to change(MeetingSession, :count).by(1)
-
-    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
-    expect(flash[:notice]).to include("Capture will start at meeting time")
-    session = MeetingSession.order(:created_at).last
-    expect(session.join_url).to eq(event.meeting_join_url)
-    expect(session.status).to eq("scheduled")
-    expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::DispatchScheduledSessionJob)
-    expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::AutoStopSessionJob)
+    expect(flash[:alert]).to include("retired")
   end
 
   it "hides manual restart controls for future scheduled sessions" do
@@ -336,7 +331,7 @@ RSpec.describe "Meetings", type: :request do
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     payload = JSON.parse(response.body)
     expect(payload["active"]).to eq(true)
-    expect(payload["html"]).to include("Live / Joining Sessions")
+    expect(payload["html"]).to include("Live / Active Sessions")
     expect(payload["html"]).to include("Polling session")
     expect(payload["html"]).not_to include("Speaker mapping")
   end
@@ -370,7 +365,7 @@ RSpec.describe "Meetings", type: :request do
     expect(session.error_message).to include("timed out")
   end
 
-  it "rejects online bot session creation when neither manual URL nor event URL is available" do
+  it "rejects retired online bot session creation even when no join url is available" do
     user, workspace, event = build_stack(suffix: "online-missing-url")
     event.update!(metadata_json: {})
     sign_in user
@@ -388,6 +383,6 @@ RSpec.describe "Meetings", type: :request do
     end.not_to change(MeetingSession, :count)
 
     expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
-    expect(flash[:alert]).to include("Meeting URL is required")
+    expect(flash[:alert]).to include("retired")
   end
 end

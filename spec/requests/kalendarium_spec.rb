@@ -168,6 +168,50 @@ RSpec.describe "Kalendarium", type: :request do
     expect(document.at_css("[data-kalendarium-task-slot-target='dialog']")).to be_present
   end
 
+  it "renders a compact embedded widget with a modal create flow" do
+    user, workspace, calendar = build_stack(suffix: "widget", time_zone: "Australia/Melbourne")
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Monthly planning",
+      starts_at_utc: Time.zone.parse("2026-04-11 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-04-11 10:00:00")
+    )
+    sign_in user
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      embedded: "1",
+      widget: "1",
+      date: "2026-04-11"
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    kalendarium_shell = document.at_css(".notae-kalendarium.is-widget")
+    create_button = document.at_css("button[data-action='kalendarium-focus#openCreateModal']")
+    minimize_button = document.at_css("button[data-action='kalendarium-focus#minimizeWidget']")
+    create_dialog = document.at_css("dialog[data-kalendarium-focus-target='createDialog']")
+    create_form = create_dialog&.at_css("form.notae-kalendarium-event-modal-form[data-controller='kalendarium-event-form']")
+    month_cell = document.at_css(".notae-kalendarium-month-cell[data-action='dblclick->kalendarium-focus#quickCreateDay']")
+
+    expect(kalendarium_shell).to be_present
+    expect(kalendarium_shell["data-kalendarium-focus-widget-value"]).to eq("true")
+    expect(document.at_css(".notae-kalendarium-widget-head")).to be_present
+    expect(document.at_css(".notae-kalendarium-sidebar")).to be_nil
+    expect(document.at_css(".notae-kalendarium-filter-controls")).to be_nil
+    expect(document.at_css(".notae-kalendarium-view-switch")).to be_nil
+    expect(create_button).to be_present
+    expect(minimize_button).to be_present
+    expect(create_dialog).to be_present
+    expect(create_form).to be_present
+    expect(create_form["action"]).to include("widget=1")
+    expect(month_cell).to be_present
+    expect(document.text).to include("Monthly planning")
+  end
+
   it "shows the current user's Tasks blockouts from other workspaces" do
     user = User.create!(email: "kal-request-cross-workspace@example.com", password: "password123", time_zone: "UTC")
     workspace = Workspace.create!(name: "Kal Request cross workspace", slug: "kal-request-cross-workspace")
@@ -1758,7 +1802,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(flash[:alert]).to include("must be in the future")
   end
 
-  it "persists the event meeting capture toggle from create and update flows" do
+  it "persists the event Google Meet extension preference from create and update flows" do
     user, workspace, calendar = build_stack(suffix: "event-capture-toggle")
     sign_in user
 
@@ -1799,7 +1843,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(event.reload.meeting_capture_enabled).to be(false)
 
     get kalendarium_path(workspace_slug: workspace.slug)
-    expect(response.body).to include("Record &amp; transcribe this event")
+    expect(response.body).to include("Prefer this event when the Google Meet extension starts a transcript")
   end
 
   it "uses project calendars and project colors for project-linked events" do

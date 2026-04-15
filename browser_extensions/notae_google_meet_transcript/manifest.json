@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Notae Google Meet Transcript",
+  "version": "0.1.0",
+  "description": "Capture Google Meet captions and send the transcript to Notae.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Notae Google Meet Transcript",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
