@@ -1,4 +1,8 @@
 class PagesController < ApplicationController
+  include RequestPerformanceInstrumentation
+
+  track_request_performance_for :show
+
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_page, only: %i[show update duplicate archive restore permissions destroy remove_tab import panel]
@@ -12,12 +16,16 @@ class PagesController < ApplicationController
     @page_title_page = @page.parent_page || @page
     @can_update_page_title_page = policy(@page_title_page).update?
 
-    @active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
-    if @active_blocks.empty? && policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create?
+    @can_create_block = policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create?
+    page_render_context = build_page_render_context
+    if page_render_context.active_blocks.empty? && @can_create_block
       @page.blocks.create!(workspace: @workspace, created_by: current_user, block_type: "paragraph")
-      @active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
+      page_render_context = build_page_render_context
     end
-    @blocks_by_parent = @active_blocks.group_by(&:parent_block_id)
+
+    @active_blocks = page_render_context.active_blocks
+    @blocks_by_parent = page_render_context.blocks_by_parent
+    @linked_target_pages_by_id = page_render_context.linked_target_pages_by_id
     @backlinks = policy_scope(PageLink).for_target(@page).includes(source_page: :linked_database).order(created_at: :desc)
     @row_backlink_databases = resolve_row_backlink_databases
     @can_comment_on_page = can_comment_on_page?
@@ -411,6 +419,15 @@ class PagesController < ApplicationController
       .distinct
       .order(updated_at: :desc)
       .to_a
+  end
+
+  def build_page_render_context
+    Pages::RenderContextBuilder.new(
+      page: @page,
+      workspace: @workspace,
+      block_scope: policy_scope(Block),
+      page_scope: policy_scope(Page)
+    ).call
   end
 
   def can_comment_on_page?

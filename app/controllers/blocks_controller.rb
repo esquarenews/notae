@@ -127,6 +127,7 @@ class BlocksController < ApplicationController
             workspace: @workspace,
             page: @page,
             blocks_by_parent: current_page_render_context[:blocks_by_parent],
+            linked_target_pages_by_id: current_page_render_context[:linked_target_pages_by_id],
             reader_mode: current_page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
           }
@@ -407,6 +408,7 @@ class BlocksController < ApplicationController
             page: @page,
             block: page_render_context[:block_lookup].fetch(touched_block.id),
             blocks_by_parent: page_render_context[:blocks_by_parent],
+            linked_target_pages_by_id: page_render_context[:linked_target_pages_by_id],
             index: page_render_context[:indexes].fetch(touched_block.id, 0),
             reader_mode: page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
@@ -429,6 +431,7 @@ class BlocksController < ApplicationController
           page: @page,
           block: page_render_context[:block_lookup].fetch(block.id),
           blocks_by_parent: page_render_context[:blocks_by_parent],
+          linked_target_pages_by_id: page_render_context[:linked_target_pages_by_id],
           index: sibling_index_for_render(page_render_context, block),
           reader_mode: page_render_context[:reader_mode],
           embedded_page_params: current_embedded_page_params
@@ -474,12 +477,19 @@ class BlocksController < ApplicationController
 
   def current_page_render_context
     @current_page_render_context ||= begin
-      active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
+      render_context = Pages::RenderContextBuilder.new(
+        page: @page,
+        workspace: @workspace,
+        block_scope: policy_scope(Block),
+        page_scope: policy_scope(Page)
+      ).call
       {
-        blocks_by_parent: active_blocks.group_by(&:parent_block_id),
-        block_lookup: active_blocks.index_by(&:id),
-        indexes: active_blocks.each_with_index.to_h { |block, index| [ block.id, index ] },
-        reader_mode: @page.remove_blocks? || @page.locked?
+        active_blocks: render_context.active_blocks,
+        blocks_by_parent: render_context.blocks_by_parent,
+        block_lookup: render_context.block_lookup,
+        indexes: render_context.indexes,
+        reader_mode: render_context.reader_mode,
+        linked_target_pages_by_id: render_context.linked_target_pages_by_id
       }
     end
   end

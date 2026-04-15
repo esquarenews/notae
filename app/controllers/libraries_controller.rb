@@ -18,6 +18,17 @@ class LibrariesController < ApplicationController
   VISIBILITY_OPTIONS = %w[all shared private].freeze
   SORT_OPTIONS = %w[last_edited_desc last_edited_asc created_desc created_asc page_name_asc page_name_desc].freeze
   LIBRARY_PAGE_SIZE = 50
+  SEARCHABLE_LIBRARY_SQL_COLUMNS = %w[title created_by last_edited_by workspace_name kind visibility].freeze
+  FILTERABLE_LIBRARY_SQL_COLUMNS = {
+    "page_name" => "title",
+    "workspace" => "workspace_name",
+    "created_by" => "created_by",
+    "source" => "kind",
+    "created_time" => "created_time_value",
+    "last_edited_by" => "last_edited_by",
+    "last_edited_time" => "last_edited_time_value",
+    "last_visited_time" => "last_visited_time_value"
+  }.freeze
 
   def show
     authorize @workspace, :show?
@@ -41,23 +52,16 @@ class LibrariesController < ApplicationController
     @column_options = COLUMN_OPTIONS
     @visible_columns = resolved_visible_columns
 
-    owner_email_lookup = owner_email_by_workspace_id(selected_workspace_ids)
-    favorite_lookup = favorite_lookup_for(selected_workspace_ids)
-    last_visited_lookup = last_page_visit_store.each_value.with_object({}) { |page_id, memo| memo[page_id] = true }
     page_scope = filtered_page_scope(selected_workspace_ids)
     database_scope = filtered_database_scope(selected_workspace_ids)
 
     if fast_path_applicable?
+      owner_email_lookup = owner_email_by_workspace_id(selected_workspace_ids)
+      favorite_lookup = favorite_lookup_for(selected_workspace_ids)
+      last_visited_lookup = last_page_visit_store.each_value.with_object({}) { |page_id, memo| memo[page_id] = true }
       build_fast_library_rows(page_scope, database_scope, owner_email_lookup, favorite_lookup, last_visited_lookup)
     else
-      @library_rows = []
-      @library_rows.concat(page_rows(page_scope, owner_email_lookup, favorite_lookup, last_visited_lookup))
-      @library_rows.concat(database_rows(database_scope, owner_email_lookup, favorite_lookup))
-
-      apply_property_filter!
-      apply_search_filter!
-      apply_sort!
-      apply_pagination!
+      build_filtered_library_rows_from_sql(page_scope, database_scope, selected_workspaces, selected_workspace_ids)
     end
   end
 
@@ -309,6 +313,36 @@ class LibrariesController < ApplicationController
     @search_query.blank? && @property_filter.blank? && @property_filter_value.blank?
   end
 
+  def build_filtered_library_rows_from_sql(page_scope, database_scope, selected_workspaces, selected_workspace_ids)
+    @per_page = LIBRARY_PAGE_SIZE
+    @current_page = resolved_page
+    workspace_lookup = selected_workspaces.index_by(&:id)
+    entries_sql = library_entries_union_sql(page_scope, database_scope, selected_workspace_ids)
+    where_clause = filtered_library_where_clause
+
+    @total_rows = ActiveRecord::Base.connection.select_value(
+      Arel.sql("SELECT COUNT(*) FROM (#{entries_sql}) library_entries #{where_clause}")
+    ).to_i
+    @total_pages = [ (@total_rows.to_f / @per_page).ceil, 1 ].max
+    @current_page = [ @current_page, @total_pages ].min
+
+    offset = (@current_page - 1) * @per_page
+    rows = ActiveRecord::Base.connection.select_all(
+      Arel.sql(<<~SQL.squish)
+        SELECT *
+        FROM (#{entries_sql}) library_entries
+        #{where_clause}
+        ORDER BY #{filtered_library_order_clause}
+        LIMIT #{@per_page}
+        OFFSET #{offset}
+      SQL
+    )
+
+    @library_rows = rows.map { |row| library_row_from_sql_result(row, workspace_lookup) }
+    @page_start = @total_rows.zero? ? 0 : offset + 1
+    @page_end = @total_rows.zero? ? 0 : offset + @library_rows.length
+  end
+
   def build_fast_library_rows(page_scope, database_scope, owner_email_lookup, favorite_lookup, last_visited_lookup)
     @per_page = LIBRARY_PAGE_SIZE
     @total_rows = scoped_count(page_scope) + scoped_count(database_scope)
@@ -366,35 +400,220 @@ class LibrariesController < ApplicationController
     end
   end
 
+  def library_entries_union_sql(page_scope, database_scope, workspace_ids)
+    owner_email_sql = owner_email_subquery_sql(workspace_ids)
+    visited_page_ids_sql = visited_page_ids_sql_list
+    timezone_name = ActiveRecord::Base.connection.quote(Time.zone.tzinfo.name)
+
+    <<~SQL.squish
+      #{page_library_entries_sql(page_scope, owner_email_sql, visited_page_ids_sql, timezone_name)}
+      UNION ALL
+      #{database_library_entries_sql(database_scope, owner_email_sql, timezone_name)}
+    SQL
+  end
+
+  def page_library_entries_sql(scope, owner_email_sql, visited_page_ids_sql, timezone_name)
+    scope
+      .except(:select, :includes, :preload, :eager_load, :order)
+      .joins("INNER JOIN workspaces ON workspaces.id = pages.workspace_id")
+      .joins("LEFT JOIN users AS created_users ON created_users.id = pages.created_by_id")
+      .joins("LEFT JOIN pages AS parent_pages ON parent_pages.id = pages.parent_page_id")
+      .joins("LEFT JOIN (#{owner_email_sql}) AS workspace_owner_emails ON workspace_owner_emails.workspace_id = pages.workspace_id")
+      .select(<<~SQL.squish)
+        'Page' AS record_type,
+        pages.id AS record_id,
+        pages.workspace_id AS workspace_id,
+        workspaces.slug AS workspace_slug,
+        workspaces.name AS workspace_name,
+        CASE
+          WHEN pages.parent_page_id IS NOT NULL AND parent_pages.title IS NOT NULL AND parent_pages.title <> ''
+            THEN parent_pages.title || ' / ' || pages.title
+          ELSE pages.title
+        END AS title,
+        pages.icon AS icon,
+        CASE
+          WHEN pages.parent_page_id IS NOT NULL THEN 'tab'
+          WHEN pages.page_kind = 'meeting_note' THEN 'meeting'
+          ELSE 'page'
+        END AS kind,
+        COALESCE(created_users.email, workspace_owner_emails.owner_email, '—') AS created_by,
+        pages.created_at AS created_time,
+        TO_CHAR(timezone(#{timezone_name}, pages.created_at), 'YYYY-MM-DD HH24:MI') AS created_time_value,
+        COALESCE(created_users.email, workspace_owner_emails.owner_email, '—') AS last_edited_by,
+        pages.updated_at AS last_edited_time,
+        TO_CHAR(timezone(#{timezone_name}, pages.updated_at), 'YYYY-MM-DD HH24:MI') AS last_edited_time_value,
+        CASE
+          WHEN pages.id IN (#{visited_page_ids_sql}) THEN pages.updated_at
+          ELSE NULL
+        END AS last_visited_time,
+        CASE
+          WHEN pages.id IN (#{visited_page_ids_sql})
+            THEN TO_CHAR(timezone(#{timezone_name}, pages.updated_at), 'YYYY-MM-DD HH24:MI')
+          ELSE ''
+        END AS last_visited_time_value,
+        CASE
+          WHEN pages.permission_mode = #{Page.permission_modes.fetch("private_page")} THEN 'private'
+          ELSE 'shared'
+        END AS visibility,
+        #{favorite_exists_sql(favoritable_type: "Page", table_name: "pages", id_column: "pages.id")} AS favorited
+      SQL
+      .to_sql
+  end
+
+  def database_library_entries_sql(scope, owner_email_sql, timezone_name)
+    scope
+      .except(:select, :includes, :preload, :eager_load, :order)
+      .joins("INNER JOIN workspaces ON workspaces.id = databases.workspace_id")
+      .joins("LEFT JOIN users AS created_users ON created_users.id = databases.created_by_id")
+      .joins("LEFT JOIN pages AS linked_pages ON linked_pages.id = databases.linked_page_id")
+      .joins("LEFT JOIN pages AS parent_pages ON parent_pages.id = linked_pages.parent_page_id")
+      .joins("LEFT JOIN (#{owner_email_sql}) AS workspace_owner_emails ON workspace_owner_emails.workspace_id = databases.workspace_id")
+      .select(<<~SQL.squish)
+        'Database' AS record_type,
+        databases.id AS record_id,
+        databases.workspace_id AS workspace_id,
+        workspaces.slug AS workspace_slug,
+        workspaces.name AS workspace_name,
+        CASE
+          WHEN linked_pages.parent_page_id IS NOT NULL THEN
+            CASE
+              WHEN parent_pages.title IS NOT NULL AND parent_pages.title <> ''
+                THEN parent_pages.title || ' / ' || linked_pages.title
+              WHEN linked_pages.title IS NOT NULL AND linked_pages.title <> ''
+                THEN linked_pages.title
+              ELSE databases.name
+            END
+          ELSE databases.name
+        END AS title,
+        databases.icon AS icon,
+        CASE
+          WHEN linked_pages.parent_page_id IS NOT NULL THEN 'grid_tab'
+          ELSE 'database'
+        END AS kind,
+        COALESCE(created_users.email, workspace_owner_emails.owner_email, '—') AS created_by,
+        databases.created_at AS created_time,
+        TO_CHAR(timezone(#{timezone_name}, databases.created_at), 'YYYY-MM-DD HH24:MI') AS created_time_value,
+        COALESCE(created_users.email, workspace_owner_emails.owner_email, '—') AS last_edited_by,
+        databases.updated_at AS last_edited_time,
+        TO_CHAR(timezone(#{timezone_name}, databases.updated_at), 'YYYY-MM-DD HH24:MI') AS last_edited_time_value,
+        NULL::timestamp AS last_visited_time,
+        ''::text AS last_visited_time_value,
+        CASE
+          WHEN databases.permission_mode = #{Database.permission_modes.fetch("private_database")} THEN 'private'
+          ELSE 'shared'
+        END AS visibility,
+        #{favorite_exists_sql(favoritable_type: "Database", table_name: "databases", id_column: "databases.id")} AS favorited
+      SQL
+      .to_sql
+  end
+
+  def owner_email_subquery_sql(workspace_ids)
+    policy_scope(Membership)
+      .joins(:user)
+      .where(workspace_id: workspace_ids, role: Membership.roles.fetch("owner"))
+      .select("DISTINCT ON (memberships.workspace_id) memberships.workspace_id, users.email AS owner_email")
+      .order("memberships.workspace_id ASC, memberships.created_at ASC")
+      .to_sql
+  end
+
+  def favorite_exists_sql(favoritable_type:, table_name:, id_column:)
+    <<~SQL.squish
+      EXISTS (
+        SELECT 1
+        FROM favorites
+        WHERE favorites.user_id = #{ActiveRecord::Base.connection.quote(current_user.id)}
+          AND favorites.workspace_id = #{table_name}.workspace_id
+          AND favorites.favoritable_type = #{ActiveRecord::Base.connection.quote(favoritable_type)}
+          AND favorites.favoritable_id = #{id_column}
+      )
+    SQL
+  end
+
+  def visited_page_ids_sql_list
+    visited_ids = last_page_visit_store.values.filter_map { |page_id| Integer(page_id, exception: false) }
+    visited_ids.presence&.join(", ") || "NULL"
+  end
+
+  def filtered_library_where_clause
+    conditions = []
+
+    if @search_query.present?
+      pattern = quoted_like_pattern(@search_query)
+      conditions << SEARCHABLE_LIBRARY_SQL_COLUMNS.map { |column| "LOWER(COALESCE(#{column}, '')) LIKE #{pattern}" }.join(" OR ").prepend("(").concat(")")
+    end
+
+    if @property_filter.present? && @property_filter_value.present?
+      column = FILTERABLE_LIBRARY_SQL_COLUMNS.fetch(@property_filter)
+      conditions << "LOWER(COALESCE(#{column}, '')) LIKE #{quoted_like_pattern(@property_filter_value)}"
+    end
+
+    conditions.present? ? "WHERE #{conditions.join(' AND ')}" : ""
+  end
+
+  def quoted_like_pattern(value)
+    ActiveRecord::Base.connection.quote("%#{ActiveRecord::Base.sanitize_sql_like(value.downcase)}%")
+  end
+
+  def filtered_library_order_clause
+    case @sort
+    when "last_edited_asc"
+      "last_edited_time ASC, LOWER(title) ASC, record_type ASC, record_id ASC"
+    when "created_desc"
+      "created_time DESC, LOWER(title) ASC, record_type ASC, record_id ASC"
+    when "created_asc"
+      "created_time ASC, LOWER(title) ASC, record_type ASC, record_id ASC"
+    when "page_name_asc"
+      "LOWER(title) ASC, record_type ASC, record_id ASC"
+    when "page_name_desc"
+      "LOWER(title) DESC, record_type DESC, record_id DESC"
+    else
+      "last_edited_time DESC, LOWER(title) ASC, record_type ASC, record_id ASC"
+    end
+  end
+
+  def library_row_from_sql_result(row, workspace_lookup)
+    workspace_id = row.fetch("workspace_id").to_i
+    workspace_slug = row.fetch("workspace_slug")
+    record_type = row.fetch("record_type")
+    record_id = row.fetch("record_id").to_i
+    kind = row.fetch("kind")
+    workspace = workspace_lookup[workspace_id] || Workspace.new(id: workspace_id, slug: workspace_slug, name: row.fetch("workspace_name"))
+
+    {
+      kind: kind,
+      title: row.fetch("title"),
+      icon: library_row_icon_for(record_type, kind, row["icon"]),
+      created_by: row.fetch("created_by"),
+      created_time: cast_library_timestamp(row["created_time"]),
+      last_edited_by: row.fetch("last_edited_by"),
+      last_edited_time: cast_library_timestamp(row["last_edited_time"]),
+      last_visited_time: cast_library_timestamp(row["last_visited_time"]),
+      visibility: row.fetch("visibility"),
+      favorited: ActiveModel::Type::Boolean.new.cast(row["favorited"]),
+      workspace_name: row.fetch("workspace_name"),
+      workspace: workspace,
+      path: library_row_path_for(record_type, workspace_slug, record_id)
+    }
+  end
+
+  def library_row_icon_for(record_type, kind, value)
+    return value if value.present?
+    return "🗃️" if record_type == "Database"
+    return "🗒️" if kind == "meeting"
+
+    "📄"
+  end
+
+  def library_row_path_for(record_type, workspace_slug, record_id)
+    if record_type == "Database"
+      database_path(workspace_slug: workspace_slug, id: record_id)
+    else
+      page_path(workspace_slug: workspace_slug, id: record_id)
+    end
+  end
+
   def scoped_count(scope)
     scope.except(:select, :includes, :preload, :eager_load, :order).count(:all)
-  end
-
-  def apply_property_filter!
-    return if @property_filter.blank? || @property_filter_value.blank?
-
-    normalized = @property_filter_value.downcase
-    @library_rows.select! do |row|
-      value = property_value_for(row, @property_filter)
-      value.to_s.downcase.include?(normalized)
-    end
-  end
-
-  def apply_search_filter!
-    return if @search_query.blank?
-
-    query = @search_query.downcase
-    @library_rows.select! do |row|
-      haystack = [
-        row[:title],
-        row[:created_by],
-        row[:last_edited_by],
-        row[:workspace_name],
-        row[:kind],
-        row[:visibility]
-      ].join(" ").downcase
-      haystack.include?(query)
-    end
   end
 
   def apply_sort!
@@ -414,48 +633,15 @@ class LibrariesController < ApplicationController
     end
   end
 
-  def apply_pagination!
-    @per_page = LIBRARY_PAGE_SIZE
-    @current_page = resolved_page
-    @total_rows = @library_rows.length
-    @total_pages = [ (@total_rows.to_f / @per_page).ceil, 1 ].max
-    @current_page = @total_pages if @current_page > @total_pages
-
-    start_index = (@current_page - 1) * @per_page
-    @library_rows = @library_rows.slice(start_index, @per_page) || []
-    @page_start = @total_rows.zero? ? 0 : start_index + 1
-    @page_end = @total_rows.zero? ? 0 : start_index + @library_rows.length
-  end
-
   def resolved_page
     requested = params[:page].to_i
     requested.positive? ? requested : 1
   end
 
-  def property_value_for(row, property_key)
-    case property_key
-    when "page_name"
-      row[:title]
-    when "created_by"
-      row[:created_by]
-    when "workspace"
-      row[:workspace_name]
-    when "source"
-      row[:kind]
-    when "created_time"
-      timestamp_value(row[:created_time])
-    when "last_edited_by"
-      row[:last_edited_by]
-    when "last_edited_time"
-      timestamp_value(row[:last_edited_time])
-    when "last_visited_time"
-      timestamp_value(row[:last_visited_time])
-    else
-      ""
-    end
-  end
+  def cast_library_timestamp(value)
+    return value.in_time_zone if value.respond_to?(:in_time_zone)
+    return nil if value.blank?
 
-  def timestamp_value(value)
-    value&.strftime("%Y-%m-%d %H:%M").to_s
+    Time.zone.parse(value.to_s)
   end
 end

@@ -1,6 +1,13 @@
 <% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
 <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
 <% embedded_preview = embedded_page_params[:embedded].to_s == "1" || params[:embedded].to_s == "1" %>
+<% can_create_block = local_assigns.fetch(:can_create_block, policy(Block.new(workspace: workspace, page: page, created_by: current_user)).create?) %>
+<% linked_target_pages_by_id = local_assigns.fetch(:linked_target_pages_by_id, {}) %>
+<% document_target_urls = {
+     move_page_search_url: workspace_document_targets_path(workspace_slug: workspace.slug, kind: "move_page", exclude_page_id: page.id),
+     note_search_url: workspace_document_targets_path(workspace_slug: workspace.slug, kind: "note", exclude_page_id: page.id),
+     grid_search_url: workspace_document_targets_path(workspace_slug: workspace.slug, kind: "grid")
+   } %>
 
 <div class="notae-doc-canvas" id="notae_doc_canvas">
 <%= render partial: "pages/block_tree",
@@ -8,12 +15,14 @@
              workspace: workspace,
              page: page,
              blocks_by_parent: blocks_by_parent,
+             linked_target_pages_by_id: linked_target_pages_by_id,
+             document_target_urls: document_target_urls,
              parent_id: nil,
              reader_mode: reader_mode,
              embedded_page_params: embedded_page_params
            } %>
 
-  <% if !reader_mode && !embedded_preview && policy(Block.new(workspace: workspace, page: page, created_by: current_user)).create? %>
+  <% if !reader_mode && !embedded_preview && can_create_block %>
     <%= form_with model: Block.new,
                   url: page_blocks_path(page_blocks_route_params),
                   class: "notae-doc-add-form" do |form| %>

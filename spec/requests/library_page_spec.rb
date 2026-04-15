@@ -147,6 +147,45 @@ RSpec.describe "Library page", type: :request do
     expect(pagination_page(response.body)).to eq("Page 2 of 2")
   end
 
+  it "paginates combined search and property-filter results" do
+    user = User.create!(email: "library-filter-pagination-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Library Filter Main", slug: "library-filter-main")
+    other_workspace = Workspace.create!(name: "Library Filter Other", slug: "library-filter-other")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Membership.create!(workspace: other_workspace, user: user, role: :owner)
+
+    60.times do |index|
+      Page.create!(workspace: workspace, created_by: user, title: "Alpha main #{index + 1}")
+    end
+    12.times do |index|
+      Page.create!(workspace: other_workspace, created_by: user, title: "Alpha other #{index + 1}")
+    end
+    Page.create!(workspace: workspace, created_by: user, title: "Beta main")
+
+    sign_in user
+
+    filter_params = {
+      workspace_filter: "all",
+      q: "Alpha",
+      filter_property: "workspace",
+      filter_value: workspace.name
+    }
+
+    get workspace_library_path(workspace_slug: workspace.slug), params: filter_params
+
+    expect(library_row_count(response.body)).to eq(50)
+    expect(pagination_meta(response.body)).to eq("Showing 1-50 of 60")
+    expect(pagination_page(response.body)).to eq("Page 1 of 2")
+    expect(library_titles(response.body)).not_to include("Beta main", "Alpha other 1")
+
+    get workspace_library_path(workspace_slug: workspace.slug), params: filter_params.merge(page: 2)
+
+    expect(library_row_count(response.body)).to eq(10)
+    expect(pagination_meta(response.body)).to eq("Showing 51-60 of 60")
+    expect(pagination_page(response.body)).to eq("Page 2 of 2")
+    expect(library_titles(response.body)).not_to include("Alpha other 1")
+  end
+
   def library_titles(html_body)
     Nokogiri::HTML(html_body).css(".notae-library-row-title").map { |node| node.text.squish }
   end
