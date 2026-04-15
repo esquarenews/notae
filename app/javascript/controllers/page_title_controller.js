@@ -16,7 +16,7 @@ export default class extends Controller {
     this.saveTimeout = null
     this.lastSavedTitle = this.inputTarget.value
     this.resizeInput()
-    this.pageHideHandler = () => this.flushSave({ keepalive: true, force: true })
+    this.pageHideHandler = () => this.flushSave({ keepalive: true })
     window.addEventListener("pagehide", this.pageHideHandler)
   }
 
@@ -51,7 +51,7 @@ export default class extends Controller {
 
   preventSubmit(event) {
     event.preventDefault()
-    this.flushSave({ force: true })
+    this.flushSave()
   }
 
   async save(title, { keepalive = false, force = false } = {}) {

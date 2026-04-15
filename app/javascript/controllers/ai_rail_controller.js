@@ -43,6 +43,8 @@ export default class extends Controller {
     this.agentToastTimer = null
     this.agentUpdatePollTimer = null
     this.agentUpdateFocusTimer = null
+    this.agentUpdatePollRequest = null
+    this.agentUpdateBooting = true
 
     if (typeof this.railViewportQuery.addEventListener === "function") {
       this.railViewportQuery.addEventListener("change", this.onRailViewportChange)
@@ -67,6 +69,7 @@ export default class extends Controller {
     this.captureExistingAgentUpdates()
     this.refreshAgentToastState()
     this.startAgentUpdatePolling()
+    this.agentUpdateBooting = false
     this.finishHydration()
   }
 
@@ -647,39 +650,46 @@ export default class extends Controller {
 
   startAgentUpdatePolling() {
     if (!this.hasAgentUpdatesPathValue || !this.agentUpdatesPathValue) return
-    this.syncAgentUpdatePolling({ immediate: this.railActive() })
+    this.syncAgentUpdatePolling()
   }
 
-  async pollAgentUpdates() {
+  async pollAgentUpdates({ force = false } = {}) {
     if (!this.hasAgentUpdatesPathValue || !this.agentUpdatesPathValue) return
     if (!this.railActive()) return
+    if (!force && this.agentUpdatePollRequest) return this.agentUpdatePollRequest
 
-    try {
-      const requestUrl = new URL(this.agentUpdatesPathValue, window.location.origin)
-      const cursor = this.latestAgentUpdateCursor()
-      if (cursor) requestUrl.searchParams.set("since", cursor)
+    this.agentUpdatePollRequest = (async () => {
+      try {
+        const requestUrl = new URL(this.agentUpdatesPathValue, window.location.origin)
+        const cursor = this.latestAgentUpdateCursor()
+        if (cursor) requestUrl.searchParams.set("since", cursor)
 
-      const response = await fetch(requestUrl.toString(), {
-        headers: {
-          Accept: "application/json",
-          "X-Requested-With": "XMLHttpRequest"
-        },
-        credentials: "same-origin"
-      })
-      if (!response.ok) return
+        const response = await fetch(requestUrl.toString(), {
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          credentials: "same-origin"
+        })
+        if (!response.ok) return
 
-      const payload = await response.json()
-      const html = payload?.data?.html?.toString() || ""
-      if (!html.trim()) return
+        const payload = await response.json()
+        const html = payload?.data?.html?.toString() || ""
+        if (!html.trim()) return
 
-      const mutationCount = this.insertAgentUpdateHtml(html)
-      if (mutationCount > 0) {
-        this.queueThreadScroll()
-        this.refreshAgentToastState()
+        const mutationCount = this.insertAgentUpdateHtml(html)
+        if (mutationCount > 0) {
+          this.queueThreadScroll()
+          this.refreshAgentToastState()
+        }
+      } catch (_error) {
+        // silent polling failure
+      } finally {
+        this.agentUpdatePollRequest = null
       }
-    } catch (_error) {
-      // silent polling failure
-    }
+    })()
+
+    return this.agentUpdatePollRequest
   }
 
   syncAgentUpdatePolling({ immediate = false } = {}) {
@@ -699,7 +709,8 @@ export default class extends Controller {
       }, AGENT_UPDATE_POLL_INTERVAL_MS)
     }
 
-    if (immediate) this.pollAgentUpdates()
+    const shouldPollImmediately = immediate && !this.agentUpdateBooting
+    if (shouldPollImmediately) this.pollAgentUpdates()
   }
 
   stopAgentUpdatePolling() {

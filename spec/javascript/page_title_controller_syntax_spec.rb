@@ -23,4 +23,13 @@ RSpec.describe "PageTitleController JavaScript syntax" do
     expect(source).to include("HTMLTextAreaElement")
     expect(source).to include("this.inputTarget.scrollHeight")
   end
+
+  it "does not force an unchanged title save on pagehide or submit interception" do
+    source = Rails.root.join("app/javascript/controllers/page_title_controller.js").read
+
+    expect(source).to include('this.pageHideHandler = () => this.flushSave({ keepalive: true })')
+    expect(source).to include("this.flushSave()")
+    expect(source).not_to include("this.flushSave({ keepalive: true, force: true })")
+    expect(source).not_to include("this.flushSave({ force: true })")
+  end
 end

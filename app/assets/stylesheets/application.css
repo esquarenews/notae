@@ -11356,14 +11356,28 @@ body.notae-theme-dark .notae-doc-muted {
   display: none !important;
 }
 
-.notae-shell.is-mobile-viewport .notae-options-panel {
+.notae-shell.is-mobile-viewport .notae-page-header-link[data-action*="openCommentsMenu"] {
+  display: none;
+}
+
+.notae-shell.is-mobile-viewport .notae-comments-panel,
+.notae-shell.is-mobile-viewport .notae-options-panel,
+.notae-shell.is-mobile-viewport .notae-actions-panel {
   position: fixed;
-  left: auto;
-  right: 0.5rem;
+  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);
+  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);
+  width: auto;
+  max-width: none;
   top: calc(env(safe-area-inset-top, 0px) + 3.05rem);
-  width: min(17rem, calc(100vw - 1.5rem));
-  max-width: calc(100vw - 1.5rem);
   max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);
+}
+
+.notae-shell.is-mobile-viewport .notae-comments-panel {
+  overflow-x: hidden;
+  z-index: 124;
+}
+
+.notae-shell.is-mobile-viewport .notae-options-panel {
   overflow-x: hidden;
   z-index: 120;
 }
@@ -11441,13 +11455,6 @@ body.notae-theme-dark .notae-doc-muted {
 }
 
 .notae-shell.is-mobile-viewport .notae-actions-panel {
-  position: fixed;
-  left: auto;
-  right: 0.5rem;
-  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);
-  width: min(17rem, calc(100vw - 1.5rem));
-  max-width: calc(100vw - 1.5rem);
-  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);
   z-index: 124;
 }
 
