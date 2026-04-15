@@ -6,15 +6,12 @@ module Pages
       :block_lookup,
       :indexes,
       :reader_mode,
-      :linked_target_pages_by_id,
       keyword_init: true
     )
 
-    def initialize(page:, workspace:, block_scope:, page_scope:)
+    def initialize(page:, block_scope:)
       @page = page
-      @workspace = workspace
       @block_scope = block_scope
-      @page_scope = page_scope
     end
 
     def call
@@ -25,8 +22,7 @@ module Pages
         blocks_by_parent: active_blocks.group_by(&:parent_block_id),
         block_lookup: active_blocks.index_by(&:id),
         indexes: active_blocks.each_with_index.to_h { |block, index| [ block.id, index ] },
-        reader_mode: @page.remove_blocks? || @page.locked?,
-        linked_target_pages_by_id: linked_target_pages_by_id(active_blocks)
+        reader_mode: @page.remove_blocks? || @page.locked?
       )
     end
 
@@ -39,19 +35,6 @@ module Pages
         .ordered
         .with_attached_asset
         .to_a
-    end
-
-    def linked_target_pages_by_id(active_blocks)
-      target_page_ids = active_blocks.filter_map do |block|
-        Blocks::SplitLinkResolver.target_page_id(content_json: block.content_json)
-      end.uniq
-      return {} if target_page_ids.empty?
-
-      @page_scope
-        .for_workspace(@workspace)
-        .where(id: target_page_ids)
-        .includes(:linked_database)
-        .index_by { |page| page.id.to_s }
     end
   end
 end

@@ -1,8 +1,6 @@
 <% blocks = blocks_by_parent[parent_id] || [] %>
 <% reader_mode = local_assigns.fetch(:reader_mode, false) %>
 <% embedded_page_params = local_assigns.fetch(:embedded_page_params, params[:embedded].to_s == "1" ? { embedded: "1" } : {}) %>
-<% linked_target_pages_by_id = local_assigns.fetch(:linked_target_pages_by_id, {}) %>
-<% document_target_urls = local_assigns[:document_target_urls] %>
 
 <div id="<%= parent_id.present? ? "notae_doc_tree_#{parent_id}" : "notae_doc_tree_root" %>"
      class="notae-doc-tree <%= "is-reader-mode" if reader_mode %>"
@@ -17,8 +15,6 @@
                  page: page,
                  block: block,
                  blocks_by_parent: blocks_by_parent,
-                 linked_target_pages_by_id: linked_target_pages_by_id,
-                 document_target_urls: document_target_urls,
                  index: index,
                  reader_mode: reader_mode,
                  embedded_page_params: embedded_page_params

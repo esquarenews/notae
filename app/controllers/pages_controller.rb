@@ -25,7 +25,6 @@ class PagesController < ApplicationController
 
     @active_blocks = page_render_context.active_blocks
     @blocks_by_parent = page_render_context.blocks_by_parent
-    @linked_target_pages_by_id = page_render_context.linked_target_pages_by_id
     @backlinks = policy_scope(PageLink).for_target(@page).includes(source_page: :linked_database).order(created_at: :desc)
     @row_backlink_databases = resolve_row_backlink_databases
     @can_comment_on_page = can_comment_on_page?
@@ -424,9 +423,7 @@ class PagesController < ApplicationController
   def build_page_render_context
     Pages::RenderContextBuilder.new(
       page: @page,
-      workspace: @workspace,
-      block_scope: policy_scope(Block),
-      page_scope: policy_scope(Page)
+      block_scope: policy_scope(Block)
     ).call
   end
 

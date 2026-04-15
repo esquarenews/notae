@@ -196,6 +196,7 @@ Rails.application.routes.draw do
           patch :attach
           get :download
           get :export_markdown
+          get :panel
           patch :reorder
           patch :archive
           patch :restore

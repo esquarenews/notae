@@ -2,7 +2,7 @@ class BlocksController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_page
-  before_action :set_block, only: %i[update attach download export_markdown reorder archive restore command]
+  before_action :set_block, only: %i[update attach download export_markdown panel reorder archive restore command]
 
   def create
     @block = @page.blocks.new(block_params)
@@ -110,6 +110,19 @@ class BlocksController < ApplicationController
            content_type: "text/markdown; charset=utf-8"
   end
 
+  def panel
+    authorize @block, :show?
+    return head :forbidden if @page.remove_blocks? || @page.locked? || embedded_page_shell?
+
+    render partial: "pages/block_menu_body",
+           locals: {
+             workspace: @workspace,
+             page: @page,
+             block: @block,
+             embedded_page_params: current_embedded_page_params
+           }
+  end
+
   def reorder
     authorize @block, :reorder?
     Blocks::ReorderService.call(
@@ -127,7 +140,6 @@ class BlocksController < ApplicationController
             workspace: @workspace,
             page: @page,
             blocks_by_parent: current_page_render_context[:blocks_by_parent],
-            linked_target_pages_by_id: current_page_render_context[:linked_target_pages_by_id],
             reader_mode: current_page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
           }
@@ -408,7 +420,6 @@ class BlocksController < ApplicationController
             page: @page,
             block: page_render_context[:block_lookup].fetch(touched_block.id),
             blocks_by_parent: page_render_context[:blocks_by_parent],
-            linked_target_pages_by_id: page_render_context[:linked_target_pages_by_id],
             index: page_render_context[:indexes].fetch(touched_block.id, 0),
             reader_mode: page_render_context[:reader_mode],
             embedded_page_params: current_embedded_page_params
@@ -431,7 +442,6 @@ class BlocksController < ApplicationController
           page: @page,
           block: page_render_context[:block_lookup].fetch(block.id),
           blocks_by_parent: page_render_context[:blocks_by_parent],
-          linked_target_pages_by_id: page_render_context[:linked_target_pages_by_id],
           index: sibling_index_for_render(page_render_context, block),
           reader_mode: page_render_context[:reader_mode],
           embedded_page_params: current_embedded_page_params
@@ -479,17 +489,14 @@ class BlocksController < ApplicationController
     @current_page_render_context ||= begin
       render_context = Pages::RenderContextBuilder.new(
         page: @page,
-        workspace: @workspace,
-        block_scope: policy_scope(Block),
-        page_scope: policy_scope(Page)
+        block_scope: policy_scope(Block)
       ).call
       {
         active_blocks: render_context.active_blocks,
         blocks_by_parent: render_context.blocks_by_parent,
         block_lookup: render_context.block_lookup,
         indexes: render_context.indexes,
-        reader_mode: render_context.reader_mode,
-        linked_target_pages_by_id: render_context.linked_target_pages_by_id
+        reader_mode: render_context.reader_mode
       }
     end
   end

@@ -906,10 +906,12 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("notae-actions-menu")
     expect(response.body).to include("notae-doc-canvas")
     expect(response.body).to include("notae-page-title-input")
-    expect(response.body).to include("Turn into")
-    expect(response.body).to include("Block equation")
-    expect(response.body).to include("Synced block")
-    expect(response.body).to include("Heading 4")
+    expect(response.body).to include('data-controller="lazy-panel"')
+    expect(response.body).to include(panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: parent_block.id))
+    expect(response.body).not_to include("Turn into")
+    expect(response.body).not_to include("Block equation")
+    expect(response.body).not_to include("Synced block")
+    expect(response.body).not_to include("Heading 4")
     expect(response.body).not_to include("Toggle heading 1")
     expect(response.body).not_to include("Toggle heading 2")
     expect(response.body).not_to include("Toggle heading 3")
@@ -920,6 +922,14 @@ RSpec.describe "Pages", type: :request do
     expect(title_field["rows"]).to eq("1")
     expect(html.css("form.notae-doc-add-form").size).to eq(1)
     expect(html.at_css("form.notae-doc-add-form.is-child")).to be_nil
+
+    get panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: parent_block.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Turn into")
+    expect(response.body).to include("Block equation")
+    expect(response.body).to include("Synced block")
+    expect(response.body).to include("Heading 4")
   end
 
   it "renders embedded page previews without full page chrome and keeps block actions embedded" do

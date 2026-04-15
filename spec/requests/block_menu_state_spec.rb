@@ -6,7 +6,7 @@ RSpec.describe "Block menu state", type: :request do
     workspace = Workspace.create!(name: "Menu state", slug: "menu-state")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Menu state page")
-    Block.create!(
+    block = Block.create!(
       workspace: workspace,
       page: page,
       created_by: owner,
@@ -30,6 +30,10 @@ RSpec.describe "Block menu state", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-doc-block is-type-heading-1")
+
+    get panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id)
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to match(
       /notae-block-menu-item is-active[^>]*>\s*<span class="notae-menu-item-icon">H1<\/span>\s*<span class="notae-menu-item-label">Heading 1<\/span>/m
     )

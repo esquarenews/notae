@@ -578,7 +578,7 @@ RSpec.describe "Blocks", type: :request do
     workspace = Workspace.create!(name: "Reorder bindings", slug: "reorder-bindings")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Reorder binding page")
-    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
     sign_in owner
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
@@ -588,14 +588,19 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("dragenter->block-list#handleDragEnter")
     expect(response.body).to include("dragleave->block-list#handleDragLeave")
     expect(response.body).to include("dragover->block-list#handleDragOver")
-    expect(response.body).to include("Indent")
-    expect(response.body).to include("Outdent")
     expect(response.body).to include("drop->block-list#handleDrop")
     expect(response.body).to include("dragend->block-list#handleDragEnd")
     expect(response.body).to include("pointerdown->block-list#prepareDragStart")
     expect(response.body).to include("class=\"notae-doc-handle\"")
     expect(response.body).to include("title=\"Drag block\"")
     expect(response.body).to include("draggable=\"true\"")
+    expect(response.body).to include(panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id))
+
+    get panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Indent")
+    expect(response.body).to include("Outdent")
     expect(response.body).to include("data-turbo-stream=\"true\"")
   end
 
@@ -604,10 +609,10 @@ RSpec.describe "Blocks", type: :request do
     workspace = Workspace.create!(name: "Menu blocks", slug: "menu-blocks")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Menu page")
-    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
     sign_in owner
 
-    get page_path(workspace_slug: workspace.slug, id: page.id)
+    get panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).not_to include('class="notae-menu-item-label">Page</span>')
@@ -842,7 +847,7 @@ RSpec.describe "Blocks", type: :request do
     workspace = Workspace.create!(name: "Media menu", slug: "media-menu")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Media menu page")
-    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
     video_block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "video")
     audio_block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "file")
     Tempfile.create([ "block-video-preview", ".mp4" ]) do |file|
@@ -860,13 +865,17 @@ RSpec.describe "Blocks", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Add media")
-    expect(response.body).not_to include("Embed image")
-    expect(response.body).not_to include("Embed video")
     expect(response.body).to include("notae-doc-video")
     expect(response.body).to include("notae-doc-audio")
     expect(response.body).not_to include("Drag and drop media")
     expect(response.body).not_to include("accept=\"image/*,video/*,audio/*\"")
+
+    get panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Add media")
+    expect(response.body).not_to include("Embed image")
+    expect(response.body).not_to include("Embed video")
   end
 
   it "creates a media block from the block menu without overwriting the current text block" do
@@ -1275,12 +1284,11 @@ RSpec.describe "Blocks", type: :request do
       )
     )
 
-    get page_path(workspace_slug: workspace.slug, id: source_page.id)
+    get panel_page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: block.id)
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
-    block_node = document.at_css("#block_#{block.id}")
-    unlink_form = block_node.css("form").find do |form|
+    unlink_form = document.css("form").find do |form|
       form.at_css('input[name="block_command[command]"][value="unlink_linked_document"]')
     end
 
@@ -1369,17 +1377,14 @@ RSpec.describe "Blocks", type: :request do
     block = Block.create!(workspace: workspace, page: source_page, created_by: owner, block_type: "paragraph")
     sign_in owner
 
-    get page_path(workspace_slug: workspace.slug, id: source_page.id)
+    get panel_page_block_path(workspace_slug: workspace.slug, page_id: source_page.id, id: block.id)
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
-    block_node = document.at_css("#block_#{block.id}")
-    expect(block_node).to be_present
-
-    picker_rows = block_node.css(".notae-block-menu-picker-row")
+    picker_rows = document.css(".notae-block-menu-picker-row")
     expect(picker_rows.size).to eq(2)
 
-    picker_forms = block_node.css("form.notae-block-menu-picker-form")
+    picker_forms = document.css("form.notae-block-menu-picker-form")
     expect(picker_forms.size).to eq(3)
 
     note_form = picker_forms.find do |form|
