@@ -789,17 +789,7 @@ class DatabasesController < ApplicationController
 
   def build_select_options_by_property
     properties = @visible_db_properties || @db_properties
-    properties.select(&:select?).each_with_object({}) do |property, options|
-      existing_values = policy_scope(DbCell)
-        .for_database(@database)
-        .where(db_property_id: property.id)
-        .where.not(value_text: [ nil, "" ])
-        .distinct
-        .order(:value_text)
-        .pluck(:value_text)
-
-      options[property.id] = select_options_with_fallback(property, existing_values)
-    end
+    build_select_options_lookup(database: @database, properties: properties)
   end
 
   def sort_value_for_row(row, property)

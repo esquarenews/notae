@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_15_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_15_153107) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -348,6 +348,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_15_090000) do
     t.datetime "updated_at", null: false
     t.text "value_text", default: "", null: false
     t.uuid "workspace_id", null: false
+    t.index ["db_property_id", "value_text"], name: "index_db_cells_on_property_and_value_text_present", where: "(value_text <> ''::text)"
     t.index ["db_property_id"], name: "index_db_cells_on_db_property_id"
     t.index ["db_row_id", "db_property_id"], name: "index_db_cells_on_db_row_id_and_db_property_id", unique: true
     t.index ["db_row_id"], name: "index_db_cells_on_db_row_id"
@@ -388,6 +389,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_15_090000) do
     t.string "title", default: "", null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
+    t.index ["database_id", "archived_at", "position", "created_at"], name: "index_db_rows_on_database_archived_position_created_at"
     t.index ["database_id", "archived_at"], name: "index_db_rows_on_database_id_and_archived_at"
     t.index ["database_id", "position"], name: "index_db_rows_on_database_id_and_position"
     t.index ["database_id"], name: "index_db_rows_on_database_id"
@@ -712,6 +714,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_15_090000) do
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
     t.uuid "workspace_id", null: false
+    t.index ["user_id", "role", "workspace_id"], name: "index_memberships_on_user_id_role_and_workspace_id"
     t.index ["user_id"], name: "index_memberships_on_user_id"
     t.index ["workspace_id", "user_id"], name: "index_memberships_on_workspace_id_and_user_id", unique: true
     t.index ["workspace_id"], name: "index_memberships_on_workspace_id"

@@ -89,4 +89,34 @@ RSpec.describe PagePolicy do
 
     expect(membership_queries.size).to be <= 1
   end
+
+  it "scope returns only visible pages in accessible workspaces" do
+    workspace = Workspace.create!(name: "Page scope policy", slug: "page-scope-policy")
+    other_workspace = Workspace.create!(name: "Other page scope", slug: "other-page-scope")
+    owner = User.create!(email: "page-scope-owner@example.com", password: "password123")
+    member = User.create!(email: "page-scope-member@example.com", password: "password123")
+    outsider = User.create!(email: "page-scope-outsider@example.com", password: "password123")
+
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    Membership.create!(workspace: other_workspace, user: outsider, role: :owner)
+
+    shared_page = Page.create!(workspace: workspace, created_by: owner, title: "Shared", permission_mode: :shared_to_workspace)
+    own_private_page = Page.create!(workspace: workspace, created_by: member, title: "Own private", permission_mode: :private_page)
+    visible_specific_page = Page.create!(workspace: workspace, created_by: owner, title: "Visible specific", permission_mode: :specific_users)
+    hidden_private_page = Page.create!(workspace: workspace, created_by: owner, title: "Hidden private", permission_mode: :private_page)
+    hidden_specific_page = Page.create!(workspace: workspace, created_by: owner, title: "Hidden specific", permission_mode: :specific_users)
+    outside_page = Page.create!(workspace: other_workspace, created_by: outsider, title: "Outside", permission_mode: :shared_to_workspace)
+
+    PageShare.create!(page: visible_specific_page, user: member, created_by: owner)
+
+    resolved_ids = described_class::Scope.new(member, Page).resolve.pluck(:id)
+
+    expect(resolved_ids).to contain_exactly(
+      shared_page.id,
+      own_private_page.id,
+      visible_specific_page.id
+    )
+    expect(resolved_ids).not_to include(hidden_private_page.id, hidden_specific_page.id, outside_page.id)
+  end
 end

@@ -1,8 +1,9 @@
 <% autofocus_title = local_assigns.fetch(:autofocus_title, false) %>
 <% highlight_row_id = local_assigns[:highlight_row_id].presence %>
 <% linked_page = row.linked_page %>
-<% row_can_update = policy(row).update? && !database.locked? %>
-<% row_can_destroy = policy(row).destroy? && !database.locked? %>
+<% row_can_update = local_assigns.fetch(:can_update_rows) { policy(row).update? && !database.locked? } %>
+<% row_can_destroy = local_assigns.fetch(:can_destroy_rows) { policy(row).destroy? && !database.locked? } %>
+<% cell_can_update = local_assigns.fetch(:can_update_cells) { row_can_update } %>
 <% row_style_classes = [] %>
 <% row_style_classes << "is-new-row-highlight" if highlight_row_id.to_s == row.id.to_s && row.title.to_s == "Untitled row" %>
 <% row_style_classes << "is-row-bold" if row.row_bold? %>
@@ -11,7 +12,7 @@
 <% row_style_classes << "is-row-color-#{row_color_class}" unless row_color_class == "default" %>
 <% row_background_class = row.row_background_color %>
 <% row_style_classes << "is-row-bg-#{row_background_class}" unless row_background_class == "default" %>
-<% page_search_url = workspace_document_targets_path(workspace_slug: workspace.slug, kind: "page") %>
+<% page_search_url = local_assigns.fetch(:page_search_url) { workspace_document_targets_path(workspace_slug: workspace.slug, kind: "page") } %>
 <% row_split_params = row_params.merge(
   workspace_slug: workspace.slug,
   id: database.id,
@@ -25,7 +26,7 @@
     data-db-table-reorder-target="row"
     data-db-table-reorder-row-id="<%= row.id %>"
     data-action="dragover->db-table-reorder#dragover drop->db-table-reorder#drop dragleave->db-table-reorder#dragleave">
-  <% name_column_style_classes = name_column_style_classes_for(database) %>
+  <% name_column_style_classes = local_assigns.fetch(:name_column_style_classes) { name_column_style_classes_for(database) } %>
   <td class="<%= name_column_style_classes %>">
     <% row_update_path = database_db_row_path(
       {
@@ -63,6 +64,7 @@
                      row_update_path: row_update_path,
                      row_params: row_params,
                      row_color_options: row_color_options,
+                     row_can_destroy: row_can_destroy,
                      linked_page: linked_page %>
         </div>
       <% end %>
@@ -187,7 +189,7 @@
     <% db_cell = cells_by_key[[row.id, db_property.id]] %>
     <% property_style_classes = column_style_classes_for(db_property) %>
     <td class="<%= property_style_classes %>">
-      <% if db_cell && policy(db_cell).update? && !database.locked? %>
+      <% if db_cell && cell_can_update %>
         <%= form_with model: db_cell,
                       url: database_db_cell_path(
                         ({

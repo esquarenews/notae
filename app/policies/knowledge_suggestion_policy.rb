@@ -23,8 +23,7 @@ class KnowledgeSuggestionPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-      scope.where(user_id: user.id, workspace_id: workspace_ids)
+      scope.where(user_id: user.id, workspace_id: accessible_workspace_ids)
     end
   end
 

@@ -70,25 +70,23 @@ class DbRowsController < ApplicationController
       end
 
       if request.format.json?
-        @database.reload
         render json: {
           id: @db_row.id,
           title: @db_row.title,
           topbar_edited_at_html: render_to_string(
             partial: "databases/topbar_edited_meta",
             formats: [ :html ],
-            locals: { database: @database }
+            locals: { database: reloaded_database }
           )
         }, status: :ok
       elsif turbo_inline_row_update_request?(next_row:)
         render turbo_stream: turbo_stream_update_row_response(@db_row)
       elsif turbo_title_autosave_request?(next_row:)
-        @database.reload
         render turbo_stream: [
           turbo_stream.update(
             "database_topbar_edited_at",
             partial: "databases/topbar_edited_meta",
-            locals: { database: @database }
+            locals: { database: reloaded_database }
           ),
           database_flash_stream("notice", "Row updated.")
         ]
@@ -394,7 +392,7 @@ class DbRowsController < ApplicationController
     end
 
     db_properties = db_properties_for_database
-    return if db_properties.empty?
+    return 0 if db_properties.empty?
 
     property_ids = db_properties.map(&:id)
     existing_property_ids = assume_empty ? [] : row.db_cells.where(db_property_id: property_ids).pluck(:db_property_id)
@@ -415,13 +413,14 @@ class DbRowsController < ApplicationController
         updated_at: now
       }
     end
-    return if missing_cells.empty?
+    return 0 if missing_cells.empty?
 
     DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
+    missing_cells.length
   end
 
   def insert_seeded_cells_for_row(row, seed_plan)
-    return if seed_plan.empty?
+    return 0 if seed_plan.empty?
 
     now = Time.current
     DbCell.insert_all(
@@ -438,6 +437,7 @@ class DbRowsController < ApplicationController
       end,
       unique_by: :index_db_cells_on_db_row_id_and_db_property_id
     )
+    seed_plan.length
   end
 
   def assign_date_value_to_row(row)
@@ -810,7 +810,7 @@ class DbRowsController < ApplicationController
       turbo_stream.update(
         "database_topbar_edited_at",
         partial: "databases/topbar_edited_meta",
-        locals: { database: @database.reload }
+        locals: { database: reloaded_database }
       ),
       turbo_stream.update(
         "database_row_count",
@@ -862,7 +862,7 @@ class DbRowsController < ApplicationController
       turbo_stream.update(
         "database_topbar_edited_at",
         partial: "databases/topbar_edited_meta",
-        locals: { database: @database.reload }
+        locals: { database: reloaded_database }
       ),
       turbo_stream.update(
         "database_row_count",
@@ -928,7 +928,7 @@ class DbRowsController < ApplicationController
       turbo_stream.update(
         "database_topbar_edited_at",
         partial: "databases/topbar_edited_meta",
-        locals: { database: @database.reload }
+        locals: { database: reloaded_database }
       ),
       turbo_stream.replace(
         "row_#{row.id}",
@@ -1024,20 +1024,12 @@ class DbRowsController < ApplicationController
   end
 
   def build_select_options_by_property_for_rows(properties:)
-    properties.select(&:select?).each_with_object({}) do |property, options|
-      existing_values = policy_scope(DbCell)
-        .for_database(@database)
-        .where(db_property_id: property.id)
-        .where.not(value_text: [ nil, "" ])
-        .distinct
-        .order(:value_text)
-        .pluck(:value_text)
-
-      options[property.id] = select_options_with_fallback(property, existing_values)
-    end
+    build_select_options_lookup(database: @database, properties: properties)
   end
 
   def table_row_locals(row:, autofocus_title: false, highlight_row_id: params[:highlight_row_id].presence)
+    can_update_rows = policy(@database).update? && !@database.locked?
+
     {
       row: row,
       workspace: @workspace,
@@ -1046,8 +1038,13 @@ class DbRowsController < ApplicationController
       row_params: table_row_params,
       visible_properties: @visible_db_properties,
       cells_by_key: @cells_by_key,
-      can_create_rows: policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked?,
+      can_create_rows: can_update_rows,
+      can_update_rows: can_update_rows,
+      can_update_cells: can_update_rows,
+      can_destroy_rows: policy(@database).destroy? && !@database.locked?,
       row_color_options: row_color_options,
+      page_search_url: workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page"),
+      name_column_style_classes: name_column_style_classes_for(@database),
       autofocus_title: autofocus_title,
       highlight_row_id: highlight_row_id
     }
@@ -1119,19 +1116,25 @@ class DbRowsController < ApplicationController
         workspace: @workspace,
         title: row.title.presence || "Untitled row",
         linked_page_id: row.linked_page_id,
-        data_json: row.style_metadata
+        data_json: row.data_json.to_h.deep_dup
       )
 
-      row.db_cells.includes(:db_property).find_each do |source_cell|
-        duplicated.db_cells.create!(
-          workspace: @workspace,
-          db_property: source_cell.db_property,
-          value_text: source_cell.value_text
-        )
+      now = Time.current
+      duplicate_cell_payloads = row.db_cells.includes(:db_property).map do |source_cell|
+        {
+          id: SecureRandom.uuid,
+          workspace_id: @workspace.id,
+          db_row_id: duplicated.id,
+          db_property_id: source_cell.db_property_id,
+          value_text: source_cell.value_text,
+          created_at: now,
+          updated_at: now
+        }
       end
+      DbCell.insert_all(duplicate_cell_payloads, unique_by: :index_db_cells_on_db_row_id_and_db_property_id) if duplicate_cell_payloads.any?
 
-      seed_cells_for_row(duplicated)
-      duplicated.sync_data_from_cells!
+      seeded_count = seed_cells_for_row(duplicated)
+      duplicated.sync_data_from_cells! if seeded_count.to_i.positive?
       insert_row_after_reference!(duplicated, row.id)
     end
 
@@ -1203,6 +1206,10 @@ class DbRowsController < ApplicationController
 
   def sync_row_cache_after_seed!(row)
     row.sync_data_from_cells!
+  end
+
+  def reloaded_database
+    @reloaded_database ||= @database.reload
   end
 
   def db_properties_for_database

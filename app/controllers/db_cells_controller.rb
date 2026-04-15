@@ -14,7 +14,6 @@ class DbCellsController < ApplicationController
 
     if @db_cell.update(db_cell_params)
       apply_task_status_row_style!(@db_cell)
-      @database.reload
       respond_to do |format|
         format.turbo_stream do
           if turbo_inline_cell_update_request?
@@ -24,7 +23,7 @@ class DbCellsController < ApplicationController
               turbo_stream.update(
                 "database_topbar_edited_at",
                 partial: "databases/topbar_edited_meta",
-                locals: { database: @database }
+                locals: { database: reloaded_database }
               ),
               database_flash_stream("notice", "Cell updated.")
             ]
@@ -54,7 +53,7 @@ class DbCellsController < ApplicationController
   end
 
   def set_db_cell
-    @db_cell = policy_scope(DbCell).for_database(@database).find(params[:id])
+    @db_cell = policy_scope(DbCell).for_database(@database).includes(:db_row, :db_property).find(params[:id])
   end
 
   def db_cell_params
@@ -135,7 +134,7 @@ class DbCellsController < ApplicationController
       turbo_stream.update(
         "database_topbar_edited_at",
         partial: "databases/topbar_edited_meta",
-        locals: { database: @database.reload }
+        locals: { database: reloaded_database }
       ),
       turbo_stream.replace(
         "row_#{row.id}",
@@ -198,20 +197,12 @@ class DbCellsController < ApplicationController
   end
 
   def build_select_options_by_property_for_rows(properties:)
-    properties.select(&:select?).each_with_object({}) do |property, options|
-      existing_values = policy_scope(DbCell)
-        .for_database(@database)
-        .where(db_property_id: property.id)
-        .where.not(value_text: [ nil, "" ])
-        .distinct
-        .order(:value_text)
-        .pluck(:value_text)
-
-      options[property.id] = select_options_with_fallback(property, existing_values)
-    end
+    build_select_options_lookup(database: @database, properties: properties)
   end
 
   def table_row_locals(row:, autofocus_title: false, highlight_row_id: params[:highlight_row_id].presence)
+    can_update_rows = policy(@database).update? && !@database.locked?
+
     {
       row: row,
       workspace: @workspace,
@@ -220,8 +211,13 @@ class DbCellsController < ApplicationController
       row_params: table_row_params,
       visible_properties: @visible_db_properties,
       cells_by_key: @cells_by_key,
-      can_create_rows: policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked?,
+      can_create_rows: can_update_rows,
+      can_update_rows: can_update_rows,
+      can_update_cells: can_update_rows,
+      can_destroy_rows: policy(@database).destroy? && !@database.locked?,
       row_color_options: row_color_options,
+      page_search_url: workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page"),
+      name_column_style_classes: name_column_style_classes_for(@database),
       autofocus_title: autofocus_title,
       highlight_row_id: highlight_row_id
     }
@@ -271,7 +267,7 @@ class DbCellsController < ApplicationController
     return unless property.select?
     return unless property.name.to_s.strip.casecmp("status").zero?
 
-    row = db_cell.db_row
+    row = db_cell.db_row.reload
     status_value = normalize_task_status_value(db_cell.value_text)
     if status_value == "done"
       row.apply_row_style_action!(action: "set_color", text_color: "gray")
@@ -279,7 +275,10 @@ class DbCellsController < ApplicationController
       row.apply_row_style_action!(action: "set_color", text_color: "default")
     end
 
-    row.data_json = row.data_json.to_h.merge(property.name.to_s.strip => db_cell.value_text.to_s)
     row.save! if row.changed?
+  end
+
+  def reloaded_database
+    @reloaded_database ||= @database.reload
   end
 end

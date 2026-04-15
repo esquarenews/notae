@@ -20,6 +20,7 @@
 <% can_persist_sort = @current_view.present? && policy(@current_view).update? && !@database.locked? %>
 <% can_edit_properties = policy(DbProperty.new(database: @database, workspace: @workspace)).update? && !@database.locked? %>
 <% can_create_rows = policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
+<% can_destroy_rows = policy(@database).destroy? && !@database.locked? %>
 <% new_row_form_id = "db_new_row_form_#{@database.id}" %>
 <% column_widths = @view_config.fetch("column_widths", {}).to_h.transform_values { |value| value.to_i } %>
 <% column_resize_enabled = can_edit_grid && @current_view.present? %>
@@ -47,6 +48,7 @@ end %>
 <% name_is_sorted = @sort_by_name %>
 <% name_next_direction = name_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
 <% name_column_style_classes = name_column_style_classes_for(@database) %>
+<% page_search_url = workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page") %>
 
 <div class="notae-db-grid-wrap"
      data-controller="db-column-resize"
@@ -318,7 +320,12 @@ end %>
                    visible_properties: visible_properties,
                    cells_by_key: @cells_by_key,
                    can_create_rows: can_create_rows,
+                   can_update_rows: can_edit_grid,
+                   can_update_cells: can_edit_grid,
+                   can_destroy_rows: can_destroy_rows,
                    row_color_options: row_color_options,
+                   page_search_url: page_search_url,
+                   name_column_style_classes: name_column_style_classes,
                    highlight_row_id: highlight_row_id %>
       <% end %>
     </tbody>

@@ -2654,7 +2654,11 @@ RSpec.describe "Databases", type: :request do
     DbCell.create!(workspace: workspace, db_row: source_row, db_property: status_property, value_text: "In progress")
     sign_in owner
 
-    post duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: source_row.id)
+    clear_enqueued_jobs
+
+    expect do
+      post duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: source_row.id)
+    end.to have_enqueued_job(Search::IndexDbRowJob).exactly(:once)
 
     duplicate_row = database.db_rows.where.not(id: [ source_row.id, tail_row.id ]).find_by!(title: "Source row")
     expect(response).to redirect_to(

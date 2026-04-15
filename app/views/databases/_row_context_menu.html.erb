@@ -2,7 +2,7 @@
 <% button_class = local_assigns.fetch(:button_class, "notae-db-row-hover-control") %>
 <% button_title = local_assigns.fetch(:button_title, "Row options") %>
 <% linked_page = local_assigns[:linked_page] %>
-<% row_can_destroy = policy(row).destroy? && !database.locked? %>
+<% row_can_destroy = local_assigns.fetch(:row_can_destroy) { policy(row).destroy? && !database.locked? } %>
 
 <div class="<%= wrapper_class %>"
      data-controller="row-menu"

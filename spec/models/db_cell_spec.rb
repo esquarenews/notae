@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe DbCell, type: :model do
+  include ActiveJob::TestHelper
+
   it "syncs row cached json when a cell changes" do
     workspace = Workspace.create!(name: "Cell sync", slug: "cell-sync")
     database = Database.create!(workspace:, name: "Tasks")
@@ -13,6 +15,38 @@ RSpec.describe DbCell, type: :model do
     db_cell.update!(value_text: "Done")
 
     expect(db_row.reload.data_json).to eq({ "Status" => "Done" })
+  end
+
+  it "enqueues a single row reindex when a cell changes" do
+    clear_enqueued_jobs
+
+    workspace = Workspace.create!(name: "Cell reindex", slug: "cell-reindex")
+    database = Database.create!(workspace:, name: "Tasks")
+    db_property = DbProperty.create!(workspace:, database:, name: "Status", property_type: :text)
+    db_row = DbRow.create!(workspace:, database:, title: "Write tests")
+    db_cell = described_class.create!(workspace:, db_row:, db_property:, value_text: "Todo")
+    clear_enqueued_jobs
+
+    expect do
+      db_cell.update!(value_text: "Done")
+    end.to have_enqueued_job(Search::IndexDbRowJob).with(db_row.id).exactly(:once)
+  end
+
+  it "removes cached row json when a cell is destroyed" do
+    clear_enqueued_jobs
+
+    workspace = Workspace.create!(name: "Cell destroy sync", slug: "cell-destroy-sync")
+    database = Database.create!(workspace:, name: "Tasks")
+    db_property = DbProperty.create!(workspace:, database:, name: "Status", property_type: :text)
+    db_row = DbRow.create!(workspace:, database:, title: "Write tests")
+    db_cell = described_class.create!(workspace:, db_row:, db_property:, value_text: "Todo")
+    clear_enqueued_jobs
+
+    expect do
+      db_cell.destroy!
+    end.to have_enqueued_job(Search::IndexDbRowJob).with(db_row.id).exactly(:once)
+
+    expect(db_row.reload.data_json).to eq({})
   end
 
   it "rejects cells where row and property belong to different databases" do

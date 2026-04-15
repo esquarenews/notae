@@ -11,11 +11,6 @@ class ShareLinkPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      admin_workspace_ids = Membership.where(
-        user_id: user.id,
-        role: [ Membership.roles.fetch("admin"), Membership.roles.fetch("owner") ]
-      ).select(:workspace_id)
-
       manageable_page_ids = Page.where(
         Page.arel_table[:workspace_id].in(admin_workspace_ids)
           .or(Page.arel_table[:created_by_id].eq(user.id))

@@ -15,7 +15,7 @@ class NotificationPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      scope.for_recipient(user).where(workspace_id: WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id))
+      scope.for_recipient(user).where(workspace_id: accessible_workspace_ids)
     end
   end
 end

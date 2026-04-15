@@ -31,8 +31,7 @@ class EpistulariumAccountPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-      scope.where(workspace_id: workspace_ids)
+      scope.where(workspace_id: accessible_workspace_ids)
            .where(
              scope.arel_table[:owner_type].eq("Workspace")
              .or(

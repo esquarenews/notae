@@ -56,4 +56,34 @@ RSpec.describe DatabasePolicy do
     expect(described_class.new(member, specific_database).show?).to be(true)
     expect(described_class.new(other, specific_database).show?).to be(false)
   end
+
+  it "scope returns only visible databases in accessible workspaces" do
+    workspace = Workspace.create!(name: "Database scope policy", slug: "database-scope-policy")
+    other_workspace = Workspace.create!(name: "Other database scope", slug: "other-database-scope")
+    owner = User.create!(email: "database-scope-owner@example.com", password: "password123")
+    member = User.create!(email: "database-scope-member@example.com", password: "password123")
+    outsider = User.create!(email: "database-scope-outsider@example.com", password: "password123")
+
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    Membership.create!(workspace: other_workspace, user: outsider, role: :owner)
+
+    shared_database = Database.create!(workspace: workspace, created_by: owner, name: "Shared grid", permission_mode: :shared_to_workspace)
+    own_private_database = Database.create!(workspace: workspace, created_by: member, name: "Own private grid", permission_mode: :private_database)
+    visible_specific_database = Database.create!(workspace: workspace, created_by: owner, name: "Visible specific grid", permission_mode: :specific_users)
+    hidden_private_database = Database.create!(workspace: workspace, created_by: owner, name: "Hidden private grid", permission_mode: :private_database)
+    hidden_specific_database = Database.create!(workspace: workspace, created_by: owner, name: "Hidden specific grid", permission_mode: :specific_users)
+    outside_database = Database.create!(workspace: other_workspace, created_by: outsider, name: "Outside grid", permission_mode: :shared_to_workspace)
+
+    DatabaseShare.create!(database: visible_specific_database, user: member, created_by: owner)
+
+    resolved_ids = described_class::Scope.new(member, Database).resolve.pluck(:id)
+
+    expect(resolved_ids).to contain_exactly(
+      shared_database.id,
+      own_private_database.id,
+      visible_specific_database.id
+    )
+    expect(resolved_ids).not_to include(hidden_private_database.id, hidden_specific_database.id, outside_database.id)
+  end
 end

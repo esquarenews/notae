@@ -11,11 +11,6 @@ class DatabaseShareLinkPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      admin_workspace_ids = Membership.where(
-        user_id: user.id,
-        role: [ Membership.roles.fetch("admin"), Membership.roles.fetch("owner") ]
-      ).select(:workspace_id)
-
       manageable_database_ids = Database.where(workspace_id: admin_workspace_ids).select(:id)
 
       scope.where(database_id: manageable_database_ids)

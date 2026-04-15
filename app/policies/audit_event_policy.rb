@@ -8,10 +8,7 @@ class AuditEventPolicy < ApplicationPolicy
       return scope.none unless user
 
       scope.where(
-        workspace_id: Membership.where(
-          user_id: user.id,
-          role: [ Membership.roles.fetch("admin"), Membership.roles.fetch("owner"), Membership.roles.fetch("auditor") ]
-        ).select(:workspace_id)
+        workspace_id: workspace_ids_for_roles(:admin, :owner, :auditor)
       )
     end
   end

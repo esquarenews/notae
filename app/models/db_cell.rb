@@ -19,7 +19,9 @@ class DbCell < ApplicationRecord
 
   before_validation :set_workspace_from_row
   before_validation :normalize_value_text_for_property
-  after_commit :sync_row_data_cache
+  before_destroy :cache_property_name_for_row_cache
+  after_commit :sync_row_data_cache_after_upsert, on: %i[create update]
+  after_destroy_commit :sync_row_data_cache_after_destroy
   validate :value_matches_property_type
 
   class << self
@@ -127,8 +129,40 @@ class DbCell < ApplicationRecord
     raw_value
   end
 
-  def sync_row_data_cache
-    row = DbRow.find_by(id: db_row_id)
-    row&.sync_data_from_cells!
+  def sync_row_data_cache_after_upsert
+    row = row_for_cache_sync
+    key = property_name_for_row_cache
+    return if row.blank? || key.blank?
+
+    row.refresh_cached_data_json!(row.data_json.to_h.merge(key => value_text.to_s), enqueue_reindex: false)
+  end
+
+  def sync_row_data_cache_after_destroy
+    row = row_for_cache_sync
+    key = @cached_property_name_for_row_cache.to_s.strip.presence
+    return if row.blank? || key.blank?
+
+    row.refresh_cached_data_json!(row.data_json.to_h.except(key), enqueue_reindex: false)
+  end
+
+  def row_for_cache_sync
+    DbRow.find_by(id: db_row_id)
+  end
+
+  def property_name_for_row_cache
+    return @cached_property_name_for_row_cache if defined?(@cached_property_name_for_row_cache) && @cached_property_name_for_row_cache.present?
+
+    name =
+      if association(:db_property).loaded?
+        db_property&.name
+      else
+        DbProperty.where(id: db_property_id).pick(:name)
+      end
+
+    name.to_s.strip.presence
+  end
+
+  def cache_property_name_for_row_cache
+    @cached_property_name_for_row_cache = property_name_for_row_cache
   end
 end

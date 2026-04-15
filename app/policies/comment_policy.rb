@@ -19,12 +19,11 @@ class CommentPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-      visible_page_ids = PagePolicy::Scope.new(user, Page).resolve.pluck(:id)
-      visible_block_ids = BlockPolicy::Scope.new(user, Block).resolve.pluck(:id)
-      visible_database_ids = DatabasePolicy::Scope.new(user, Database).resolve.pluck(:id)
+      visible_page_ids = PagePolicy::Scope.new(user, Page).resolve.select(:id)
+      visible_block_ids = BlockPolicy::Scope.new(user, Block).resolve.select(:id)
+      visible_database_ids = DatabasePolicy::Scope.new(user, Database).resolve.select(:id)
 
-      scoped = scope.where(workspace_id: workspace_ids)
+      scoped = scope.where(workspace_id: accessible_workspace_ids)
       page_visible = scoped.where(commentable_type: "Page", commentable_id: visible_page_ids)
       block_visible = scoped.where(commentable_type: "Block", commentable_id: visible_block_ids)
       database_visible = scoped.where(commentable_type: "Database", commentable_id: visible_database_ids)

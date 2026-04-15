@@ -48,14 +48,8 @@ class DatabasePolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-      admin_workspace_ids = Membership.where(
-        user_id: user.id,
-        role: [ Membership.roles.fetch("admin"), Membership.roles.fetch("owner") ]
-      ).select(:workspace_id)
-
       scope
-        .where(workspace_id: workspace_ids)
+        .where(workspace_id: accessible_workspace_ids)
         .left_joins(:database_shares)
         .where(
           Database.arel_table[:workspace_id].in(admin_workspace_ids)

@@ -49,6 +49,45 @@ class ApplicationPolicy
     private
 
     attr_reader :user, :scope
+
+    def accessible_workspace_ids
+      return [] unless user
+
+      policy_scope_cache[:accessible_workspace_ids] ||= Workspace.active
+        .joins(:memberships)
+        .where(memberships: { user_id: user.id })
+        .distinct
+        .pluck(:id)
+    end
+
+    def admin_workspace_ids
+      workspace_ids_for_roles(:admin, :owner)
+    end
+
+    def auditor_workspace_ids
+      workspace_ids_for_roles(:auditor)
+    end
+
+    def workspace_ids_for_roles(*roles)
+      return [] unless user
+
+      normalized_roles = Array(roles).flatten.map(&:to_s).uniq.sort
+      cache_key = "workspace_ids:#{normalized_roles.join(',')}"
+
+      policy_scope_cache[cache_key] ||= begin
+        role_values = normalized_roles.map { |role| Membership.roles.fetch(role) }
+        Membership.where(user_id: user.id, role: role_values).distinct.pluck(:workspace_id)
+      end
+    end
+
+    def policy_scope_cache
+      cache = user.instance_variable_get(:@_notae_policy_scope_cache)
+      return cache if cache.is_a?(Hash)
+
+      cache = {}
+      user.instance_variable_set(:@_notae_policy_scope_cache, cache)
+      cache
+    end
   end
 
   private

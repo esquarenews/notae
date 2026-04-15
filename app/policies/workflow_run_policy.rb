@@ -18,11 +18,7 @@ class WorkflowRunPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      workspace_scope = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-      admin_workspace_ids = Membership.where(user_id: user.id, role: %w[admin owner]).select(:workspace_id)
-      auditor_workspace_ids = Membership.where(user_id: user.id, role: %w[auditor]).select(:workspace_id)
-
-      own_runs = scope.where(workspace_id: workspace_scope, user_id: user.id)
+      own_runs = scope.where(workspace_id: accessible_workspace_ids, user_id: user.id)
       admin_runs = scope.where(workspace_id: admin_workspace_ids)
       auditor_runs = scope.where(workspace_id: auditor_workspace_ids)
 

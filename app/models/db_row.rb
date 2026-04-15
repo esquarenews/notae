@@ -48,13 +48,16 @@ class DbRow < ApplicationRecord
   before_validation :set_workspace_from_database
   before_validation :set_initial_position, on: :create
   before_validation :set_search_text
-  after_commit :enqueue_search_chunk_reindex, on: %i[create update]
+  after_commit :enqueue_search_chunk_reindex, on: %i[create update], if: :search_chunk_reindex_required?
   after_commit :remove_search_chunks, on: :destroy
 
   def sync_data_from_cells!
     style_payload = style_metadata
-    serialized_data = db_cells.includes(:db_property).to_a.sort_by { |cell| [ cell.db_property.position, cell.db_property.created_at ] }
-                             .each_with_object({}) do |cell, data|
+    serialized_data = db_cells
+      .joins(:db_property)
+      .includes(:db_property)
+      .order(Arel.sql("db_properties.position ASC"), Arel.sql("db_properties.created_at ASC"), Arel.sql("db_cells.created_at ASC"))
+      .each_with_object({}) do |cell, data|
       key = cell.db_property.name.to_s.strip
       next if key.blank?
 
@@ -63,6 +66,29 @@ class DbRow < ApplicationRecord
     serialized_data.merge!(style_payload)
 
     update!(data_json: serialized_data)
+  end
+
+  def refresh_cached_data_json!(payload, enqueue_reindex: true)
+    normalized_payload = payload.is_a?(Hash) ? payload : {}
+    normalized_search_text = self.class.search_text_from(title:, data_json: normalized_payload)
+    return if data_json == normalized_payload && search_text == normalized_search_text
+
+    update_columns(data_json: normalized_payload, search_text: normalized_search_text)
+    queue_search_chunk_reindex! if enqueue_reindex
+  end
+
+  def queue_search_chunk_reindex!
+    Search::IndexDbRowJob.perform_later(id)
+  rescue StandardError => error
+    raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+
+    Rails.logger.warn("Search index queue unavailable for row=#{id}: #{error.class}: #{error.message}")
+    Search::ChunkIndexingService.index_db_row!(db_row: self)
+  end
+
+  def self.search_text_from(title:, data_json:)
+    flattened = data_json.is_a?(Hash) ? data_json.values.join(" ") : data_json.to_s
+    [ title, flattened ].compact.join(" ").strip
   end
 
   def row_bold?
@@ -176,8 +202,7 @@ class DbRow < ApplicationRecord
   end
 
   def set_search_text
-    flattened = data_json.is_a?(Hash) ? data_json.values.join(" ") : data_json.to_s
-    self.search_text = [ title, flattened ].compact.join(" ").strip
+    self.search_text = self.class.search_text_from(title:, data_json:)
   end
 
   def linked_page_workspace_matches
@@ -203,12 +228,15 @@ class DbRow < ApplicationRecord
   end
 
   def enqueue_search_chunk_reindex
-    Search::IndexDbRowJob.perform_later(id)
-  rescue StandardError => error
-    raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+    queue_search_chunk_reindex!
+  end
 
-    Rails.logger.warn("Search index queue unavailable for row=#{id}: #{error.class}: #{error.message}")
-    Search::ChunkIndexingService.index_db_row!(db_row: self)
+  def search_chunk_reindex_required?
+    previous_changes.key?("id") ||
+      previous_changes.key?("title") ||
+      previous_changes.key?("search_text") ||
+      previous_changes.key?("data_json") ||
+      previous_changes.key?("archived_at")
   end
 
   def remove_search_chunks

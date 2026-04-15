@@ -11,16 +11,14 @@ class FavoritePolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-      visible_page_ids = PagePolicy::Scope.new(user, Page).resolve.pluck(:id)
-      visible_database_ids = DatabasePolicy::Scope.new(user, Database).resolve.pluck(:id)
+      visible_page_ids = PagePolicy::Scope.new(user, Page).resolve.select(:id)
+      visible_database_ids = DatabasePolicy::Scope.new(user, Database).resolve.select(:id)
 
-      favorites = scope.where(user_id: user.id, workspace_id: workspace_ids)
-      table = Favorite.arel_table
-      page_clause = table[:favoritable_type].eq("Page").and(table[:favoritable_id].in(visible_page_ids))
-      database_clause = table[:favoritable_type].eq("Database").and(table[:favoritable_id].in(visible_database_ids))
+      favorites = scope.where(user_id: user.id, workspace_id: accessible_workspace_ids)
+      page_favorites = favorites.where(favoritable_type: "Page", favoritable_id: visible_page_ids)
+      database_favorites = favorites.where(favoritable_type: "Database", favoritable_id: visible_database_ids)
 
-      favorites.where(page_clause.or(database_clause))
+      page_favorites.or(database_favorites)
     end
   end
 

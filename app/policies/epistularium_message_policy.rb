@@ -13,10 +13,8 @@ class EpistulariumMessagePolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      workspace_ids = WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id)
-
       scope.joins(:epistularium_account)
-           .where(workspace_id: workspace_ids)
+           .where(workspace_id: accessible_workspace_ids)
            .where(
              EpistulariumAccount.arel_table[:owner_type].eq("Workspace")
              .or(

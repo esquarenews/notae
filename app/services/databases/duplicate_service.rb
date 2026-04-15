@@ -72,21 +72,27 @@ module Databases
           workspace: workspace,
           title: source_row.title,
           position: source_row.position,
-          linked_page: source_row.linked_page
+          linked_page: source_row.linked_page,
+          data_json: source_row.data_json.to_h.deep_dup
         )
 
-        source_row.db_cells.each do |source_cell|
+        now = Time.current
+        duplicate_cell_payloads = source_row.db_cells.filter_map do |source_cell|
           mapped_property_id = property_id_map[source_cell.db_property_id.to_s]
           next if mapped_property_id.blank?
 
-          duplicated_row.db_cells.create!(
-            workspace: workspace,
+          {
+            id: SecureRandom.uuid,
+            workspace_id: workspace.id,
+            db_row_id: duplicated_row.id,
             db_property_id: mapped_property_id,
-            value_text: source_cell.value_text
-          )
+            value_text: source_cell.value_text,
+            created_at: now,
+            updated_at: now
+          }
         end
+        DbCell.insert_all(duplicate_cell_payloads, unique_by: :index_db_cells_on_db_row_id_and_db_property_id) if duplicate_cell_payloads.any?
 
-        duplicated_row.sync_data_from_cells!
       end
     end
 

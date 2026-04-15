@@ -21,12 +21,12 @@ class KalendariumWriteProposalPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      scope.where(workspace_id: WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id))
+      scope.where(workspace_id: accessible_workspace_ids)
            .where(
              scope.arel_table[:user_id].eq(user.id)
              .or(
                scope.arel_table[:workspace_id].in(
-                 Membership.where(user_id: user.id, role: [ Membership.roles.fetch("admin"), Membership.roles.fetch("owner") ]).select(:workspace_id)
+                 admin_workspace_ids
                )
              )
            )

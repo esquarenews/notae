@@ -35,6 +35,27 @@ module DatabaseTablePresentation
     @select_options_by_property[property.id] || []
   end
 
+  def build_select_options_lookup(database:, properties:)
+    select_properties = Array(properties).select(&:select?)
+    return {} if select_properties.empty?
+
+    values_by_property = Hash.new { |hash, key| hash[key] = [] }
+    policy_scope(DbCell)
+      .for_database(database)
+      .where(db_property_id: select_properties.map(&:id))
+      .where.not(value_text: [ nil, "" ])
+      .distinct
+      .order(:db_property_id, :value_text)
+      .pluck(:db_property_id, :value_text)
+      .each do |property_id, value_text|
+        values_by_property[property_id] << value_text
+      end
+
+    select_properties.each_with_object({}) do |property, lookup|
+      lookup[property.id] = select_options_with_fallback(property, values_by_property[property.id])
+    end
+  end
+
   def select_options_with_fallback(property, existing_values = [])
     values = []
     seen = {}

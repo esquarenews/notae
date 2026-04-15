@@ -16,7 +16,7 @@ class MeetingBotRunPolicy < ApplicationPolicy
       return scope.none unless user
 
       scope.joins(:meeting_session)
-           .where(meeting_sessions: { workspace_id: WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id) })
+           .where(meeting_sessions: { workspace_id: accessible_workspace_ids })
     end
   end
 
