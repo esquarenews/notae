@@ -1,0 +1,44 @@
+<% progress_value = DbCell.progress_value(db_cell&.value_text) %>
+<% previous_value = [progress_value - 1, DbCell::PROGRESS_MIN].max %>
+<% next_value = [progress_value + 1, DbCell::PROGRESS_MAX].min %>
+<% show_controls = local_assigns.fetch(:show_controls, true) %>
+<% field_id = local_assigns.fetch(:field_id, "db_cell_#{db_cell.id}_value_text") %>
+
+<div class="notae-db-progress-field"
+     data-controller="progress-cell"
+     data-progress-cell-cell-id-value="<%= db_cell.id %>"
+     data-progress-cell-value-value="<%= progress_value %>">
+  <% if show_controls %>
+    <button type="submit"
+            name="db_cell[value_text]"
+            value="<%= previous_value %>"
+            class="notae-db-progress-stepper is-decrease"
+            data-action="click->progress-cell#prepare"
+            data-progress-cell-next-value-param="<%= previous_value %>"
+            aria-label="Decrease progress to <%= previous_value %> out of <%= DbCell::PROGRESS_MAX %>"
+            <%= "disabled" if progress_value <= DbCell::PROGRESS_MIN %>>-</button>
+  <% end %>
+
+  <div class="notae-db-progress-track"
+       id="<%= field_id %>"
+       role="progressbar"
+       aria-valuemin="<%= DbCell::PROGRESS_MIN %>"
+       aria-valuemax="<%= DbCell::PROGRESS_MAX %>"
+       aria-valuenow="<%= progress_value %>"
+       aria-valuetext="<%= "#{progress_value} out of #{DbCell::PROGRESS_MAX}" %>">
+    <div class="notae-db-progress-fill" style="width: <%= (progress_value.to_f / DbCell::PROGRESS_MAX) * 100 %>%"></div>
+    <span class="notae-db-progress-label"><%= progress_value %>/<%= DbCell::PROGRESS_MAX %></span>
+    <div class="notae-db-progress-confetti" aria-hidden="true" data-progress-cell-target="confetti"></div>
+  </div>
+
+  <% if show_controls %>
+    <button type="submit"
+            name="db_cell[value_text]"
+            value="<%= next_value %>"
+            class="notae-db-progress-stepper is-increase"
+            data-action="click->progress-cell#prepare"
+            data-progress-cell-next-value-param="<%= next_value %>"
+            aria-label="Increase progress to <%= next_value %> out of <%= DbCell::PROGRESS_MAX %>"
+            <%= "disabled" if progress_value >= DbCell::PROGRESS_MAX %>>+</button>
+  <% end %>
+</div>

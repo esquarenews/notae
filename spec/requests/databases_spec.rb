@@ -301,6 +301,62 @@ RSpec.describe "Databases", type: :request do
     expect(templates_panel_text).to include("Save as template")
   end
 
+  it "renders and updates dropdown property options from the column menu" do
+    owner = User.create!(email: "database-dropdown-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Dropdown tables", slug: "dropdown-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Dropdown grid")
+    property = DbProperty.create!(
+      workspace: workspace,
+      database: database,
+      name: "Priority",
+      property_type: :select,
+      select_options_json: ["High"]
+    )
+    row = DbRow.create!(workspace: workspace, database: database, title: "Task one")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: property, value_text: "High")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    property_type_labels = document.css("select[name='db_property[property_type]'] option").map(&:text)
+
+    expect(property_type_labels).to include("Dropdown")
+    expect(response.body).to include("Add dropdown item")
+    expect(response.body).to include("High")
+    expect(response.body).to include('data-turbo-confirm="Are you sure?"')
+
+    patch database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: property.id),
+          params: {
+            db_property: {
+              select_option_action: "add_select_option",
+              select_option_value: "Low"
+            }
+          }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(property.reload.select_options_list).to eq(["High", "Low"])
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    document = Nokogiri::HTML(response.body)
+    dropdown = document.at_css("select.notae-db-cell-input")
+    expect(dropdown.css("option").map { |option| option["value"] }).to include("", "High", "Low")
+
+    patch database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: property.id),
+          params: {
+            db_property: {
+              select_option_action: "remove_select_option",
+              select_option_value: "High"
+            }
+          }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(property.reload.select_options_list).to eq(["Low"])
+  end
+
   it "disables taskify for custom grids and rejects direct taskify requests" do
     owner = User.create!(email: "database-taskify-custom-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Taskify custom tables", slug: "taskify-custom-tables")
@@ -852,6 +908,47 @@ RSpec.describe "Databases", type: :request do
     expect(name_cell["class"]).to include("is-column-italic")
     expect(name_cell["class"]).to include("is-column-color-purple")
     expect(name_cell["class"]).to include("is-column-bg-rose")
+  end
+
+  it "renders progress properties with step controls and updates them inline" do
+    owner = User.create!(email: "database-progress-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables Progress", slug: "tables-progress")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Roadmap")
+    progress_property = DbProperty.create!(workspace: workspace, database: database, name: "Progress", property_type: :progress)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Ship launch")
+    cell = DbCell.create!(workspace: workspace, db_row: row, db_property: progress_property, value_text: "3")
+    view = DatabaseView.create!(
+      workspace: workspace,
+      database: database,
+      created_by: owner,
+      name: "Table",
+      view_type: :table,
+      default: true
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(response.body).to include("Progress")
+    progress_field = html.at_css("#row_#{row.id} .notae-db-progress-field")
+    expect(progress_field).to be_present
+    expect(progress_field["data-controller"]).to include("progress-cell")
+    expect(progress_field.at_css(".notae-db-progress-label")&.text).to eq("3/10")
+    buttons = progress_field.css(".notae-db-progress-stepper")
+    expect(buttons.map { |node| node.text.strip }).to eq([ "-", "+" ])
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: cell.id, view_id: view.id, progress_inline_update: "1"),
+          params: { db_cell: { value_text: "10" } },
+          as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(%(turbo-stream action="replace" target="row_#{row.id}"))
+    expect(response.body).to include("10/10")
+    expect(cell.reload.value_text).to eq("10")
+    expect(row.reload.data_json["Progress"]).to eq("10")
   end
 
   it "sorts rows by column values" do
@@ -3267,6 +3364,8 @@ RSpec.describe "Databases", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include(".notae-db-view-pill.is-active {\n  color: var(--notae-text-strong);")
+    expect(stylesheet).to include(".notae-db-progress-field {\n  display: grid;")
+    expect(stylesheet).to include("@keyframes notae-db-progress-confetti-burst {")
     expect(stylesheet).to include(".notae-db-grid th:hover .notae-db-column-hover-controls,")
     expect(stylesheet).to include(".notae-db-column-hover-controls {\n  display: inline-flex;\n  align-items: center;\n  flex: 0 0 auto;\n  opacity: 0;\n  pointer-events: none;\n  position: relative;\n  z-index: 6;")
     expect(stylesheet).to include(".notae-db-column-hover-control {\n  flex-shrink: 0;\n  position: relative;\n  z-index: 7;")

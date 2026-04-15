@@ -190,18 +190,25 @@
       <% if db_cell && policy(db_cell).update? && !database.locked? %>
         <%= form_with model: db_cell,
                       url: database_db_cell_path(
-                        {
+                        ({
                           workspace_slug: workspace.slug,
                           database_id: database.id,
                           id: db_cell.id
-                        }.merge(row_params)
+                        }.merge(row_params)).merge(db_property.progress? ? { progress_inline_update: "1" } : {})
                       ),
                       method: :patch,
-                      data: {
-                        controller: "auto-submit",
-                        turbo_stream: true,
-                        preserve_database_scroll: true
-                      } do |form| %>
+                      data: (
+                        db_property.progress? ?
+                          {
+                            turbo_stream: true,
+                            preserve_database_scroll: true
+                          } :
+                          {
+                            controller: "auto-submit",
+                            turbo_stream: true,
+                            preserve_database_scroll: true
+                          }
+                      ) do |form| %>
           <% field_classes = db_property.select? ? select_input_classes_for(db_property, db_cell.value_text) : "notae-db-cell-input" %>
           <% if db_property.checkbox? %>
             <label class="notae-db-checkbox-wrap">
@@ -228,6 +235,11 @@
                                   step: "any",
                                   class: field_classes,
                                   data: { action: "change->auto-submit#submit" } %>
+          <% elsif db_property.progress? %>
+            <%= render "databases/progress_cell",
+                       form: form,
+                       db_cell: db_cell,
+                       field_id: "db_cell_#{db_cell.id}_value_text" %>
           <% elsif db_property.date? %>
             <%= form.date_field :value_text,
                                 value: db_cell.value_text,

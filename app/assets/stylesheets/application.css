@@ -4735,6 +4735,63 @@ turbo-frame#notae_sidebar_sections {
   justify-content: center;
 }
 
+.notae-db-column-option-form {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+}
+
+.notae-db-column-option-add {
+  min-width: 2rem;
+  padding-inline: 0.4rem;
+  justify-content: center;
+}
+
+.notae-db-column-option-list {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.notae-db-column-option-pill-form {
+  margin: 0;
+}
+
+.notae-db-column-option-pill {
+  width: 100%;
+  border: 1px solid var(--notae-border);
+  border-radius: 0.44rem;
+  background: color-mix(in srgb, var(--notae-surface-muted) 76%, transparent);
+  color: var(--notae-text);
+  font-size: 0.78rem;
+  font-weight: 520;
+  padding: 0.38rem 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-height: 2rem;
+}
+
+.notae-db-column-option-pill:hover {
+  background: color-mix(in srgb, var(--notae-surface-muted) 92%, transparent);
+}
+
+.notae-db-column-option-pill-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notae-db-column-option-pill-remove {
+  width: 1rem;
+  text-align: center;
+  color: var(--notae-muted);
+  flex-shrink: 0;
+}
+
 .notae-db-row-menu-form {
   margin: 0;
 }
@@ -5719,6 +5776,116 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   padding: 0.24rem 0.38rem;
   font-size: 0.82rem;
   line-height: 1.32;
+}
+
+.notae-db-progress-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+.notae-db-progress-stepper {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border) 88%, transparent);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--notae-surface-muted) 82%, transparent);
+  color: var(--notae-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notae-db-progress-stepper:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--notae-accent) 32%, var(--notae-border));
+  background: color-mix(in srgb, var(--notae-accent) 10%, var(--notae-surface-muted));
+}
+
+.notae-db-progress-stepper:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.notae-db-progress-track {
+  position: relative;
+  overflow: visible;
+  min-width: 0;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--notae-border) 82%, transparent);
+  background: color-mix(in srgb, var(--notae-surface-muted) 88%, transparent);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.notae-db-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.notae-db-progress-label {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.52rem;
+  color: var(--notae-text-strong);
+  font-size: 0.73rem;
+  font-weight: 700;
+  line-height: 1;
+  mix-blend-mode: normal;
+  z-index: 1;
+}
+
+.notae-db-progress-confetti {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 0.2rem);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.notae-db-progress-confetti-piece {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0.34rem;
+  height: 0.58rem;
+  border-radius: 0.12rem;
+  background: var(--notae-progress-confetti-color, #8b5cf6);
+  opacity: 0;
+  transform: translate3d(0, 0, 0) rotate(0deg);
+  animation: notae-db-progress-confetti-burst 1s ease-out forwards;
+  animation-delay: var(--notae-progress-confetti-delay, 0s);
+}
+
+@keyframes notae-db-progress-confetti-burst {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.72);
+  }
+
+  8% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--notae-progress-confetti-offset, 0px), -2.4rem, 0) rotate(var(--notae-progress-confetti-rotation, 0deg)) scale(1);
+  }
 }
 
 .notae-db-title-input {

@@ -66,7 +66,8 @@ module Databases
 
         {
           "name" => name,
-          "property_type" => property_type
+          "property_type" => property_type,
+          "select_options" => Array(property_snapshot["select_options"])
         }
       end
     end
@@ -81,7 +82,8 @@ module Databases
       template_properties.each do |property_snapshot|
         property = find_or_create_property!(
           name: property_snapshot.fetch("name"),
-          property_type: property_snapshot.fetch("property_type")
+          property_type: property_snapshot.fetch("property_type"),
+          select_options: property_snapshot.fetch("select_options", [])
         )
         normalized_property_map[normalize_property_name(property.name)] = property
       end
@@ -90,11 +92,14 @@ module Databases
       normalized_property_map
     end
 
-    def find_or_create_property!(name:, property_type:)
+    def find_or_create_property!(name:, property_type:, select_options:)
       existing_property = database.db_properties.ordered.find do |property|
         normalize_property_name(property.name) == normalize_property_name(name)
       end
-      return existing_property if existing_property.present? && existing_property.property_type == property_type
+      if existing_property.present? && existing_property.property_type == property_type
+        sync_select_options!(existing_property, select_options)
+        return existing_property
+      end
 
       if existing_property.present?
         existing_property.errors.add(:property_type, "must be #{property_type} to use the #{template.name} template")
@@ -104,8 +109,16 @@ module Databases
       database.db_properties.create!(
         workspace: database.workspace,
         name: name,
-        property_type: property_type
+        property_type: property_type,
+        select_options_json: property_type == "select" ? select_options : []
       )
+    end
+
+    def sync_select_options!(property, select_options)
+      return unless property.select?
+
+      property.select_options_list = select_options
+      property.save! if property.changed?
     end
 
     def reposition_properties!(template_property_records)

@@ -59,7 +59,7 @@ module Databases
       bound_value = normalized_filter_value(@filter_property, @filter_value)
       return scope unless bound_value.present?
 
-      if @filter_property.number?
+      if @filter_property.numeric_like?
         apply_number_filter(scope, bound_value)
       elsif @filter_property.date?
         apply_date_filter(scope, bound_value)
@@ -112,7 +112,7 @@ module Databases
       end
 
       null_order_sql, value_order_sql =
-        if @sort_property.number?
+        if @sort_property.numeric_like?
           [
             Arel.sql("CASE WHEN CAST(NULLIF(TRIM(sort_cells.value_text), '') AS REAL) IS NULL THEN 1 ELSE 0 END ASC"),
             @sort_direction == "desc" ?
@@ -149,7 +149,7 @@ module Databases
       return false unless @sort_mode == "calendar"
       return false if @sort_property.blank?
 
-      !@sort_property.number? && !@sort_property.date? && !@sort_property.checkbox?
+      !@sort_property.numeric_like? && !@sort_property.date? && !@sort_property.checkbox?
     end
 
     def calendar_sort_rank_sql(column_sql)
@@ -260,7 +260,7 @@ module Databases
 
     def normalized_filter_value(property, raw_value)
       case property.property_type
-      when "number"
+      when "number", "progress"
         Float(raw_value)
       when "date"
         Date.parse(raw_value).iso8601

@@ -790,36 +790,15 @@ class DatabasesController < ApplicationController
   def build_select_options_by_property
     properties = @visible_db_properties || @db_properties
     properties.select(&:select?).each_with_object({}) do |property, options|
-      seen = {}
-      values = []
-
-      if task_status_property?(property)
-        DatabaseTablePresentation::TASK_STATUS_OPTIONS.each do |status|
-          seen[status] = true
-          values << status
-        end
-      end
-
-      policy_scope(DbCell)
+      existing_values = policy_scope(DbCell)
         .for_database(@database)
         .where(db_property_id: property.id)
         .where.not(value_text: [ nil, "" ])
         .distinct
         .order(:value_text)
         .pluck(:value_text)
-        .each do |value|
-          value = value.to_s.strip
-        next if value.blank?
 
-        normalized = task_status_property?(property) ? normalize_task_status_value(value) : value
-        next if normalized.blank?
-        next if seen.key?(normalized)
-
-        seen[normalized] = true
-        values << normalized
-      end
-
-      options[property.id] = task_status_property?(property) ? values : values.sort
+      options[property.id] = select_options_with_fallback(property, existing_values)
     end
   end
 
@@ -859,7 +838,7 @@ class DatabasesController < ApplicationController
     return nil if value.blank?
 
     case property.property_type
-    when "number"
+    when "number", "progress"
       Float(value)
     when "date"
       parse_date_value(value)
@@ -896,12 +875,12 @@ class DatabasesController < ApplicationController
     when "neq"
       row_value != normalized_filter
     when "before"
-      return false unless @filter_property.number? || @filter_property.date?
+      return false unless @filter_property.numeric_like? || @filter_property.date?
       return false if row_value.nil?
 
       row_value < normalized_filter
     when "after"
-      return false unless @filter_property.number? || @filter_property.date?
+      return false unless @filter_property.numeric_like? || @filter_property.date?
       return false if row_value.nil?
 
       row_value > normalized_filter

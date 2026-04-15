@@ -40,4 +40,22 @@ RSpec.describe DbProperty, type: :model do
     expect(property.column_text_color).to eq("purple")
     expect(property.column_background_color).to eq("mint")
   end
+
+  it "normalizes and updates dropdown options" do
+    workspace = Workspace.create!(name: "Schema dropdowns", slug: "schema-dropdowns")
+    database = Database.create!(workspace:, name: "Tasks")
+    property = described_class.create!(database:, workspace:, name: "Status", property_type: :select)
+
+    property.apply_select_option_action!(action: "add_select_option", option_value: "  Started  ")
+    property.apply_select_option_action!(action: "add_select_option", option_value: "Started")
+    property.apply_select_option_action!(action: "add_select_option", option_value: "Done")
+    property.save!
+
+    expect(property.reload.select_options_list).to eq(["Started", "Done"])
+
+    property.apply_select_option_action!(action: "remove_select_option", option_value: "Started")
+    property.save!
+
+    expect(property.reload.select_options_list).to eq(["Done"])
+  end
 end

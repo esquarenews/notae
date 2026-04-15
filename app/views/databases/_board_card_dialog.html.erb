@@ -78,12 +78,20 @@
                 <%= form_with model: db_cell,
                               url: database_db_cell_path({ workspace_slug: workspace.slug, database_id: database.id, id: db_cell.id }.merge(row_params)),
                               method: :patch,
-                              data: {
-                                controller: "auto-submit",
-                                turbo_stream: true,
-                                preserve_database_scroll: true,
-                                action: "turbo:submit-end->database-drag#refreshBoardOnSubmit"
-                              },
+                              data: (
+                                db_property.progress? ?
+                                  {
+                                    turbo_stream: true,
+                                    preserve_database_scroll: true,
+                                    action: "turbo:submit-end->database-drag#refreshBoardOnSubmit"
+                                  } :
+                                  {
+                                    controller: "auto-submit",
+                                    turbo_stream: true,
+                                    preserve_database_scroll: true,
+                                    action: "turbo:submit-end->database-drag#refreshBoardOnSubmit"
+                                  }
+                              ),
                               class: "notae-db-board-card-modal-field-form" do |form| %>
                   <% field_classes = db_property.select? ? select_input_classes_for(db_property, db_cell.value_text) : "notae-db-cell-input" %>
                   <% if db_property.checkbox? %>
@@ -114,6 +122,11 @@
                                           step: "any",
                                           class: field_classes,
                                           data: { action: "change->auto-submit#submit" } %>
+                  <% elsif db_property.progress? %>
+                    <%= render "databases/progress_cell",
+                               form: form,
+                               db_cell: db_cell,
+                               field_id: field_id %>
                   <% elsif db_property.date? %>
                     <%= form.date_field :value_text,
                                         value: db_cell.value_text,

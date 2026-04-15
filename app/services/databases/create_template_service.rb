@@ -66,11 +66,13 @@ module Databases
       {
         "database_name" => database.name,
         "properties" => ordered_properties.map do |property|
-          {
+          snapshot = {
             "name" => property.name,
             "property_type" => property.property_type,
             "position" => property.position
           }
+          snapshot["select_options"] = property.select_options_list if property.select?
+          snapshot
         end,
         "view" => view_snapshot
       }

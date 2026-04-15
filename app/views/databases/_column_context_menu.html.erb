@@ -47,6 +47,42 @@
         <%= form.submit "Save", class: "notae-chip-button notae-db-column-menu-save" %>
       <% end %>
 
+      <% if db_property.select? %>
+        <div class="notae-db-row-menu-section-label">Dropdown items</div>
+        <%= form_with model: db_property,
+                      url: column_update_path,
+                      method: :patch,
+                      class: "notae-db-inline-form notae-db-column-option-form",
+                      data: { preserve_database_scroll: true } do |form| %>
+          <%= form.hidden_field :select_option_action, value: "add_select_option" %>
+          <%= form.text_field :select_option_value,
+                              value: "",
+                              placeholder: "Add dropdown item",
+                              class: "notae-options-input",
+                              aria: { label: "Add dropdown item for #{db_property.name}" } %>
+          <%= form.submit "+", class: "notae-chip-button notae-db-column-option-add", aria: { label: "Add dropdown item" } %>
+        <% end %>
+
+        <% if db_property.select_options_list.any? %>
+          <div class="notae-db-column-option-list">
+            <% db_property.select_options_list.each do |option_value| %>
+              <%= form_with model: db_property,
+                            url: column_update_path,
+                            method: :patch,
+                            class: "notae-db-column-option-pill-form",
+                            data: { preserve_database_scroll: true } do |form| %>
+                <%= form.hidden_field :select_option_action, value: "remove_select_option" %>
+                <%= form.hidden_field :select_option_value, value: option_value %>
+                <button type="submit" class="notae-db-column-option-pill" aria-label="Remove <%= option_value %>">
+                  <span class="notae-db-column-option-pill-label"><%= option_value %></span>
+                  <span class="notae-db-column-option-pill-remove">×</span>
+                </button>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+
       <%= form_with model: db_property,
                     url: column_update_path,
                     method: :patch,
@@ -130,7 +166,10 @@
                       class: "notae-db-row-menu-button is-danger",
                       form: {
                         class: "notae-db-row-menu-form",
-                        data: { preserve_database_scroll: true }
+                        data: {
+                          preserve_database_scroll: true,
+                          turbo_confirm: "Are you sure?"
+                        }
                       } do %>
           <span class="notae-db-row-menu-icon">x</span>
           <span class="notae-db-row-menu-label">Delete column</span>

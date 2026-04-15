@@ -40,6 +40,9 @@ end %>
   ["Pink", "pink"],
   ["Red", "red"]
 ] %>
+<% property_type_options = DbProperty.property_types.keys.map do |value|
+  [value == "select" ? "Dropdown" : value.titleize, value]
+end %>
 <% highlight_row_id = params[:highlight_row_id].presence %>
 <% name_is_sorted = @sort_by_name %>
 <% name_next_direction = name_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
@@ -261,7 +264,7 @@ end %>
                               class: "notae-db-inline-form" do |form| %>
                   <%= form.text_field :name, placeholder: "Property name", required: true, class: "notae-options-input" %>
                   <%= form.select :property_type,
-                                  DbProperty.property_types.keys.map { |value| [value.titleize, value] },
+                                  property_type_options,
                                   {},
                                   class: "notae-options-input" %>
                   <%= form.submit "Add", class: "notae-chip-button" %>

@@ -35,6 +35,36 @@ module DatabaseTablePresentation
     @select_options_by_property[property.id] || []
   end
 
+  def select_options_with_fallback(property, existing_values = [])
+    values = []
+    seen = {}
+
+    if task_status_property?(property)
+      TASK_STATUS_OPTIONS.each do |value|
+        seen[value] = true
+        values << value
+      end
+    end
+
+    property.select_options_list.each do |value|
+      normalized = task_status_property?(property) ? normalize_task_status_value(value) : value.to_s.strip
+      next if normalized.blank? || seen.key?(normalized)
+
+      seen[normalized] = true
+      values << normalized
+    end
+
+    Array(existing_values).each do |value|
+      normalized = task_status_property?(property) ? normalize_task_status_value(value) : value.to_s.strip
+      next if normalized.blank? || seen.key?(normalized)
+
+      seen[normalized] = true
+      values << normalized
+    end
+
+    values
+  end
+
   def select_input_classes_for(property, value)
     classes = [ "notae-db-cell-input" ]
     return classes.join(" ") unless task_status_property?(property)

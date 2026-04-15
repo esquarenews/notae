@@ -29,6 +29,7 @@ class DbPropertiesController < ApplicationController
 
     @db_property.assign_attributes(db_property_update_params)
     apply_db_property_style_update!
+    apply_db_property_select_option_update!
 
     if @db_property.save
       redirect_to database_redirect_location, notice: db_property_update_notice
@@ -63,6 +64,10 @@ class DbPropertiesController < ApplicationController
     params.fetch(:db_property, ActionController::Parameters.new).permit(:style_action, :text_color, :background_color)
   end
 
+  def db_property_select_option_params
+    params.fetch(:db_property, ActionController::Parameters.new).permit(:select_option_action, :select_option_value)
+  end
+
   def apply_db_property_style_update!
     payload = db_property_style_params
     return if payload[:style_action].blank?
@@ -74,8 +79,21 @@ class DbPropertiesController < ApplicationController
     )
   end
 
+  def apply_db_property_select_option_update!
+    payload = db_property_select_option_params
+    return if payload[:select_option_action].blank?
+
+    @db_property.apply_select_option_action!(
+      action: payload[:select_option_action],
+      option_value: payload[:select_option_value]
+    )
+  end
+
   def db_property_update_notice
-    db_property_style_params[:style_action].present? ? "Column updated." : "Column renamed."
+    return "Column updated." if db_property_style_params[:style_action].present?
+    return "Dropdown updated." if db_property_select_option_params[:select_option_action].present?
+
+    "Column renamed."
   end
 
   def seed_cells_for_existing_rows(db_property)
@@ -94,7 +112,7 @@ class DbPropertiesController < ApplicationController
         workspace_id: @workspace.id,
         db_row_id: row_id,
         db_property_id: db_property.id,
-        value_text: "",
+        value_text: default_cell_value_for_property(db_property),
         created_at: now,
         updated_at: now
       }
@@ -102,6 +120,12 @@ class DbPropertiesController < ApplicationController
     return if missing_cells.empty?
 
     DbCell.insert_all(missing_cells, unique_by: :index_db_cells_on_db_row_id_and_db_property_id)
+  end
+
+  def default_cell_value_for_property(db_property)
+    return DbCell::PROGRESS_MIN.to_s if db_property.progress?
+
+    ""
   end
 
   def append_property_to_active_view_visibility(db_property)

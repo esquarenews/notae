@@ -67,4 +67,21 @@ RSpec.describe DbCell, type: :model do
     expect(invalid_cell).not_to be_valid
     expect(invalid_cell.errors[:value_text]).to include("must be a valid number")
   end
+
+  it "normalizes and clamps progress values to whole steps between 0 and 10" do
+    workspace = Workspace.create!(name: "Cell progress", slug: "cell-progress")
+    database = Database.create!(workspace:, name: "Tasks")
+    db_property = DbProperty.create!(workspace:, database:, name: "Progress", property_type: :progress)
+    db_row = DbRow.create!(workspace:, database:, title: "Progress row")
+
+    db_cell = described_class.create!(workspace:, db_row:, db_property:, value_text: "14")
+    expect(db_cell.value_text).to eq("10")
+
+    db_cell.update!(value_text: "-5")
+    expect(db_cell.reload.value_text).to eq("0")
+
+    invalid_cell = described_class.new(workspace:, db_row:, db_property:, value_text: "halfway")
+    expect(invalid_cell).not_to be_valid
+    expect(invalid_cell.errors[:value_text]).to include("must be a whole number between 0 and 10")
+  end
 end

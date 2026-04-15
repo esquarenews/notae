@@ -58,7 +58,8 @@ module Databases
           workspace: workspace,
           name: db_property.name,
           property_type: db_property.property_type,
-          position: db_property.position
+          position: db_property.position,
+          select_options_json: db_property.select_options_list
         )
         property_id_map[db_property.id.to_s] = duplicated_property.id.to_s
       end

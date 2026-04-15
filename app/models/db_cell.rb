@@ -1,6 +1,8 @@
 class DbCell < ApplicationRecord
   TRUTHY_VALUES = %w[1 true t yes y on checked].freeze
   FALSY_VALUES = %w[0 false f no n off unchecked].freeze
+  PROGRESS_MIN = 0
+  PROGRESS_MAX = 10
 
   has_paper_trail
 
@@ -19,6 +21,28 @@ class DbCell < ApplicationRecord
   before_validation :normalize_value_text_for_property
   after_commit :sync_row_data_cache
   validate :value_matches_property_type
+
+  class << self
+    def progress_value(raw_value, default: PROGRESS_MIN)
+      value = raw_value.to_s.strip
+      return default if value.blank?
+
+      normalized = Integer(value, exception: false)
+      return default if normalized.nil?
+
+      normalized.clamp(PROGRESS_MIN, PROGRESS_MAX)
+    end
+
+    def normalize_progress_value(raw_value)
+      value = raw_value.to_s.strip
+      return PROGRESS_MIN.to_s if value.blank?
+
+      normalized = Integer(value, exception: false)
+      return value if normalized.nil?
+
+      normalized.clamp(PROGRESS_MIN, PROGRESS_MAX).to_s
+    end
+  end
 
   private
 
@@ -54,6 +78,8 @@ class DbCell < ApplicationRecord
       self.value_text = normalize_checkbox_value(raw_value)
     when "date"
       self.value_text = normalize_date_value(raw_value)
+    when "progress"
+      self.value_text = self.class.normalize_progress_value(raw_value)
     else
       self.value_text = raw_value
     end
@@ -75,6 +101,11 @@ class DbCell < ApplicationRecord
       return if %w[true false].include?(value_text)
 
       errors.add(:value_text, "must be true or false")
+    when "progress"
+      progress_value = Integer(value_text, exception: false)
+      return if progress_value.present? && progress_value.between?(PROGRESS_MIN, PROGRESS_MAX)
+
+      errors.add(:value_text, "must be a whole number between #{PROGRESS_MIN} and #{PROGRESS_MAX}")
     end
   rescue ArgumentError
     expected = db_property.property_type == "number" ? "number" : "date"

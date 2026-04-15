@@ -120,6 +120,7 @@ class DbCellsController < ApplicationController
 
   def turbo_inline_cell_update_request?
     return false unless request.format.turbo_stream?
+    return true if params[:progress_inline_update].to_s == "1"
     return false unless simple_table_render_context?
     return false if params[:split_source].to_s == "row"
 
@@ -198,29 +199,15 @@ class DbCellsController < ApplicationController
 
   def build_select_options_by_property_for_rows(properties:)
     properties.select(&:select?).each_with_object({}) do |property, options|
-      values = if task_status_property?(property)
-        DatabaseTablePresentation::TASK_STATUS_OPTIONS.dup
-      else
-        []
-      end
-      seen = values.each_with_object({}) { |value, memo| memo[value] = true }
-
-      policy_scope(DbCell)
+      existing_values = policy_scope(DbCell)
         .for_database(@database)
         .where(db_property_id: property.id)
         .where.not(value_text: [ nil, "" ])
         .distinct
         .order(:value_text)
         .pluck(:value_text)
-        .each do |value|
-          normalized = task_status_property?(property) ? normalize_task_status_value(value) : value.to_s.strip
-          next if normalized.blank? || seen.key?(normalized)
 
-          seen[normalized] = true
-          values << normalized
-        end
-
-      options[property.id] = task_status_property?(property) ? values : values.sort
+      options[property.id] = select_options_with_fallback(property, existing_values)
     end
   end
 
