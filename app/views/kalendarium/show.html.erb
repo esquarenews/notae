@@ -13,6 +13,13 @@
 <% widget_params = widget_view ? { widget: "1" } : {} %>
 <% embedded_split_view = embedded_params[:embedded] == "1" && !widget_view %>
 <% embedded_compact_view = embedded_split_view || widget_view %>
+<% widget_view_options = [
+     ["(1)", "day", "Day"],
+     ["(7)", "week", "Week"],
+     ["(7+)", "next_7_days", "Next 7 days"],
+     ["(31)", "month", "Month"],
+     ["(365)", "year", "Year"]
+   ] %>
 <% task_schedule_params = @task_schedule_row.present? ? { task_row_id: @task_schedule_row.id } : {} %>
 <% window_start_value = params[:window_start].presence || (@view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : nil) %>
 <% window_start_params = window_start_value.present? ? { window_start: window_start_value } : {} %>
@@ -138,6 +145,27 @@
                       ).merge(project_scope_params)
                     ),
                     class: "notae-chip-button" %>
+      </div>
+
+      <div class="notae-kalendarium-view-switch notae-kalendarium-widget-view-switch"
+           aria-label="Quick calendar range switch">
+        <% widget_view_options.each do |label, view_option, accessible_label| %>
+          <%= link_to label,
+                      kalendarium_path(
+                        kalendarium_base_params.merge(
+                          view: view_option,
+                          date: @selected_date,
+                          window_start: (view_option == "next_7_days" ? @selected_date.strftime("%Y-%m-%d") : nil),
+                          project_id: @selected_project_id,
+                          calendar_ids: @selected_calendar_ids,
+                          year_daily_events: year_daily_events_param
+                        ).merge(project_scope_params)
+                      ),
+                      class: ["notae-chip-button", ("is-active" if @view == view_option)].compact.join(" "),
+                      title: accessible_label,
+                      aria: { label: accessible_label },
+                      data: { kalendarium_focus_target: "viewLink", view_option: view_option } %>
+        <% end %>
       </div>
     <% else %>
       <div class="notae-kalendarium-head-top">

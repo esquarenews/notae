@@ -1,0 +1,12 @@
+[47115777ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47122825ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47131962ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47141920ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47153086ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47166827ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47181301ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47198332ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47218529ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47240659ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47265855ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47291289ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163

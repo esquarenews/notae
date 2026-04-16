@@ -196,13 +196,16 @@ RSpec.describe "Kalendarium", type: :request do
     create_dialog = document.at_css("dialog[data-kalendarium-focus-target='createDialog']")
     create_form = create_dialog&.at_css("form.notae-kalendarium-event-modal-form[data-controller='kalendarium-event-form']")
     month_cell = document.at_css(".notae-kalendarium-month-cell[data-action='dblclick->kalendarium-focus#quickCreateDay']")
+    widget_view_switch = document.css(".notae-kalendarium-widget-view-switch .notae-chip-button")
 
     expect(kalendarium_shell).to be_present
     expect(kalendarium_shell["data-kalendarium-focus-widget-value"]).to eq("true")
     expect(document.at_css(".notae-kalendarium-widget-head")).to be_present
     expect(document.at_css(".notae-kalendarium-sidebar")).to be_nil
     expect(document.at_css(".notae-kalendarium-filter-controls")).to be_nil
-    expect(document.at_css(".notae-kalendarium-view-switch")).to be_nil
+    expect(document.at_css(".notae-kalendarium-widget-view-switch")).to be_present
+    expect(widget_view_switch.map { |link| link.text.strip }).to eq(["(1)", "(7)", "(7+)", "(31)", "(365)"])
+    expect(widget_view_switch.map { |link| link["aria-label"] }).to eq(["Day", "Week", "Next 7 days", "Month", "Year"])
     expect(create_button).to be_present
     expect(minimize_button).to be_present
     expect(create_dialog).to be_present
