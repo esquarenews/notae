@@ -16,9 +16,10 @@ class MeetingsController < ApplicationController
     authorize @workspace, :show?
     load_meetings_dashboard_data!
     @meeting_session = MeetingSession.new(workspace: @workspace, capture_mode: "upload", provider: "local", status: "scheduled")
-    @meeting_extension_token = flash[:meeting_extension_token].to_s.presence
-    @meeting_extension_token_expires_at = Time.zone.parse(flash[:meeting_extension_token_expires_at].to_s) if flash[:meeting_extension_token_expires_at].present?
+    @meeting_extension_token = nil
+    @meeting_extension_token_expires_at = nil
     load_meeting_extension_token_state!
+    load_new_meeting_extension_token!
   end
 
   def status
@@ -175,7 +176,7 @@ class MeetingsController < ApplicationController
   end
 
   def load_meeting_extension_token_state!
-    token_service = Meetings::ExtensionTokenService.new(user: current_user, workspace: @workspace)
+    token_service = meeting_extension_token_service
     @meeting_extension_tokens_available = token_service.storage_available?
     @active_meeting_extension_token = @meeting_extension_tokens_available ? token_service.latest_active_token : nil
   rescue Meetings::ExtensionTokenService::UnavailableError,
@@ -185,5 +186,27 @@ class MeetingsController < ApplicationController
     Rails.logger.error("[Meetings::ExtensionToken] load failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
     @meeting_extension_tokens_available = false
     @active_meeting_extension_token = nil
+  end
+
+  def load_new_meeting_extension_token!
+    token_id = flash[:meeting_extension_token_id].to_s.presence
+    return if token_id.blank? || !@meeting_extension_tokens_available
+
+    token = meeting_extension_token_service.find_active_token(token_id)
+    return if token.blank?
+
+    @meeting_extension_token = token.token
+    @meeting_extension_token_expires_at = token.expires_at
+  rescue Meetings::ExtensionTokenService::UnavailableError,
+         ActiveRecord::StatementInvalid,
+         ActiveRecord::Encryption::Errors::Configuration,
+         ActiveSupport::MessageEncryptor::InvalidMessage => error
+    Rails.logger.error("[Meetings::ExtensionToken] reveal failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
+    @meeting_extension_token = nil
+    @meeting_extension_token_expires_at = nil
+  end
+
+  def meeting_extension_token_service
+    @meeting_extension_token_service ||= Meetings::ExtensionTokenService.new(user: current_user, workspace: @workspace)
   end
 end

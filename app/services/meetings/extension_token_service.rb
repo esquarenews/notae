@@ -33,6 +33,12 @@ module Meetings
       active_tokens.order(created_at: :desc).first
     end
 
+    def find_active_token(id)
+      return nil unless storage_available?
+
+      active_tokens.find_by(id: id)
+    end
+
     def storage_available?
       ActiveRecord::Base.connection.data_source_exists?("api_tokens")
     rescue ActiveRecord::StatementInvalid => error

@@ -9,8 +9,7 @@ class MeetingExtensionTokensController < ApplicationController
 
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), flash: {
       notice: "Google Meet extension token created. Copy it into the extension now.",
-      meeting_extension_token: token.token,
-      meeting_extension_token_expires_at: token.expires_at&.iso8601
+      meeting_extension_token_id: token.id
     }
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
