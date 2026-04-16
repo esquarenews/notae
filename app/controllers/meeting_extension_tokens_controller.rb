@@ -14,6 +14,12 @@ class MeetingExtensionTokensController < ApplicationController
     }
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+  rescue Meetings::ExtensionTokenService::UnavailableError,
+         ActiveRecord::StatementInvalid,
+         ActiveRecord::Encryption::Errors::Configuration,
+         ActiveSupport::MessageEncryptor::InvalidMessage => error
+    Rails.logger.error("[Meetings::ExtensionToken] create failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
+    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Google Meet extension tokens are unavailable right now. Check server configuration and migrations."
   end
 
   def destroy
@@ -21,6 +27,12 @@ class MeetingExtensionTokensController < ApplicationController
 
     token_service.revoke!
     redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Google Meet extension token revoked."
+  rescue Meetings::ExtensionTokenService::UnavailableError,
+         ActiveRecord::StatementInvalid,
+         ActiveRecord::Encryption::Errors::Configuration,
+         ActiveSupport::MessageEncryptor::InvalidMessage => error
+    Rails.logger.error("[Meetings::ExtensionToken] revoke failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
+    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Google Meet extension tokens are unavailable right now. Check server configuration and migrations."
   end
 
   private

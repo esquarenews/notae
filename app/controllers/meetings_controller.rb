@@ -18,7 +18,7 @@ class MeetingsController < ApplicationController
     @meeting_session = MeetingSession.new(workspace: @workspace, capture_mode: "upload", provider: "local", status: "scheduled")
     @meeting_extension_token = flash[:meeting_extension_token].to_s.presence
     @meeting_extension_token_expires_at = Time.zone.parse(flash[:meeting_extension_token_expires_at].to_s) if flash[:meeting_extension_token_expires_at].present?
-    @active_meeting_extension_token = Meetings::ExtensionTokenService.new(user: current_user, workspace: @workspace).latest_active_token
+    load_meeting_extension_token_state!
   end
 
   def status
@@ -172,5 +172,18 @@ class MeetingsController < ApplicationController
 
   def status_stale_check_cache_key
     "meetings/#{@workspace.id}/status_stale_check"
+  end
+
+  def load_meeting_extension_token_state!
+    token_service = Meetings::ExtensionTokenService.new(user: current_user, workspace: @workspace)
+    @meeting_extension_tokens_available = token_service.storage_available?
+    @active_meeting_extension_token = @meeting_extension_tokens_available ? token_service.latest_active_token : nil
+  rescue Meetings::ExtensionTokenService::UnavailableError,
+         ActiveRecord::StatementInvalid,
+         ActiveRecord::Encryption::Errors::Configuration,
+         ActiveSupport::MessageEncryptor::InvalidMessage => error
+    Rails.logger.error("[Meetings::ExtensionToken] load failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
+    @meeting_extension_tokens_available = false
+    @active_meeting_extension_token = nil
   end
 end

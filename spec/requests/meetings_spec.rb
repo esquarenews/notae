@@ -94,6 +94,32 @@ RSpec.describe "Meetings", type: :request do
     expect(created_token.reload.revoked_at).to be_present
   end
 
+  it "renders the meetings page without a 500 when extension token storage is unavailable" do
+    user, workspace, = build_stack(suffix: "extension-token-unavailable-show")
+    sign_in user
+    allow_any_instance_of(Meetings::ExtensionTokenService).to receive(:storage_available?).and_return(false)
+
+    get workspace_meetings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Google Meet extension tokens are unavailable right now")
+    expect(response.body).not_to include("Generate extension token")
+  end
+
+  it "redirects with an alert instead of raising when extension token creation is unavailable" do
+    user, workspace, = build_stack(suffix: "extension-token-unavailable-create")
+    sign_in user
+    allow_any_instance_of(Meetings::ExtensionTokenService).to receive(:issue!).and_raise(Meetings::ExtensionTokenService::UnavailableError, "API token storage is unavailable.")
+
+    expect do
+      post meeting_extension_token_path(workspace_slug: workspace.slug)
+    end.not_to change(ApiToken, :count)
+
+    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
+    follow_redirect!
+    expect(response.body).to include("Google Meet extension tokens are unavailable right now")
+  end
+
   it "shows a recording-in-progress indicator when a live session exists" do
     user, workspace, event = build_stack(suffix: "active-indicator")
     session = MeetingSession.create!(

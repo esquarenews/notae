@@ -36,6 +36,9 @@
           <strong>Workspace slug</strong><br>
           <span><%= @workspace.slug %></span>
         </div>
+        <% unless @meeting_extension_tokens_available %>
+          <p class="notae-form-error">Google Meet extension tokens are unavailable right now. Check server configuration and apply the token-storage migration.</p>
+        <% end %>
         <% if @active_meeting_extension_token.present? %>
           <p class="notae-doc-muted">
             Active token expires
@@ -55,18 +58,20 @@
             </p>
           <% end %>
         <% end %>
-        <div class="notae-meetings-recorder-actions">
-          <%= button_to "Generate extension token",
-                        meeting_extension_token_path(workspace_slug: @workspace.slug),
-                        method: :post,
-                        class: "notae-chip-button" %>
-          <% if @active_meeting_extension_token.present? %>
-            <%= button_to "Revoke token",
+        <% if @meeting_extension_tokens_available %>
+          <div class="notae-meetings-recorder-actions">
+            <%= button_to "Generate extension token",
                           meeting_extension_token_path(workspace_slug: @workspace.slug),
-                          method: :delete,
+                          method: :post,
                           class: "notae-chip-button" %>
-          <% end %>
-        </div>
+            <% if @active_meeting_extension_token.present? %>
+              <%= button_to "Revoke token",
+                            meeting_extension_token_path(workspace_slug: @workspace.slug),
+                            method: :delete,
+                            class: "notae-chip-button" %>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </section>
 
