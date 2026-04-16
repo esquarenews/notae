@@ -3,6 +3,8 @@ module Meetings
     class UnavailableError < StandardError; end
 
     TOKEN_EXPIRY = 90.days
+    TOKEN_REFERENCE_EXPIRY = 5.minutes
+    TOKEN_REFERENCE_PURPOSE = "meeting_extension_token_reveal".freeze
 
     def initialize(user:, workspace:)
       @user = user
@@ -33,10 +35,22 @@ module Meetings
       active_tokens.order(created_at: :desc).first
     end
 
-    def find_active_token(id)
+    def issue_reference(token)
+      token.signed_id(purpose: TOKEN_REFERENCE_PURPOSE, expires_in: TOKEN_REFERENCE_EXPIRY)
+    end
+
+    def find_active_token_by_reference(reference)
       return nil unless storage_available?
 
-      active_tokens.find_by(id: id)
+      token = ApiToken.find_signed(reference, purpose: TOKEN_REFERENCE_PURPOSE)
+      return nil if token.blank?
+      return nil unless token.user_id == user.id
+      return nil unless token.name == token_name
+      return nil unless token.active?
+
+      token
+    rescue ActiveSupport::MessageVerifier::InvalidSignature
+      nil
     end
 
     def storage_available?

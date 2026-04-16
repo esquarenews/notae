@@ -39,6 +39,9 @@
         <% unless @meeting_extension_tokens_available %>
           <p class="notae-form-error">Google Meet extension tokens are unavailable right now. Check server configuration and apply the token-storage migration.</p>
         <% end %>
+        <% if @meeting_extension_feedback_message.present? %>
+          <p class="<%= @meeting_extension_feedback_type == :alert ? "notae-form-error" : "notae-doc-muted" %>"><%= @meeting_extension_feedback_message %></p>
+        <% end %>
         <% if @active_meeting_extension_token.present? %>
           <p class="notae-doc-muted">
             Active token expires

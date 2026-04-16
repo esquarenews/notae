@@ -18,6 +18,7 @@ class MeetingsController < ApplicationController
     @meeting_session = MeetingSession.new(workspace: @workspace, capture_mode: "upload", provider: "local", status: "scheduled")
     @meeting_extension_token = nil
     @meeting_extension_token_expires_at = nil
+    load_meeting_extension_feedback!
     load_meeting_extension_token_state!
     load_new_meeting_extension_token!
   end
@@ -189,10 +190,10 @@ class MeetingsController < ApplicationController
   end
 
   def load_new_meeting_extension_token!
-    token_id = flash[:meeting_extension_token_id].to_s.presence
-    return if token_id.blank? || !@meeting_extension_tokens_available
+    token_ref = params[:extension_token_ref].to_s.presence
+    return if token_ref.blank? || params[:extension_token_status].to_s != "created" || !@meeting_extension_tokens_available
 
-    token = meeting_extension_token_service.find_active_token(token_id)
+    token = meeting_extension_token_service.find_active_token_by_reference(token_ref)
     return if token.blank?
 
     @meeting_extension_token = token.token
@@ -204,6 +205,23 @@ class MeetingsController < ApplicationController
     Rails.logger.error("[Meetings::ExtensionToken] reveal failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
     @meeting_extension_token = nil
     @meeting_extension_token_expires_at = nil
+  end
+
+  def load_meeting_extension_feedback!
+    case params[:extension_token_status].to_s
+    when "created"
+      @meeting_extension_feedback_type = :notice
+      @meeting_extension_feedback_message = "Google Meet extension token created. Copy it into the extension now."
+    when "revoked"
+      @meeting_extension_feedback_type = :notice
+      @meeting_extension_feedback_message = "Google Meet extension token revoked."
+    when "unavailable"
+      @meeting_extension_feedback_type = :alert
+      @meeting_extension_feedback_message = "Google Meet extension tokens are unavailable right now. Check server configuration and migrations."
+    when "invalid"
+      @meeting_extension_feedback_type = :alert
+      @meeting_extension_feedback_message = "Google Meet extension token could not be created. Please try again."
+    end
   end
 
   def meeting_extension_token_service

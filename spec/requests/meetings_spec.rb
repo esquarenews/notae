@@ -1,4 +1,6 @@
 require "rails_helper"
+require "cgi"
+require "uri"
 
 RSpec.describe "Meetings", type: :request do
   include ActiveJob::TestHelper
@@ -80,12 +82,17 @@ RSpec.describe "Meetings", type: :request do
       post meeting_extension_token_path(workspace_slug: workspace.slug)
     end.to change(ApiToken, :count).by(1)
 
-    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
     created_token = ApiToken.order(:created_at).last
+    redirect_uri = URI.parse(response.location)
+    redirect_params = Rack::Utils.parse_query(redirect_uri.query.to_s)
+
+    expect(redirect_uri.path).to eq(workspace_meetings_path(workspace_slug: workspace.slug))
+    expect(redirect_params["extension_token_status"]).to eq("created")
+    expect(redirect_params["extension_token_ref"]).to be_present
     expect(created_token.name).to eq("Google Meet transcript extension (#{workspace.slug})")
     expect(flash[:meeting_extension_token]).to be_nil
     expect(flash[:meeting_extension_token_expires_at]).to be_nil
-    expect(flash[:meeting_extension_token_id].to_s).to eq(created_token.id.to_s)
+    expect(flash[:meeting_extension_token_id]).to be_nil
 
     follow_redirect!
     expect(response.body).to include("New extension token")
@@ -93,7 +100,7 @@ RSpec.describe "Meetings", type: :request do
 
     delete meeting_extension_token_path(workspace_slug: workspace.slug)
 
-    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
+    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug, extension_token_status: "revoked"))
     expect(created_token.reload.revoked_at).to be_present
   end
 
@@ -118,7 +125,7 @@ RSpec.describe "Meetings", type: :request do
       post meeting_extension_token_path(workspace_slug: workspace.slug)
     end.not_to change(ApiToken, :count)
 
-    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
+    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug, extension_token_status: "unavailable"))
     follow_redirect!
     expect(response.body).to include("Google Meet extension tokens are unavailable right now")
   end

@@ -6,32 +6,29 @@ class MeetingExtensionTokensController < ApplicationController
     authorize @workspace, :show?
 
     token = token_service.issue!
-
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), flash: {
-      notice: "Google Meet extension token created. Copy it into the extension now.",
-      meeting_extension_token_id: token.id
-    }
+    redirect_to workspace_meetings_path(meeting_extension_redirect_params(status: "created", token: token))
   rescue ActiveRecord::RecordInvalid => error
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+    Rails.logger.error("[Meetings::ExtensionToken] create invalid workspace=#{@workspace.slug} user=#{current_user.id}: #{error.record.errors.full_messages.to_sentence}")
+    redirect_to workspace_meetings_path(meeting_extension_redirect_params(status: "invalid"))
   rescue Meetings::ExtensionTokenService::UnavailableError,
          ActiveRecord::StatementInvalid,
          ActiveRecord::Encryption::Errors::Configuration,
          ActiveSupport::MessageEncryptor::InvalidMessage => error
     Rails.logger.error("[Meetings::ExtensionToken] create failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Google Meet extension tokens are unavailable right now. Check server configuration and migrations."
+    redirect_to workspace_meetings_path(meeting_extension_redirect_params(status: "unavailable"))
   end
 
   def destroy
     authorize @workspace, :show?
 
     token_service.revoke!
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), notice: "Google Meet extension token revoked."
+    redirect_to workspace_meetings_path(meeting_extension_redirect_params(status: "revoked"))
   rescue Meetings::ExtensionTokenService::UnavailableError,
          ActiveRecord::StatementInvalid,
          ActiveRecord::Encryption::Errors::Configuration,
          ActiveSupport::MessageEncryptor::InvalidMessage => error
     Rails.logger.error("[Meetings::ExtensionToken] revoke failed workspace=#{@workspace.slug} user=#{current_user.id}: #{error.class}: #{error.message}")
-    redirect_to workspace_meetings_path(workspace_slug: @workspace.slug), alert: "Google Meet extension tokens are unavailable right now. Check server configuration and migrations."
+    redirect_to workspace_meetings_path(meeting_extension_redirect_params(status: "unavailable"))
   end
 
   private
@@ -42,5 +39,14 @@ class MeetingExtensionTokensController < ApplicationController
 
   def token_service
     @token_service ||= Meetings::ExtensionTokenService.new(user: current_user, workspace: @workspace)
+  end
+
+  def meeting_extension_redirect_params(status:, token: nil)
+    params = {
+      workspace_slug: @workspace.slug,
+      extension_token_status: status
+    }
+    params[:extension_token_ref] = token_service.issue_reference(token) if token.present?
+    params
   end
 end
