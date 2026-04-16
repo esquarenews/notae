@@ -16764,6 +16764,10 @@ body.notae-theme-dark .notae-auth-submit {
   display: grid;
 }
 
+.notae-shell-status-bar-calendar[hidden] {
+  display: none;
+}
+
 .notae-shell-status-bar-calendar-frame {
   width: 100%;
   height: min(28rem, 72vh);

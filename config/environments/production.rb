@@ -1,5 +1,6 @@
 require "active_support/core_ext/integer/time"
 require "uri"
+require Rails.root.join("lib/notae/solid_cache_support")
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -51,9 +52,9 @@ Rails.application.configure do
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
-  # Use Solid Cache so sessions and application cache live server-side instead
-  # of inside the browser cookie.
-  config.cache_store = :solid_cache_store
+  # Use Solid Cache when its backing table exists; otherwise fall back to
+  # memory_store so a partial deploy does not take the app down.
+  config.cache_store = Notae::SolidCacheSupport.cache_store
 
   # Default to async jobs so production can run without Redis; set
   # ACTIVE_JOB_QUEUE_ADAPTER=sidekiq when Redis/Sidekiq are available.

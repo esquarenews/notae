@@ -7,6 +7,24 @@ function meetTabUrl(url) {
   return typeof url === "string" && url.startsWith("https://meet.google.com/")
 }
 
+function workspaceContextFromUrl(urlString) {
+  if (typeof urlString !== "string" || urlString.trim().length === 0) return null
+
+  try {
+    const url = new URL(urlString)
+    const match = url.pathname.match(/^\/w\/([^/]+)(?:\/|$)/)
+    if (!match) return null
+
+    return {
+      baseUrl: url.origin.replace(/\/+$/, ""),
+      workspaceSlug: decodeURIComponent(match[1]),
+      workspaceUrl: `${url.origin}/w/${match[1]}`
+    }
+  } catch (_error) {
+    return null
+  }
+}
+
 function normalizedSettings(settings = {}) {
   return {
     baseUrl: String(settings.baseUrl || "").trim().replace(/\/+$/, ""),
@@ -50,6 +68,19 @@ async function removeCapture(tabId) {
 async function activeTab() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
   return tabs[0] || null
+}
+
+async function detectedWorkspaceContext() {
+  const tabs = await chrome.tabs.query({ currentWindow: true })
+  const candidates = tabs
+    .map((tab) => ({
+      tab,
+      context: workspaceContextFromUrl(tab.url)
+    }))
+    .filter((entry) => entry.context)
+    .sort((left, right) => Number(right.tab.lastAccessed || 0) - Number(left.tab.lastAccessed || 0))
+
+  return candidates[0]?.context || null
 }
 
 function jsonError(error) {
@@ -232,12 +263,14 @@ async function popupState() {
   const tab = await activeTab()
   const settings = await getSettings()
   const capture = tab ? await getCapture(tab.id) : null
+  const detectedWorkspace = await detectedWorkspaceContext()
 
   return {
     tabId: tab?.id || null,
     isMeetTab: meetTabUrl(tab?.url),
     settings,
-    capture
+    capture,
+    detectedWorkspace
   }
 }
 
@@ -250,6 +283,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case "notae-meet-save-settings":
         await saveSettings(message.settings || {})
         sendResponse({ ok: true })
+        return
+      case "notae-meet-detected-workspace":
+        sendResponse({ ok: true, detectedWorkspace: await detectedWorkspaceContext() })
         return
       case "notae-meet-start-capture": {
         const tabId = Number(message.tabId)

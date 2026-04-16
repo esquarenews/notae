@@ -206,6 +206,7 @@ RSpec.describe "Workspace home", type: :request do
       document = Nokogiri::HTML(response.body)
       bar = document.at_css(".notae-shell-status-bar")
       clock_button = document.at_css(".notae-shell-status-bar-clock-button")
+      calendar_panel = document.at_css(".notae-shell-status-bar-calendar")
       calendar_frame = document.at_css(".notae-shell-status-bar-calendar-frame")
       links = document.css(".notae-shell-status-bar-link").map { |node| [ node.text.squish, node["href"] ] }
       controls = document.css(".notae-shell-status-bar-control")
@@ -217,6 +218,8 @@ RSpec.describe "Workspace home", type: :request do
       expect(clock_button).to be_present
       expect(clock_button["data-action"]).to include("dblclick->notification-bar#toggleCalendar")
       expect(clock_button["aria-expanded"]).to eq("false")
+      expect(calendar_panel).to be_present
+      expect(calendar_panel.attribute("hidden")).to be_present
       expect(calendar_frame).to be_present
       expect(calendar_frame["src"]).to eq(kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: "2026-04-11"))
       expect(document.text).to include("Client review")
@@ -238,6 +241,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(stylesheet).to include(".notae-shell-status-bar {\n  position: fixed;")
     expect(stylesheet).to include(".notae-shell-status-bar.is-calendar-open {\n  width: min(32rem, calc(100vw - 2.5rem));\n}")
     expect(stylesheet).to include(".notae-shell-status-bar-clock-button {\n  appearance: none;")
+    expect(stylesheet).to include(".notae-shell-status-bar-calendar[hidden] {\n  display: none;\n}")
     expect(stylesheet).to include(".notae-shell-status-bar-calendar-frame {\n  width: 100%;")
     expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")
     expect(stylesheet).to include("  background: var(--notae-glass-surface);")

@@ -9,13 +9,16 @@ export default class extends Controller {
     this.startClock()
     this.applyStoredAlertState()
     this.handleWidgetMessage = this.handleWidgetMessage.bind(this)
+    this.beforeCache = this.beforeCache.bind(this)
     window.addEventListener("message", this.handleWidgetMessage)
-    this.refreshCalendarState()
+    document.addEventListener("turbo:before-cache", this.beforeCache)
+    this.syncCalendarState()
   }
 
   disconnect() {
     this.stopClock()
     window.removeEventListener("message", this.handleWidgetMessage)
+    document.removeEventListener("turbo:before-cache", this.beforeCache)
   }
 
   startClock() {
@@ -66,8 +69,7 @@ export default class extends Controller {
     if (!this.hasCalendarPanelTarget) return
 
     this.calendarPanelTarget.hidden = false
-    this.element.classList.add("is-calendar-open")
-    this.refreshCalendarState()
+    this.syncCalendarState()
   }
 
   closeCalendar(event) {
@@ -76,8 +78,11 @@ export default class extends Controller {
     if (!this.hasCalendarPanelTarget) return
 
     this.calendarPanelTarget.hidden = true
-    this.element.classList.remove("is-calendar-open")
-    this.refreshCalendarState()
+    this.syncCalendarState()
+  }
+
+  beforeCache() {
+    this.closeCalendar()
   }
 
   dismissAlert(event) {
@@ -139,10 +144,12 @@ export default class extends Controller {
     this.element.hidden = !(clockVisible || alertsVisible)
   }
 
-  refreshCalendarState() {
+  syncCalendarState() {
+    const expanded = this.hasCalendarPanelTarget && !this.calendarPanelTarget.hidden
+    this.element.classList.toggle("is-calendar-open", expanded)
+
     if (!this.hasClockButtonTarget) return
 
-    const expanded = this.hasCalendarPanelTarget && !this.calendarPanelTarget.hidden
     this.clockButtonTarget.setAttribute("aria-expanded", expanded ? "true" : "false")
     this.clockButtonTarget.setAttribute("aria-label", expanded ? "Close compact Kalendārium" : "Open compact Kalendārium")
   }

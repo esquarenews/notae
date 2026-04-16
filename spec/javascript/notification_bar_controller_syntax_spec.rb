@@ -32,6 +32,9 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
     expect(source).to include("toggleCalendar(event)")
     expect(source).to include("openCalendar()")
     expect(source).to include("closeCalendar(event)")
+    expect(source).to include("beforeCache()")
+    expect(source).to include("document.addEventListener(\"turbo:before-cache\", this.beforeCache)")
+    expect(source).to include("syncCalendarState()")
     expect(source).to include("window.addEventListener(\"message\", this.handleWidgetMessage)")
     expect(source).to include("messageType === \"notae:kalendarium-widget:minimize\"")
   end

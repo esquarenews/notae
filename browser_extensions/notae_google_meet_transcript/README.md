@@ -19,6 +19,8 @@ Then open the extension popup and enter:
 - Workspace slug
 - Extension token
 
+If you already have the target Notae workspace open in another tab in the same browser window, the popup will offer a **Use detected workspace** button to fill the base URL and workspace slug for you.
+
 ## Use
 
 1. Join a Google Meet in Chrome.

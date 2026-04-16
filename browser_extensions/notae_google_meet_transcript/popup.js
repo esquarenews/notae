@@ -2,6 +2,8 @@
   const baseUrlInput = document.getElementById("baseUrl")
   const workspaceSlugInput = document.getElementById("workspaceSlug")
   const apiTokenInput = document.getElementById("apiToken")
+  const detectedWorkspaceButton = document.getElementById("detectedWorkspaceButton")
+  const detectedWorkspaceHint = document.getElementById("detectedWorkspaceHint")
   const saveButton = document.getElementById("saveButton")
   const startButton = document.getElementById("startButton")
   const stopButton = document.getElementById("stopButton")
@@ -11,6 +13,7 @@
 
   let activeTabId = null
   let currentState = null
+  let appliedDetectedWorkspace = false
 
   function setStatus(message, tone = "") {
     statusMessage.textContent = message
@@ -30,6 +33,47 @@
     return settings.baseUrl.length > 0 && settings.workspaceSlug.length > 0 && settings.apiToken.length > 0
   }
 
+  function localhostUrl(value) {
+    try {
+      const url = new URL(value)
+      return ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+    } catch (_error) {
+      return false
+    }
+  }
+
+  function applyDetectedWorkspace(workspace, { preserveToken = true } = {}) {
+    if (!workspace) return
+
+    baseUrlInput.value = workspace.baseUrl || ""
+    workspaceSlugInput.value = workspace.workspaceSlug || ""
+    if (!preserveToken) apiTokenInput.value = ""
+  }
+
+  function renderDetectedWorkspace(workspace) {
+    const hasWorkspace = Boolean(workspace?.baseUrl && workspace?.workspaceSlug)
+    detectedWorkspaceButton.classList.toggle("hidden", !hasWorkspace)
+    detectedWorkspaceHint.classList.toggle("hidden", !hasWorkspace)
+
+    if (!hasWorkspace) {
+      detectedWorkspaceHint.textContent = ""
+      return
+    }
+
+    detectedWorkspaceButton.textContent = `Use ${workspace.workspaceSlug}`
+    detectedWorkspaceHint.textContent = `Detected Notae workspace: ${workspace.workspaceSlug} @ ${workspace.baseUrl}`
+  }
+
+  function shouldAutoApplyDetectedWorkspace(savedSettings, detectedWorkspace) {
+    if (!detectedWorkspace?.baseUrl || !detectedWorkspace?.workspaceSlug) return false
+    if (appliedDetectedWorkspace) return false
+
+    if (!savedSettings.baseUrl || !savedSettings.workspaceSlug) return true
+    if (localhostUrl(savedSettings.baseUrl) && !localhostUrl(detectedWorkspace.baseUrl)) return true
+
+    return false
+  }
+
   function renderState(payload) {
     currentState = payload
     activeTabId = payload.tabId
@@ -37,6 +81,12 @@
     baseUrlInput.value = payload.settings.baseUrl || ""
     workspaceSlugInput.value = payload.settings.workspaceSlug || ""
     apiTokenInput.value = payload.settings.apiToken || ""
+    renderDetectedWorkspace(payload.detectedWorkspace)
+
+    if (shouldAutoApplyDetectedWorkspace(payload.settings, payload.detectedWorkspace)) {
+      applyDetectedWorkspace(payload.detectedWorkspace)
+      appliedDetectedWorkspace = true
+    }
 
     tabState.classList.toggle("hidden", false)
     tabState.textContent = payload.isMeetTab ? "Google Meet tab detected" : "Open a Google Meet tab to capture"
@@ -101,6 +151,21 @@
     await chrome.runtime.sendMessage({ type: "notae-meet-save-settings", settings })
     setStatus("Settings saved.", "is-success")
     await refreshState()
+  })
+
+  detectedWorkspaceButton.addEventListener("click", async () => {
+    const response = await chrome.runtime.sendMessage({ type: "notae-meet-detected-workspace" })
+    const workspace = response?.detectedWorkspace
+
+    if (!workspace?.baseUrl || !workspace?.workspaceSlug) {
+      setStatus("No Notae workspace tab was detected in this browser window.", "is-error")
+      renderDetectedWorkspace(null)
+      return
+    }
+
+    applyDetectedWorkspace(workspace)
+    renderDetectedWorkspace(workspace)
+    setStatus("Filled base URL and workspace from the detected Notae tab.", "is-success")
   })
 
   startButton.addEventListener("click", async () => {

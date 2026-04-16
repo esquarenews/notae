@@ -27,11 +27,14 @@ RSpec.describe "Notae Google Meet extension JavaScript syntax" do
 
     expect(background).to include("notae-meet-start-capture")
     expect(background).to include("notae-meet-stop-capture")
+    expect(background).to include("workspaceContextFromUrl")
+    expect(background).to include("notae-meet-detected-workspace")
     expect(background).to include("/api/v1/workspaces/")
     expect(background).to include("/ingest_transcript")
     expect(content).to include("aria-live")
     expect(content).to include("notae-meet-transcript-snapshot")
     expect(popup.text).to include("Start capture")
     expect(popup.text).to include("Stop & sync")
+    expect(popup.text).to include("Use detected workspace")
   end
 end
