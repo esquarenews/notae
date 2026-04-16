@@ -10,3 +10,10 @@
 [47240659ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
 [47265855ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
 [47291289ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47315744ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47341175ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47368052ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47392439ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47418325ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47443577ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
+[47468869ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:4000/cable' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/assets/actioncable.esm-e0ec9819.js:163
