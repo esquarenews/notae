@@ -517,9 +517,12 @@
              data-kalendarium-timeline-start-hour-value="5"
              data-kalendarium-timeline-slot-height-value="<%= slot_height %>"
              data-kalendarium-timeline-all-day-offset-value="<%= @day_all_day_offset %>"
-             data-kalendarium-timeline-initial-focus-minutes-value="<%= @task_slot_focus_minutes if @task_slot_focus_minutes.present? %>"
+             data-kalendarium-timeline-center-current-time-value="<%= widget_view ? "true" : "false" %>"
              data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>"
              data-kalendarium-timeline-task-scheduling-value="<%= @task_schedule_row.present? %>"
+             <% if @task_slot_focus_minutes.present? %>
+             data-kalendarium-timeline-initial-focus-minutes-value="<%= @task_slot_focus_minutes %>"
+             <% end %>
              data-kalendarium-timeline-task-default-duration-minutes-value="<%= Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES %>">
           <div class="notae-kalendarium-timeline-scroller" data-kalendarium-timeline-target="scroller">
             <div class="notae-kalendarium-day-columns">
@@ -607,9 +610,11 @@
              data-kalendarium-timeline-start-hour-value="5"
              data-kalendarium-timeline-slot-height-value="<%= slot_height %>"
              data-kalendarium-timeline-all-day-offset-value="<%= @week_all_day_offset %>"
-             data-kalendarium-timeline-initial-focus-minutes-value="<%= @task_slot_focus_minutes if @task_slot_focus_minutes.present? %>"
              data-kalendarium-timeline-time-zone-value="<%= current_user.time_zone %>"
              data-kalendarium-timeline-task-scheduling-value="<%= @task_schedule_row.present? %>"
+             <% if @task_slot_focus_minutes.present? %>
+             data-kalendarium-timeline-initial-focus-minutes-value="<%= @task_slot_focus_minutes %>"
+             <% end %>
              data-kalendarium-timeline-task-default-duration-minutes-value="<%= Kalendarium::TaskSchedulingService::DEFAULT_DURATION_MINUTES %>">
           <div class="notae-kalendarium-week-header">
             <span class="notae-kalendarium-week-header-spacer" aria-hidden="true"></span>

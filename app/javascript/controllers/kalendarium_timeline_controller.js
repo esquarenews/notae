@@ -8,6 +8,7 @@ export default class extends Controller {
     allDayOffset: Number,
     timeZone: String,
     initialFocusMinutes: Number,
+    centerCurrentTime: Boolean,
     taskScheduling: Boolean,
     taskDefaultDurationMinutes: Number
   }
@@ -32,11 +33,11 @@ export default class extends Controller {
       const canFocusNow = now && this.hasNowDateInView(now.date)
 
       if (this.hasInitialFocusMinutesValue) {
-        const rawTop = this.allDayOffsetForScroll() + ((this.initialFocusMinutesValue / 30.0) * slotHeight) - (this.scrollerTarget.clientHeight * 0.2)
+        const rawTop = this.focusedScrollTop(((this.initialFocusMinutesValue / 30.0) * slotHeight), this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue ? 0.5 : 0.2)
         this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
       } else if (canFocusNow) {
         const minutesIntoDay = (now.hour * 60) + now.minute
-        const rawTop = this.allDayOffsetForScroll() + ((minutesIntoDay / 30.0) * slotHeight) - (this.scrollerTarget.clientHeight * 0.35)
+        const rawTop = this.focusedScrollTop(((minutesIntoDay / 30.0) * slotHeight), this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue ? 0.5 : 0.35)
         this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
       } else {
         this.scrollerTarget.scrollTop = this.allDayOffsetForScroll() + fallbackTop
@@ -171,6 +172,10 @@ export default class extends Controller {
     if (Number.isNaN(parsed) || parsed <= 0) return 0
 
     return parsed
+  }
+
+  focusedScrollTop(focusPixels, viewportRatio) {
+    return this.allDayOffsetForScroll() + focusPixels - (this.scrollerTarget.clientHeight * viewportRatio)
   }
 
   currentZonedTime() {

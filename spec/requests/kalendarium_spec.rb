@@ -231,10 +231,13 @@ RSpec.describe "Kalendarium", type: :request do
     document = Nokogiri::HTML.parse(response.body)
     active_view_button = document.at_css(".notae-kalendarium-widget-view-switch .notae-chip-button.is-active")
     day_track = document.at_css(".notae-kalendarium-day-track")
+    day_timeline = document.at_css(".notae-kalendarium-timeline")
 
     expect(active_view_button).to be_present
     expect(active_view_button.text.strip).to eq("(1)")
     expect(document.at_css(".notae-kalendarium-month-grid")).to be_nil
+    expect(day_timeline["data-kalendarium-timeline-center-current-time-value"]).to eq("true")
+    expect(day_timeline["data-kalendarium-timeline-initial-focus-minutes-value"]).to be_nil
     expect(day_track).to be_present
     expect(day_track["data-day-date"]).to eq("2026-04-11")
   end

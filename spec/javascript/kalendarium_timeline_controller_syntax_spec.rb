@@ -31,7 +31,9 @@ RSpec.describe "kalendarium_timeline_controller.js" do
     source = Rails.root.join("app/javascript/controllers/kalendarium_timeline_controller.js").read
 
     expect(source).to include("initialFocusMinutes: Number")
+    expect(source).to include("centerCurrentTime: Boolean")
     expect(source).to include("this.hasInitialFocusMinutesValue")
     expect(source).to include("this.initialFocusMinutesValue / 30.0")
+    expect(source).to include("focusedScrollTop(")
   end
 end
