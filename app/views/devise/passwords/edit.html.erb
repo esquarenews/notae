@@ -1,0 +1,46 @@
+<section class="notae-auth-page">
+  <div class="notae-auth-brand">
+    <%= image_tag notae_auth_brand_icon_path, alt: "Notae icon", class: "notae-auth-brand-icon" %>
+    <div>
+      <h1>Notae</h1>
+      <p>Choose a new password for your account.</p>
+    </div>
+  </div>
+
+  <section class="notae-auth-card">
+    <h2>Change your password</h2>
+
+    <% if resource.errors.any? %>
+      <p class="notae-flash alert"><%= resource.errors.full_messages.to_sentence %></p>
+    <% end %>
+
+    <%= form_for(resource,
+                 as: resource_name,
+                 url: password_path(resource_name),
+                 html: { method: :put, class: "notae-auth-form", data: { turbo: false } }) do |form| %>
+      <%= form.hidden_field :reset_password_token %>
+
+      <div class="notae-auth-field">
+        <%= form.label :password, "New password" %>
+        <% if @minimum_password_length %>
+          <small class="notae-page-subtle">Minimum <%= @minimum_password_length %> characters.</small>
+        <% end %>
+        <%= form.password_field :password, autofocus: true, autocomplete: "new-password", class: "notae-auth-input" %>
+      </div>
+
+      <div class="notae-auth-field">
+        <%= form.label :password_confirmation, "Confirm new password" %>
+        <%= form.password_field :password_confirmation, autocomplete: "new-password", class: "notae-auth-input" %>
+      </div>
+
+      <%= form.submit "Change my password", class: "notae-chip-button notae-auth-submit" %>
+    <% end %>
+
+    <div class="notae-auth-links">
+      <%= link_to "Back to sign in", new_session_path(resource_name) %>
+      <% if devise_mapping.registerable? %>
+        <%= link_to "Create account", new_registration_path(resource_name) %>
+      <% end %>
+    </div>
+  </section>
+</section>

@@ -1,0 +1,20 @@
+- main [ref=e2]:
+  - heading "Change your password" [level=2] [ref=e3]
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: New password
+      - paragraph [ref=e7]:
+        - emphasis [ref=e8]: (6 characters minimum)
+      - paragraph [ref=e9]:
+        - textbox "New password" [active] [ref=e10]
+    - generic [ref=e11]:
+      - paragraph [ref=e12]: Confirm new password
+      - paragraph [ref=e13]:
+        - textbox "Confirm new password" [ref=e14]
+    - button "Change my password" [ref=e16]
+  - paragraph [ref=e17]:
+    - link "Log in" [ref=e18] [cursor=pointer]:
+      - /url: /users/sign_in
+  - paragraph [ref=e19]:
+    - link "Sign up" [ref=e20] [cursor=pointer]:
+      - /url: /users/sign_up

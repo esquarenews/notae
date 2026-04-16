@@ -1,0 +1,67 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: D
+          - generic [ref=e8]: dev-login-check@example.com
+        - generic [ref=e9]:
+          - link "＋" [ref=e10] [cursor=pointer]:
+            - /url: /workspaces/new
+          - button "Minimize sidebar" [ref=e11] [cursor=pointer]: ◂
+      - navigation [ref=e13]:
+        - link "Home" [ref=e14] [cursor=pointer]:
+          - /url: /workspaces/new
+          - generic [ref=e15]:
+            - img [ref=e17]
+            - generic [ref=e20]: Home
+        - link "Search" [ref=e21] [cursor=pointer]:
+          - /url: /workspaces/new
+          - generic [ref=e22]:
+            - img [ref=e24]
+            - generic [ref=e27]: Search
+      - generic [ref=e28]:
+        - link "Settings" [ref=e29] [cursor=pointer]:
+          - /url: /workspaces/new
+          - generic [ref=e30]:
+            - img [ref=e32]
+            - generic [ref=e35]: Settings
+        - link "Trash" [ref=e36] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e37]:
+            - img [ref=e39]
+            - generic [ref=e42]: Trash
+        - button "Sign out" [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]:
+            - img [ref=e47]
+            - generic [ref=e50]: Sign out
+  - generic [ref=e51]:
+    - banner [ref=e52]:
+      - generic [ref=e54]:
+        - generic [ref=e55]: 📄
+        - generic [ref=e56]: Notae
+        - generic [ref=e57]: Private
+    - main [ref=e58]:
+      - paragraph [ref=e59]: Signed in successfully.
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - img "Notae icon" [ref=e62]
+          - generic [ref=e63]:
+            - heading "Notae" [level=1] [ref=e64]
+            - paragraph [ref=e65]: Welcome back, dev-login-check@example.com.
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - heading "Your workspaces" [level=2] [ref=e68]
+            - link "New workspace" [ref=e69] [cursor=pointer]:
+              - /url: /workspaces/new
+          - paragraph [ref=e70]: No workspaces yet.
+  - complementary [ref=e73]:
+    - generic [ref=e74]:
+      - generic [ref=e75]: New AI chat
+      - generic [ref=e76]:
+        - generic [ref=e77]: Auto
+        - button "Minimize AI assistant rail" [ref=e78] [cursor=pointer]: ▸
+    - generic [ref=e79]:
+      - paragraph [ref=e80]: Notae AI assistant
+      - paragraph [ref=e81]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - paragraph [ref=e84]: Join a workspace to use Notae AI assistant prompts.

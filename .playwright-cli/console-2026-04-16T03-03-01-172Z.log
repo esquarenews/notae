@@ -1,0 +1,2 @@
+[     304ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[     700ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:4000/users/password/edit?reset_password_token=dYMKN3s_kJcAfpniJCwV:0

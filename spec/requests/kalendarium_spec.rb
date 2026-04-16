@@ -185,6 +185,7 @@ RSpec.describe "Kalendarium", type: :request do
       workspace_slug: workspace.slug,
       embedded: "1",
       widget: "1",
+      view: "month",
       date: "2026-04-11"
     )
 
@@ -213,6 +214,51 @@ RSpec.describe "Kalendarium", type: :request do
     expect(create_form["action"]).to include("widget=1")
     expect(month_cell).to be_present
     expect(document.text).to include("Monthly planning")
+  end
+
+  it "defaults the compact embedded widget to a one-day today view" do
+    user, workspace, = build_stack(suffix: "widget-default-day", time_zone: "Australia/Melbourne")
+    sign_in user
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      embedded: "1",
+      widget: "1",
+      date: "2026-04-11"
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    active_view_button = document.at_css(".notae-kalendarium-widget-view-switch .notae-chip-button.is-active")
+    day_track = document.at_css(".notae-kalendarium-day-track")
+
+    expect(active_view_button).to be_present
+    expect(active_view_button.text.strip).to eq("(1)")
+    expect(document.at_css(".notae-kalendarium-month-grid")).to be_nil
+    expect(day_track).to be_present
+    expect(day_track["data-day-date"]).to eq("2026-04-11")
+  end
+
+  it "respects the requested widget calendar view" do
+    user, workspace, = build_stack(suffix: "widget-year", time_zone: "Australia/Melbourne")
+    sign_in user
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      embedded: "1",
+      widget: "1",
+      view: "year",
+      date: "2026-04-11"
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    active_view_button = document.at_css(".notae-kalendarium-widget-view-switch .notae-chip-button.is-active")
+
+    expect(active_view_button).to be_present
+    expect(active_view_button.text.strip).to eq("(365)")
+    expect(document.at_css(".notae-kalendarium-year-grid")).to be_present
+    expect(document.at_css(".notae-kalendarium-month-grid")).to be_nil
   end
 
   it "shows the current user's Tasks blockouts from other workspaces" do

@@ -6,6 +6,7 @@ class KalendariumController < ApplicationController
   track_request_performance_for :show, :refresh
 
   VIEW_OPTIONS = %w[day next_7_days week month year project].freeze
+  WIDGET_VIEW_OPTIONS = %w[day week next_7_days month year].freeze
   TIMELINE_SLOT_MINUTES = 30
   TIMELINE_SLOT_HEIGHT_PX = 28.0
   TIMELINE_DAY_MINUTES = 1_440
@@ -17,7 +18,7 @@ class KalendariumController < ApplicationController
     authorize @workspace, :show?
 
     @widget_mode = params[:widget].to_s == "1"
-    @view = @widget_mode ? "month" : (VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week")
+    @view = resolve_requested_view(widget_mode: @widget_mode)
     persist_last_calendar_view! unless @widget_mode
     @project_return_view = resolve_project_return_view
     @selected_date = parse_selected_date
@@ -91,7 +92,7 @@ class KalendariumController < ApplicationController
   def refresh
     authorize @workspace, :show?
 
-    @view = VIEW_OPTIONS.include?(params[:view].to_s) ? params[:view].to_s : "week"
+    @view = resolve_requested_view(widget_mode: params[:widget].to_s == "1")
     @selected_date = parse_selected_date
     @next_seven_days_start = resolve_next_seven_days_start
     normalize_selected_date_for_view!
@@ -827,6 +828,13 @@ class KalendariumController < ApplicationController
     return stored if stored.present? && VIEW_OPTIONS.include?(stored) && stored != "project"
 
     "week"
+  end
+
+  def resolve_requested_view(widget_mode:)
+    allowed_views = widget_mode ? WIDGET_VIEW_OPTIONS : VIEW_OPTIONS
+    fallback_view = widget_mode ? "day" : "week"
+    requested_view = params[:view].to_s
+    allowed_views.include?(requested_view) ? requested_view : fallback_view
   end
 
   def scoped_project_id(projects)

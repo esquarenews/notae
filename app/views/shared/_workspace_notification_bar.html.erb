@@ -4,7 +4,7 @@
        data-notification-bar-time-zone-value="<%= presenter.time_zone_name %>"
        data-notification-bar-workspace-key-value="<%= workspace.slug %>">
   <% if presenter.show_clock? %>
-    <% calendar_widget_path = kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "month", date: presenter.calendar_widget_date) %>
+    <% calendar_widget_path = kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: presenter.calendar_widget_date) %>
     <button type="button"
             class="notae-shell-status-bar-clock-button"
             aria-label="Open compact Kalendārium"

@@ -218,7 +218,7 @@ RSpec.describe "Workspace home", type: :request do
       expect(clock_button["data-action"]).to include("dblclick->notification-bar#toggleCalendar")
       expect(clock_button["aria-expanded"]).to eq("false")
       expect(calendar_frame).to be_present
-      expect(calendar_frame["src"]).to eq(kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "month", date: "2026-04-11"))
+      expect(calendar_frame["src"]).to eq(kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: "2026-04-11"))
       expect(document.text).to include("Client review")
       expect(document.text).to include("Starts in 10 min")
       expect(document.text).to include("1 email just came in")

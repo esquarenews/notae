@@ -1,0 +1,23 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img "Notae icon" [ref=e5]
+      - generic [ref=e6]:
+        - heading "Notae" [level=1] [ref=e7]
+        - paragraph [ref=e8]: Choose a new password for your account.
+    - generic [ref=e9]:
+      - heading "Change your password" [level=2] [ref=e10]
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: New password
+          - generic [ref=e14]: Minimum 6 characters.
+          - textbox "New password" [active] [ref=e15]
+        - generic [ref=e16]:
+          - generic [ref=e17]: Confirm new password
+          - textbox "Confirm new password" [ref=e18]
+        - button "Change my password" [ref=e19] [cursor=pointer]
+      - generic [ref=e20]:
+        - link "Back to sign in" [ref=e21] [cursor=pointer]:
+          - /url: /users/sign_in
+        - link "Create account" [ref=e22] [cursor=pointer]:
+          - /url: /users/sign_up
