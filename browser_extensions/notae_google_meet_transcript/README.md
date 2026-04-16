@@ -21,6 +21,8 @@ Then open the extension popup and enter:
 
 If you already have the target Notae workspace open in another tab in the same browser window, the popup will offer a **Use detected workspace** button to fill the base URL and workspace slug for you.
 
+If paste shortcuts are blocked in an installed PWA window, use the popup's **Paste token** button to read the token from the clipboard directly.
+
 ## Use
 
 1. Join a Google Meet in Chrome.

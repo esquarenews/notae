@@ -23,7 +23,9 @@ RSpec.describe "Notae Google Meet extension JavaScript syntax" do
   it "keeps the extension wired for popup state, transcript capture, and transcript upload" do
     background = Rails.root.join("browser_extensions/notae_google_meet_transcript/background.js").read
     content = Rails.root.join("browser_extensions/notae_google_meet_transcript/content.js").read
+    popup_script = Rails.root.join("browser_extensions/notae_google_meet_transcript/popup.js").read
     popup = Nokogiri::HTML(Rails.root.join("browser_extensions/notae_google_meet_transcript/popup.html").read)
+    manifest = JSON.parse(Rails.root.join("browser_extensions/notae_google_meet_transcript/manifest.json").read)
 
     expect(background).to include("notae-meet-start-capture")
     expect(background).to include("notae-meet-stop-capture")
@@ -33,8 +35,12 @@ RSpec.describe "Notae Google Meet extension JavaScript syntax" do
     expect(background).to include("/ingest_transcript")
     expect(content).to include("aria-live")
     expect(content).to include("notae-meet-transcript-snapshot")
+    expect(popup_script).to include("navigator.clipboard?.readText")
+    expect(popup_script).to include("pasteTokenButton")
+    expect(manifest.fetch("permissions")).to include("clipboardRead")
     expect(popup.text).to include("Start capture")
     expect(popup.text).to include("Stop & sync")
     expect(popup.text).to include("Use detected workspace")
+    expect(popup.text).to include("Paste token")
   end
 end

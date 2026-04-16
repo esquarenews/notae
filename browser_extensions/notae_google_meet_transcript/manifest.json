@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "Capture Google Meet captions and send the transcript to Notae.",
   "permissions": [
+    "clipboardRead",
     "storage",
     "tabs"
   ],

@@ -65,6 +65,12 @@
         background: #fff;
       }
 
+      .field-action {
+        justify-self: start;
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
       .actions {
         display: flex;
         gap: 8px;
@@ -134,6 +140,7 @@
       <label class="field">
         <span>Extension token</span>
         <input id="apiToken" type="password" placeholder="Paste token from Notae">
+        <button id="pasteTokenButton" type="button" class="field-action">Paste token</button>
       </label>
 
       <div class="actions">

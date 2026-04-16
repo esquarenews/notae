@@ -2,6 +2,7 @@
   const baseUrlInput = document.getElementById("baseUrl")
   const workspaceSlugInput = document.getElementById("workspaceSlug")
   const apiTokenInput = document.getElementById("apiToken")
+  const pasteTokenButton = document.getElementById("pasteTokenButton")
   const detectedWorkspaceButton = document.getElementById("detectedWorkspaceButton")
   const detectedWorkspaceHint = document.getElementById("detectedWorkspaceHint")
   const saveButton = document.getElementById("saveButton")
@@ -166,6 +167,30 @@
     applyDetectedWorkspace(workspace)
     renderDetectedWorkspace(workspace)
     setStatus("Filled base URL and workspace from the detected Notae tab.", "is-success")
+  })
+
+  pasteTokenButton.addEventListener("click", async () => {
+    if (!navigator.clipboard?.readText) {
+      setStatus("Clipboard paste is not available here. Paste the token manually into the field.", "is-error")
+      apiTokenInput.focus()
+      return
+    }
+
+    try {
+      const clipboardText = (await navigator.clipboard.readText()).trim()
+      if (!clipboardText) {
+        setStatus("Clipboard is empty.", "is-error")
+        return
+      }
+
+      apiTokenInput.value = clipboardText
+      apiTokenInput.focus()
+      apiTokenInput.select()
+      setStatus("Token pasted from clipboard.", "is-success")
+    } catch (_error) {
+      setStatus("Clipboard access was blocked. Paste the token manually into the field.", "is-error")
+      apiTokenInput.focus()
+    }
   })
 
   startButton.addEventListener("click", async () => {
