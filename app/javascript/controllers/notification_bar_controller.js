@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 const ALERT_POLL_INTERVAL_MS = 15000
 
 export default class extends Controller {
-  static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel"]
+  static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel", "calendarFrame"]
   static values = { timeZone: String, workspaceKey: String, refreshPath: String }
 
   connect() {
@@ -13,11 +13,15 @@ export default class extends Controller {
     this.handleWidgetMessage = this.handleWidgetMessage.bind(this)
     this.beforeCache = this.beforeCache.bind(this)
     this.visibilityChangeHandler = () => this.syncAlertPolling({ immediate: document.visibilityState === "visible" })
+    this.calendarFrameLoadHandler = () => this.requestCalendarRecenter()
     this.alertPollTimer = null
     this.alertPollRequest = null
     window.addEventListener("message", this.handleWidgetMessage)
     document.addEventListener("turbo:before-cache", this.beforeCache)
     document.addEventListener("visibilitychange", this.visibilityChangeHandler)
+    if (this.hasCalendarFrameTarget) {
+      this.calendarFrameTarget.addEventListener("load", this.calendarFrameLoadHandler)
+    }
     this.syncCalendarState()
     this.syncAlertPolling({ immediate: true })
   }
@@ -27,6 +31,9 @@ export default class extends Controller {
     window.removeEventListener("message", this.handleWidgetMessage)
     document.removeEventListener("turbo:before-cache", this.beforeCache)
     document.removeEventListener("visibilitychange", this.visibilityChangeHandler)
+    if (this.hasCalendarFrameTarget) {
+      this.calendarFrameTarget.removeEventListener("load", this.calendarFrameLoadHandler)
+    }
     this.stopAlertPolling()
   }
 
@@ -79,6 +86,7 @@ export default class extends Controller {
 
     this.calendarPanelTarget.hidden = false
     this.syncCalendarState()
+    window.requestAnimationFrame(() => this.requestCalendarRecenter({ retries: 6 }))
   }
 
   closeCalendar(event) {
@@ -171,6 +179,20 @@ export default class extends Controller {
     if (messageType === "notae:kalendarium-widget:minimize") {
       this.closeCalendar()
     }
+  }
+
+  requestCalendarRecenter({ retries = 0 } = {}) {
+    if (!this.hasCalendarFrameTarget) return
+
+    const frameWindow = this.calendarFrameTarget.contentWindow
+    if (!frameWindow) {
+      if (retries > 0) {
+        window.setTimeout(() => this.requestCalendarRecenter({ retries: retries - 1 }), 120)
+      }
+      return
+    }
+
+    frameWindow.postMessage({ type: "notae:kalendarium-widget:center-current-time" }, window.location.origin)
   }
 
   alertForEvent(event) {

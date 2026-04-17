@@ -18,6 +18,10 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("data-pwa-target=\"pushSettingsToggle\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsStateLabel\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsStatus\"")
+    expect(response.body).to include("Send test push")
+    expect(response.body).to include("data-action=\"pwa#sendTestPush\"")
+    expect(response.body).to include("data-pwa-target=\"pushSettingsTestButton\"")
+    expect(response.body).to include(%(data-push-test-path="/w/#{workspace.slug}/settings/notifications/test-push"))
     expect(response.body).to include("Slack notifications")
     expect(response.body).to include("Discord notifications")
     expect(response.body).to include("Email notifications")
@@ -62,5 +66,35 @@ RSpec.describe "Notification settings", type: :request do
     expect(user.email_notify_always_send).to be(true)
     expect(user.email_notify_page_updates).to be(false)
     expect(user.email_notify_workspace_digest).to be(false)
+  end
+
+  it "sends a test push to the current device subscription" do
+    user = User.create!(email: "notification-settings-test-push@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification settings push", slug: "notification-settings-push")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    subscription = user.web_push_subscriptions.create!(
+      endpoint: "https://push.example.test/subscriptions/test-device",
+      p256dh: "p256dh-test",
+      auth: "auth-test"
+    )
+    delivery_service = instance_double(WebPush::DeliveryService, call: true)
+    sign_in user
+
+    allow(WebPush::Configuration).to receive(:configured?).and_return(true)
+    allow(WebPush::DeliveryService).to receive(:new).and_return(delivery_service)
+
+    post workspace_notification_settings_test_push_path(workspace_slug: workspace.slug),
+         params: { endpoint: subscription.endpoint },
+         as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(JSON.parse(response.body)).to include("ok" => true, "message" => "Test push sent to this device.")
+    expect(WebPush::DeliveryService).to have_received(:new).with(
+      subscription: subscription,
+      payload: hash_including(
+        title: "Notae test notification",
+        url: workspace_notification_settings_path(workspace_slug: workspace.slug)
+      )
+    )
   end
 end

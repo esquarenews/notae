@@ -81,11 +81,30 @@
                         class: "notae-utility-link notae-utility-mini-link" %>
           <% elsif notification.knowledge_suggestion_notification? && notification.notifiable.is_a?(KnowledgeSuggestion) %>
             <% suggestion = notification.notifiable %>
+            <% daily_agenda_items = Array(notification.metadata["daily_agenda_items"]) %>
             <p class="notae-utility-copy">
               <strong><%= suggestion.title %></strong>
               · <%= suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief" : "Suggested next step" %>
             </p>
             <p class="notae-utility-copy"><%= suggestion.summary %></p>
+            <% if suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY %>
+              <% if daily_agenda_items.any? %>
+                <ul class="notae-utility-agenda-list">
+                  <% daily_agenda_items.each do |item| %>
+                    <li>
+                      <span class="notae-utility-agenda-time"><%= item["time"] %></span>
+                      <span><%= item["title"] %></span>
+                    </li>
+                  <% end %>
+                </ul>
+                <% remaining_items = notification.metadata["daily_agenda_total_count"].to_i - daily_agenda_items.length %>
+                <% if remaining_items.positive? %>
+                  <p class="notae-utility-copy">+<%= remaining_items %> more events today</p>
+                <% end %>
+              <% elsif ActiveModel::Type::Boolean.new.cast(notification.metadata["daily_agenda_empty"]) %>
+                <p class="notae-utility-copy">No events scheduled today.</p>
+              <% end %>
+            <% end %>
             <%= link_to "Open suggestion",
                         workspace_path(@workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"),
                         class: "notae-utility-link notae-utility-mini-link" %>

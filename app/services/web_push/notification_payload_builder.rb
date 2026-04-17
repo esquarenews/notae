@@ -61,10 +61,7 @@ module WebPush
         suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion)
         return "Open Notifications in Notae." if suggestion.blank?
 
-        [
-          suggestion.title.presence,
-          comment_excerpt(suggestion.summary)
-        ].compact.join(" · ")
+        knowledge_suggestion_body(suggestion)
       when Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
            Notification::TYPE_AGENT_ACTION_RESUBMITTED,
            Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
@@ -103,6 +100,36 @@ module WebPush
       return "New AI suggestion" unless suggestion.is_a?(KnowledgeSuggestion)
 
       suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief ready" : "New AI suggestion"
+    end
+
+    def knowledge_suggestion_body(suggestion)
+      return default_knowledge_suggestion_body(suggestion) unless suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY
+
+      daily_summary_body.presence || default_knowledge_suggestion_body(suggestion)
+    end
+
+    def default_knowledge_suggestion_body(suggestion)
+      [
+        suggestion.title.presence,
+        comment_excerpt(suggestion.summary)
+      ].compact.join(" · ")
+    end
+
+    def daily_summary_body
+      agenda_lines = Array(notification.metadata["daily_agenda_items"]).first(3).filter_map do |item|
+        title = comment_excerpt(item["title"].to_s)
+        next if title.blank?
+
+        [ item["time"].to_s.presence || "Scheduled", title ].join(" — ")
+      end
+
+      if agenda_lines.any?
+        remaining_count = notification.metadata["daily_agenda_total_count"].to_i - agenda_lines.length
+        agenda_lines << "+#{remaining_count} more today" if remaining_count.positive?
+        agenda_lines.join("\n")
+      elsif ActiveModel::Type::Boolean.new.cast(notification.metadata["daily_agenda_empty"])
+        "No events scheduled today."
+      end
     end
 
     def workspace_name

@@ -33,6 +33,14 @@
                 data-pwa-target="pushSettingsStateLabel">
             Off
           </span>
+          <button type="button"
+                  class="notae-chip-button notae-chip-button-subtle"
+                  data-pwa-target="pushSettingsTestButton"
+                  data-push-test-path="<%= workspace_notification_settings_test_push_path(workspace_slug: @workspace.slug) %>"
+                  data-default-label="Send test push"
+                  data-action="pwa#sendTestPush">
+            Send test push
+          </button>
         </div>
       </div>
 

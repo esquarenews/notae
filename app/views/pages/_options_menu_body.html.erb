@@ -63,15 +63,27 @@
         <% if active_share_links.any? %>
           <ul class="notae-options-list">
             <% active_share_links.each do |share_link| %>
+              <% share_url = public_share_url(token: share_link.token) %>
               <li class="notae-options-list-item">
-                <%= link_to public_share_url(token: share_link.token),
-                            public_share_path(token: share_link.token),
+                <%= link_to share_url,
+                            share_url,
                             target: "_blank",
                             rel: "noopener" %>
-                <%= button_to "Revoke",
-                              page_share_link_path(workspace_slug: workspace.slug, page_id: page.id, id: share_link.id, options_menu: "open"),
-                              method: :delete,
-                              class: "notae-chip-button" %>
+                <div class="notae-options-inline-actions">
+                  <button type="button"
+                          class="notae-inline-icon-button notae-options-link-copy"
+                          title="Copy link"
+                          aria-label="Copy link"
+                          data-action="click->copy-text#copy"
+                          data-copy-text-value="<%= share_url %>">
+                    <span aria-hidden="true">⧉</span>
+                    <span class="notae-visually-hidden" data-copy-text-feedback>Copy link</span>
+                  </button>
+                  <%= button_to "Revoke",
+                                page_share_link_path(workspace_slug: workspace.slug, page_id: page.id, id: share_link.id, options_menu: "open"),
+                                method: :delete,
+                                class: "notae-chip-button" %>
+                </div>
               </li>
             <% end %>
           </ul>

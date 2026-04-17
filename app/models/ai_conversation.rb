@@ -7,6 +7,7 @@ class AiConversation < ApplicationRecord
   belongs_to :user
   belongs_to :workspace
   belongs_to :page, optional: true
+  has_many :knowledge_suggestions, dependent: :nullify
 
   validates :scope, presence: true
   validates :status, inclusion: { in: STATUSES }

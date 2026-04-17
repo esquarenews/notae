@@ -35,5 +35,8 @@ RSpec.describe "kalendarium_timeline_controller.js" do
     expect(source).to include("this.hasInitialFocusMinutesValue")
     expect(source).to include("this.initialFocusMinutesValue / 30.0")
     expect(source).to include("focusedScrollTop(")
+    expect(source).to include("centerOnCurrentTime()")
+    expect(source).to include("window.addEventListener(\"message\", this.handleWidgetMessage)")
+    expect(source).to include("messageType === \"notae:kalendarium-widget:center-current-time\"")
   end
 end

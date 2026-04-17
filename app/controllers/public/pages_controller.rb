@@ -1,11 +1,11 @@
 module Public
   class PagesController < ApplicationController
+    helper Public::PagesHelper
+
     skip_after_action :verify_pundit_authorization
     rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
 
     before_action :set_share_link
-
-    helper_method :block_text
 
     def show
       @page = @share_link.page
@@ -20,22 +20,6 @@ module Public
 
     def set_share_link
       @share_link = ShareLink.for_public_access.find_by!(token: params[:token])
-    end
-
-    def block_text(block)
-      fragments = []
-      collect_text_fragments(block.content_json, fragments)
-      fragments.join(" ").squish
-    end
-
-    def collect_text_fragments(node, collector)
-      case node
-      when Hash
-        collector << node["text"] if node["text"].is_a?(String)
-        node.each_value { |value| collect_text_fragments(value, collector) }
-      when Array
-        node.each { |value| collect_text_fragments(value, collector) }
-      end
     end
 
     def log_share_link_view!(ip_address:)

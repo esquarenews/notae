@@ -51,6 +51,7 @@ Rails.application.routes.draw do
     patch "settings/connections", to: "connection_settings#update"
     get "settings/notifications", to: "notification_settings#show", as: :workspace_notification_settings
     patch "settings/notifications", to: "notification_settings#update"
+    post "settings/notifications/test-push", to: "notification_settings#send_test_push", as: :workspace_notification_settings_test_push
     get "settings/kalendarium", to: "kalendarium_settings#show", as: :workspace_kalendarium_settings
     patch "settings/kalendarium", to: "kalendarium_settings#update"
     get "settings/epistularium", to: "epistularium_settings#show", as: :workspace_epistularium_settings

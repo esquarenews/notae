@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_16_100500) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1165,9 +1165,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_16_100500) do
   add_foreign_key "kalendarium_write_proposals", "kalendarium_events"
   add_foreign_key "kalendarium_write_proposals", "users"
   add_foreign_key "kalendarium_write_proposals", "workspaces"
-  add_foreign_key "knowledge_suggestions", "ai_conversations"
-  add_foreign_key "knowledge_suggestions", "users"
-  add_foreign_key "knowledge_suggestions", "workspaces"
+  add_foreign_key "knowledge_suggestions", "ai_conversations", on_delete: :nullify
+  add_foreign_key "knowledge_suggestions", "users", on_delete: :cascade
+  add_foreign_key "knowledge_suggestions", "workspaces", on_delete: :cascade
   add_foreign_key "meeting_bot_runs", "meeting_sessions"
   add_foreign_key "meeting_sessions", "kalendarium_events"
   add_foreign_key "meeting_sessions", "pages"

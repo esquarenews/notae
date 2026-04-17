@@ -18,8 +18,10 @@ export default class extends Controller {
 
     this.onLayoutChange = () => this.updateNowLine()
     this.onScrollerScroll = () => this.updateNowLine()
+    this.handleWidgetMessage = this.handleWidgetMessage.bind(this)
     window.addEventListener("resize", this.onLayoutChange)
     window.addEventListener("notae:layout-changed", this.onLayoutChange)
+    window.addEventListener("message", this.handleWidgetMessage)
     if (this.hasScrollerTarget) {
       this.scrollerTarget.addEventListener("scroll", this.onScrollerScroll, { passive: true })
     }
@@ -29,17 +31,11 @@ export default class extends Controller {
       const slotHeight = this.hasSlotHeightValue ? this.slotHeightValue : 28
       const slotsPerHour = 2
       const fallbackTop = startHour * slotsPerHour * slotHeight
-      const now = this.currentZonedTime()
-      const canFocusNow = now && this.hasNowDateInView(now.date)
 
       if (this.hasInitialFocusMinutesValue) {
         const rawTop = this.focusedScrollTop(((this.initialFocusMinutesValue / 30.0) * slotHeight), this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue ? 0.5 : 0.2)
         this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
-      } else if (canFocusNow) {
-        const minutesIntoDay = (now.hour * 60) + now.minute
-        const rawTop = this.focusedScrollTop(((minutesIntoDay / 30.0) * slotHeight), this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue ? 0.5 : 0.35)
-        this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
-      } else {
+      } else if (!this.centerOnCurrentTime()) {
         this.scrollerTarget.scrollTop = this.allDayOffsetForScroll() + fallbackTop
       }
 
@@ -53,6 +49,7 @@ export default class extends Controller {
   disconnect() {
     window.removeEventListener("resize", this.onLayoutChange)
     window.removeEventListener("notae:layout-changed", this.onLayoutChange)
+    window.removeEventListener("message", this.handleWidgetMessage)
     if (this.hasScrollerTarget) {
       this.scrollerTarget.removeEventListener("scroll", this.onScrollerScroll)
     }
@@ -60,6 +57,33 @@ export default class extends Controller {
     if (this.nowTimer) {
       window.clearInterval(this.nowTimer)
       this.nowTimer = null
+    }
+  }
+
+  centerOnCurrentTime() {
+    if (!this.hasScrollerTarget) return false
+
+    const now = this.currentZonedTime()
+    const canFocusNow = now && this.hasNowDateInView(now.date)
+    if (!canFocusNow) return false
+
+    const slotHeight = this.hasSlotHeightValue ? this.slotHeightValue : 28
+    const minutesIntoDay = (now.hour * 60) + now.minute
+    const rawTop = this.focusedScrollTop(
+      ((minutesIntoDay / 30.0) * slotHeight),
+      this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue ? 0.5 : 0.35
+    )
+    this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
+    return true
+  }
+
+  handleWidgetMessage(event) {
+    if (event.origin !== window.location.origin) return
+
+    const messageType = event.data?.type
+    if (messageType === "notae:kalendarium-widget:center-current-time") {
+      this.centerOnCurrentTime()
+      this.updateNowLine()
     }
   }
 

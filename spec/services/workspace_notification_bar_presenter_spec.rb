@@ -140,6 +140,47 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.recent_update_headline).to eq("1 new workspace update")
   end
 
+  it "surfaces the daily summary agenda in the shell widget detail" do
+    user = User.create!(email: "notification-bar-daily@example.com", password: "password123", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "Daily AI status workspace", slug: "daily-ai-status-workspace", shell_status_bar_mode: "all")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Daily morning summary",
+      summary: "Today has two meetings. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_for_date: Date.new(2026, 4, 11),
+      generated_at: 5.minutes.ago
+    )
+    Notification.create!(
+      workspace: workspace,
+      recipient: user,
+      actor: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: {
+        "daily_agenda_items" => [
+          { "time" => "09:00", "title" => "Stand-up" },
+          { "time" => "11:30", "title" => "Client review" }
+        ],
+        "daily_agenda_total_count" => 2
+      }
+    )
+
+    presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
+
+    expect(presenter.recent_ai_update_headline).to eq("Daily workspace brief ready")
+    expect(presenter.recent_ai_update_detail).to include("09:00 — Stand-up")
+    expect(presenter.recent_ai_update_detail).to include("11:30 — Client review")
+  end
+
   it "respects time-only and off modes" do
     user = User.create!(email: "notification-bar-modes@example.com", password: "password123")
     time_only_workspace = Workspace.create!(name: "Clock only", slug: "clock-only", shell_status_bar_mode: "time_only")

@@ -1102,6 +1102,7 @@ RSpec.describe "Pages", type: :request do
     workspace = Workspace.create!(name: "Menu Open", slug: "menu-open")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     page = Page.create!(workspace: workspace, created_by: owner, title: "Menu open page")
+    share_link = ShareLink.create!(workspace: workspace, page: page, created_by: owner)
     sign_in owner
 
     patch page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
@@ -1126,7 +1127,7 @@ RSpec.describe "Pages", type: :request do
     html = Nokogiri::HTML(response.body)
     expect(html.at_css("#page-options-menu[open]")).to be_present
     expect(response.body).to include("⚙")
-    expect(response.body).to include('data-controller="options-menu lazy-panel"')
+    expect(response.body).to include('data-controller="copy-text options-menu lazy-panel"')
     expect(response.body).not_to include("Public share links")
 
     get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "actions", current_path: page_path(workspace_slug: workspace.slug, id: page.id))
@@ -1141,6 +1142,8 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Permissions")
     expect(response.body).to include("Public share links")
     expect(response.body).to include("Templates")
+    expect(response.body).to include(%(data-copy-text-value="#{public_share_url(token: share_link.token)}"))
+    expect(response.body).to include("aria-label=\"Copy link\"")
   end
 
   it "updates page title from the clean page header" do

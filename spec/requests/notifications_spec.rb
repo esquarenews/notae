@@ -226,6 +226,52 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include(workspace_path(workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"))
   end
 
+  it "renders the daily summary agenda in the inbox" do
+    user = User.create!(email: "notif-daily-summary@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Daily Summary", slug: "notif-daily-summary")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Daily morning summary",
+      summary: "The day has two concrete meetings. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_for_date: Date.new(2026, 4, 17),
+      generated_at: Time.current
+    )
+    Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: {
+        "kind" => suggestion.kind,
+        "daily_agenda_items" => [
+          { "time" => "09:00", "title" => "Stand-up" },
+          { "time" => "11:30", "title" => "Client review" }
+        ],
+        "daily_agenda_total_count" => 3
+      }
+    )
+
+    sign_in user
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Daily workspace brief ready")
+    expect(response.body).to include("09:00")
+    expect(response.body).to include("Stand-up")
+    expect(response.body).to include("11:30")
+    expect(response.body).to include("Client review")
+    expect(response.body).to include("+1 more events today")
+  end
+
   it "uses high-contrast notification link text in dark themes" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 

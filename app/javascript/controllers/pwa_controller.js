@@ -15,7 +15,8 @@ export default class extends Controller {
     "pushPrompt",
     "pushSettingsToggle",
     "pushSettingsStateLabel",
-    "pushSettingsStatus"
+    "pushSettingsStatus",
+    "pushSettingsTestButton"
   ]
   static values = {
     authenticated: Boolean,
@@ -27,6 +28,7 @@ export default class extends Controller {
     this.devicePushSubscribed = false
     this.networkToastTimeout = null
     this.pushUiPending = false
+    this.pushTestPending = false
     this.beforeInstallPromptHandler = (event) => this.handleBeforeInstallPrompt(event)
     this.appInstalledHandler = () => this.handleAppInstalled()
     this.onlineHandler = () => this.refreshNetworkState()
@@ -122,6 +124,55 @@ export default class extends Controller {
     this.syncPushPrompt()
   }
 
+  async sendTestPush(event) {
+    event.preventDefault()
+    if (this.pushUiPending || this.pushTestPending) return
+
+    const state = this.pushSettingsState()
+    if (state.disabled || !state.checked) {
+      this.showNetworkToast("Enable push notifications on this device first.")
+      return
+    }
+
+    const registration = await navigator.serviceWorker.ready.catch(() => null)
+    const subscription = await registration?.pushManager?.getSubscription?.()
+    if (!subscription?.endpoint) {
+      this.showNetworkToast("This device does not have an active push subscription.")
+      return
+    }
+
+    const path = event.currentTarget?.dataset?.pushTestPath
+    if (!path) {
+      this.showNetworkToast("The test push endpoint is missing.")
+      return
+    }
+
+    this.pushTestPending = true
+    this.refreshPushUi()
+
+    try {
+      const response = await fetch(path, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": this.csrfToken()
+        },
+        body: JSON.stringify({ endpoint: subscription.endpoint })
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || "Test push could not be sent.")
+
+      this.showNetworkToast(payload.message || "Test push sent to this device.")
+    } catch (error) {
+      this.showNetworkToast(error.message || "Test push could not be sent.")
+    } finally {
+      this.pushTestPending = false
+      this.refreshPushUi()
+    }
+  }
+
   refreshNetworkState() {
     const offline = !window.navigator.onLine
 
@@ -207,6 +258,12 @@ export default class extends Controller {
       label.textContent = state.label
       label.classList.toggle("is-active", state.checked)
       label.classList.toggle("is-pending", state.pending)
+    })
+
+    this.pushSettingsTestButtonTargets.forEach((button) => {
+      button.hidden = state.hidden
+      button.disabled = state.disabled || !state.checked || state.pending || this.pushTestPending
+      button.textContent = this.pushTestPending ? "Sending…" : (button.dataset.defaultLabel || "Send test push")
     })
   }
 
