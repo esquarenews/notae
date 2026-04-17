@@ -17,6 +17,7 @@ class LibrariesController < ApplicationController
   SOURCE_OPTIONS = %w[all page meeting database].freeze
   VISIBILITY_OPTIONS = %w[all shared private].freeze
   SORT_OPTIONS = %w[last_edited_desc last_edited_asc created_desc created_asc page_name_asc page_name_desc].freeze
+  VIEW_MODE_OPTIONS = %w[list thumbnails].freeze
   LIBRARY_PAGE_SIZE = 50
   SEARCHABLE_LIBRARY_SQL_COLUMNS = %w[title created_by last_edited_by workspace_name kind visibility].freeze
   FILTERABLE_LIBRARY_SQL_COLUMNS = {
@@ -33,7 +34,7 @@ class LibrariesController < ApplicationController
   def show
     authorize @workspace, :show?
 
-    @workspace_options = policy_scope(Workspace).select(:id, :name, :slug, :updated_at).order(updated_at: :desc).to_a
+    @workspace_options = policy_scope(Workspace).select(:id, :name, :slug, :workspace_color, :updated_at).order(updated_at: :desc).to_a
     @workspace_filter_options = [ [ "All workspaces", "all" ] ] +
       @workspace_options.map { |workspace| [ workspace.name, workspace.slug ] }
 
@@ -45,6 +46,7 @@ class LibrariesController < ApplicationController
     @source_filter = resolved_source_filter
     @visibility_filter = resolved_visibility_filter
     @sort = resolved_sort
+    @view_mode = resolved_view_mode
     @search_query = params[:q].to_s.strip
     @property_filter = resolved_property_filter
     @property_filter_value = params[:filter_value].to_s.strip
@@ -110,6 +112,11 @@ class LibrariesController < ApplicationController
     SORT_OPTIONS.include?(requested) ? requested : "last_edited_desc"
   end
 
+  def resolved_view_mode
+    requested = params[:view_mode].to_s
+    VIEW_MODE_OPTIONS.include?(requested) ? requested : "list"
+  end
+
   def resolved_property_filter
     requested = params[:filter_property].to_s
     COLUMN_OPTIONS.key?(requested) ? requested : ""
@@ -152,6 +159,8 @@ class LibrariesController < ApplicationController
         meeting = page.page_kind == "meeting_note"
         creator_email = page.created_by&.email || owner_email_lookup[page.workspace_id] || "—"
         {
+          record_type: "Page",
+          record_id: page.id,
           kind: page.tab_child? ? "tab" : (meeting ? "meeting" : "page"),
           title: page.tab_child? ? page.tab_reference_title : page.title,
           icon: page.icon.presence || (meeting ? "🗒️" : "📄"),
@@ -175,6 +184,8 @@ class LibrariesController < ApplicationController
       .map do |database|
         creator_email = owner_email_lookup[database.workspace_id] || "—"
         {
+          record_type: "Database",
+          record_id: database.id,
           kind: database.tab_child? ? "grid_tab" : "database",
           title: database.tab_child? ? database.tab_reference_title : database.name,
           icon: database.icon.presence || "🗃️",
@@ -339,6 +350,7 @@ class LibrariesController < ApplicationController
     )
 
     @library_rows = rows.map { |row| library_row_from_sql_result(row, workspace_lookup) }
+    enrich_library_rows!(@library_rows)
     @page_start = @total_rows.zero? ? 0 : offset + 1
     @page_end = @total_rows.zero? ? 0 : offset + @library_rows.length
   end
@@ -371,6 +383,7 @@ class LibrariesController < ApplicationController
 
     start_index = (@current_page - 1) * @per_page
     @library_rows = @library_rows.slice(start_index, @per_page) || []
+    enrich_library_rows!(@library_rows)
     @page_start = @total_rows.zero? ? 0 : start_index + 1
     @page_end = @total_rows.zero? ? 0 : start_index + @library_rows.length
   end
@@ -580,6 +593,8 @@ class LibrariesController < ApplicationController
     workspace = workspace_lookup[workspace_id] || Workspace.new(id: workspace_id, slug: workspace_slug, name: row.fetch("workspace_name"))
 
     {
+      record_type: record_type,
+      record_id: record_id,
       kind: kind,
       title: row.fetch("title"),
       icon: library_row_icon_for(record_type, kind, row["icon"]),
@@ -594,6 +609,72 @@ class LibrariesController < ApplicationController
       workspace: workspace,
       path: library_row_path_for(record_type, workspace_slug, record_id)
     }
+  end
+
+  def enrich_library_rows!(rows)
+    return if rows.blank?
+
+    page_ids = rows.filter_map { |row| row[:record_id] if row[:record_type] == "Page" }.uniq
+    database_ids = rows.filter_map { |row| row[:record_id] if row[:record_type] == "Database" }.uniq
+
+    pages_by_id = Page.where(id: page_ids).includes(:parent_page).with_attached_cover_image.index_by(&:id)
+    databases_by_id = Database.where(id: database_ids).includes(:linked_page).with_attached_cover_image.index_by(&:id)
+    linked_page_ids = databases_by_id.values.filter_map(&:linked_page_id).uniq
+    linked_pages_by_id = Page.where(id: linked_page_ids).includes(:parent_page).with_attached_cover_image.index_by(&:id)
+
+    rows.each do |row|
+      record = row[:record_type] == "Database" ? databases_by_id[row[:record_id]] : pages_by_id[row[:record_id]]
+      linked_page = record.is_a?(Database) ? linked_pages_by_id[record.linked_page_id] : nil
+      icon_value = if record.is_a?(Database)
+        record.icon.presence || linked_page&.icon.presence
+      else
+        record&.icon.presence
+      end
+
+      row[:icon] = library_row_icon_for(row[:record_type], row[:kind], icon_value.presence || row[:icon])
+      row[:document_type_label] = library_document_type_label(row[:kind])
+      row[:description] = library_row_description(record)
+      row[:cover_record] = library_cover_record(record, linked_page:)
+      row[:workspace_color] = row[:workspace]&.display_color || Workspace::DEFAULT_COLOR
+    end
+  end
+
+  def library_document_type_label(kind)
+    case kind
+    when "database"
+      "Grid"
+    when "grid_tab"
+      "Grid tab"
+    when "tab"
+      "Tab"
+    when "meeting"
+      "Meeting"
+    else
+      "Nota"
+    end
+  end
+
+  def library_row_description(record)
+    case record
+    when Database
+      record.description.to_s.strip.presence
+    else
+      nil
+    end
+  end
+
+  def library_cover_record(record, linked_page: nil)
+    return nil if record.blank?
+
+    if record.is_a?(Database)
+      return linked_page if linked_page&.cover?
+      return record if record.cover?
+      return linked_page if linked_page.present?
+    end
+
+    return record if record.respond_to?(:cover?) && record.cover?
+
+    nil
   end
 
   def library_row_icon_for(record_type, kind, value)

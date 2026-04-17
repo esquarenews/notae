@@ -1,0 +1,62 @@
+<section class="notae-library-thumbnail-grid">
+  <% if library_rows.any? %>
+    <% library_rows.each do |row| %>
+      <% cover_record = row[:cover_record] %>
+      <% cover_image = cover_display_image(cover_record, preview: true) if cover_record.present? %>
+      <% cover_style = page_cover_preset_style(cover_record.cover_preset_key, focal_y: cover_record.cover_focal_y) if cover_record.present? && cover_image.blank? %>
+      <% fallback_icon = row[:document_type_label].to_s.downcase.include?("grid") ? "🗃️" : "📄" %>
+      <article class="notae-library-card" style="--notae-library-workspace-color: <%= row[:workspace_color] %>;">
+        <%= link_to row[:path], class: "notae-library-card-link" do %>
+          <div class="notae-library-card-cover">
+            <span class="notae-library-card-workspace-flash" aria-hidden="true"></span>
+            <% if cover_image.present? %>
+              <%= image_tag cover_image,
+                            alt: "#{row[:title]} cover",
+                            class: "notae-library-card-cover-image",
+                            loading: "lazy" %>
+            <% elsif cover_style.present? %>
+              <div class="notae-library-card-cover-fill" style="<%= cover_style %>"></div>
+            <% else %>
+              <div class="notae-library-card-cover-placeholder">
+                <%= render_notae_icon(row[:icon], workspace: row[:workspace], fallback: fallback_icon, css_class: "notae-library-card-cover-placeholder-icon", label: row[:title]) %>
+                <span class="notae-library-card-cover-placeholder-label"><%= row[:document_type_label] %></span>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="notae-library-card-body">
+            <div class="notae-library-card-meta">
+              <span class="notae-library-card-workspace-name"><%= row[:workspace_name] %></span>
+              <span class="notae-library-card-type"><%= row[:document_type_label] %></span>
+            </div>
+
+            <div class="notae-library-card-title-row">
+              <%= render_notae_icon(row[:icon], workspace: row[:workspace], fallback: fallback_icon, css_class: "notae-library-card-icon", label: row[:title]) %>
+              <h2 class="notae-library-card-title"><%= row[:title] %></h2>
+              <% if row[:favorited] %>
+                <span class="notae-library-card-favorite" aria-label="Favorited">★</span>
+              <% end %>
+            </div>
+
+            <% if row[:description].present? %>
+              <p class="notae-library-card-description"><%= truncate(row[:description], length: 170) %></p>
+            <% end %>
+
+            <dl class="notae-library-card-dates">
+              <div>
+                <dt>Created</dt>
+                <dd><%= row[:created_time].present? ? row[:created_time].in_time_zone.strftime("%-d %b %Y") : "—" %></dd>
+              </div>
+              <div>
+                <dt>Updated</dt>
+                <dd><%= row[:last_edited_time].present? ? row[:last_edited_time].in_time_zone.strftime("%-d %b %Y") : "—" %></dd>
+              </div>
+            </dl>
+          </div>
+        <% end %>
+      </article>
+    <% end %>
+  <% else %>
+    <p class="notae-library-empty notae-library-empty-cards">No results.</p>
+  <% end %>
+</section>

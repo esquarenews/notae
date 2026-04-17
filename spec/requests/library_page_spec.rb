@@ -88,6 +88,56 @@ RSpec.describe "Library page", type: :request do
     expect(headers).not_to include("Last edited time")
   end
 
+  it "renders a thumbnail library view with covers and document metadata" do
+    user = User.create!(email: "library-thumbnail-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Library thumbs", slug: "library-thumbs", workspace_color: "#0ea5e9")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    Page.create!(
+      workspace: workspace,
+      created_by: user,
+      title: "Creative brief",
+      icon: "🎨",
+      cover_preset_key: "gradient-cosmos",
+      created_at: Time.zone.parse("2026-04-01 10:00:00"),
+      updated_at: Time.zone.parse("2026-04-14 16:15:00")
+    )
+    Page.create!(
+      workspace: workspace,
+      created_by: user,
+      title: "Board meeting",
+      page_kind: "meeting_note",
+      icon: "🗒️"
+    )
+    Database.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch grid",
+      icon: "🚀",
+      description: "Launch milestones and owners.",
+      cover_preset_key: "gradient-lagoon",
+      created_at: Time.zone.parse("2026-04-02 09:30:00"),
+      updated_at: Time.zone.parse("2026-04-15 08:45:00")
+    )
+
+    sign_in user
+    get workspace_library_path(workspace_slug: workspace.slug), params: { view_mode: "thumbnails" }
+
+    expect(response).to have_http_status(:ok)
+    expect(active_view_mode_label(response.body)).to eq("Thumbnails")
+    expect(response.body).to include("notae-library-thumbnail-grid")
+
+    launch_card = thumbnail_card(response.body, "Launch grid")
+    meeting_card = thumbnail_card(response.body, "Board meeting")
+
+    expect(thumbnail_card_titles(response.body)).to include("Creative brief", "Board meeting", "Launch grid")
+    expect(launch_card).to be_present
+    expect(launch_card["style"]).to include("--notae-library-workspace-color: #0ea5e9")
+    expect(launch_card.text).to include("Library thumbs", "Grid", "Launch milestones and owners.", "Created", "Updated")
+    expect(launch_card.at_css(".notae-library-card-cover-fill")).to be_present
+    expect(meeting_card.text).to include("Meeting")
+  end
+
   it "renders child tabs as parent references instead of standalone documents" do
     user = User.create!(email: "library-tab-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Library tabs", slug: "library-tabs")
@@ -218,6 +268,10 @@ RSpec.describe "Library page", type: :request do
     Nokogiri::HTML(html_body).at_css(".notae-library-tab.active")&.text&.strip
   end
 
+  def active_view_mode_label(html_body)
+    Nokogiri::HTML(html_body).at_css(".notae-library-view-button.active")&.text&.strip
+  end
+
   def library_row_classes(html_body)
     Nokogiri::HTML(html_body).css(".notae-library-table tbody tr").map { |node| node["class"].to_s }
   end
@@ -231,6 +285,16 @@ RSpec.describe "Library page", type: :request do
       node.text.include?(title)
     end
     row&.text.to_s
+  end
+
+  def thumbnail_card_titles(html_body)
+    Nokogiri::HTML(html_body).css(".notae-library-card-title").map { |node| node.text.squish }
+  end
+
+  def thumbnail_card(html_body, title)
+    Nokogiri::HTML(html_body).css(".notae-library-card").find do |node|
+      node.text.include?(title)
+    end
   end
 
   def pagination_meta(html_body)

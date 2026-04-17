@@ -11848,6 +11848,35 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
   flex: 0 0 auto;
 }
 
+.notae-library-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  padding: 0.18rem;
+  border: 1px solid var(--notae-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--notae-surface-raised) 94%, transparent);
+}
+
+.notae-library-view-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.32rem 0.74rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #57534e;
+  text-decoration: none;
+}
+
+.notae-library-view-button.active,
+.notae-library-view-button:hover {
+  background: var(--notae-surface-muted);
+  color: var(--notae-text);
+}
+
 .notae-library-popover {
   position: relative;
 }
@@ -12050,6 +12079,209 @@ body.notae-theme-system .notae-favorite-toggle.is-favorited {
 .notae-library-empty {
   text-align: center;
   color: #78716c;
+}
+
+.notae-library-thumbnail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.notae-library-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--notae-border);
+  border-radius: 1rem;
+  background: var(--notae-surface-raised);
+  box-shadow: 0 14px 34px rgba(24, 24, 27, 0.06);
+  overflow: hidden;
+}
+
+.notae-library-card-link {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.notae-library-card-link:link,
+.notae-library-card-link:visited,
+.notae-library-card-link:hover,
+.notae-library-card-link:active {
+  color: inherit;
+}
+
+.notae-library-card-cover {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--notae-library-workspace-color) 14%, #fff) 0%, transparent 100%),
+    color-mix(in srgb, var(--notae-library-workspace-color) 12%, var(--notae-surface-muted) 88%);
+}
+
+.notae-library-card-workspace-flash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0.34rem;
+  background: var(--notae-library-workspace-color);
+  z-index: 2;
+}
+
+.notae-library-card-cover-image,
+.notae-library-card-cover-fill,
+.notae-library-card-cover-placeholder {
+  width: 100%;
+  height: 100%;
+}
+
+.notae-library-card-cover-image {
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.notae-library-card-cover-fill {
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.notae-library-card-cover-placeholder {
+  display: grid;
+  place-items: center;
+  gap: 0.55rem;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--notae-library-workspace-color) 30%, transparent) 0%, transparent 48%),
+    linear-gradient(155deg, color-mix(in srgb, var(--notae-library-workspace-color) 15%, #fff) 0%, color-mix(in srgb, var(--notae-library-workspace-color) 8%, var(--notae-surface-muted)) 100%);
+}
+
+.notae-library-card-cover-placeholder-icon {
+  font-size: 2rem;
+}
+
+.notae-library-card-cover-placeholder-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #57534e;
+}
+
+.notae-library-card-body {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.9rem 0.95rem 1rem;
+}
+
+.notae-library-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  font-size: 0.74rem;
+}
+
+.notae-library-card-workspace-name {
+  color: #57534e;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notae-library-card-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  background: color-mix(in srgb, var(--notae-library-workspace-color) 16%, white);
+  color: color-mix(in srgb, var(--notae-library-workspace-color) 68%, #111827);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.notae-library-card-title-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 0.55rem;
+}
+
+.notae-library-card-icon {
+  font-size: 1.15rem;
+  margin-top: 0.04rem;
+}
+
+.notae-library-card-title {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.25;
+  color: var(--notae-heading-ink);
+  overflow-wrap: anywhere;
+}
+
+.notae-library-card-favorite {
+  color: #ca8a04;
+  font-size: 0.86rem;
+  margin-top: 0.1rem;
+}
+
+.notae-library-card-description {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--notae-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notae-library-card-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+  padding-top: 0.2rem;
+  border-top: 1px solid color-mix(in srgb, var(--notae-border) 76%, transparent);
+}
+
+.notae-library-card-dates div {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.notae-library-card-dates dt {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+.notae-library-card-dates dd {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--notae-text);
+}
+
+.notae-library-empty-cards {
+  grid-column: 1 / -1;
+  border: 1px dashed var(--notae-border);
+  border-radius: 1rem;
+  padding: 2rem 1rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 92%, transparent);
 }
 
 .notae-library-pagination {
@@ -14677,6 +14909,10 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
 }
 
 @media (max-width: 1500px) {
+  .notae-library-thumbnail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .notae-shell:not(.is-ai-compact-viewport):not(.is-ai-rail-collapsed) .notae-kalendarium {
     grid-template-columns: 1fr;
   }
@@ -14713,6 +14949,10 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
 }
 
 @media (max-width: 1100px) {
+  .notae-library-thumbnail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .notae-kalendarium {
     grid-template-columns: 1fr;
   }
@@ -14760,6 +15000,19 @@ body.notae-theme-dark .notae-kalendarium-timezone-grid {
 }
 
 @media (max-width: 760px) {
+  .notae-library-thumbnail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notae-library-view-toggle {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .notae-library-view-button {
+    flex: 1 1 0;
+  }
+
   .notae-kalendarium-head {
     gap: 0.62rem;
   }
