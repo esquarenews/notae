@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Notae Google Meet Transcript",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Capture Google Meet captions and send the transcript to Notae.",
   "permissions": [
     "clipboardRead",

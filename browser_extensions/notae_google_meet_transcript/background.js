@@ -1,6 +1,6 @@
 const SETTINGS_KEY = "notaeMeetSettings"
 const CAPTURES_KEY = "notaeMeetCaptures"
-const EXTENSION_VERSION = "0.1.0"
+const EXTENSION_VERSION = "0.1.2"
 const SESSION_CREATE_RETRY_MS = 10_000
 
 function meetTabUrl(url) {

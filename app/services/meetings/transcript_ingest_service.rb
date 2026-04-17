@@ -1,6 +1,49 @@
 module Meetings
   class TranscriptIngestService
     class Error < StandardError; end
+    INTERFACE_TEXT_ERROR = "Transcript only contained Google Meet interface text. Turn captions on and confirm spoken captions are visible before syncing."
+    TEXT_STRIP_PATTERNS = [
+      /^(?:closed_caption|live captions)\b[:.\s-]*/i,
+      /^(?:you\s+)?on live captions are turned on\.?\s*/i,
+      /^(?:live\s+)?captions are turned on\.?\s*/i,
+      /^(?:live\s+)?captions are turned off\.?\s*/i,
+      /^arrow_downward\s*jump to bottom\.?\s*/i,
+      /^jump to bottom\.?\s*/i
+    ].freeze
+
+    SYSTEM_TRANSCRIPT_PATTERNS = [
+      /your meeting'?s ready/i,
+      /closed_caption/i,
+      /live captions/i,
+      /meeting details/i,
+      /or share this joining info with others you want in the meeting/i,
+      /join with google meet/i,
+      /meet\.google\.com\/[a-z0-9-]+/i,
+      /dial-?in:\s*/i,
+      /\bpin:\s*\d/i,
+      /jump to bottom/i,
+      /arrow_downward/i,
+      /more phone numbers/i,
+      /share full details/i,
+      /joined as /i,
+      /turn on captions/i,
+      /captions are (?:on|off)/i,
+      /you (?:left|joined) the meeting/i
+    ].freeze
+
+    SYSTEM_SPEAKER_PATTERNS = [
+      /\Acaptions?\z/i,
+      /\Aclosed_caption\z/i,
+      /\Agoogle meet\z/i,
+      /\Ameeting details\z/i,
+      /\Apresenting\z/i,
+      /\Aclose\z/i,
+      /\Aperson_add\z/i,
+      /\Acontent_copy\z/i,
+      /\Adial-?in\z/i,
+      /\Acall\z/i,
+      /\Ashare\z/i
+    ].freeze
 
     TurnInput = Struct.new(
       :position,
@@ -20,7 +63,11 @@ module Meetings
 
     def ingest!(utterances:, transcript_text: nil, metadata: {})
       normalized_turns = normalize_turns(Array(utterances), transcript_text)
+      normalized_turns = collapse_incremental_turns(normalized_turns)
       raise Error, "Transcript is empty" if normalized_turns.empty?
+      normalized_turns = filter_system_turns(normalized_turns)
+      raise Error, INTERFACE_TEXT_ERROR if normalized_turns.empty?
+      validate_transcript_quality!(normalized_turns)
 
       resolved_turns = Meetings::SpeakerResolutionService.new(session: session).resolve(turns: normalized_turns)
 
@@ -63,12 +110,13 @@ module Meetings
         next unless utterance.is_a?(Hash)
 
         text = utterance["text"].to_s.strip.presence || utterance[:text].to_s.strip.presence
+        text = clean_transcript_text(text)
         next if text.blank?
 
         started_ms = integer_value(utterance, :started_ms, index * 1_000)
         ended_ms = [ integer_value(utterance, :ended_ms, started_ms + 1_000), started_ms + 250 ].max
         speaker_key = string_value(utterance, :speaker_key).presence || "S#{index + 1}"
-        speaker_name = string_value(utterance, :speaker_name).presence
+        speaker_name = clean_speaker_name(string_value(utterance, :speaker_name).presence)
         confidence = float_value(utterance, :confidence, 0.72)
 
         TurnInput.new(
@@ -84,6 +132,7 @@ module Meetings
       return turns if turns.any?
 
       fallback_text = transcript_text.to_s.strip
+      fallback_text = clean_transcript_text(fallback_text)
       return [] if fallback_text.blank?
 
       [ TurnInput.new(
@@ -97,12 +146,97 @@ module Meetings
       ) ]
     end
 
+    def filter_system_turns(turns)
+      turns.reject { |turn| system_turn?(turn) }
+    end
+
+    def collapse_incremental_turns(turns)
+      turns.each_with_object([]) do |turn, collapsed|
+        previous = collapsed.last
+        if previous && same_speaker?(previous, turn) && incremental_extension?(previous.text, turn.text)
+          previous.text = longer_variant(previous.text, turn.text)
+          previous.ended_ms = [ previous.ended_ms.to_i, turn.ended_ms.to_i ].max
+          previous.confidence = [ previous.confidence.to_f, turn.confidence.to_f ].max
+          next
+        end
+
+        collapsed << TurnInput.new(**turn.to_h)
+      end
+    end
+
     def transcript_for(turns)
       turns.map do |turn|
         timestamp = MeetingSession.milliseconds_to_clock(turn.started_ms.to_i)
         speaker = turn.speaker_name.to_s.presence || turn.speaker_key.to_s
         "[#{timestamp}] #{speaker}: #{turn.text.to_s.strip}"
       end.join("\n")
+    end
+
+    def validate_transcript_quality!(turns)
+      return if turns.any? { |turn| !system_turn?(turn) }
+
+      raise Error, INTERFACE_TEXT_ERROR
+    end
+
+    def system_turn?(turn)
+      speaker_name = turn.speaker_name.to_s.strip
+      text = clean_transcript_text(turn.text.to_s)
+      combined = [ speaker_name, text ].reject(&:blank?).join(": ")
+
+      SYSTEM_SPEAKER_PATTERNS.any? { |pattern| pattern.match?(speaker_name) } ||
+        SYSTEM_TRANSCRIPT_PATTERNS.any? { |pattern| pattern.match?(combined) }
+    end
+
+    def clean_transcript_text(value)
+      text = value.to_s.strip
+      previous = nil
+
+      while text.present? && text != previous
+        previous = text
+        TEXT_STRIP_PATTERNS.each do |pattern|
+          text = text.sub(pattern, "").strip
+        end
+      end
+
+      text
+        .gsub(/arrow_downward\s*jump to bottom/i, "")
+        .gsub(/\bclosed_caption\b/i, "")
+        .strip
+    end
+
+    def clean_speaker_name(value)
+      speaker_name = value.to_s.strip
+      return nil if speaker_name.blank?
+
+      speaker_name
+    end
+
+    def same_speaker?(left, right)
+      left_name = left.speaker_name.to_s.strip
+      right_name = right.speaker_name.to_s.strip
+      return left_name == right_name if left_name.present? && right_name.present?
+
+      left.speaker_key.to_s == right.speaker_key.to_s
+    end
+
+    def incremental_extension?(left, right)
+      left_text = canonical_text(left)
+      right_text = canonical_text(right)
+      return false if left_text.blank? || right_text.blank?
+
+      right_text.start_with?(left_text) || left_text.start_with?(right_text)
+    end
+
+    def longer_variant(left, right)
+      left_text = left.to_s.strip
+      right_text = right.to_s.strip
+      return left_text if left_text.length >= right_text.length
+
+      right_text
+    end
+
+    def canonical_text(value)
+      value.to_s.downcase.gsub(/[^a-z0-9\s]/, " ").gsub(/\s+/, " ").strip
     end
 
     def string_value(hash, key)

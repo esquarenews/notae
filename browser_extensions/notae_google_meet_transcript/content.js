@@ -82,12 +82,12 @@ class NotaeMeetTranscriptCollector {
   extractEntries() {
     const signatures = new Set()
     const entries = []
-    const regions = Array.from(document.querySelectorAll('[aria-live="polite"], [aria-live="assertive"]'))
+    const regions = this.captionRegions()
 
     for (const region of regions) {
-      if (!this.visible(region)) continue
+      if (!this.visible(region) || this.interactiveElement(region)) continue
 
-      const candidates = [ region, ...Array.from(region.querySelectorAll("div, span, p")) ]
+      const candidates = this.entryCandidates(region)
       for (const candidate of candidates) {
         const entry = this.entryFromElement(candidate)
         if (!entry) continue
@@ -103,13 +103,51 @@ class NotaeMeetTranscriptCollector {
     return entries
   }
 
-  entryFromElement(element) {
-    if (!(element instanceof HTMLElement) || !this.visible(element)) return null
+  entryCandidates(region) {
+    const descendants = Array.from(region.querySelectorAll("div, p, li"))
+    const candidates = descendants.filter((element) => this.atomicEntryCandidate(element))
+
+    return candidates.length > 0 ? candidates : [ region ]
+  }
+
+  atomicEntryCandidate(element) {
+    if (!(element instanceof HTMLElement) || !this.visible(element) || this.interactiveElement(element)) return false
 
     const rawText = this.normalizeMultilineText(element.innerText || element.textContent || "")
-    if (!rawText) return null
+    if (!rawText || this.systemText(rawText)) return false
 
-    const lines = rawText.split("\n").map((line) => line.trim()).filter(Boolean)
+    const childLines = this.childTextLines(element)
+    if (childLines.length >= 2 && childLines.length <= 4 && this.plausibleSpeaker(childLines[0])) {
+      return childLines.slice(1).some((line) => this.plausibleTranscriptText(this.stripSystemFragments(line)))
+    }
+
+    return /^([^:\n]{1,60}):\s+(.+)$/.test(rawText)
+  }
+
+  captionRegions() {
+    const selector = [
+      '[aria-live="polite"]',
+      '[aria-live="assertive"]',
+      '[role="log"]',
+      '[role="status"]',
+      '[aria-label*="caption" i]',
+      '[aria-label*="subtitle" i]',
+      '[class*="caption" i]',
+      '[class*="subtitle" i]'
+    ].join(", ")
+
+    return this.uniqueElements(Array.from(document.querySelectorAll(selector)))
+  }
+
+  entryFromElement(element) {
+    if (!(element instanceof HTMLElement) || !this.visible(element) || this.interactiveElement(element)) return null
+
+    const rawText = this.stripSystemFragments(this.normalizeMultilineText(element.innerText || element.textContent || ""))
+    if (!rawText || this.systemText(rawText)) return null
+
+    const childLines = this.childTextLines(element).map((line) => this.stripSystemFragments(line)).filter(Boolean)
+    const rawLines = rawText.split("\n").map((line) => line.trim()).filter(Boolean)
+    const lines = childLines.length >= 2 && this.plausibleSpeaker(childLines[0]) ? childLines : rawLines
     let speakerName = ""
     let text = ""
 
@@ -124,6 +162,8 @@ class NotaeMeetTranscriptCollector {
       text = match[2].trim()
     }
 
+    speakerName = this.normalizeInlineText(speakerName)
+    text = this.stripSystemFragments(text)
     text = this.normalizeInlineText(text)
     if (!this.plausibleTranscriptText(text)) return null
 
@@ -221,18 +261,89 @@ class NotaeMeetTranscriptCollector {
     return rect.width > 0 && rect.height > 0
   }
 
+  interactiveElement(element) {
+    return Boolean(element.closest('button, a, input, textarea, select, [role="button"], [role="menuitem"]'))
+  }
+
+  childTextLines(element) {
+    return this.uniqueStrings(
+      Array.from(element.children)
+        .map((child) => this.normalizeInlineText(child.innerText || child.textContent || ""))
+        .filter(Boolean)
+    )
+  }
+
   plausibleSpeaker(value) {
     const text = value.trim()
     if (text.length === 0 || text.length > 60) return false
-    if (/captions?|google meet|meeting details|presenting/i.test(text)) return false
+    if (text.split(/\s+/).length > 4) return false
+    if (text.includes("_")) return false
+    if (this.systemSpeakerText(text) || this.systemText(text)) return false
     return /[A-Za-z]/.test(text)
   }
 
   plausibleTranscriptText(value) {
     const text = value.trim()
     if (text.length < 2 || text.length > 320) return false
-    if (/turn on captions|you left the meeting|meeting details/i.test(text)) return false
+    if (this.systemText(text)) return false
     return /[A-Za-z0-9]/.test(text)
+  }
+
+  systemSpeakerText(value) {
+    return /^(captions?|closed_caption|google meet|meeting details|presenting|close|person_add|content_copy|dial-?in|call|share|arrow_downward)$/i.test(value.trim())
+  }
+
+  systemText(value) {
+    const text = this.normalizeInlineText(value).toLowerCase()
+    if (!text) return false
+
+    if (/meet\.google\.com\/[a-z0-9-]+/i.test(text)) return true
+    if (/dial-?in:\s*/i.test(text)) return true
+    if (/\bpin:\s*\d/i.test(text)) return true
+
+    return [
+      "closed_caption",
+      "live captions",
+      "your meeting's ready",
+      "meeting details",
+      "or share this joining info with others you want in the meeting",
+      "join with google meet",
+      "jump to bottom",
+      "arrow_downward",
+      "more phone numbers",
+      "share full details",
+      "joined as ",
+      "turn on captions",
+      "captions are on",
+      "captions are off",
+      "you left the meeting",
+      "you joined the meeting"
+    ].some((fragment) => text.includes(fragment))
+  }
+
+  stripSystemFragments(value) {
+    let text = this.normalizeInlineText(String(value || ""))
+    const prefixPatterns = [
+      /^(?:closed_caption|live captions)\b[:.\s-]*/i,
+      /^(?:you\s+)?on live captions are turned on\.?\s*/i,
+      /^(?:live\s+)?captions are turned on\.?\s*/i,
+      /^(?:live\s+)?captions are turned off\.?\s*/i,
+      /^arrow_downward\s*jump to bottom\.?\s*/i,
+      /^jump to bottom\.?\s*/i
+    ]
+
+    let previous = null
+    while (text && text !== previous) {
+      previous = text
+      for (const pattern of prefixPatterns) {
+        text = text.replace(pattern, "").trim()
+      }
+    }
+
+    return text
+      .replace(/arrow_downward\s*jump to bottom/ig, "")
+      .replace(/\bclosed_caption\b/ig, "")
+      .trim()
   }
 
   normalizeInlineText(value) {
@@ -258,6 +369,33 @@ class NotaeMeetTranscriptCollector {
     if (normalizedLeft.startsWith(normalizedRight)) return normalizedLeft
 
     return normalizedRight
+  }
+
+  uniqueElements(elements) {
+    const seen = new Set()
+    const unique = []
+
+    for (const element of elements) {
+      if (!(element instanceof HTMLElement) || seen.has(element)) continue
+      seen.add(element)
+      unique.push(element)
+    }
+
+    return unique
+  }
+
+  uniqueStrings(values) {
+    const seen = new Set()
+    const unique = []
+
+    for (const value of values) {
+      const normalized = this.normalizeInlineText(String(value || ""))
+      if (!normalized || seen.has(normalized)) continue
+      seen.add(normalized)
+      unique.push(normalized)
+    }
+
+    return unique
   }
 }
 

@@ -82,4 +82,86 @@ RSpec.describe Meetings::TranscriptIngestService do
     ])
     expect(enqueued_jobs.map { |job| job[:job] }).to include(Meetings::SummarizeSessionJob)
   end
+
+  it "rejects Google Meet interface text masquerading as transcript" do
+    session = build_session(suffix: "noise")
+
+    expect {
+      described_class.new(session: session, actor: session.updated_by).ingest!(
+        utterances: [
+          {
+            speaker_key: "S1",
+            speaker_name: "Your meeting's ready",
+            text: "Or share this joining info with others you want in the meeting meet.google.com/abc-defg-hij",
+            started_ms: 0,
+            ended_ms: 1_200,
+            confidence: 0.7
+          },
+          {
+            speaker_key: "S2",
+            speaker_name: "call",
+            text: "More phone numbers",
+            started_ms: 1_300,
+            ended_ms: 2_500,
+            confidence: 0.7
+          }
+        ]
+      )
+    }.to raise_error(
+      Meetings::TranscriptIngestService::Error,
+      "Transcript only contained Google Meet interface text. Turn captions on and confirm spoken captions are visible before syncing."
+    )
+
+    session.reload
+    expect(session.meeting_utterances).to be_empty
+    expect(session.transcript_text).to be_blank
+    expect(enqueued_jobs.map { |job| job[:job] }).not_to include(Meetings::SummarizeSessionJob)
+  end
+
+  it "strips caption chrome and collapses incremental caption growth into the final utterance" do
+    session = build_session(suffix: "incremental")
+
+    described_class.new(session: session, actor: session.updated_by).ingest!(
+      utterances: [
+        {
+          speaker_key: "S1",
+          speaker_name: "closed_caption",
+          text: "Live captions",
+          started_ms: 0,
+          ended_ms: 300,
+          confidence: 0.7
+        },
+        {
+          speaker_key: "S2",
+          speaker_name: "You",
+          text: "On live captions are turned on.",
+          started_ms: 1_000,
+          ended_ms: 1_400,
+          confidence: 0.8
+        },
+        {
+          speaker_key: "S2",
+          speaker_name: "You",
+          text: "On live captions are turned on. What was the cause of the success of Heroku?",
+          started_ms: 1_500,
+          ended_ms: 2_100,
+          confidence: 0.82
+        },
+        {
+          speaker_key: "S2",
+          speaker_name: "You",
+          text: "On live captions are turned on. What was the cause of the success of Heroku? Was it because it was something completely unique?",
+          started_ms: 2_200,
+          ended_ms: 3_300,
+          confidence: 0.84
+        }
+      ]
+    )
+
+    session.reload
+    expect(session.meeting_utterances.ordered.pluck(:speaker_name, :text)).to eq([
+      [ "You", "What was the cause of the success of Heroku? Was it because it was something completely unique?" ]
+    ])
+    expect(session.transcript_text).to include("You: What was the cause of the success of Heroku? Was it because it was something completely unique?")
+  end
 end

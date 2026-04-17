@@ -187,4 +187,47 @@ RSpec.describe "API V1 Meetings sessions", type: :request do
     expect(session.reload.status).to eq("cancelled")
     expect(session.error_message).to eq("Cancelled from Google Meet extension.")
   end
+
+  it "rejects browser extension transcript payloads that only contain Meet interface text" do
+    user = User.create!(email: "api-meetings-extension-noise@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API meetings extension noise", slug: "api-meetings-extension-noise")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    session = MeetingSession.create!(
+      workspace: workspace,
+      title: "Noisy browser extension session",
+      capture_mode: "browser_extension",
+      provider: "google_meet",
+      status: "recording",
+      created_by: user,
+      updated_by: user
+    )
+    token = ApiToken.create!(user: user, name: "Meetings extension noise token")
+
+    post "/api/v1/workspaces/#{workspace.slug}/meetings/sessions/#{session.id}/ingest_transcript",
+         params: {
+           meeting_session: {
+             utterances: [
+               {
+                 speaker_key: "S1",
+                 speaker_name: "Your meeting's ready",
+                 text: "Or share this joining info with others you want in the meeting meet.google.com/ext-api-test"
+               },
+               {
+                 speaker_key: "S2",
+                 speaker_name: "call",
+                 text: "More phone numbers"
+               }
+             ]
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(422)
+    expect(json_body.dig("error", "code")).to eq("invalid_transcript")
+    expect(json_body.dig("error", "message")).to eq(
+      "Transcript only contained Google Meet interface text. Turn captions on and confirm spoken captions are visible before syncing."
+    )
+    expect(session.reload.meeting_utterances).to be_empty
+    expect(enqueued_jobs.map { |job| job[:job] }).not_to include(Meetings::SummarizeSessionJob)
+  end
 end
