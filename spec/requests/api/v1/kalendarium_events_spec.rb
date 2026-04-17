@@ -96,4 +96,111 @@ RSpec.describe "API V1 Kalendarium events", type: :request do
     titles = json_body.fetch("data").map { |row| row.fetch("title") }
     expect(titles).to eq([ "In range" ])
   end
+
+  it "creates a calendar event on a writable calendar" do
+    owner = User.create!(email: "api-kal-events-create@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Kal events create", slug: "api-kal-events-create")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Primary",
+      color_hex: "#3B82F6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local"
+    )
+    token = ApiToken.create!(user: owner, name: "Kal create API")
+
+    post "/api/v1/workspaces/#{workspace.slug}/kalendarium/events",
+         params: {
+           kalendarium_event: {
+             kalendarium_calendar_id: calendar.id,
+             title: "Board review",
+             description: "Review the Q2 board pack",
+             location: "Melbourne HQ",
+             starts_at: "2026-04-20T10:30:00+10:00",
+             ends_at: "2026-04-20T11:30:00+10:00",
+             reminder_offsets_minutes: [ 10, 30 ]
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    payload = json_body.fetch("data")
+    event_payload = payload.fetch("event")
+    event = KalendariumEvent.find(event_payload.fetch("id"))
+
+    expect(event.title).to eq("Board review")
+    expect(event.description).to eq("Review the Q2 board pack")
+    expect(event.location).to eq("Melbourne HQ")
+    expect(event.reminder_offsets_minutes).to eq([ 10, 30 ])
+    expect(event.starts_at_utc.iso8601).to eq("2026-04-20T00:30:00Z")
+    expect(event.ends_at_utc.iso8601).to eq("2026-04-20T01:30:00Z")
+    expect(payload.fetch("url")).to include("/w/#{workspace.slug}/kalendarium")
+  end
+
+  it "normalizes all-day events using the supplied time zone" do
+    owner = User.create!(email: "api-kal-events-all-day@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Kal events all day", slug: "api-kal-events-all-day")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Primary",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
+    token = ApiToken.create!(user: owner, name: "Kal all-day API")
+
+    post "/api/v1/workspaces/#{workspace.slug}/kalendarium/events",
+         params: {
+           kalendarium_event: {
+             kalendarium_calendar_id: calendar.id,
+             title: "Offsite",
+             starts_at: "2026-04-20",
+             ends_at: "2026-04-20",
+             time_zone: "Australia/Melbourne",
+             all_day: true
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    event = KalendariumEvent.find(json_body.dig("data", "event", "id"))
+
+    expect(event.all_day).to be(true)
+    expect(event.starts_at_utc.iso8601).to eq("2026-04-19T14:00:00Z")
+    expect(event.ends_at_utc.iso8601).to eq("2026-04-20T13:59:59Z")
+  end
+
+  it "rejects event creation on a read-only calendar" do
+    owner = User.create!(email: "api-kal-events-read-only@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Kal events read only", slug: "api-kal-events-read-only")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Read only",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "local",
+      read_only: true
+    )
+    token = ApiToken.create!(user: owner, name: "Kal read-only API")
+
+    post "/api/v1/workspaces/#{workspace.slug}/kalendarium/events",
+         params: {
+           kalendarium_event: {
+             kalendarium_calendar_id: calendar.id,
+             title: "Should fail",
+             starts_at: "2026-04-20T10:30:00Z",
+             ends_at: "2026-04-20T11:30:00Z"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json_body.dig("error", "code")).to eq("forbidden")
+  end
 end

@@ -6,8 +6,15 @@ module Api
 
         def index
           calendars = policy_scope(KalendariumCalendar).for_workspace(workspace).order(:name)
+          calendars = calendars.enabled.user_writable if writable_only?
 
           render json: { data: Api::V1::Serializers::KalendariumCalendarSerializer.render_collection(calendars) }, status: :ok
+        end
+
+        private
+
+        def writable_only?
+          ActiveModel::Type::Boolean.new.cast(params[:writable])
         end
       end
     end

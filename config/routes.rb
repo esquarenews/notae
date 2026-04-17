@@ -243,7 +243,7 @@ Rails.application.routes.draw do
         resources :databases, only: %i[index show create update]
         namespace :kalendarium do
           resources :calendars, only: :index
-          resources :events, only: :index
+          resources :events, only: %i[index create]
           resources :write_proposals, only: :create do
             member do
               post :confirm

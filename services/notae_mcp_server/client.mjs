@@ -78,9 +78,44 @@ export class NotaeApiClient {
     return databases.filter((database) => database.name?.toLowerCase().includes(pattern));
   }
 
-  async listCalendars({ workspaceSlug }) {
-    const payload = await this.request(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/kalendarium/calendars`);
+  async listCalendars({ workspaceSlug, writable = true } = {}) {
+    const payload = await this.request(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/kalendarium/calendars`, {
+      query: compactQuery({ writable: writable ? "1" : undefined })
+    });
     return payload.data ?? [];
+  }
+
+  async createCalendarEvent({
+    workspaceSlug,
+    calendarId,
+    title,
+    startsAt,
+    endsAt,
+    timeZone,
+    allDay,
+    description,
+    location,
+    meetingJoinUrl,
+    reminderOffsetsMinutes
+  }) {
+    const payload = await this.request(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/kalendarium/events`, {
+      method: "POST",
+      body: {
+        kalendarium_event: compactObject({
+          kalendarium_calendar_id: calendarId,
+          title,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          time_zone: timeZone,
+          all_day: allDay,
+          description,
+          location,
+          meeting_join_url: meetingJoinUrl,
+          reminder_offsets_minutes: reminderOffsetsMinutes
+        })
+      }
+    });
+    return payload.data;
   }
 
   async listAgentActions({ workspaceSlug, status, limit } = {}) {

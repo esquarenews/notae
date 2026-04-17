@@ -10,6 +10,7 @@ This repo now includes a local MCP stdio server that lets Codex connect to Notae
 - creates a new page from Markdown
 - appends Markdown to an existing page
 - lists task lists and calendars for approval destinations
+- creates calendar events directly in Kalendārium
 - creates agent-action drafts in Notae
 - approves agent-action drafts when the API token belongs to an approver
 
@@ -73,6 +74,7 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
 - `append_markdown_to_page`
 - `list_task_lists`
 - `list_calendars`
+- `create_calendar_event`
 - `list_agent_actions`
 - `create_agent_action`
 - `approve_agent_action`
@@ -81,6 +83,7 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
 
 - page resources are also exposed through the MCP resource template:
   - `notae://workspace/{workspaceSlug}/pages/{pageId}.md`
+- direct calendar event creation requires a writable calendar in the target workspace
 - task drafts still need a destination task list at approval time
 - calendar drafts still need a destination calendar at approval time
 - the MCP server does not bypass Notae permissions or workspace policy

@@ -221,7 +221,7 @@ server.registerTool(
   "list_calendars",
   {
     title: "List Notae Calendars",
-    description: "List writable Notae calendars in a workspace. Use this before approving calendar drafts.",
+    description: "List writable Notae calendars in a workspace. Use this before approving calendar drafts or creating events.",
     inputSchema: {
       workspace_slug: z.string()
     },
@@ -237,6 +237,60 @@ server.registerTool(
     return successResult({
       text: renderCalendars(calendars),
       data: { calendars }
+    });
+  })
+);
+
+server.registerTool(
+  "create_calendar_event",
+  {
+    title: "Create Notae Calendar Event",
+    description: "Create a Notae calendar event directly on a writable calendar in a workspace.",
+    inputSchema: {
+      workspace_slug: z.string(),
+      calendar_id: z.string(),
+      title: z.string(),
+      starts_at: z.string(),
+      ends_at: z.string(),
+      time_zone: z.string().optional(),
+      all_day: z.boolean().optional(),
+      description: z.string().optional(),
+      location: z.string().optional(),
+      meeting_join_url: z.string().optional(),
+      reminder_offsets_minutes: z.array(z.number().int().min(0)).optional()
+    },
+    outputSchema: {
+      event: z.object({
+        id: z.string(),
+        calendar_id: z.string(),
+        title: z.string(),
+        starts_at_utc: z.string().nullable().optional(),
+        ends_at_utc: z.string().nullable().optional(),
+        all_day: z.boolean(),
+        status: z.string(),
+        visibility: z.string()
+      }),
+      url: z.string().optional(),
+      warning: z.string().optional()
+    }
+  },
+  async ({ workspace_slug: workspaceSlug, calendar_id: calendarId, title, starts_at: startsAt, ends_at: endsAt, time_zone: timeZone, all_day: allDay, description, location, meeting_join_url: meetingJoinUrl, reminder_offsets_minutes: reminderOffsetsMinutes }) => runTool(async () => {
+    const result = await client.createCalendarEvent({
+      workspaceSlug,
+      calendarId,
+      title,
+      startsAt,
+      endsAt,
+      timeZone,
+      allDay,
+      description,
+      location,
+      meetingJoinUrl,
+      reminderOffsetsMinutes
+    });
+    return successResult({
+      text: renderCreatedCalendarEvent(result),
+      data: result
     });
   })
 );
@@ -385,6 +439,20 @@ function renderTaskLists(taskLists) {
 function renderCalendars(calendars) {
   if (!calendars.length) return "No calendars found.";
   return calendars.map((calendar) => `- ${calendar.name} (${calendar.id})`).join("\n");
+}
+
+function renderCreatedCalendarEvent(result) {
+  const event = result?.event;
+  if (!event) return "Created calendar event.";
+
+  const lines = [
+    `Created event "${event.title}" (${event.id}) on calendar ${event.calendar_id}.`,
+    event.starts_at_utc && event.ends_at_utc ? `Time: ${event.starts_at_utc} -> ${event.ends_at_utc}` : null,
+    result?.warning ? `Warning: ${result.warning}` : null,
+    result?.url ? `Open: ${result.url}` : null
+  ].filter(Boolean);
+
+  return lines.join("\n");
 }
 
 function renderAgentActions(agentActions) {

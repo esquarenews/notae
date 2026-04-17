@@ -91,3 +91,59 @@ test("listTaskLists filters client-side when q is provided", async () => {
 
   assert.deepEqual(taskLists, [ { id: "1", name: "Task Inbox" } ]);
 });
+
+test("createCalendarEvent posts structured event data", async () => {
+  let receivedRequest = null;
+  const client = new NotaeApiClient({
+    baseUrl: "https://notae.example.com",
+    token: "secret-token",
+    fetchImpl: async (url, options) => {
+      receivedRequest = { url: url.toString(), options };
+      return new Response(JSON.stringify({
+        data: {
+          event: {
+            id: "event-1",
+            calendar_id: "calendar-1",
+            title: "Board review",
+            starts_at_utc: "2026-04-20T00:30:00Z",
+            ends_at_utc: "2026-04-20T01:30:00Z",
+            all_day: false,
+            status: "confirmed",
+            visibility: "default"
+          },
+          url: "/w/test-space/kalendarium?view=day"
+        }
+      }), {
+        status: 201,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  const result = await client.createCalendarEvent({
+    workspaceSlug: "test-space",
+    calendarId: "calendar-1",
+    title: "Board review",
+    startsAt: "2026-04-20T10:30:00+10:00",
+    endsAt: "2026-04-20T11:30:00+10:00",
+    description: "Review the Q2 board pack",
+    location: "Melbourne",
+    reminderOffsetsMinutes: [ 10, 30 ]
+  });
+
+  assert.equal(receivedRequest.url, "https://notae.example.com/api/v1/workspaces/test-space/kalendarium/events");
+  assert.equal(receivedRequest.options.method, "POST");
+  assert.deepEqual(JSON.parse(receivedRequest.options.body), {
+    kalendarium_event: {
+      kalendarium_calendar_id: "calendar-1",
+      title: "Board review",
+      starts_at: "2026-04-20T10:30:00+10:00",
+      ends_at: "2026-04-20T11:30:00+10:00",
+      description: "Review the Q2 board pack",
+      location: "Melbourne",
+      reminder_offsets_minutes: [ 10, 30 ]
+    }
+  });
+  assert.equal(result.event.id, "event-1");
+  assert.equal(result.url, "/w/test-space/kalendarium?view=day");
+});
