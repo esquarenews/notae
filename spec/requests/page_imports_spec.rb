@@ -87,6 +87,36 @@ RSpec.describe "Page imports", type: :request do
     expect(ordered_ids).to eq([ first_block.id, imported_block.id, second_block.id ])
   end
 
+  it "keeps multi-file imports in the order they were uploaded after the selected block" do
+    owner = User.create!(email: "page-import-multi-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page import multi", slug: "page-import-multi")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Multi import note")
+    first_block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph", content_json: paragraph_content("First"))
+    second_block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph", content_json: paragraph_content("Second"))
+    sign_in owner
+
+    first_markdown = uploaded_file("one.md", "First imported paragraph", "text/markdown")
+    second_markdown = uploaded_file("two.md", "Second imported paragraph", "text/markdown")
+
+    post import_page_path(workspace_slug: workspace.slug, id: page.id),
+         params: {
+           return_to: page_path(workspace_slug: workspace.slug, id: page.id),
+           import: {
+             insert_after_id: first_block.id,
+             files: [ first_markdown, second_markdown ]
+           }
+         }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+
+    imported_blocks = page.blocks.active.where.not(id: [ first_block.id, second_block.id ]).ordered.to_a
+    ordered_ids = page.blocks.active.roots.ordered.pluck(:id)
+
+    expect(ordered_ids).to eq([ first_block.id, imported_blocks[0].id, imported_blocks[1].id, second_block.id ])
+    expect(imported_blocks.map(&:search_text)).to eq([ "First imported paragraph", "Second imported paragraph" ])
+  end
+
   it "keeps csv imports on the workspace import flow" do
     owner = User.create!(email: "page-import-csv-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Page import csv", slug: "page-import-csv")

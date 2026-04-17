@@ -105,20 +105,35 @@ module Pages
         end
 
         blocks = document.blocks.presence || [ default_block_payload ]
-        blocks.each do |block_payload|
-          insert_block!(
-            block_type: block_payload.fetch(:block_type).to_s,
-            content_json: block_payload.fetch(:content_json)
-          )
-        end
+        inserted_blocks = Pages::InsertBlocksService.call(
+          page: page,
+          workspace: workspace,
+          user: user,
+          blocks: blocks,
+          target_parent_id: target_parent_id,
+          target_index: next_index
+        )
+        imported_blocks.concat(inserted_blocks)
+        self.next_index += inserted_blocks.size
       end
     end
 
     def import_media_file(uploaded_file)
-      block = insert_block!(
-        block_type: block_type_for_media(uploaded_file),
-        content_json: Block::DEFAULT_CONTENT.deep_dup
-      )
+      block = Pages::InsertBlocksService.call(
+        page: page,
+        workspace: workspace,
+        user: user,
+        blocks: [
+          {
+            block_type: block_type_for_media(uploaded_file),
+            content_json: Block::DEFAULT_CONTENT.deep_dup
+          }
+        ],
+        target_parent_id: target_parent_id,
+        target_index: next_index
+      ).first
+      self.next_index += 1
+      imported_blocks << block
       block.asset.attach(uploaded_file)
       block.touch
     end
@@ -129,26 +144,6 @@ module Pages
       return "video" if content_type.start_with?("video/")
 
       "file"
-    end
-
-    def insert_block!(block_type:, content_json:)
-      block = page.blocks.create!(
-        workspace: workspace,
-        created_by: user,
-        parent_block: target_parent,
-        block_type: block_type,
-        content_json: content_json
-      )
-
-      Blocks::ReorderService.call(
-        block: block,
-        target_parent_id: target_parent_id,
-        target_index: next_index
-      )
-
-      self.next_index += 1
-      imported_blocks << block
-      block
     end
 
     def default_block_payload

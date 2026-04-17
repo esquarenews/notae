@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+
+import "../services/notae_mcp_server/server.mjs";

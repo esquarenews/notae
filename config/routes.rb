@@ -222,9 +222,22 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      resources :workspaces, only: :index
       scope "workspaces/:workspace_slug" do
         resources :pages, only: %i[index show create update] do
+          collection do
+            post :import_markdown, to: "page_documents#create"
+          end
+          member do
+            get :markdown, to: "page_documents#show"
+            post :append_markdown, to: "page_documents#append"
+          end
           resources :blocks, only: %i[index show create update]
+        end
+        resources :agent_actions, only: %i[index show create] do
+          member do
+            post :approve
+          end
         end
         resources :databases, only: %i[index show create update]
         namespace :kalendarium do

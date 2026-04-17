@@ -1,0 +1,14 @@
+{
+  "name": "notae-mcp-server",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.19.1",
+    "zod": "^3.25.76"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test client.test.mjs",
+    "check": "node --check server.mjs && node --check client.mjs"
+  }
+}

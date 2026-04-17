@@ -90,4 +90,25 @@ RSpec.describe "API V1 Pages", type: :request do
     expect(response).to have_http_status(:ok)
     expect(Page.find(created_page_id).title).to eq("Updated from API")
   end
+
+  it "supports title and page-kind filtering for page discovery" do
+    owner = User.create!(email: "api-pages-filter-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Pages Filter", slug: "api-pages-filter")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    token = ApiToken.create!(user: owner, name: "Owner filter token")
+
+    Page.create!(workspace: workspace, created_by: owner, title: "Kickoff notes", page_kind: "meeting_note")
+    Page.create!(workspace: workspace, created_by: owner, title: "Product brief", page_kind: "nota")
+    Page.create!(workspace: workspace, created_by: owner, title: "Kickoff checklist", page_kind: "nota")
+
+    get "/api/v1/workspaces/#{workspace.slug}/pages",
+        params: { q: "kick", page_kind: "meeting_note", limit: 5 },
+        headers: auth_headers(token)
+
+    expect(response).to have_http_status(:ok)
+    payload = json_body.fetch("data")
+
+    expect(payload.map { |entry| entry.fetch("title") }).to eq([ "Kickoff notes" ])
+    expect(payload.first.fetch("permission_mode")).to eq("shared_to_workspace")
+  end
 end
