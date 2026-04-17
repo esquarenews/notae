@@ -37,6 +37,8 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include("const shouldPollImmediately = immediate && !this.agentUpdateBooting")
     expect(source).to include("this.syncAgentUpdatePolling()")
     expect(source).to include("showAgentToast(count)")
+    expect(source).to include("statusBarAvailable()")
+    expect(source).to include("document.querySelector(\".notae-shell-status-bar\")")
     expect(source).to include('const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"')
     expect(source).to include("this.preference(AI_RAIL_COLLAPSED_PREFERENCE_KEY, false)")
     expect(source).to match(/window\.setTimeout\(\(\) => \{\s*this\.dismissCurrentAgentToast\(\)/m)

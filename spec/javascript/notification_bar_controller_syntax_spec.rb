@@ -19,6 +19,7 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
   it "updates the shell clock and persists dismiss and snooze state for alerts" do
     source = Rails.root.join("app/javascript/controllers/notification_bar_controller.js").read
 
+    expect(source).to include("ALERT_POLL_INTERVAL_MS")
     expect(source).to include("renderClock()")
     expect(source).to include("Intl.DateTimeFormat")
     expect(source).to include("weekday: \"short\"")
@@ -29,6 +30,11 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
     expect(source).to include("window.sessionStorage.setItem")
     expect(source).to include("window.localStorage.setItem")
     expect(source).to include("refreshVisibility()")
+    expect(source).to include("pollAlerts({ force = false } = {})")
+    expect(source).to include("syncAlertPolling({ immediate = false } = {})")
+    expect(source).to include("stopAlertPolling()")
+    expect(source).to include("this.refreshPathValue")
+    expect(source).to include("document.addEventListener(\"visibilitychange\", this.visibilityChangeHandler)")
     expect(source).to include("toggleCalendar(event)")
     expect(source).to include("openCalendar()")
     expect(source).to include("closeCalendar(event)")

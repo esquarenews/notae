@@ -527,6 +527,11 @@ export default class extends Controller {
   refreshAgentToastState() {
     if (!this.hasAgentToastTarget) return
 
+    if (this.statusBarAvailable()) {
+      this.hideAgentToast()
+      return
+    }
+
     if (this.railActive()) {
       this.markAgentUpdatesSeen()
       this.hideAgentToast()
@@ -646,6 +651,10 @@ export default class extends Controller {
 
   workspaceScopeKey() {
     return this.hasWorkspaceKeyValue && this.workspaceKeyValue ? this.workspaceKeyValue : "global"
+  }
+
+  statusBarAvailable() {
+    return document.querySelector(".notae-shell-status-bar") !== null
   }
 
   startAgentUpdatePolling() {

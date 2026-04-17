@@ -1,8 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
+const ALERT_POLL_INTERVAL_MS = 15000
+
 export default class extends Controller {
   static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel"]
-  static values = { timeZone: String, workspaceKey: String }
+  static values = { timeZone: String, workspaceKey: String, refreshPath: String }
 
   connect() {
     this.renderClock()
@@ -10,15 +12,22 @@ export default class extends Controller {
     this.applyStoredAlertState()
     this.handleWidgetMessage = this.handleWidgetMessage.bind(this)
     this.beforeCache = this.beforeCache.bind(this)
+    this.visibilityChangeHandler = () => this.syncAlertPolling({ immediate: document.visibilityState === "visible" })
+    this.alertPollTimer = null
+    this.alertPollRequest = null
     window.addEventListener("message", this.handleWidgetMessage)
     document.addEventListener("turbo:before-cache", this.beforeCache)
+    document.addEventListener("visibilitychange", this.visibilityChangeHandler)
     this.syncCalendarState()
+    this.syncAlertPolling({ immediate: true })
   }
 
   disconnect() {
     this.stopClock()
     window.removeEventListener("message", this.handleWidgetMessage)
     document.removeEventListener("turbo:before-cache", this.beforeCache)
+    document.removeEventListener("visibilitychange", this.visibilityChangeHandler)
+    this.stopAlertPolling()
   }
 
   startClock() {
@@ -113,12 +122,13 @@ export default class extends Controller {
   }
 
   applyStoredAlertState() {
-    if (!this.hasAlertTarget) {
+    const alerts = this.alertElements()
+    if (alerts.length < 1) {
       this.refreshVisibility()
       return
     }
 
-    this.alertTargets.forEach((alert) => {
+    alerts.forEach((alert) => {
       const key = this.alertKey(alert)
       if (!key) return
 
@@ -135,7 +145,7 @@ export default class extends Controller {
 
   refreshVisibility() {
     if (this.hasAlertsTarget) {
-      const hasVisibleAlerts = this.alertTargets.some((alert) => !alert.hidden)
+      const hasVisibleAlerts = this.alertElements().some((alert) => !alert.hidden)
       this.alertsTarget.hidden = !hasVisibleAlerts
     }
 
@@ -165,6 +175,10 @@ export default class extends Controller {
 
   alertForEvent(event) {
     return event.target?.closest("[data-notification-bar-alert-key]") || null
+  }
+
+  alertElements() {
+    return Array.from(this.element.querySelectorAll("[data-notification-bar-target='alert']"))
   }
 
   alertKey(alert) {
@@ -236,5 +250,58 @@ export default class extends Controller {
     if (!workspaceKey || !alertKey) return ""
 
     return `notae:notification-bar:snooze:${workspaceKey}:${alertKey}`
+  }
+
+  syncAlertPolling({ immediate = false } = {}) {
+    if (!this.hasAlertsTarget || !this.hasRefreshPathValue || !this.refreshPathValue || document.visibilityState !== "visible") {
+      this.stopAlertPolling()
+      return
+    }
+
+    if (!this.alertPollTimer) {
+      this.alertPollTimer = window.setInterval(() => {
+        this.pollAlerts()
+      }, ALERT_POLL_INTERVAL_MS)
+    }
+
+    if (immediate) this.pollAlerts()
+  }
+
+  stopAlertPolling() {
+    if (this.alertPollTimer) {
+      window.clearInterval(this.alertPollTimer)
+      this.alertPollTimer = null
+    }
+  }
+
+  async pollAlerts({ force = false } = {}) {
+    if (!this.hasRefreshPathValue || !this.refreshPathValue) return
+    if (document.visibilityState !== "visible") return
+    if (!force && this.alertPollRequest) return this.alertPollRequest
+
+    this.alertPollRequest = (async () => {
+      try {
+        const response = await fetch(this.refreshPathValue, {
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          credentials: "same-origin"
+        })
+        if (!response.ok) return
+
+        const payload = await response.json()
+        if (!this.hasAlertsTarget) return
+
+        this.alertsTarget.innerHTML = payload?.data?.html?.toString() || ""
+        window.requestAnimationFrame(() => this.applyStoredAlertState())
+      } catch (_error) {
+        // Ignore transient polling failures.
+      } finally {
+        this.alertPollRequest = null
+      }
+    })()
+
+    return this.alertPollRequest
   }
 }

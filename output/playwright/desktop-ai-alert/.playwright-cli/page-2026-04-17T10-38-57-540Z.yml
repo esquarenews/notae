@@ -1,0 +1,211 @@
+- generic [ref=e180]:
+  - complementary [ref=e181]:
+    - generic [ref=e182]:
+      - generic [ref=e183]:
+        - generic [ref=e186]: Desktop AI Alert
+        - generic [ref=e187]:
+          - button "＋" [ref=e189] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e190] [cursor=pointer]: ◂
+      - generic [ref=e191]:
+        - navigation [ref=e192]:
+          - link "Home" [ref=e193] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert
+            - generic [ref=e194]:
+              - img [ref=e196]
+              - generic [ref=e199]: Home
+          - link "Search" [ref=e200] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/search
+            - generic [ref=e201]:
+              - img [ref=e203]
+              - generic [ref=e206]: Search
+          - link "Notifications" [ref=e207] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/notifications
+            - generic [ref=e208]:
+              - img [ref=e210]
+              - generic [ref=e213]: Notifications
+          - link "Library" [ref=e214] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/library
+            - generic [ref=e215]:
+              - img [ref=e217]
+              - generic [ref=e221]: Library
+          - link "Kalendārium" [ref=e222] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/kalendarium
+            - generic [ref=e223]:
+              - img [ref=e225]
+              - generic [ref=e228]: Kalendārium
+          - link "Epistularium" [ref=e229] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/epistularium
+            - generic [ref=e230]:
+              - img [ref=e232]
+              - generic [ref=e235]: Epistularium
+          - link "Meetings" [ref=e236] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/meetings
+            - generic [ref=e237]:
+              - img [ref=e239]
+              - generic [ref=e242]: Meetings
+          - link "AI Conversation History" [ref=e243] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/ai-conversation-history
+            - generic [ref=e244]:
+              - img [ref=e246]
+              - generic [ref=e249]: AI Conversation History
+        - generic [ref=e250]:
+          - generic [ref=e251]:
+            - generic [ref=e252]:
+              - button "Workspaces" [expanded] [ref=e253] [cursor=pointer]:
+                - generic [ref=e254]: ▾
+                - generic [ref=e255]: Workspaces
+              - button "Create new Workspace" [ref=e256] [cursor=pointer]: "[+]"
+            - list [ref=e258]:
+              - listitem [ref=e259]:
+                - link "Desktop AI Alert" [ref=e260] [cursor=pointer]:
+                  - /url: /w/desktop-ai-alert
+                  - generic [ref=e261]: Desktop AI Alert
+          - generic [ref=e263]:
+            - generic [ref=e264]:
+              - button "Notarum" [expanded] [ref=e265] [cursor=pointer]:
+                - generic [ref=e266]: ▾
+                - generic [ref=e267]: Notarum
+              - button "Create new Nota" [ref=e269] [cursor=pointer]: "[+]"
+            - paragraph [ref=e271]: No Notarum yet.
+          - generic [ref=e272]:
+            - generic [ref=e273]:
+              - button "Grids" [expanded] [ref=e274] [cursor=pointer]:
+                - generic [ref=e275]: ▾
+                - generic [ref=e276]: Grids
+              - button "Create new Grid" [ref=e278] [cursor=pointer]: "[+]"
+            - paragraph [ref=e280]: No grids yet.
+          - generic [ref=e281]:
+            - generic [ref=e282]:
+              - button "Meetings" [expanded] [ref=e283] [cursor=pointer]:
+                - generic [ref=e284]: ▾
+                - generic [ref=e285]: Meetings
+              - button "Create new Meeting" [ref=e287] [cursor=pointer]: "[+]"
+            - paragraph [ref=e289]: No meetings yet.
+          - generic [ref=e290]:
+            - button "Favorites" [expanded] [ref=e292] [cursor=pointer]:
+              - generic [ref=e293]: ▾
+              - generic [ref=e294]: Favorites
+            - paragraph [ref=e296]: No favorites yet.
+      - generic [ref=e297]:
+        - link "Settings" [ref=e298] [cursor=pointer]:
+          - /url: /w/desktop-ai-alert/settings/preferences
+          - generic [ref=e299]:
+            - img [ref=e301]
+            - generic [ref=e304]: Settings
+        - link "Trash" [ref=e305] [cursor=pointer]:
+          - /url: /w/desktop-ai-alert/trash
+          - generic [ref=e306]:
+            - img [ref=e308]
+            - generic [ref=e311]: Trash
+        - button "Sign out" [ref=e313] [cursor=pointer]:
+          - generic [ref=e314]:
+            - img [ref=e316]
+            - generic [ref=e319]: Sign out
+  - generic [ref=e320]:
+    - banner [ref=e321]:
+      - generic [ref=e323]:
+        - generic [ref=e324]: 📄
+        - generic [ref=e325]: Desktop AI Alert
+        - generic [ref=e326]: Private
+    - main [ref=e327]:
+      - generic [ref=e328]:
+        - generic [ref=e330]:
+          - generic [ref=e331]:
+            - paragraph [ref=e332]: Workspace home
+            - heading "Good evening" [level=1] [ref=e333]
+          - generic [ref=e335]:
+            - textbox "Search Notarum, blocks, and rows" [ref=e336]
+            - button "Search" [ref=e337] [cursor=pointer]
+            - link "Notifications (0)" [ref=e338] [cursor=pointer]:
+              - /url: /w/desktop-ai-alert/notifications
+        - generic [ref=e339]:
+          - generic [ref=e340]:
+            - generic [ref=e341]:
+              - generic [ref=e342]:
+                - heading "Daily workspace brief" [level=2] [ref=e343]
+                - paragraph [ref=e344]: Your next daily brief window is Sat 7:00 AM.
+              - generic [ref=e346]:
+                - text: Next brief
+                - strong [ref=e347]: Sat 7:00 AM
+            - generic [ref=e348]:
+              - paragraph [ref=e349]: No daily brief yet.
+              - paragraph [ref=e350]: Your first workspace brief appears once Notae has enough indexed activity to summarise.
+          - generic [ref=e351]:
+            - generic [ref=e352]:
+              - generic [ref=e353]:
+                - heading "Important updates" [level=2] [ref=e354]
+                - paragraph [ref=e355]: Review AI suggestions, draft actions, and jump back into planning from here.
+              - generic [ref=e356]:
+                - link "Create Nota" [ref=e357] [cursor=pointer]:
+                  - /url: /w/desktop-ai-alert#workspace-home-create-nota
+                - link "Open Kalendārium" [ref=e358] [cursor=pointer]:
+                  - /url: /w/desktop-ai-alert/kalendarium
+                - link "Review drafts" [ref=e359] [cursor=pointer]:
+                  - /url: /w/desktop-ai-alert/agent-actions
+                - link "New draft" [ref=e360] [cursor=pointer]:
+                  - /url: /w/desktop-ai-alert/agent-actions/new
+            - generic [ref=e362]:
+              - generic [ref=e363]:
+                - heading "Agent draft actions" [level=3] [ref=e364]
+                - generic [ref=e365]: 0 drafts pending
+              - generic [ref=e366]:
+                - paragraph [ref=e367]: No pending draft actions.
+                - paragraph [ref=e368]: Use draft actions for calendar holds, task tickets, and reviewable outbound work.
+          - generic [ref=e369]:
+            - generic [ref=e370]:
+              - heading "Create Nota" [level=2] [ref=e372]
+              - generic [ref=e373]:
+                - textbox "New Nota title" [ref=e374]
+                - button "Create Nota" [ref=e375] [cursor=pointer]
+            - generic [ref=e376]:
+              - heading "Create Grid" [level=2] [ref=e378]
+              - generic [ref=e379]:
+                - textbox "New grid name" [ref=e380]
+                - button "Create Grid" [ref=e381] [cursor=pointer]
+          - generic [ref=e382]:
+            - heading "Notarum" [level=2] [ref=e384]
+            - paragraph [ref=e385]: No Notarum yet.
+          - generic [ref=e386]:
+            - heading "Grids" [level=2] [ref=e388]
+            - paragraph [ref=e389]: No grids yet.
+          - generic [ref=e390]:
+            - heading "Members" [level=2] [ref=e392]
+            - list [ref=e393]:
+              - listitem [ref=e394]:
+                - generic [ref=e396]:
+                  - strong [ref=e397]: desktop-ai-alert@example.com
+                  - text: owner
+          - generic [ref=e398]:
+            - heading "Invite people" [level=2] [ref=e400]
+            - generic [ref=e401]:
+              - textbox "teammate@example.com" [ref=e402]
+              - combobox [ref=e403]:
+                - option "Member"
+                - option "Admin"
+                - option "Owner"
+                - option "Guest" [selected]
+                - option "Auditor"
+                - option "Automation Agent"
+              - button "Send invite" [ref=e404] [cursor=pointer]
+  - complementary "Workspace notification bar" [ref=e405]:
+    - button "Open compact Kalendārium" [ref=e406] [cursor=pointer]:
+      - generic [ref=e407]: Fri 17 Apr · 20:38
+  - complementary [ref=e411]:
+    - generic [ref=e412]:
+      - generic [ref=e413]: New AI chat
+      - generic [ref=e414]:
+        - combobox [ref=e415]:
+          - option "Auto" [selected]
+          - option "This document only"
+          - option "This workspace only"
+          - option "Whole account"
+        - button "Minimize AI assistant rail" [ref=e416] [cursor=pointer]: ▸
+    - generic [ref=e417]:
+      - paragraph [ref=e418]: Notae AI assistant
+      - paragraph [ref=e419]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - generic [ref=e421]:
+      - generic [ref=e422]: Prompt
+      - textbox "Prompt" [ref=e424]:
+        - /placeholder: Ask a question or request a draft action for review.
+      - button "Send" [ref=e426] [cursor=pointer]
+    - button "Usage" [ref=e428] [cursor=pointer]

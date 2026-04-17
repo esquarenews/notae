@@ -2,6 +2,15 @@ class WorkspaceNotificationBarPresenter
   EVENT_LOOKAHEAD = 15.minutes
   EVENT_GRACE_PERIOD = 5.minutes
   RECENT_ACTIVITY_WINDOW = 1.hour
+  AI_NOTIFICATION_TYPES = [
+    Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
+    Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
+    Notification::TYPE_AGENT_ACTION_RESUBMITTED,
+    Notification::TYPE_AGENT_ACTION_APPROVED,
+    Notification::TYPE_AGENT_ACTION_REJECTED,
+    Notification::TYPE_WORKFLOW_FAILED,
+    Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
+  ].freeze
 
   attr_reader :workspace, :user, :reference_time
 
@@ -106,6 +115,54 @@ class WorkspaceNotificationBarPresenter
     "mail:#{latest_message.id}:#{recent_email_count}"
   end
 
+  def recent_ai_update_count
+    return 0 unless show_alerts?
+    return 0 unless data_source_available?("notifications")
+    return 0 if user.blank?
+
+    @recent_ai_update_count ||= recent_ai_update_scope.count
+  end
+
+  def recent_ai_update_present?
+    recent_ai_update_count.positive?
+  end
+
+  def recent_ai_update_headline
+    return "" unless recent_ai_update_present?
+
+    payload = recent_ai_update_payload
+    if recent_ai_update_count == 1
+      payload[:title].to_s.presence || "New AI update"
+    else
+      "#{recent_ai_update_count} AI updates"
+    end
+  end
+
+  def recent_ai_update_detail
+    return "" unless recent_ai_update_present?
+
+    payload = recent_ai_update_payload
+    if recent_ai_update_count == 1
+      payload[:body].to_s.presence || "Review the latest AI activity."
+    else
+      [ payload[:title].to_s.presence, payload[:body].to_s.presence ].compact.join(" · ").presence || "Recent AI activity needs review."
+    end
+  end
+
+  def recent_ai_update_path
+    latest_notification = recent_ai_update_latest_notification
+    return "" if latest_notification.blank?
+
+    Notifications::DestinationResolver.new(notification: latest_notification).call.to_s
+  end
+
+  def recent_ai_update_alert_key
+    latest_notification = recent_ai_update_latest_notification
+    return "" if latest_notification.blank?
+
+    "ai:#{latest_notification.id}:#{recent_ai_update_count}"
+  end
+
   def recent_update_count
     return 0 unless show_alerts?
     return 0 unless data_source_available?("notifications")
@@ -142,7 +199,7 @@ class WorkspaceNotificationBarPresenter
   end
 
   def has_alerts?
-    event_alert.present? || recent_email_present? || recent_update_present?
+    event_alert.present? || recent_ai_update_present? || recent_email_present? || recent_update_present?
   end
 
   private
@@ -190,6 +247,23 @@ class WorkspaceNotificationBarPresenter
       .first
   end
 
+  def recent_ai_update_latest_notification
+    return nil unless recent_ai_update_present?
+
+    @recent_ai_update_latest_notification ||= recent_ai_update_scope
+      .includes(:workspace, :recipient, :actor, :notifiable)
+      .recent_first
+      .first
+  end
+
+  def recent_ai_update_payload
+    latest_notification = recent_ai_update_latest_notification
+    return {} if latest_notification.blank?
+
+    @recent_ai_update_payloads ||= {}
+    @recent_ai_update_payloads[latest_notification.id] ||= WebPush::NotificationPayloadBuilder.new(notification: latest_notification).call
+  end
+
   def recent_email_scope
     workspace
       .epistularium_messages
@@ -203,6 +277,16 @@ class WorkspaceNotificationBarPresenter
       .notifications
       .for_recipient(user)
       .unread
+      .where.not(notification_type: AI_NOTIFICATION_TYPES)
+      .where("notifications.created_at >= ?", recent_cutoff)
+  end
+
+  def recent_ai_update_scope
+    workspace
+      .notifications
+      .for_recipient(user)
+      .unread
+      .where(notification_type: AI_NOTIFICATION_TYPES)
       .where("notifications.created_at >= ?", recent_cutoff)
   end
 

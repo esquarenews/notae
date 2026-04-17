@@ -1,0 +1,136 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Desktop AI Alert
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "Desktop AI Alert" [ref=e82] [cursor=pointer]:
+                  - /url: /w/desktop-ai-alert
+                  - generic [ref=e83]: Desktop AI Alert
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - button "Notarum" [expanded] [ref=e87] [cursor=pointer]:
+                - generic [ref=e88]: ▾
+                - generic [ref=e89]: Notarum
+              - button "Create new Nota" [ref=e91] [cursor=pointer]: "[+]"
+            - paragraph [ref=e93]: No Notarum yet.
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - paragraph [ref=e102]: No grids yet.
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - button "Meetings" [expanded] [ref=e105] [cursor=pointer]:
+                - generic [ref=e106]: ▾
+                - generic [ref=e107]: Meetings
+              - button "Create new Meeting" [ref=e109] [cursor=pointer]: "[+]"
+            - paragraph [ref=e111]: No meetings yet.
+          - generic [ref=e112]:
+            - button "Favorites" [expanded] [ref=e114] [cursor=pointer]:
+              - generic [ref=e115]: ▾
+              - generic [ref=e116]: Favorites
+            - paragraph [ref=e118]: No favorites yet.
+      - generic [ref=e119]:
+        - link "Settings" [ref=e120] [cursor=pointer]:
+          - /url: /w/desktop-ai-alert/settings/preferences
+          - generic [ref=e121]:
+            - img [ref=e123]
+            - generic [ref=e126]: Settings
+        - link "Trash" [ref=e127] [cursor=pointer]:
+          - /url: /w/desktop-ai-alert/trash
+          - generic [ref=e128]:
+            - img [ref=e130]
+            - generic [ref=e133]: Trash
+        - button "Sign out" [ref=e135] [cursor=pointer]:
+          - generic [ref=e136]:
+            - img [ref=e138]
+            - generic [ref=e141]: Sign out
+  - generic [ref=e142]:
+    - banner [ref=e143]:
+      - generic [ref=e145]:
+        - generic [ref=e146]: 📄
+        - generic [ref=e147]: Notae
+        - generic [ref=e148]: Private
+    - main [ref=e149]:
+      - paragraph [ref=e150]: Signed in successfully.
+      - generic [ref=e151]:
+        - generic [ref=e152]:
+          - img "Notae icon" [ref=e153]
+          - generic [ref=e154]:
+            - heading "Notae" [level=1] [ref=e155]
+            - paragraph [ref=e156]: Welcome back, desktop-ai-alert@example.com.
+        - generic [ref=e157]:
+          - generic [ref=e158]:
+            - heading "Your workspaces" [level=2] [ref=e159]
+            - link "New workspace" [ref=e160] [cursor=pointer]:
+              - /url: /workspaces/new
+          - link "Desktop AI Alert desktop-ai-alert" [ref=e162] [cursor=pointer]:
+            - /url: /w/desktop-ai-alert
+            - strong [ref=e163]: Desktop AI Alert
+            - generic [ref=e164]: desktop-ai-alert
+  - complementary [ref=e167]:
+    - generic [ref=e168]:
+      - generic [ref=e169]: New AI chat
+      - generic [ref=e170]:
+        - generic [ref=e171]: Auto
+        - button "Minimize AI assistant rail" [ref=e172] [cursor=pointer]: ▸
+    - generic [ref=e173]:
+      - paragraph [ref=e174]: Notae AI assistant
+      - paragraph [ref=e175]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - paragraph [ref=e178]: Join a workspace to use Notae AI assistant prompts.

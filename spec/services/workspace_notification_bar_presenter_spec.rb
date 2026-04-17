@@ -94,6 +94,52 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.has_alerts?).to be(true)
   end
 
+  it "routes alert-grade AI notifications into the shell widget separately from generic updates" do
+    user = User.create!(email: "notification-bar-ai@example.com", password: "password123", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "AI status workspace", slug: "ai-status-workspace", shell_status_bar_mode: "all")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Review the launch note",
+      summary: "A new AI suggestion is ready. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: 5.minutes.ago,
+      expires_at: 6.hours.from_now
+    )
+    Notification.create!(
+      workspace: workspace,
+      recipient: user,
+      actor: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: {}
+    )
+    Notification.create!(
+      workspace: workspace,
+      recipient: user,
+      actor: user,
+      notification_type: Notification::TYPE_MENTION,
+      metadata: {}
+    )
+
+    presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
+
+    expect(presenter.recent_ai_update_count).to eq(1)
+    expect(presenter.recent_ai_update_present?).to be(true)
+    expect(presenter.recent_ai_update_headline).to eq("New AI suggestion")
+    expect(presenter.recent_ai_update_detail).to include("Review the launch note")
+    expect(presenter.recent_ai_update_path).to eq("/w/#{workspace.slug}?show_home=1#knowledge-suggestion-#{suggestion.id}")
+    expect(presenter.recent_update_count).to eq(1)
+    expect(presenter.recent_update_headline).to eq("1 new workspace update")
+  end
+
   it "respects time-only and off modes" do
     user = User.create!(email: "notification-bar-modes@example.com", password: "password123")
     time_only_workspace = Workspace.create!(name: "Clock only", slug: "clock-only", shell_status_bar_mode: "time_only")
