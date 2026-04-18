@@ -7269,6 +7269,25 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   line-height: 1.32;
 }
 
+.notae-pref-inline-feedback {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--notae-text-muted);
+}
+
+.notae-pref-inline-feedback[data-state="pending"] {
+  color: color-mix(in srgb, var(--notae-text-muted) 82%, var(--notae-text-strong));
+}
+
+.notae-pref-inline-feedback[data-state="success"] {
+  color: color-mix(in srgb, #2b9b64 82%, var(--notae-text-strong));
+}
+
+.notae-pref-inline-feedback[data-state="error"] {
+  color: color-mix(in srgb, #c84a5a 82%, var(--notae-text-strong));
+}
+
 .notae-pref-control-form {
   margin: 0;
 }
@@ -7278,6 +7297,46 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   flex-wrap: wrap;
   gap: 0.58rem;
   align-items: center;
+}
+
+.notae-pref-row--quiet-hours-window {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+}
+
+.notae-pref-control-form--quiet-hours {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.72rem;
+  width: min(22rem, 100%);
+  max-width: 100%;
+}
+
+.notae-quiet-hours-field {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.notae-quiet-hours-field-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--notae-text-soft);
+}
+
+.notae-pref-select--quiet-hours {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  max-width: 100%;
+  inline-size: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .notae-pref-device-switch {
@@ -7412,6 +7471,14 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   }
 
   .notae-pref-control-form {
+    width: 100%;
+  }
+
+  .notae-pref-row--quiet-hours-window {
+    grid-template-columns: 1fr;
+  }
+
+  .notae-pref-control-form--quiet-hours {
     width: 100%;
   }
 
@@ -11183,6 +11250,10 @@ body.notae-theme-dark .notae-doc-muted {
   .notae-pref-row {
     grid-template-columns: 1fr;
     align-items: start;
+  }
+
+  .notae-pref-control-form--quiet-hours {
+    grid-template-columns: 1fr;
   }
 
   .notae-pref-select {
@@ -18435,6 +18506,132 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   line-height: 1.5;
 }
 
+.notae-operations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.35rem;
+}
+
+.notae-operations-card {
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 86%, transparent);
+  background: color-mix(in srgb, var(--notae-panel-bg) 84%, transparent);
+  box-shadow: var(--notae-shadow-soft);
+}
+
+.notae-operations-card-label {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--notae-text-soft);
+}
+
+.notae-operations-card-value {
+  margin: 0.28rem 0 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--notae-text-strong);
+}
+
+.notae-operations-card-meta {
+  margin: 0.28rem 0 0;
+  font-size: 0.88rem;
+  color: var(--notae-text-muted);
+}
+
+.notae-operations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.45rem;
+}
+
+.notae-operations-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 88%, transparent);
+  background: color-mix(in srgb, var(--notae-panel-bg) 82%, transparent);
+}
+
+.notae-operations-item-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.notae-operations-item-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--notae-text-strong);
+}
+
+.notae-operations-item-subtitle,
+.notae-operations-item-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--notae-text-muted);
+}
+
+.notae-operations-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+}
+
+.notae-operations-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.notae-operations-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 90%, transparent);
+  background: color-mix(in srgb, var(--notae-panel-muted) 88%, transparent);
+  color: var(--notae-text-default);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.notae-operations-pill.is-ok {
+  border-color: color-mix(in srgb, #2b9b64 34%, var(--notae-border-muted));
+  background: color-mix(in srgb, #2b9b64 12%, var(--notae-panel-bg));
+}
+
+.notae-operations-pill.is-warn {
+  border-color: color-mix(in srgb, #cb8a2d 38%, var(--notae-border-muted));
+  background: color-mix(in srgb, #cb8a2d 12%, var(--notae-panel-bg));
+}
+
+.notae-operations-pill.is-error {
+  border-color: color-mix(in srgb, #c84a5a 42%, var(--notae-border-muted));
+  background: color-mix(in srgb, #c84a5a 14%, var(--notae-panel-bg));
+}
+
+.notae-operations-inline-list {
+  margin: 0.55rem 0 0;
+  padding-left: 1rem;
+  color: var(--notae-text-muted);
+}
+
+.notae-operations-inline-list li + li {
+  margin-top: 0.25rem;
+}
+
 .notae-options-input,
 .notae-auth-input,
 .notae-sidebar-input,
@@ -18463,6 +18660,14 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   .notae-pref-row {
     grid-template-columns: 1fr;
     gap: 0.72rem;
+  }
+
+  .notae-operations-item {
+    flex-direction: column;
+  }
+
+  .notae-operations-pills {
+    justify-content: flex-start;
   }
 
   .notae-workspace-home-list-item,

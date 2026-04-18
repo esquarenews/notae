@@ -1,6 +1,8 @@
 module Api
   module V1
     class NotificationsController < BaseController
+      require_api_token_scopes codex_completion: ApiToken::SCOPE_NOTIFICATIONS_WRITE
+
       before_action :set_workspace!
 
       def codex_completion

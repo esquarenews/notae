@@ -1,0 +1,396 @@
+<% content_for :title, "Operations settings" %>
+<% content_for :topbar_page_icon, "📡" %>
+<% content_for :topbar_privacy, "Admin" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Open workspace", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+
+<% background_jobs = @dashboard.fetch(:background_jobs) %>
+<% request_performance = @dashboard.fetch(:request_performance) %>
+<% api_token_activity = @dashboard.fetch(:api_token_activity) %>
+<% epistularium = @dashboard.fetch(:epistularium_accounts) %>
+<% kalendarium = @dashboard.fetch(:kalendarium_connections) %>
+<% push_delivery = @dashboard.fetch(:push_delivery) %>
+<% meeting_capture = @dashboard.fetch(:meeting_capture) %>
+<% format_relative_time = ->(timestamp, fallback = "Not yet") { timestamp.present? ? "#{time_ago_in_words(timestamp)} ago" : fallback } %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :operations %>
+
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2>Background jobs</h2>
+      <p class="notae-pref-description">Queue depth, retries, scheduled work, and worker heartbeat for Sidekiq.</p>
+
+      <% if background_jobs[:available] %>
+        <div class="notae-operations-grid">
+          <% background_jobs[:queues].each do |queue| %>
+            <article class="notae-operations-card">
+              <p class="notae-operations-card-label"><%= queue[:name].humanize %> queue</p>
+              <p class="notae-operations-card-value"><%= queue[:size] %></p>
+              <p class="notae-operations-card-meta">Latency <%= number_with_precision(queue[:latency], precision: 1) %>s</p>
+            </article>
+          <% end %>
+
+          <article class="notae-operations-card">
+            <p class="notae-operations-card-label">Retries</p>
+            <p class="notae-operations-card-value"><%= background_jobs[:retry_count] %></p>
+            <p class="notae-operations-card-meta">Jobs waiting for retry</p>
+          </article>
+
+          <article class="notae-operations-card">
+            <p class="notae-operations-card-label">Scheduled</p>
+            <p class="notae-operations-card-value"><%= background_jobs[:scheduled_count] %></p>
+            <p class="notae-operations-card-meta">Future-dated jobs</p>
+          </article>
+
+          <article class="notae-operations-card">
+            <p class="notae-operations-card-label">Dead</p>
+            <p class="notae-operations-card-value"><%= background_jobs[:dead_count] %></p>
+            <p class="notae-operations-card-meta">Jobs that exhausted retries</p>
+          </article>
+
+          <article class="notae-operations-card">
+            <p class="notae-operations-card-label">Workers</p>
+            <p class="notae-operations-card-value"><%= background_jobs[:process_count] %></p>
+            <p class="notae-operations-card-meta"><%= background_jobs[:busy_threads] %> busy of <%= background_jobs[:concurrency] %> threads</p>
+          </article>
+        </div>
+
+        <% if background_jobs[:processes].any? %>
+          <ul class="notae-operations-inline-list">
+            <% background_jobs[:processes].each do |process| %>
+              <li>
+                <strong><%= process[:hostname].presence || process[:identity] %></strong>
+                · <%= process[:busy] %>/<%= process[:concurrency] %> busy
+                · last beat <%= format_relative_time.call(process[:beat_at], "Unknown") %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% else %>
+        <p class="notae-page-subtle">Background worker telemetry is unavailable right now. <%= background_jobs[:error] %></p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Recent request performance</h2>
+      <p class="notae-pref-description">Recent tracked page samples for this workspace. Server-Timing headers are emitted on tracked requests, and the latest samples appear here for slow-screen diagnosis.</p>
+
+      <div class="notae-operations-grid">
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Captured samples</p>
+          <p class="notae-operations-card-value"><%= request_performance[:sample_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Slow samples</p>
+          <p class="notae-operations-card-value"><%= request_performance[:slow_count] %></p>
+          <p class="notae-operations-card-meta">Threshold <%= number_with_precision(Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS, precision: 0) %>ms</p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Slowest request</p>
+          <p class="notae-operations-card-value"><%= request_performance[:slowest_total_ms].present? ? "#{number_with_precision(request_performance[:slowest_total_ms], precision: 1)}ms" : "None" %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Latest sample</p>
+          <p class="notae-operations-card-value"><%= request_performance[:latest_recorded_at].present? ? format_relative_time.call(request_performance[:latest_recorded_at]) : "Not yet" %></p>
+        </article>
+      </div>
+
+      <% if request_performance[:items].any? %>
+        <div class="notae-operations-list">
+          <% request_performance[:items].each do |sample| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= sample[:action] %></p>
+                <p class="notae-operations-item-subtitle"><%= sample[:path] %></p>
+                <p class="notae-operations-item-meta">
+                  <span>Total <%= number_with_precision(sample[:total_ms], precision: 1) %>ms</span>
+                  <span>SQL <%= number_with_precision(sample[:sql_ms], precision: 1) %>ms across <%= sample[:sql_queries] %> queries</span>
+                  <span>Status <%= sample[:status] %></span>
+                  <span>Captured <%= format_relative_time.call(sample[:recorded_at]) %></span>
+                </p>
+              </div>
+
+              <div class="notae-operations-pills">
+                <span class="notae-operations-pill <%= sample[:total_ms] >= Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS ? "is-warn" : "is-ok" %>">
+                  <%= sample[:total_ms] >= Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS ? "Slow" : "Healthy" %>
+                </span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No request samples have been captured for this workspace yet.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>API token activity</h2>
+      <p class="notae-pref-description">Recent scoped API token events for this workspace, including issued or revoked extension tokens and any scope-denied requests.</p>
+
+      <div class="notae-operations-grid">
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Recent events</p>
+          <p class="notae-operations-card-value"><%= api_token_activity[:event_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Denied requests</p>
+          <p class="notae-operations-card-value"><%= api_token_activity[:denied_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Tokens seen</p>
+          <p class="notae-operations-card-value"><%= api_token_activity[:token_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Latest event</p>
+          <p class="notae-operations-card-value"><%= api_token_activity[:latest_event_at].present? ? format_relative_time.call(api_token_activity[:latest_event_at]) : "Not yet" %></p>
+        </article>
+      </div>
+
+      <% if api_token_activity[:items].any? %>
+        <div class="notae-operations-list">
+          <% api_token_activity[:items].each do |event| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= event[:token_name] %></p>
+                <p class="notae-operations-item-subtitle"><%= event[:user_email] %> · <%= event[:event_type].humanize %></p>
+                <p class="notae-operations-item-meta">
+                  <% if event[:request_method].present? && event[:path].present? %>
+                    <span><%= event[:request_method] %> <%= event[:path] %></span>
+                  <% end %>
+                  <% if event[:http_status].present? %>
+                    <span>Status <%= event[:http_status] %></span>
+                  <% end %>
+                  <% if event[:required_scopes].any? %>
+                    <span>Scopes <%= event[:required_scopes].join(", ") %></span>
+                  <% end %>
+                  <span>Captured <%= format_relative_time.call(event[:created_at]) %></span>
+                </p>
+              </div>
+
+              <div class="notae-operations-pills">
+                <span class="notae-operations-pill <%= event[:event_type] == "scope_denied" ? "is-error" : "is-ok" %>">
+                  <%= event[:event_type].humanize %>
+                </span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No API token events have been recorded for this workspace yet.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Email sync</h2>
+      <p class="notae-pref-description">Fresh-mail cadence, backfill state, and queue health for Epistularium accounts in this workspace.</p>
+
+      <div class="notae-operations-grid">
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Accounts</p>
+          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :total) %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Connected</p>
+          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :connected) %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Attention needed</p>
+          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :attention_needed) %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Active syncs</p>
+          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :active_or_queued) %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Stalled</p>
+          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :stalled) %></p>
+        </article>
+      </div>
+
+      <% if epistularium[:items].any? %>
+        <div class="notae-operations-list">
+          <% epistularium[:items].each do |account| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= account[:label] %></p>
+                <p class="notae-operations-item-subtitle"><%= account[:provider].to_s.humanize %> · <%= account[:enabled] ? "Enabled" : "Disabled" %> · status <%= account[:status] %></p>
+                <p class="notae-operations-item-meta">
+                  <span>Fresh mail <%= format_relative_time.call(account[:last_fresh_sync_at]) %></span>
+                  <span>Backfill batch <%= format_relative_time.call(account[:last_backfill_sync_at], "Not yet") %></span>
+                  <% if account[:last_error].present? %>
+                    <span>Last error: <%= account[:last_error] %></span>
+                  <% end %>
+                </p>
+              </div>
+
+              <div class="notae-operations-pills">
+                <span class="notae-operations-pill <%= account[:status] == "connected" ? "is-ok" : "is-error" %>"><%= account[:status] %></span>
+                <span class="notae-operations-pill <%= account[:backfill_pending] ? "is-warn" : "is-ok" %>"><%= account[:backfill_pending] ? "Backfill in progress" : "Backfill complete" %></span>
+                <% if account[:sync_active] %>
+                  <span class="notae-operations-pill is-ok">Sync active</span>
+                <% elsif account[:sync_stalled] %>
+                  <span class="notae-operations-pill is-error">Queue stalled</span>
+                <% elsif account[:fresh_sync_due] %>
+                  <span class="notae-operations-pill is-warn">Fresh mail overdue</span>
+                <% end %>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No Epistularium accounts are configured for this workspace yet.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Calendar connections</h2>
+      <p class="notae-pref-description">Sync status and calendar counts for Kalendārium provider connections.</p>
+
+      <div class="notae-operations-grid">
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Connections</p>
+          <p class="notae-operations-card-value"><%= kalendarium.dig(:counts, :total) %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Connected</p>
+          <p class="notae-operations-card-value"><%= kalendarium.dig(:counts, :connected) %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Attention needed</p>
+          <p class="notae-operations-card-value"><%= kalendarium.dig(:counts, :attention_needed) %></p>
+        </article>
+      </div>
+
+      <% if kalendarium[:items].any? %>
+        <div class="notae-operations-list">
+          <% kalendarium[:items].each do |connection| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= connection[:label] %></p>
+                <p class="notae-operations-item-subtitle"><%= connection[:provider].to_s.humanize %> · <%= connection[:calendar_count] %> calendars · <%= connection[:enabled] ? "Enabled" : "Disabled" %></p>
+                <p class="notae-operations-item-meta">
+                  <span>Last sync <%= format_relative_time.call(connection[:last_synced_at]) %></span>
+                  <% if connection[:last_error].present? %>
+                    <span>Last error: <%= connection[:last_error] %></span>
+                  <% end %>
+                </p>
+              </div>
+
+              <div class="notae-operations-pills">
+                <span class="notae-operations-pill <%= connection[:status] == "connected" ? "is-ok" : "is-error" %>"><%= connection[:status] %></span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No Kalendārium connections are configured for this workspace yet.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Push delivery</h2>
+      <p class="notae-pref-description">Current device subscription health for your account, plus unread in-app notification load.</p>
+
+      <div class="notae-operations-grid">
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Subscribed devices</p>
+          <p class="notae-operations-card-value"><%= push_delivery[:subscription_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Failing devices</p>
+          <p class="notae-operations-card-value"><%= push_delivery[:failing_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Last push delivered</p>
+          <p class="notae-operations-card-value"><%= push_delivery[:latest_delivery_at].present? ? format_relative_time.call(push_delivery[:latest_delivery_at]) : "Never" %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Unread in-app</p>
+          <p class="notae-operations-card-value"><%= push_delivery[:unread_in_app_count] %></p>
+        </article>
+      </div>
+
+      <% if push_delivery[:items].any? %>
+        <div class="notae-operations-list">
+          <% push_delivery[:items].each do |device| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= device[:host] %></p>
+                <p class="notae-operations-item-subtitle">Subscribed <%= format_relative_time.call(device[:created_at]) %></p>
+                <p class="notae-operations-item-meta">
+                  <span>Last delivered <%= format_relative_time.call(device[:last_delivered_at], "Never") %></span>
+                  <% if device[:last_error_message].present? %>
+                    <span>Last error: <%= device[:last_error_message] %></span>
+                  <% end %>
+                </p>
+              </div>
+
+              <div class="notae-operations-pills">
+                <% status_class = device[:status] == :healthy ? "is-ok" : (device[:status] == :failing ? "is-error" : "is-warn") %>
+                <span class="notae-operations-pill <%= status_class %>"><%= device[:status].to_s.humanize %></span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">This account has no push subscriptions yet.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Meeting capture</h2>
+      <p class="notae-pref-description">Live session state, bot-run health, and the most recent failures for workspace meeting capture.</p>
+
+      <div class="notae-operations-grid">
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Active sessions</p>
+          <p class="notae-operations-card-value"><%= meeting_capture[:active_session_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Failed sessions</p>
+          <p class="notae-operations-card-value"><%= meeting_capture[:failed_session_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Active bot runs</p>
+          <p class="notae-operations-card-value"><%= meeting_capture[:active_run_count] %></p>
+        </article>
+      </div>
+
+      <% if meeting_capture[:active_sessions].any? %>
+        <div class="notae-operations-list">
+          <% meeting_capture[:active_sessions].each do |session| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= session[:title] %></p>
+                <p class="notae-operations-item-subtitle"><%= session[:provider].to_s.humanize %> · <%= session[:capture_mode].to_s.humanize %></p>
+                <p class="notae-operations-item-meta">
+                  <span>Updated <%= format_relative_time.call(session[:updated_at]) %></span>
+                  <% if session[:error_message].present? %>
+                    <span>Error: <%= session[:error_message] %></span>
+                  <% end %>
+                </p>
+              </div>
+
+              <div class="notae-operations-pills">
+                <span class="notae-operations-pill is-warn"><%= session[:status] %></span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% elsif meeting_capture[:latest_failed_run].present? %>
+        <p class="notae-page-subtle">
+          Latest failed bot run: <strong><%= meeting_capture[:latest_failed_run][:title] %></strong>
+          · <%= meeting_capture[:latest_failed_run][:provider].to_s.humanize %>
+          · <%= format_relative_time.call(meeting_capture[:latest_failed_run][:updated_at]) %>
+          <% if meeting_capture[:latest_failed_run][:error_message].present? %>
+            · <%= meeting_capture[:latest_failed_run][:error_message] %>
+          <% end %>
+        </p>
+      <% else %>
+        <p class="notae-page-subtle">No active or failed meeting capture jobs are currently visible for this workspace.</p>
+      <% end %>
+    </section>
+  </div>
+</section>

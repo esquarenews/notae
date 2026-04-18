@@ -1,6 +1,13 @@
 module Api
   module V1
     class BlocksController < BaseController
+      require_api_token_scopes(
+        index: ApiToken::SCOPE_PAGES_READ,
+        show: ApiToken::SCOPE_PAGES_READ,
+        create: ApiToken::SCOPE_PAGES_WRITE,
+        update: ApiToken::SCOPE_PAGES_WRITE
+      )
+
       before_action :set_workspace!
       before_action :set_page!
       before_action :set_block!, only: %i[show update]

@@ -73,6 +73,7 @@ class Workspace < ApplicationRecord
   has_many :database_shares, through: :databases
   has_many :page_links, dependent: :destroy
   has_many :audit_events, dependent: :destroy
+  has_many :api_token_audit_events, dependent: :nullify
   has_many :share_links, dependent: :destroy
   has_many :share_link_views, dependent: :destroy
   has_many :database_share_links, dependent: :destroy

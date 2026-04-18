@@ -2,6 +2,15 @@ module Api
   module V1
     module Meetings
       class SessionsController < BaseController
+        require_api_token_scopes(
+          index: ApiToken::SCOPE_MEETINGS_READ,
+          show: ApiToken::SCOPE_MEETINGS_READ,
+          transcript: ApiToken::SCOPE_MEETINGS_READ,
+          create: ApiToken::SCOPE_MEETINGS_WRITE,
+          ingest_transcript: ApiToken::SCOPE_MEETINGS_WRITE,
+          cancel: ApiToken::SCOPE_MEETINGS_WRITE
+        )
+
         before_action :set_workspace!
         before_action :set_meeting_session!, only: %i[show transcript ingest_transcript cancel]
 

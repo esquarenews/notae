@@ -25,7 +25,8 @@ module RequestPerformanceInstrumentation
   private
 
   def request_performance_enabled?
-    return false unless Rails.env.development? || Rails.env.test?
+    return true if Rails.env.development? || Rails.env.test?
+    return true if ActiveModel::Type::Boolean.new.cast(ENV["NOTAE_REQUEST_PERFORMANCE"])
 
     self.class.request_performance_actions.include?(action_name)
   end
@@ -54,11 +55,26 @@ module RequestPerformanceInstrumentation
     sql_duration_ms = counters[:sql_duration_ms].round(1)
     total_duration_ms = total_duration_ms.round(1)
     action_label = "#{self.class.name}##{action_name}"
+    workspace_id = instance_variable_defined?(:@workspace) ? @workspace&.id : nil
 
     response.set_header("X-Notae-Perf-Action", action_label)
     response.set_header("X-Notae-Perf-Total-Ms", total_duration_ms.to_s)
     response.set_header("X-Notae-Perf-Sql-Queries", counters[:queries].to_s)
     response.set_header("X-Notae-Perf-Sql-Ms", sql_duration_ms.to_s)
+    response.set_header("Server-Timing", "app;dur=#{total_duration_ms}, sql;dur=#{sql_duration_ms}")
+
+    Notae::RequestPerformanceStore.record!(
+      workspace_id: workspace_id,
+      sample: {
+        action: action_label,
+        path: request.fullpath,
+        total_ms: total_duration_ms,
+        sql_queries: counters[:queries],
+        sql_ms: sql_duration_ms,
+        status: response.status,
+        recorded_at: Time.current
+      }
+    )
 
     Rails.logger.info(
       "[NOTAE PERF] action=#{action_label} total_ms=#{total_duration_ms} sql_queries=#{counters[:queries]} sql_ms=#{sql_duration_ms}"

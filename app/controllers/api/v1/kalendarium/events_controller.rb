@@ -2,6 +2,11 @@ module Api
   module V1
     module Kalendarium
       class EventsController < BaseController
+        require_api_token_scopes(
+          index: ApiToken::SCOPE_CALENDAR_READ,
+          create: ApiToken::SCOPE_CALENDAR_WRITE
+        )
+
         DATE_ONLY_PATTERN = /\A\d{4}-\d{2}-\d{2}\z/
         EXPLICIT_OFFSET_PATTERN = /(Z|[+-]\d{2}:\d{2})\z/
 

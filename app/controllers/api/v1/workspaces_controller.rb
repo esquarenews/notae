@@ -1,6 +1,8 @@
 module Api
   module V1
     class WorkspacesController < BaseController
+      require_api_token_scopes index: ApiToken::SCOPE_WORKSPACES_READ
+
       DEFAULT_LIMIT = 25
       MAX_LIMIT = 100
 

@@ -34,6 +34,8 @@ RSpec.describe "PwaController JavaScript syntax" do
     expect(source).to include("pushSettingsStateLabel")
     expect(source).to include("pushSettingsStatus")
     expect(source).to include("pushSettingsTestButton")
+    expect(source).to include("pushSettingsFeedback")
+    expect(source).to include("setPushSettingsFeedback(message, tone = \"neutral\")")
     expect(source).to include("Test push sent to this device.")
     expect(source).to include("Push notifications turned off on this device.")
     expect(source).to include("Home Screen app")

@@ -9,6 +9,7 @@
   <% active_item_labels = {
        preferences: "Preferences",
        notifications: "Notifications",
+       operations: "Operations",
        connections: "Connections",
        general: "General",
        people: "People",
@@ -165,6 +166,13 @@
   </span>
 
   <p class="notae-settings-nav-group">Admin</p>
+  <%= link_to workspace_operations_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :operations) ].compact.join(" ") do %>
+    <span class="notae-settings-nav-item-label">
+      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg>
+      <span>Operations</span>
+    </span>
+  <% end %>
   <span class="notae-settings-nav-item is-disabled">
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>

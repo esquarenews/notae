@@ -34,4 +34,21 @@ class Membership < ApplicationRecord
   def audit_reviewer?
     admin_or_owner? || auditor?
   end
+
+  def notification_preferences
+    raw_preferences = notification_preferences_json
+    raw_preferences.is_a?(Hash) ? raw_preferences : {}
+  end
+
+  def workspace_email_notify_activity_override
+    raw_value = notification_preferences["email_notify_activity"]
+    return nil if raw_value.nil?
+
+    ActiveModel::Type::Boolean.new.cast(raw_value)
+  end
+
+  def workspace_email_notify_activity_enabled?(default:)
+    override = workspace_email_notify_activity_override
+    override.nil? ? default : override
+  end
 end

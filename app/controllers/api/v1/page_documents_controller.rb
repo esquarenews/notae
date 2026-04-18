@@ -1,6 +1,12 @@
 module Api
   module V1
     class PageDocumentsController < BaseController
+      require_api_token_scopes(
+        show: ApiToken::SCOPE_PAGE_DOCUMENTS_READ,
+        create: ApiToken::SCOPE_PAGE_DOCUMENTS_WRITE,
+        append: ApiToken::SCOPE_PAGE_DOCUMENTS_WRITE
+      )
+
       before_action :set_workspace!
       before_action :set_page!, only: %i[show append]
 

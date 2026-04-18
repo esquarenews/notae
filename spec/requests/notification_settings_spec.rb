@@ -5,6 +5,12 @@ RSpec.describe "Notification settings", type: :request do
     user = User.create!(email: "notification-settings-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notification settings", slug: "notification-settings")
     Membership.create!(workspace: workspace, user: user, role: :owner)
+    user.web_push_subscriptions.create!(
+      endpoint: "https://web.push.apple.com/QH123/subscriptions/test-device",
+      p256dh: "p256dh-render",
+      auth: "auth-render",
+      last_error_at: 5.minutes.ago
+    )
     sign_in user
 
     get workspace_notification_settings_path(workspace_slug: workspace.slug)
@@ -19,6 +25,19 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("data-pwa-target=\"pushSettingsStateLabel\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsStatus\"")
     expect(response.body).to include("Send test push")
+    expect(response.body).to include("data-pwa-target=\"pushSettingsFeedback\"")
+    expect(response.body).to include("Push notification types")
+    expect(response.body).to include("Mentions and comments")
+    expect(response.body).to include("Workflow failures")
+    expect(response.body).to include("Quiet hours")
+    expect(response.body).to include("notae-pref-row--quiet-hours-window")
+    expect(response.body).to include("notae-pref-control-form--quiet-hours")
+    expect(response.body).to include("notae-quiet-hours-field-label")
+    expect(response.body).to include("Start")
+    expect(response.body).to include("End")
+    expect(response.body).to include("Push delivery state")
+    expect(response.body).to include("Current workspace override")
+    expect(response.body).to include("web.push.apple.com")
     expect(response.body).to include("data-action=\"pwa#sendTestPush\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsTestButton\"")
     expect(response.body).to include(%(data-push-test-path="/w/#{workspace.slug}/settings/notifications/test-push"))
@@ -36,7 +55,7 @@ RSpec.describe "Notification settings", type: :request do
   it "updates notification preference values for signed-in user" do
     user = User.create!(email: "notification-settings-update@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notification settings update", slug: "notification-settings-update")
-    Membership.create!(workspace: workspace, user: user, role: :owner)
+    membership = Membership.create!(workspace: workspace, user: user, role: :owner)
     sign_in user
 
     patch workspace_notification_settings_path(workspace_slug: workspace.slug),
@@ -45,12 +64,20 @@ RSpec.describe "Notification settings", type: :request do
               meeting_notify_join_transcribing: "1",
               meeting_notify_transcribed: "0",
               meeting_notify_summarized: "1",
+              push_notify_mentions: "0",
+              push_notify_workflow_failures: "1",
+              push_quiet_hours_enabled: "1",
+              push_quiet_hours_starts_at: "21:30",
+              push_quiet_hours_ends_at: "06:45",
               slack_notification_preference: "mentions",
               discord_notification_preference: "all_activity",
               email_notify_activity: "0",
               email_notify_always_send: "1",
               email_notify_page_updates: "0",
               email_notify_workspace_digest: "0"
+            },
+            membership: {
+              email_notify_activity: "1"
             }
           }
 
@@ -60,12 +87,19 @@ RSpec.describe "Notification settings", type: :request do
     expect(user.meeting_notify_join_transcribing).to be(true)
     expect(user.meeting_notify_transcribed).to be(false)
     expect(user.meeting_notify_summarized).to be(true)
+    expect(user.push_notification_enabled_for?(Notification::TYPE_MENTION)).to be(false)
+    expect(user.push_notification_enabled_for?(Notification::TYPE_WORKFLOW_FAILED)).to be(true)
+    expect(user.push_quiet_hours_enabled).to be(true)
+    expect(user.push_quiet_hours_starts_at).to eq("21:30")
+    expect(user.push_quiet_hours_ends_at).to eq("06:45")
     expect(user.slack_notification_preference).to eq("mentions")
     expect(user.discord_notification_preference).to eq("all_activity")
     expect(user.email_notify_activity).to be(false)
     expect(user.email_notify_always_send).to be(true)
     expect(user.email_notify_page_updates).to be(false)
     expect(user.email_notify_workspace_digest).to be(false)
+
+    expect(membership.reload.workspace_email_notify_activity_override).to be(true)
   end
 
   it "sends a test push to the current device subscription" do

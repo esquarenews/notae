@@ -29,4 +29,16 @@ RSpec.describe "API V1 Workspaces", type: :request do
     expect(payload.find { |entry| entry.fetch("slug") == alpha.slug }.fetch("role")).to eq("owner")
     expect(payload.find { |entry| entry.fetch("slug") == beta.slug }.fetch("role")).to eq("member")
   end
+
+  it "rejects tokens without the required workspace read scope" do
+    user = User.create!(email: "api-workspaces-insufficient-scope@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Scoped Space", slug: "scoped-space")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    token = ApiToken.create!(user: user, name: "Scoped token", scopes_json: [ ApiToken::SCOPE_PAGES_READ ])
+
+    get "/api/v1/workspaces", headers: auth_headers(token)
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json_body.dig("error", "code")).to eq("insufficient_scope")
+  end
 end

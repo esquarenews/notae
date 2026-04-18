@@ -27,8 +27,9 @@ module Kalendarium
     private
 
     def dispatch_for_event!(event, offset_minutes)
-      recipients = Membership.where(workspace_id: event.workspace_id).includes(:user).map(&:user)
-      recipients.each do |recipient|
+      memberships = Membership.where(workspace_id: event.workspace_id).includes(:user)
+      memberships.each do |membership|
+        recipient = membership.user
         key = "#{event.id}:#{offset_minutes}:#{event.starts_at_utc.to_i}"
         existing = Notification.where(
           workspace_id: event.workspace_id,
@@ -51,7 +52,7 @@ module Kalendarium
           }
         )
 
-        if recipient.email_notify_activity? && (recipient.email_notify_always_send? || !recipient.open_links_in_desktop_app?)
+        if recipient.email_notify_activity_for?(event.workspace, membership: membership) && (recipient.email_notify_always_send? || !recipient.open_links_in_desktop_app?)
           NotificationMailer.with(notification: notification, mailer_user: event.updated_by).calendar_reminder_notification.deliver_later
         end
       end

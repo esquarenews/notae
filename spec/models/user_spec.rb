@@ -82,4 +82,54 @@ RSpec.describe User, type: :model do
     expect(user.masked_openai_api_key).to eq("Not configured")
     expect(user.masked_smtp_password).to eq("Not configured")
   end
+
+  it "supports per-type push notification preferences" do
+    user = described_class.new(
+      email: "push-preferences@example.com",
+      password: "password123",
+      push_notification_preferences: {
+        Notification::TYPE_MENTION => false,
+        Notification::TYPE_WORKFLOW_FAILED => true
+      }
+    )
+
+    expect(user.push_notification_enabled_for?(Notification::TYPE_MENTION)).to be(false)
+    expect(user.push_notification_enabled_for?(Notification::TYPE_WORKFLOW_FAILED)).to be(true)
+    expect(user.push_notification_enabled_for?(Notification::TYPE_CALENDAR_REMINDER)).to be(true)
+  end
+
+  it "applies quiet hours to routine notifications but exempts workflow failures" do
+    user = described_class.new(
+      email: "push-quiet-hours@example.com",
+      password: "password123",
+      time_zone: "Australia/Melbourne",
+      push_quiet_hours_enabled: true,
+      push_quiet_hours_starts_at: "22:00",
+      push_quiet_hours_ends_at: "07:00"
+    )
+    within_quiet_hours = Time.find_zone!("Australia/Melbourne").parse("2026-04-18 23:15")
+
+    expect(user.push_quiet_hours_active_for?(Notification::TYPE_MENTION, at: within_quiet_hours)).to be(true)
+    expect(user.push_delivery_allowed_for?(Notification::TYPE_MENTION, at: within_quiet_hours)).to be(false)
+    expect(user.push_quiet_hours_active_for?(Notification::TYPE_WORKFLOW_FAILED, at: within_quiet_hours)).to be(false)
+    expect(user.push_delivery_allowed_for?(Notification::TYPE_WORKFLOW_FAILED, at: within_quiet_hours)).to be(true)
+  end
+
+  it "respects workspace-scoped email overrides" do
+    user = described_class.create!(
+      email: "workspace-email-override@example.com",
+      password: "password123",
+      email_notify_activity: false
+    )
+    workspace = Workspace.create!(name: "Workspace Email Override", slug: "workspace-email-override")
+    membership = Membership.create!(
+      workspace: workspace,
+      user: user,
+      role: :owner,
+      notification_preferences_json: { "email_notify_activity" => true }
+    )
+
+    expect(user.email_notify_activity_for?(workspace, membership: membership)).to be(true)
+    expect(user.email_notify_activity_for?(workspace)).to be(true)
+  end
 end

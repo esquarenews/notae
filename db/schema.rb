@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_18_113000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -158,12 +158,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
     t.index ["workspace_id"], name: "index_ai_usage_logs_on_workspace_id"
   end
 
+  create_table "api_token_audit_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "action_name"
+    t.uuid "api_token_id", null: false
+    t.string "controller_name"
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.integer "http_status"
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "path"
+    t.string "request_method"
+    t.jsonb "required_scopes_json", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id"
+    t.index ["api_token_id", "created_at"], name: "index_api_token_audit_events_on_api_token_id_and_created_at"
+    t.index ["api_token_id"], name: "index_api_token_audit_events_on_api_token_id"
+    t.index ["event_type", "created_at"], name: "index_api_token_audit_events_on_event_type_and_created_at"
+    t.index ["user_id", "created_at"], name: "index_api_token_audit_events_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_api_token_audit_events_on_user_id"
+    t.index ["workspace_id", "created_at"], name: "index_api_token_audit_events_on_workspace_id_and_created_at"
+    t.index ["workspace_id"], name: "index_api_token_audit_events_on_workspace_id"
+  end
+
   create_table "api_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "expires_at"
     t.datetime "last_used_at"
     t.string "name", default: "default", null: false
     t.datetime "revoked_at"
+    t.jsonb "scopes_json", default: ["*"], null: false
     t.string "token", null: false
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
@@ -710,6 +734,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
 
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.jsonb "notification_preferences_json", default: {}, null: false
     t.integer "role", default: 0, null: false
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
@@ -963,6 +988,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
     t.string "open_on_start_preference", default: "workspace_home", null: false
     t.string "openai_api_key"
     t.boolean "profile_discoverability", default: true, null: false
+    t.jsonb "push_notification_preferences", default: {}, null: false
+    t.boolean "push_quiet_hours_enabled", default: false, null: false
+    t.string "push_quiet_hours_ends_at", default: "07:00", null: false
+    t.string "push_quiet_hours_starts_at", default: "22:00", null: false
     t.boolean "reduce_ai_loader_motion", default: false, null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
@@ -1103,6 +1132,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
   add_foreign_key "ai_conversations", "workspaces"
   add_foreign_key "ai_usage_logs", "users"
   add_foreign_key "ai_usage_logs", "workspaces"
+  add_foreign_key "api_token_audit_events", "api_tokens"
+  add_foreign_key "api_token_audit_events", "users"
+  add_foreign_key "api_token_audit_events", "workspaces"
   add_foreign_key "api_tokens", "users"
   add_foreign_key "audit_events", "users", column: "actor_id"
   add_foreign_key "audit_events", "workspaces"

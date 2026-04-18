@@ -37,4 +37,24 @@ RSpec.describe ApiToken, type: :model do
     expect(api_token.attributes_before_type_cast["token"]).not_to eq(plaintext)
     expect(api_token.token).to eq(plaintext)
   end
+
+  it "defaults to full access when scopes are not specified" do
+    user = User.create!(email: "api-token-default-scopes@example.com", password: "password123")
+    api_token = described_class.create!(user: user, name: "Default scopes")
+
+    expect(api_token.scopes).to eq([ ApiToken::SCOPE_ALL ])
+    expect(api_token.allows_scope?(ApiToken::SCOPE_WORKSPACES_READ)).to be(true)
+  end
+
+  it "rejects unsupported scopes" do
+    user = User.create!(email: "api-token-invalid-scopes@example.com", password: "password123")
+    api_token = described_class.new(
+      user: user,
+      name: "Invalid scopes",
+      scopes_json: [ "pages:read", "admin:root" ]
+    )
+
+    expect(api_token).not_to be_valid
+    expect(api_token.errors[:scopes_json]).to include("contains unsupported scopes")
+  end
 end

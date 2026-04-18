@@ -45,4 +45,19 @@ RSpec.describe Membership, type: :model do
     expect(automation_agent.content_editor?).to eq(false)
     expect(automation_agent.can_author_agent_actions?).to eq(true)
   end
+
+  it "supports workspace-level notification overrides" do
+    user = User.create!(email: "notification-override@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification Override", slug: "notification-override")
+    membership = described_class.create!(
+      user: user,
+      workspace: workspace,
+      role: :owner,
+      notification_preferences_json: { "email_notify_activity" => false }
+    )
+
+    expect(membership.notification_preferences).to eq("email_notify_activity" => false)
+    expect(membership.workspace_email_notify_activity_override).to be(false)
+    expect(membership.workspace_email_notify_activity_enabled?(default: true)).to be(false)
+  end
 end

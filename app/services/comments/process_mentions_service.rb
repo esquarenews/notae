@@ -41,7 +41,7 @@ module Comments
 
     def deliver_mention_email(user:, notification:)
       return unless notification.previously_new_record?
-      return unless user.email_notify_activity?
+      return unless user.email_notify_activity_for?(comment.workspace)
 
       NotificationMailer.with(notification: notification, mailer_user: comment.author).mention_notification.deliver_later
     end

@@ -1,6 +1,13 @@
 module Api
   module V1
     class PagesController < BaseController
+      require_api_token_scopes(
+        index: ApiToken::SCOPE_PAGES_READ,
+        show: ApiToken::SCOPE_PAGES_READ,
+        create: ApiToken::SCOPE_PAGES_WRITE,
+        update: ApiToken::SCOPE_PAGES_WRITE
+      )
+
       before_action :set_workspace!
       DEFAULT_LIMIT = 25
       MAX_LIMIT = 100

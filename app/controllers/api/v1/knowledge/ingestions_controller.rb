@@ -2,6 +2,8 @@ module Api
   module V1
     module Knowledge
       class IngestionsController < BaseController
+        require_api_token_scopes create: ApiToken::SCOPE_KNOWLEDGE_WRITE
+
         before_action :set_workspace!
 
         def create

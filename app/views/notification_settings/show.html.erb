@@ -2,7 +2,7 @@
 <% content_for :topbar_page_icon, "🔔" %>
 <% content_for :topbar_privacy, "Account" %>
 <% content_for :topbar_actions do %>
-  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+  <%= link_to "Close", workspace_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
 <% end %>
 
 <section class="notae-settings-shell" data-controller="auto-submit">
@@ -42,7 +42,91 @@
             Send test push
           </button>
         </div>
+        <p class="notae-pref-inline-feedback"
+           data-pwa-target="pushSettingsFeedback"
+           aria-live="polite"></p>
       </div>
+
+      <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-workspace-home-stack" do %>
+        <div class="notae-pref-row notae-pref-row--stacked">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Push notification types</p>
+            <p class="notae-pref-description">Choose which Notae events are allowed to interrupt this device. Workflow failures bypass quiet hours.</p>
+          </div>
+
+          <div class="notae-workspace-home-stack">
+            <% User::PUSH_NOTIFICATION_OPTIONS.each do |option| %>
+              <div class="notae-pref-row">
+                <div class="notae-pref-copy">
+                  <p class="notae-pref-label"><%= option[:label] %></p>
+                  <p class="notae-pref-description"><%= option[:description] %></p>
+                </div>
+                <div class="notae-pref-control-form">
+                  <label class="notae-pref-toggle">
+                    <%= hidden_field_tag "user[#{option[:param_key]}]", "0" %>
+                    <%= check_box_tag "user[#{option[:param_key]}]",
+                                      "1",
+                                      @user.push_notification_enabled_for?(option[:type]),
+                                      class: "notae-pref-toggle-input",
+                                      data: { action: "change->auto-submit#submit" } %>
+                    <span class="notae-pref-toggle-track"></span>
+                  </label>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="notae-pref-row notae-pref-row--stacked">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Quiet hours</p>
+            <p class="notae-pref-description">Suppress routine push notifications during your local quiet hours. Workflow failures still break through.</p>
+          </div>
+
+          <div class="notae-workspace-home-stack">
+            <div class="notae-pref-row">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Enable quiet hours</p>
+                <p class="notae-pref-description">Current Notae time zone: <strong><%= @user.time_zone %></strong>.</p>
+              </div>
+              <div class="notae-pref-control-form">
+                <label class="notae-pref-toggle">
+                  <%= hidden_field_tag "user[push_quiet_hours_enabled]", "0" %>
+                  <%= check_box_tag "user[push_quiet_hours_enabled]",
+                                    "1",
+                                    @user.push_quiet_hours_enabled?,
+                                    class: "notae-pref-toggle-input",
+                                    data: { action: "change->auto-submit#submit" } %>
+                  <span class="notae-pref-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--quiet-hours-window">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Quiet hours window</p>
+                <p class="notae-pref-description">Cross-midnight windows are supported, for example 22:00 to 07:00.</p>
+              </div>
+              <div class="notae-pref-control-form notae-pref-control-form--quiet-hours">
+                <label class="notae-quiet-hours-field">
+                  <span class="notae-quiet-hours-field-label">Start</span>
+                  <%= time_field_tag "user[push_quiet_hours_starts_at]",
+                                     @user.push_quiet_hours_starts_at,
+                                     class: "notae-pref-select notae-pref-select--quiet-hours",
+                                     data: { action: "change->auto-submit#submit" } %>
+                </label>
+                <label class="notae-quiet-hours-field">
+                  <span class="notae-quiet-hours-field-label">End</span>
+                  <%= time_field_tag "user[push_quiet_hours_ends_at]",
+                                     @user.push_quiet_hours_ends_at,
+                                     class: "notae-pref-select notae-pref-select--quiet-hours",
+                                     data: { action: "change->auto-submit#submit" } %>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
 
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
@@ -94,6 +178,53 @@
     </section>
 
     <section class="notae-settings-section">
+      <h2>Push delivery state</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Current workspace override</p>
+          <p class="notae-pref-description">Override the global activity-email default for <strong><%= @workspace.name %></strong> when it makes sense to treat this workspace differently.</p>
+        </div>
+        <%= form_with url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do %>
+          <label class="notae-pref-toggle">
+            <%= hidden_field_tag "membership[email_notify_activity]", "0" %>
+            <%= check_box_tag "membership[email_notify_activity]",
+                              "1",
+                              @workspace_membership&.workspace_email_notify_activity_enabled?(default: @user.email_notify_activity?),
+                              class: "notae-pref-toggle-input",
+                              data: { action: "change->auto-submit#submit" } %>
+            <span class="notae-pref-toggle-track"></span>
+          </label>
+        <% end %>
+      </div>
+
+      <% if @push_subscriptions.any? %>
+        <div class="notae-operations-list">
+          <% @push_subscriptions.each do |subscription| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= subscription.endpoint_host %></p>
+                <p class="notae-operations-item-subtitle">Subscribed <%= time_ago_in_words(subscription.created_at) %> ago</p>
+                <p class="notae-operations-item-meta">
+                  <span>Last delivered <%= subscription.last_delivered_at.present? ? "#{time_ago_in_words(subscription.last_delivered_at)} ago" : "Never" %></span>
+                  <% if subscription.last_error_message.present? %>
+                    <span>Last error: <%= subscription.last_error_message %></span>
+                  <% end %>
+                </p>
+              </div>
+              <div class="notae-operations-pills">
+                <% status_class = subscription.delivery_status == :healthy ? "is-ok" : (subscription.delivery_status == :failing ? "is-error" : "is-warn") %>
+                <span class="notae-operations-pill <%= status_class %>"><%= subscription.delivery_status.to_s.humanize %></span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No push subscriptions are registered for this account yet.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
       <h2>Slack notifications</h2>
 
       <div class="notae-pref-row">
@@ -134,8 +265,8 @@
 
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
-          <p class="notae-pref-label">Activity in my workspace</p>
-          <p class="notae-pref-description">Email notices for comments, mentions, invites, reminders, and access requests.</p>
+          <p class="notae-pref-label">Activity email default</p>
+          <p class="notae-pref-description">Default email behaviour for comments, mentions, invites, reminders, and access requests across workspaces.</p>
         </div>
         <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">

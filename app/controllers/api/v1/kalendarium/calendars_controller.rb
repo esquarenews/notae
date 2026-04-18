@@ -2,6 +2,8 @@ module Api
   module V1
     module Kalendarium
       class CalendarsController < BaseController
+        require_api_token_scopes index: ApiToken::SCOPE_CALENDAR_READ
+
         before_action :set_workspace!
 
         def index

@@ -79,6 +79,71 @@ class User < ApplicationRecord
     [ "All activity", "all_activity" ]
   ].freeze
 
+  PUSH_NOTIFICATION_OPTIONS = [
+    {
+      param_key: "push_notify_mentions",
+      type: Notification::TYPE_MENTION,
+      label: "Mentions and comments",
+      description: "New mentions and comment activity that needs attention."
+    },
+    {
+      param_key: "push_notify_calendar_reminders",
+      type: Notification::TYPE_CALENDAR_REMINDER,
+      label: "Calendar reminders",
+      description: "Upcoming Kalendārium reminders for events and meetings."
+    },
+    {
+      param_key: "push_notify_approval_requests",
+      type: Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
+      label: "Approval requests",
+      description: "Agent drafts waiting on your approval."
+    },
+    {
+      param_key: "push_notify_changes_requested",
+      type: Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
+      label: "Changes requested",
+      description: "Drafts that were sent back for changes."
+    },
+    {
+      param_key: "push_notify_resubmitted_drafts",
+      type: Notification::TYPE_AGENT_ACTION_RESUBMITTED,
+      label: "Resubmitted drafts",
+      description: "Drafts that were updated and re-submitted for review."
+    },
+    {
+      param_key: "push_notify_approved_drafts",
+      type: Notification::TYPE_AGENT_ACTION_APPROVED,
+      label: "Approved drafts",
+      description: "Confirmation that an agent draft was approved."
+    },
+    {
+      param_key: "push_notify_rejected_drafts",
+      type: Notification::TYPE_AGENT_ACTION_REJECTED,
+      label: "Rejected drafts",
+      description: "Confirmation that an agent draft was rejected."
+    },
+    {
+      param_key: "push_notify_workflow_failures",
+      type: Notification::TYPE_WORKFLOW_FAILED,
+      label: "Workflow failures",
+      description: "Critical workflow failures. These bypass quiet hours."
+    },
+    {
+      param_key: "push_notify_ai_suggestions",
+      type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      label: "AI suggestions",
+      description: "Knowledge suggestions and daily AI briefs that are ready."
+    },
+    {
+      param_key: "push_notify_codex_completions",
+      type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      label: "Codex completions",
+      description: "Completion pushes sent from Codex into Notae."
+    }
+  ].freeze
+  PUSH_QUIET_HOURS_EXEMPT_TYPES = [ Notification::TYPE_WORKFLOW_FAILED ].freeze
+  CLOCK_TIME_PATTERN = /\A([01]\d|2[0-3]):[0-5]\d\z/
+
   SMTP_AUTHENTICATION_OPTIONS = [
     [ "Plain", "plain" ],
     [ "Login", "login" ],
@@ -111,6 +176,7 @@ class User < ApplicationRecord
   has_many :created_page_templates, class_name: "PageTemplate", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :created_cover_assets, class_name: "WorkspaceCoverAsset", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :api_tokens, dependent: :destroy
+  has_many :api_token_audit_events, dependent: :destroy
   has_many :favorites, dependent: :destroy
   has_many :ai_usage_logs, dependent: :destroy
   has_many :ai_conversations, dependent: :destroy
@@ -147,12 +213,15 @@ class User < ApplicationRecord
   validates :meeting_notify_join_transcribing, inclusion: { in: [ true, false ] }
   validates :meeting_notify_transcribed, inclusion: { in: [ true, false ] }
   validates :meeting_notify_summarized, inclusion: { in: [ true, false ] }
+  validates :push_quiet_hours_enabled, inclusion: { in: [ true, false ] }
   validates :email_notify_activity, inclusion: { in: [ true, false ] }
   validates :email_notify_always_send, inclusion: { in: [ true, false ] }
   validates :email_notify_page_updates, inclusion: { in: [ true, false ] }
   validates :email_notify_workspace_digest, inclusion: { in: [ true, false ] }
   validates :slack_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
   validates :discord_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
+  validates :push_quiet_hours_starts_at, format: { with: CLOCK_TIME_PATTERN }
+  validates :push_quiet_hours_ends_at, format: { with: CLOCK_TIME_PATTERN }
   validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
   validates :smtp_address, length: { maximum: 255 }, allow_blank: true
   validates :smtp_domain, length: { maximum: 255 }, allow_blank: true
@@ -170,6 +239,7 @@ class User < ApplicationRecord
   validates :smtp_authentication, inclusion: { in: SMTP_AUTHENTICATION_OPTIONS.map(&:last) }
   validate :smtp_settings_complete_if_any
   validate :smtp_from_email_format
+  validate :push_notification_preferences_supported
   validates :ai_search_daily_budget_usd, numericality: { greater_than_or_equal_to: 0 }
   validates :ai_search_semantic_rate_limit_per_minute, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
   validates :ai_search_answer_rate_limit_per_minute, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
@@ -224,6 +294,18 @@ class User < ApplicationRecord
     AI_LOADER_STYLE_OPTIONS.find { |(_label, option_value)| option_value == value }&.first || AI_LOADER_STYLE_OPTIONS.first.first
   end
 
+  def self.push_notification_param_keys
+    PUSH_NOTIFICATION_OPTIONS.map { |option| option[:param_key].to_sym }
+  end
+
+  def self.push_notification_type_for_param(param_key)
+    PUSH_NOTIFICATION_OPTIONS.find { |option| option[:param_key] == param_key.to_s }&.dig(:type)
+  end
+
+  def self.push_notification_types
+    PUSH_NOTIFICATION_OPTIONS.map { |option| option[:type].to_s }
+  end
+
   def resolved_ai_search_daily_budget_usd
     ai_search_daily_budget_usd.to_f
   end
@@ -238,6 +320,47 @@ class User < ApplicationRecord
 
   def calendar_extra_time_zone_list
     Array(calendar_extra_time_zones).map(&:to_s).reject(&:blank?).uniq
+  end
+
+  def push_notification_preferences
+    raw_preferences = self[:push_notification_preferences]
+    raw_preferences.is_a?(Hash) ? raw_preferences : {}
+  end
+
+  def push_notification_enabled_for?(notification_type)
+    stored_value = push_notification_preferences[notification_type.to_s]
+    return true if stored_value.nil?
+
+    ActiveModel::Type::Boolean.new.cast(stored_value)
+  end
+
+  def push_quiet_hours_active_for?(notification_type = nil, at: Time.current)
+    return false unless push_quiet_hours_enabled?
+    return false if notification_type.present? && PUSH_QUIET_HOURS_EXEMPT_TYPES.include?(notification_type.to_s)
+
+    start_minutes = clock_string_to_minutes(push_quiet_hours_starts_at)
+    end_minutes = clock_string_to_minutes(push_quiet_hours_ends_at)
+    return false if start_minutes.nil? || end_minutes.nil? || start_minutes == end_minutes
+
+    local_time = at.in_time_zone(ActiveSupport::TimeZone[time_zone] || Time.zone)
+    minute_of_day = (local_time.hour * 60) + local_time.min
+
+    if start_minutes < end_minutes
+      minute_of_day >= start_minutes && minute_of_day < end_minutes
+    else
+      minute_of_day >= start_minutes || minute_of_day < end_minutes
+    end
+  end
+
+  def push_delivery_allowed_for?(notification_type, at: Time.current)
+    push_notification_enabled_for?(notification_type) && !push_quiet_hours_active_for?(notification_type, at: at)
+  end
+
+  def email_notify_activity_for?(workspace, membership: nil)
+    scoped_membership = membership || membership_for_notification_workspace(workspace)
+    return email_notify_activity? if scoped_membership.blank?
+
+    scoped_membership.workspace_email_notify_activity_enabled?(default: email_notify_activity?)
   end
 
   private
@@ -289,6 +412,31 @@ class User < ApplicationRecord
     return if invalid_time_zones.empty?
 
     errors.add(:calendar_extra_time_zones, "contains unsupported time zones")
+  end
+
+  def push_notification_preferences_supported
+    unsupported_keys = push_notification_preferences.keys.map(&:to_s) - self.class.push_notification_types
+    return if unsupported_keys.empty?
+
+    errors.add(:push_notification_preferences, "contains unsupported notification types")
+  end
+
+  def membership_for_notification_workspace(workspace)
+    workspace_id = workspace.is_a?(Workspace) ? workspace.id : workspace
+
+    if memberships.loaded?
+      memberships.find { |membership| membership.workspace_id == workspace_id }
+    else
+      memberships.find_by(workspace_id: workspace_id)
+    end
+  end
+
+  def clock_string_to_minutes(raw_value)
+    value = raw_value.to_s
+    return nil unless CLOCK_TIME_PATTERN.match?(value)
+
+    hours, minutes = value.split(":").map(&:to_i)
+    (hours * 60) + minutes
   end
 
   def encrypted_value_present?(attribute_name)

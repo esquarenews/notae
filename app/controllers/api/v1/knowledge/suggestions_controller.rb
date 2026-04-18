@@ -2,6 +2,8 @@ module Api
   module V1
     module Knowledge
       class SuggestionsController < BaseController
+        require_api_token_scopes index: ApiToken::SCOPE_KNOWLEDGE_READ
+
         before_action :set_workspace!
 
         def index

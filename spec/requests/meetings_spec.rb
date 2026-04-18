@@ -90,6 +90,7 @@ RSpec.describe "Meetings", type: :request do
     expect(redirect_params["extension_token_status"]).to eq("created")
     expect(redirect_params["extension_token_ref"]).to be_present
     expect(created_token.name).to eq("Google Meet transcript extension (#{workspace.slug})")
+    expect(created_token.scopes).to contain_exactly(ApiToken::SCOPE_MEETINGS_READ, ApiToken::SCOPE_MEETINGS_WRITE)
     expect(flash[:meeting_extension_token]).to be_nil
     expect(flash[:meeting_extension_token_expires_at]).to be_nil
     expect(flash[:meeting_extension_token_id]).to be_nil
@@ -102,6 +103,7 @@ RSpec.describe "Meetings", type: :request do
 
     expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug, extension_token_status: "revoked"))
     expect(created_token.reload.revoked_at).to be_present
+    expect(ApiTokenAuditEvent.where(workspace: workspace).pluck(:event_type)).to include("issued", "revoked")
   end
 
   it "renders the meetings page without a 500 when extension token storage is unavailable" do

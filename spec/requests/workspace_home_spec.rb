@@ -64,6 +64,8 @@ RSpec.describe "Workspace home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceHomeController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
+    expect(response.headers["Server-Timing"]).to include("app;dur=")
+    expect(response.headers["Server-Timing"]).to include("sql;dur=")
     expect(response.body).to include("Open AI assistant")
     expect(response.body).to include("notae-ai-rail-reopen")
     expect(response.body).to include("notae-ai-floating-toggle")
@@ -101,6 +103,14 @@ RSpec.describe "Workspace home", type: :request do
 
     hero_subtle_lines = html.css(".notae-workspace-home-hero .notae-page-subtle").map { |node| node.text.strip }
     expect(hero_subtle_lines).to eq([ "Workspace home" ])
+
+    perf_samples = Notae::RequestPerformanceStore.fetch(workspace_id: workspace.id)
+    expect(perf_samples.first).to include(
+      action: "WorkspaceHomeController#show",
+      path: "/w/#{workspace.slug}",
+      status: 200
+    )
+    expect(perf_samples.first[:sql_queries]).to be >= 0
   end
 
   it "renders the workspace colour marker and top border for the active workspace" do

@@ -22,4 +22,22 @@ RSpec.describe WebPushSubscription, type: :model do
     expect(duplicate.errors[:p256dh]).to include("can't be blank")
     expect(duplicate.errors[:auth]).to include("can't be blank")
   end
+
+  it "reports host and delivery health for diagnostics" do
+    user = User.create!(email: "web-push-diagnostics@example.com", password: "password123")
+    subscription = described_class.create!(
+      user: user,
+      endpoint: "https://web.push.apple.com/QH123/subscriptions/1",
+      p256dh: "p256dh-token",
+      auth: "auth-token",
+      last_error_at: Time.current
+    )
+
+    expect(subscription.endpoint_host).to eq("web.push.apple.com")
+    expect(subscription.delivery_status).to eq(:failing)
+
+    subscription.update!(last_delivered_at: Time.current + 1.minute)
+
+    expect(subscription.delivery_status).to eq(:healthy)
+  end
 end

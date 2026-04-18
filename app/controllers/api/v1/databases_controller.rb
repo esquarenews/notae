@@ -1,6 +1,13 @@
 module Api
   module V1
     class DatabasesController < BaseController
+      require_api_token_scopes(
+        index: ApiToken::SCOPE_DATABASES_READ,
+        show: ApiToken::SCOPE_DATABASES_READ,
+        create: ApiToken::SCOPE_DATABASES_WRITE,
+        update: ApiToken::SCOPE_DATABASES_WRITE
+      )
+
       before_action :set_workspace!
       before_action :set_database!, only: %i[show update]
 

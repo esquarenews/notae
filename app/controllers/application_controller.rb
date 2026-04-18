@@ -1,4 +1,5 @@
 require "uri"
+require Rails.root.join("lib/notae/session_diagnostics")
 
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
@@ -22,11 +23,13 @@ class ApplicationController < ActionController::Base
   before_action :set_paper_trail_whodunnit
   before_action :ensure_realtime_channel_loaded
   around_action :use_user_time_zone
+  after_action :warn_if_cookie_session_near_limit
   after_action :verify_pundit_authorization, unless: :devise_controller?
   after_action :store_last_workspace_slug!, if: :should_store_last_workspace_slug?
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
   rescue_from ActionController::InvalidAuthenticityToken, with: :handle_invalid_authenticity_token
+  rescue_from ActionDispatch::Cookies::CookieOverflow, with: :handle_cookie_overflow
   rescue_from ActiveRecord::Encryption::Errors::Configuration, with: :handle_encryption_configuration_error
 
   private
@@ -52,9 +55,16 @@ class ApplicationController < ActionController::Base
     session["notae_last_workspace_slug"] = params[:workspace_slug].to_s
   end
 
-  def handle_invalid_authenticity_token
+  def handle_invalid_authenticity_token(error = nil)
+    log_session_diagnostic_event(reason: "invalid_authenticity_token", error: error)
     reset_session
     redirect_to new_user_session_path, alert: "Your session expired. Please sign in again."
+  end
+
+  def handle_cookie_overflow(error)
+    log_session_diagnostic_event(reason: "cookie_overflow", error: error)
+    reset_session
+    redirect_to new_user_session_path, alert: "Your session data exceeded the browser limit. Please sign in again."
   end
 
   def handle_encryption_configuration_error(error)
@@ -74,6 +84,15 @@ class ApplicationController < ActionController::Base
   def prune_workspace_session_state
     prune_legacy_workspace_session_state!
     last_page_visit_store
+  end
+
+  def warn_if_cookie_session_near_limit
+    return unless Notae::SessionDiagnostics.cookie_store?
+
+    bytes = Notae::SessionDiagnostics.approximate_payload_bytes(session)
+    return if bytes < Notae::SessionDiagnostics.warning_threshold_bytes
+
+    log_session_diagnostic_event(reason: "cookie_session_near_limit", extra: { approximate_session_bytes: bytes })
   end
 
   def prune_legacy_workspace_session_state!
@@ -694,6 +713,21 @@ class ApplicationController < ActionController::Base
 
   def derive_encryption_key(secret, context)
     OpenSSL::HMAC.hexdigest("SHA256", secret, "notae:active-record-encryption:#{context}")
+  end
+
+  def log_session_diagnostic_event(reason:, error: nil, extra: {})
+    payload = Notae::SessionDiagnostics.event_payload(
+      request: request,
+      session: session,
+      current_user: current_user,
+      reason: reason,
+      error: error
+    ).merge(extra)
+
+    Notae::SessionDiagnostics.instrument!(payload)
+    Rails.logger.warn("[SessionDiagnostic] #{payload.to_json}")
+  rescue StandardError => diagnostic_error
+    Rails.logger.warn("[SessionDiagnostic] failed to capture #{reason}: #{diagnostic_error.class}: #{diagnostic_error.message}")
   end
 
   def use_user_time_zone(&block)

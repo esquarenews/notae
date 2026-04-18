@@ -15,10 +15,13 @@ module Meetings
       raise UnavailableError, "API token storage is unavailable." unless storage_available?
 
       revoke!
-      user.api_tokens.create!(
+      token = user.api_tokens.create!(
         name: token_name,
-        expires_at: TOKEN_EXPIRY.from_now
+        expires_at: TOKEN_EXPIRY.from_now,
+        scopes_json: token_scopes
       )
+      log_audit_event!(token:, event_type: "issued")
+      token
     end
 
     def revoke!
@@ -26,6 +29,7 @@ module Meetings
 
       active_tokens.find_each do |token|
         token.revoke!
+        log_audit_event!(token:, event_type: "revoked")
       end
     end
 
@@ -71,6 +75,27 @@ module Meetings
 
     def active_tokens
       user.api_tokens.active.where(name: token_name)
+    end
+
+    def token_scopes
+      [
+        ApiToken::SCOPE_MEETINGS_READ,
+        ApiToken::SCOPE_MEETINGS_WRITE
+      ]
+    end
+
+    def log_audit_event!(token:, event_type:)
+      ApiTokenAuditEvent.create!(
+        api_token: token,
+        user: user,
+        workspace: workspace,
+        event_type: event_type,
+        required_scopes_json: token.scopes,
+        metadata_json: {
+          token_name: token.name,
+          token_scopes: token.scopes
+        }
+      )
     end
 
     def optional_schema_error?(error)

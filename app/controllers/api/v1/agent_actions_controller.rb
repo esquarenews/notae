@@ -1,6 +1,13 @@
 module Api
   module V1
     class AgentActionsController < BaseController
+      require_api_token_scopes(
+        index: ApiToken::SCOPE_AGENT_ACTIONS_READ,
+        show: ApiToken::SCOPE_AGENT_ACTIONS_READ,
+        create: ApiToken::SCOPE_AGENT_ACTIONS_WRITE,
+        approve: ApiToken::SCOPE_AGENT_ACTIONS_WRITE
+      )
+
       DEFAULT_LIMIT = 25
       MAX_LIMIT = 100
 

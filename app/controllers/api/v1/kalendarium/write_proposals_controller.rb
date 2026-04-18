@@ -2,6 +2,12 @@ module Api
   module V1
     module Kalendarium
       class WriteProposalsController < BaseController
+        require_api_token_scopes(
+          create: ApiToken::SCOPE_CALENDAR_WRITE,
+          confirm: ApiToken::SCOPE_CALENDAR_WRITE,
+          reject: ApiToken::SCOPE_CALENDAR_WRITE
+        )
+
         before_action :set_workspace!
         before_action :set_proposal!, only: %i[confirm reject]
 
