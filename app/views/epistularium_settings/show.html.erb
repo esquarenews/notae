@@ -6,11 +6,11 @@
 <% end %>
 <% content_for :suppress_layout_flash, true %>
 
+<%= render "shared/settings_flash_messages" %>
 <section class="notae-settings-shell">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :epistularium %>
 
   <div class="notae-settings-content">
-    <%= render "shared/settings_flash_messages" %>
     <section class="notae-settings-section">
       <h2>Connect Gmail with OAuth</h2>
       <p class="notae-pref-description">Use Google OAuth for read-only Gmail access. Message history is backfilled and indexed for AI context.</p>

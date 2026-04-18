@@ -6,11 +6,11 @@
 <% end %>
 <% content_for :suppress_layout_flash, true %>
 
+<%= render "shared/settings_flash_messages" %>
 <section class="notae-settings-shell" data-controller="auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :notifications %>
 
   <div class="notae-settings-content">
-    <%= render "shared/settings_flash_messages" %>
     <section class="notae-settings-section">
       <h2>In-app notifications</h2>
 

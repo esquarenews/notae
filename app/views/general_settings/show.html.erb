@@ -6,11 +6,11 @@
 <% end %>
 <% content_for :suppress_layout_flash, true %>
 
+<%= render "shared/settings_flash_messages" %>
 <section class="notae-settings-shell" data-controller="auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :general %>
 
   <div class="notae-settings-content">
-    <%= render "shared/settings_flash_messages" %>
     <% can_update = policy(@workspace).update? %>
     <% can_destroy = policy(@workspace).destroy? %>
 

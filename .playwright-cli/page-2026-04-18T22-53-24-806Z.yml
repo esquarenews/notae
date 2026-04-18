@@ -1,0 +1,507 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: personal
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/personal
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/personal/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/personal/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/personal/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/personal/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/personal/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/personal/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/personal/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - paragraph [ref=e82]: Loading workspaces…
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - button "Notarum" [expanded] [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]: ▾
+                - generic [ref=e87]: Notarum
+              - button "Create new Nota" [ref=e89] [cursor=pointer]: "[+]"
+            - list [ref=e91]:
+              - listitem [ref=e92]:
+                - paragraph [ref=e93]: Loading Notarum…
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - paragraph [ref=e104]: Loading grids…
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - button "Meetings" [expanded] [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]: ▾
+                - generic [ref=e109]: Meetings
+              - button "Create new Meeting" [ref=e111] [cursor=pointer]: "[+]"
+            - list [ref=e113]:
+              - listitem [ref=e114]:
+                - paragraph [ref=e115]: Loading meetings…
+          - generic [ref=e116]:
+            - button "Favorites" [expanded] [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: ▾
+              - generic [ref=e120]: Favorites
+            - list [ref=e122]:
+              - listitem [ref=e123]:
+                - paragraph [ref=e124]: Loading favorites…
+      - generic [ref=e125]:
+        - link "Settings" [ref=e126] [cursor=pointer]:
+          - /url: /w/personal/settings/preferences
+          - generic [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e132]: Settings
+        - link "Trash" [ref=e133] [cursor=pointer]:
+          - /url: /w/personal/trash
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e139]: Trash
+        - button "Sign out" [ref=e141] [cursor=pointer]:
+          - generic [ref=e142]:
+            - img [ref=e144]
+            - generic [ref=e147]: Sign out
+  - generic [ref=e148]:
+    - banner [ref=e149]:
+      - generic [ref=e151]:
+        - generic [ref=e152]: ⚙
+        - generic [ref=e153]: Preferences
+        - generic [ref=e154]: Account
+      - link "Close" [ref=e156] [cursor=pointer]:
+        - /url: /w/personal
+    - main [ref=e157]:
+      - generic [ref=e158]:
+        - complementary [ref=e159]:
+          - group [ref=e160]:
+            - generic [ref=e162]:
+              - paragraph [ref=e163]: Account
+              - generic [ref=e164]:
+                - generic [ref=e165]: P
+                - generic [ref=e166]: playwright-local@example.com
+              - link "Preferences" [ref=e167] [cursor=pointer]:
+                - /url: /w/personal/settings/preferences
+                - generic [ref=e168]:
+                  - img [ref=e169]
+                  - generic [ref=e171]: Preferences
+              - link "Notifications" [ref=e172] [cursor=pointer]:
+                - /url: /w/personal/settings/notifications
+                - generic [ref=e173]:
+                  - img [ref=e174]
+                  - generic [ref=e177]: Notifications
+              - link "Connections" [ref=e178] [cursor=pointer]:
+                - /url: /w/personal/settings/connections
+                - generic [ref=e179]:
+                  - img [ref=e180]
+                  - generic [ref=e183]: Connections
+              - paragraph [ref=e184]: Workspace
+              - generic [ref=e185]:
+                - generic [ref=e186]: Active workspace
+                - combobox "Active workspace" [ref=e187]:
+                  - option "personal" [selected]
+              - link "General" [ref=e188] [cursor=pointer]:
+                - /url: /w/personal/settings/general?settings_workspace_slug=personal
+                - generic [ref=e189]:
+                  - img [ref=e190]
+                  - generic [ref=e193]: General
+              - link "People" [ref=e194] [cursor=pointer]:
+                - /url: /w/personal/settings/people?settings_workspace_slug=personal
+                - generic [ref=e195]:
+                  - img [ref=e196]
+                  - generic [ref=e201]: People
+              - link "Import" [ref=e202] [cursor=pointer]:
+                - /url: /w/personal/settings/import?settings_workspace_slug=personal
+                - generic [ref=e203]:
+                  - img [ref=e204]
+                  - generic [ref=e207]: Import
+              - paragraph [ref=e208]: Features
+              - link "Notae AI" [ref=e209] [cursor=pointer]:
+                - /url: /w/personal/settings/notae-ai?settings_workspace_slug=personal
+                - generic [ref=e210]:
+                  - img [ref=e211]
+                  - generic [ref=e213]: Notae AI
+              - link "AI Analytics" [ref=e214] [cursor=pointer]:
+                - /url: /w/personal/settings/ai-analytics?settings_workspace_slug=personal
+                - generic [ref=e215]:
+                  - img [ref=e216]
+                  - generic [ref=e217]: AI Analytics
+              - link "Kalendārium" [ref=e218] [cursor=pointer]:
+                - /url: /w/personal/settings/kalendarium?settings_workspace_slug=personal
+                - generic [ref=e219]:
+                  - img [ref=e220]
+                  - generic [ref=e223]: Kalendārium
+              - link "Epistularium" [ref=e224] [cursor=pointer]:
+                - /url: /w/personal/settings/epistularium?settings_workspace_slug=personal
+                - generic [ref=e225]:
+                  - img [ref=e226]
+                  - generic [ref=e229]: Epistularium
+              - generic [ref=e230]:
+                - generic [ref=e231]:
+                  - img [ref=e232]
+                  - generic [ref=e236]: Favicon Lab
+                - emphasis [ref=e237]: Internal
+              - generic [ref=e238]:
+                - generic [ref=e239]:
+                  - img [ref=e240]
+                  - generic [ref=e243]: Public Notarum
+                - emphasis [ref=e244]: Future
+              - link "Emoji" [ref=e245] [cursor=pointer]:
+                - /url: /w/personal/settings/emoji?settings_workspace_slug=personal
+                - generic [ref=e246]:
+                  - img [ref=e247]
+                  - generic [ref=e250]: Emoji
+              - paragraph [ref=e251]: Integrations
+              - generic [ref=e252]:
+                - generic [ref=e253]:
+                  - img [ref=e254]
+                  - generic [ref=e257]: Manage
+                - emphasis [ref=e258]: Future
+              - paragraph [ref=e259]: Admin
+              - link "Operations" [ref=e260] [cursor=pointer]:
+                - /url: /w/personal/settings/operations?settings_workspace_slug=personal
+                - generic [ref=e261]:
+                  - img [ref=e262]
+                  - generic [ref=e264]: Operations
+              - generic [ref=e265]:
+                - generic [ref=e266]:
+                  - img [ref=e267]
+                  - generic [ref=e272]: Teamspaces
+                - emphasis [ref=e273]: Future
+              - paragraph [ref=e274]: Access & billing
+              - generic [ref=e275]:
+                - generic [ref=e276]:
+                  - img [ref=e277]
+                  - generic [ref=e279]: Upgrade plan
+                - emphasis [ref=e280]: Future
+        - generic [ref=e281]:
+          - paragraph [ref=e282]: Preferences updated.
+          - generic [ref=e283]:
+            - heading "Appearance" [level=2] [ref=e284]
+            - generic [ref=e285]:
+              - generic [ref=e286]:
+                - paragraph [ref=e287]: Theme
+                - paragraph [ref=e288]: Choose a theme for Notae on this device.
+              - combobox [ref=e290]:
+                - option "Light" [selected]
+                - option "Use system setting"
+                - option "Dark"
+            - generic [ref=e291]:
+              - generic [ref=e292]:
+                - paragraph [ref=e293]: Reduce Notae AI loader motion
+                - paragraph [ref=e294]: Show static AI loader states instead of animated loops for accessibility.
+              - checkbox [ref=e297] [cursor=pointer]
+          - generic [ref=e299]:
+            - heading "Language & Time" [level=2] [ref=e300]
+            - generic [ref=e301]:
+              - generic [ref=e302]:
+                - paragraph [ref=e303]:
+                  - text: Language
+                  - generic [ref=e304]: Future implementation
+                - paragraph [ref=e305]: Choose the language you want to use in Notae.
+              - combobox [ref=e307]:
+                - option "English (US)" [selected]
+                - option "English (UK)"
+            - generic [ref=e308]:
+              - generic [ref=e309]:
+                - paragraph [ref=e310]:
+                  - text: Always show text direction controls
+                  - generic [ref=e311]: Future implementation
+                - paragraph [ref=e312]: Show left-to-right and right-to-left controls in the editor.
+              - checkbox [ref=e315] [cursor=pointer]
+            - generic [ref=e317]:
+              - generic [ref=e318]:
+                - paragraph [ref=e319]: Start week on
+                - paragraph [ref=e320]: Choose whether calendars start on Monday (default) or Sunday.
+              - combobox [ref=e322]:
+                - option "Monday" [selected]
+                - option "Sunday"
+            - generic [ref=e323]:
+              - generic [ref=e324]:
+                - paragraph [ref=e325]: Date format
+                - paragraph [ref=e326]:
+                  - text: Format used for
+                  - code [ref=e327]: "@date"
+                  - text: mentions.
+              - combobox [ref=e329]:
+                - option "Full date"
+                - option "Short date"
+                - option "Month/Day/Year"
+                - option "Day/Month/Year"
+                - option "Year/Month/Day"
+                - option "Relative" [selected]
+            - generic [ref=e330]:
+              - generic [ref=e331]:
+                - paragraph [ref=e332]: Set time zone automatically using your location
+                - paragraph [ref=e333]: Uses your system time zone from the browser/OS.
+              - checkbox [checked] [ref=e336] [cursor=pointer]
+            - generic [ref=e338]:
+              - generic [ref=e339]:
+                - paragraph [ref=e340]: Time zone
+                - paragraph [ref=e341]: Choose your time zone for timestamps and time-based greetings.
+              - combobox [disabled] [ref=e343]:
+                - option "(GMT-12:00) International Date Line West" [selected]
+                - option "(GMT-11:00) American Samoa"
+                - option "(GMT-11:00) Midway Island"
+                - option "(GMT-10:00) Hawaii"
+                - option "(GMT-09:00) Alaska"
+                - option "(GMT-08:00) Pacific Time (US & Canada)"
+                - option "(GMT-08:00) Tijuana"
+                - option "(GMT-07:00) Arizona"
+                - option "(GMT-07:00) Mazatlan"
+                - option "(GMT-07:00) Mountain Time (US & Canada)"
+                - option "(GMT-06:00) Central America"
+                - option "(GMT-06:00) Central Time (US & Canada)"
+                - option "(GMT-06:00) Chihuahua"
+                - option "(GMT-06:00) Guadalajara"
+                - option "(GMT-06:00) Mexico City"
+                - option "(GMT-06:00) Monterrey"
+                - option "(GMT-06:00) Saskatchewan"
+                - option "(GMT-05:00) Bogota"
+                - option "(GMT-05:00) Eastern Time (US & Canada)"
+                - option "(GMT-05:00) Indiana (East)"
+                - option "(GMT-05:00) Lima"
+                - option "(GMT-05:00) Quito"
+                - option "(GMT-04:00) Atlantic Time (Canada)"
+                - option "(GMT-04:00) Caracas"
+                - option "(GMT-04:00) Georgetown"
+                - option "(GMT-04:00) La Paz"
+                - option "(GMT-04:00) Puerto Rico"
+                - option "(GMT-04:00) Santiago"
+                - option "(GMT-03:30) Newfoundland"
+                - option "(GMT-03:00) Asuncion"
+                - option "(GMT-03:00) Brasilia"
+                - option "(GMT-03:00) Buenos Aires"
+                - option "(GMT-03:00) Montevideo"
+                - option "(GMT-02:00) Greenland"
+                - option "(GMT-02:00) Mid-Atlantic"
+                - option "(GMT-01:00) Azores"
+                - option "(GMT-01:00) Cape Verde Is."
+                - option "(GMT+00:00) Casablanca"
+                - option "(GMT+00:00) Dublin"
+                - option "(GMT+00:00) Edinburgh"
+                - option "(GMT+00:00) Lisbon"
+                - option "(GMT+00:00) London"
+                - option "(GMT+00:00) Monrovia"
+                - option "(GMT+00:00) UTC"
+                - option "(GMT+01:00) Amsterdam"
+                - option "(GMT+01:00) Belgrade"
+                - option "(GMT+01:00) Berlin"
+                - option "(GMT+01:00) Bern"
+                - option "(GMT+01:00) Bratislava"
+                - option "(GMT+01:00) Brussels"
+                - option "(GMT+01:00) Budapest"
+                - option "(GMT+01:00) Copenhagen"
+                - option "(GMT+01:00) Ljubljana"
+                - option "(GMT+01:00) Madrid"
+                - option "(GMT+01:00) Paris"
+                - option "(GMT+01:00) Prague"
+                - option "(GMT+01:00) Rome"
+                - option "(GMT+01:00) Sarajevo"
+                - option "(GMT+01:00) Skopje"
+                - option "(GMT+01:00) Stockholm"
+                - option "(GMT+01:00) Vienna"
+                - option "(GMT+01:00) Warsaw"
+                - option "(GMT+01:00) West Central Africa"
+                - option "(GMT+01:00) Zagreb"
+                - option "(GMT+01:00) Zurich"
+                - option "(GMT+02:00) Athens"
+                - option "(GMT+02:00) Bucharest"
+                - option "(GMT+02:00) Cairo"
+                - option "(GMT+02:00) Harare"
+                - option "(GMT+02:00) Helsinki"
+                - option "(GMT+02:00) Jerusalem"
+                - option "(GMT+02:00) Kaliningrad"
+                - option "(GMT+02:00) Kyiv"
+                - option "(GMT+02:00) Pretoria"
+                - option "(GMT+02:00) Riga"
+                - option "(GMT+02:00) Sofia"
+                - option "(GMT+02:00) Tallinn"
+                - option "(GMT+02:00) Vilnius"
+                - option "(GMT+03:00) Baghdad"
+                - option "(GMT+03:00) Istanbul"
+                - option "(GMT+03:00) Kuwait"
+                - option "(GMT+03:00) Minsk"
+                - option "(GMT+03:00) Moscow"
+                - option "(GMT+03:00) Nairobi"
+                - option "(GMT+03:00) Riyadh"
+                - option "(GMT+03:00) St. Petersburg"
+                - option "(GMT+03:00) Volgograd"
+                - option "(GMT+03:30) Tehran"
+                - option "(GMT+04:00) Abu Dhabi"
+                - option "(GMT+04:00) Baku"
+                - option "(GMT+04:00) Muscat"
+                - option "(GMT+04:00) Samara"
+                - option "(GMT+04:00) Tbilisi"
+                - option "(GMT+04:00) Yerevan"
+                - option "(GMT+04:30) Kabul"
+                - option "(GMT+05:00) Almaty"
+                - option "(GMT+05:00) Astana"
+                - option "(GMT+05:00) Ekaterinburg"
+                - option "(GMT+05:00) Islamabad"
+                - option "(GMT+05:00) Karachi"
+                - option "(GMT+05:00) Tashkent"
+                - option "(GMT+05:30) Chennai"
+                - option "(GMT+05:30) Kolkata"
+                - option "(GMT+05:30) Mumbai"
+                - option "(GMT+05:30) New Delhi"
+                - option "(GMT+05:30) Sri Jayawardenepura"
+                - option "(GMT+05:45) Kathmandu"
+                - option "(GMT+06:00) Dhaka"
+                - option "(GMT+06:00) Urumqi"
+                - option "(GMT+06:30) Rangoon"
+                - option "(GMT+07:00) Bangkok"
+                - option "(GMT+07:00) Hanoi"
+                - option "(GMT+07:00) Jakarta"
+                - option "(GMT+07:00) Krasnoyarsk"
+                - option "(GMT+07:00) Novosibirsk"
+                - option "(GMT+08:00) Beijing"
+                - option "(GMT+08:00) Chongqing"
+                - option "(GMT+08:00) Hong Kong"
+                - option "(GMT+08:00) Irkutsk"
+                - option "(GMT+08:00) Kuala Lumpur"
+                - option "(GMT+08:00) Perth"
+                - option "(GMT+08:00) Singapore"
+                - option "(GMT+08:00) Taipei"
+                - option "(GMT+08:00) Ulaanbaatar"
+                - option "(GMT+09:00) Osaka"
+                - option "(GMT+09:00) Sapporo"
+                - option "(GMT+09:00) Seoul"
+                - option "(GMT+09:00) Tokyo"
+                - option "(GMT+09:00) Yakutsk"
+                - option "(GMT+09:30) Adelaide"
+                - option "(GMT+09:30) Darwin"
+                - option "(GMT+10:00) Brisbane"
+                - option "(GMT+10:00) Canberra"
+                - option "(GMT+10:00) Guam"
+                - option "(GMT+10:00) Hobart"
+                - option "(GMT+10:00) Melbourne"
+                - option "(GMT+10:00) Port Moresby"
+                - option "(GMT+10:00) Sydney"
+                - option "(GMT+10:00) Vladivostok"
+                - option "(GMT+11:00) Magadan"
+                - option "(GMT+11:00) New Caledonia"
+                - option "(GMT+11:00) Solomon Is."
+                - option "(GMT+11:00) Srednekolymsk"
+                - option "(GMT+12:00) Auckland"
+                - option "(GMT+12:00) Fiji"
+                - option "(GMT+12:00) Kamchatka"
+                - option "(GMT+12:00) Marshall Is."
+                - option "(GMT+12:00) Wellington"
+                - option "(GMT+12:45) Chatham Is."
+                - option "(GMT+13:00) Nuku'alofa"
+                - option "(GMT+13:00) Samoa"
+                - option "(GMT+13:00) Tokelau Is."
+          - generic [ref=e344]:
+            - heading "Desktop app" [level=2] [ref=e345]
+            - generic [ref=e346]:
+              - generic [ref=e347]:
+                - paragraph [ref=e348]: Open links in new browser window
+                - paragraph [ref=e349]: External links open in a new tab/window by default.
+              - checkbox [checked] [ref=e352] [cursor=pointer]
+            - generic [ref=e354]:
+              - generic [ref=e355]:
+                - paragraph [ref=e356]:
+                  - text: Open desktop app
+                  - generic [ref=e357]: Future implementation
+                - paragraph [ref=e358]: Directly opening the native app from web is not wired yet.
+              - button "Open desktop app" [disabled] [ref=e360]
+            - generic [ref=e361]:
+              - generic [ref=e362]:
+                - paragraph [ref=e363]: Open on start
+                - paragraph [ref=e364]: Choose whether to open Home page (default) or last page visited.
+              - combobox [ref=e366]:
+                - option "Home page" [selected]
+                - option "Last page visited"
+          - generic [ref=e367]:
+            - heading "Privacy" [level=2] [ref=e368]
+            - generic [ref=e369]:
+              - generic [ref=e370]:
+                - paragraph [ref=e371]:
+                  - text: Cookie settings
+                  - generic [ref=e372]: Future implementation
+                - paragraph [ref=e373]: Granular cookie controls will be connected to runtime consent gates later.
+              - combobox [ref=e375]:
+                - option "Customize" [selected]
+                - option "Balanced"
+                - option "Strict"
+            - generic [ref=e376]:
+              - generic [ref=e377]:
+                - paragraph [ref=e378]:
+                  - text: Show my view history
+                  - generic [ref=e379]: Future implementation
+                - paragraph [ref=e380]: Visibility of viewing history will be respected when view-tracking is fully enabled.
+              - checkbox [checked] [ref=e383] [cursor=pointer]
+            - generic [ref=e385]:
+              - generic [ref=e386]:
+                - paragraph [ref=e387]:
+                  - text: Profile discoverability
+                  - generic [ref=e388]: Future implementation
+                - paragraph [ref=e389]: Controls who can discover your profile when inviting collaborators.
+              - checkbox [checked] [ref=e392] [cursor=pointer]
+  - complementary "Workspace notification bar" [ref=e394]:
+    - button "Open compact Kalendārium" [ref=e395] [cursor=pointer]:
+      - generic [ref=e396]: Sun 19 Apr · 8:53
+  - complementary [ref=e400]:
+    - generic [ref=e401]:
+      - generic [ref=e402]: New AI chat
+      - generic [ref=e403]:
+        - combobox [ref=e404]:
+          - option "Auto" [selected]
+          - option "This document only"
+          - option "This workspace only"
+          - option "Whole account"
+        - button "Minimize AI assistant rail" [ref=e405] [cursor=pointer]: ▸
+    - generic [ref=e406]:
+      - paragraph [ref=e407]: Notae AI assistant
+      - paragraph [ref=e408]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - generic [ref=e410]:
+      - generic [ref=e411]: Prompt
+      - textbox "Prompt" [ref=e413]:
+        - /placeholder: Ask a question or request a draft action for review.
+      - button "Send" [ref=e415] [cursor=pointer]
+    - button "Usage" [ref=e417] [cursor=pointer]
