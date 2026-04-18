@@ -222,7 +222,7 @@ RSpec.describe "Workspace home", type: :request do
       expect(calendar_panel.attribute("hidden")).to be_present
       expect(calendar_frame).to be_present
       expect(calendar_frame["data-notification-bar-target"]).to eq("calendarFrame")
-      expect(calendar_frame["src"]).to eq(kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: "2026-04-11"))
+      expect(calendar_frame["src"]).to eq(kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: "2026-04-11", tz: [ "Australia/Melbourne" ]))
       expect(document.text).to include("Client review")
       expect(document.text).to include("Starts in 10 min")
       expect(document.text).to include("1 email just came in")

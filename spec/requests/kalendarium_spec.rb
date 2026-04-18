@@ -242,6 +242,26 @@ RSpec.describe "Kalendarium", type: :request do
     expect(day_track["data-day-date"]).to eq("2026-04-11")
   end
 
+  it "uses the requested widget timezone for timeline centering and now-line calculations" do
+    user, workspace, = build_stack(suffix: "widget-time-zone", time_zone: "UTC")
+    sign_in user
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      embedded: "1",
+      widget: "1",
+      date: "2026-04-11",
+      tz: [ "Australia/Melbourne" ]
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    day_timeline = document.at_css(".notae-kalendarium-timeline")
+
+    expect(day_timeline).to be_present
+    expect(day_timeline["data-kalendarium-timeline-time-zone-value"]).to eq("Australia/Melbourne")
+  end
+
   it "respects the requested widget calendar view" do
     user, workspace, = build_stack(suffix: "widget-year", time_zone: "Australia/Melbourne")
     sign_in user

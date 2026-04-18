@@ -5,7 +5,7 @@
        data-notification-bar-workspace-key-value="<%= workspace.slug %>"
        data-notification-bar-refresh-path-value="<%= workspace_notification_bar_path(workspace_slug: workspace.slug) %>">
   <% if presenter.show_clock? %>
-    <% calendar_widget_path = kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: presenter.calendar_widget_date) %>
+    <% calendar_widget_path = kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: presenter.calendar_widget_date, tz: [presenter.time_zone_name]) %>
     <button type="button"
             class="notae-shell-status-bar-clock-button"
             aria-label="Open compact Kalendārium"
