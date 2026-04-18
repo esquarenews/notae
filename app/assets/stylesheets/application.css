@@ -6806,6 +6806,15 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   word-break: break-word;
 }
 
+.notae-agent-action-preview-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--notae-line-soft);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--notae-surface) 86%, transparent);
+}
+
 .notae-utility-page {
   gap: 0.8rem;
 }

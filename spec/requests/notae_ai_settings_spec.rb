@@ -151,6 +151,7 @@ RSpec.describe "Notae AI settings", type: :request do
               automation_confidence_threshold: "0.80",
               allowed_target_systems_json: %w[gmail github],
               allowed_draft_types_json: %w[email_draft github_comment_draft],
+              approval_required_draft_types_json: %w[github_comment_draft],
               allowed_lifecycle_operations_json: %w[draft update approve reject request_changes],
               allowed_internal_actions_json: %w[create_nota create_task],
               author_roles_json: %w[member owner automation_agent],
@@ -161,6 +162,7 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response).to redirect_to(workspace_notae_ai_settings_path(workspace_slug: workspace.slug))
     policy = workspace.reload.agent_policy
     expect(policy.allowed_target_systems).to eq(%w[gmail github])
+    expect(policy.approval_required_draft_types).to eq(%w[github_comment_draft])
     expect(policy.allowed_internal_actions).to eq(%w[create_nota create_task])
     expect(policy.approver_roles).to eq(%w[owner])
     expect(policy.automation_retry_limit).to eq(3)

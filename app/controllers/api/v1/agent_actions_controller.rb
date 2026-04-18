@@ -12,7 +12,7 @@ module Api
       MAX_LIMIT = 100
 
       before_action :set_workspace!
-      before_action :set_agent_action!, only: %i[show approve]
+      before_action :set_agent_action!, only: %i[show approve reverse]
 
       def index
         authorize AgentAction.new(workspace: workspace, user: current_user), :index?
@@ -82,6 +82,22 @@ module Api
           data: Api::V1::Serializers::AgentActionSerializer.render(agent_action.reload, include_history: true)
         }, status: :ok
       rescue AgentActions::ApprovalService::Error => error
+        render_error(code: "validation_failed", message: error.message, status: :unprocessable_entity)
+      end
+
+      def reverse
+        authorize @agent_action, :reverse?
+
+        agent_action = AgentActions::ReversalService.new(
+          agent_action: @agent_action,
+          actor: current_user,
+          comment: params[:decision_comment]
+        ).call
+
+        render json: {
+          data: Api::V1::Serializers::AgentActionSerializer.render(agent_action.reload, include_history: true)
+        }, status: :ok
+      rescue AgentActions::ReversalService::Error => error
         render_error(code: "validation_failed", message: error.message, status: :unprocessable_entity)
       end
 

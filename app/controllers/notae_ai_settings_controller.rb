@@ -64,6 +64,7 @@ class NotaeAiSettingsController < ApplicationController
       :automation_confidence_threshold,
       allowed_target_systems_json: [],
       allowed_draft_types_json: [],
+      approval_required_draft_types_json: [],
       allowed_lifecycle_operations_json: [],
       allowed_internal_actions_json: [],
       author_roles_json: [],

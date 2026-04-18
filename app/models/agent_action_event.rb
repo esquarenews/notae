@@ -9,6 +9,7 @@ class AgentActionEvent < ApplicationRecord
     changes_requested
     resubmitted
     approved
+    reversed
     rejected
     tool_used
     failed

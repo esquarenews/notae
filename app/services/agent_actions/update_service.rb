@@ -17,6 +17,7 @@ module AgentActions
 
       resubmitting = agent_action.changes_requested?
       agent_action.transaction do
+        preview_before = AgentActions::PreviewBuilder.new(agent_action).to_h["after"]
         agent_action.update!(
           title: attributes.fetch(:title, agent_action.title),
           payload_json: attributes.fetch(:payload_json, agent_action.payload_json),
@@ -33,7 +34,9 @@ module AgentActions
           details: {
             "title" => agent_action.title,
             "target_system" => agent_action.target_system,
-            "draft_type" => agent_action.draft_type
+            "draft_type" => agent_action.draft_type,
+            "preview_before" => preview_before,
+            "preview_after" => AgentActions::PreviewBuilder.new(agent_action).to_h["after"]
           }
         )
         if resubmitting

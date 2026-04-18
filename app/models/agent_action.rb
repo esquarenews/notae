@@ -57,6 +57,14 @@ class AgentAction < ApplicationRecord
     status == STATUS_FAILED
   end
 
+  def reversed?
+    result_json.to_h["reversal"].present?
+  end
+
+  def reversible?
+    approved? && !reversed? && result_json.to_h["target_id"].present? && reversible_target_type?
+  end
+
   def editable?
     pending? || changes_requested?
   end
@@ -86,6 +94,10 @@ class AgentAction < ApplicationRecord
   end
 
   private
+
+  def reversible_target_type?
+    %w[Page DbRow KalendariumEvent].include?(result_json.to_h["target_type"].to_s)
+  end
 
   def validate_target_system_for_draft_type
     return if draft_type.blank? || target_system.blank?

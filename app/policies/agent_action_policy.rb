@@ -32,6 +32,10 @@ class AgentActionPolicy < ApplicationPolicy
     membership&.admin_or_owner? && record.pending?
   end
 
+  def reverse?
+    membership&.admin_or_owner? && record.reversible?
+  end
+
   class Scope < Scope
     def resolve
       return scope.none unless user

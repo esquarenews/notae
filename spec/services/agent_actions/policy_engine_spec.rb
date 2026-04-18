@@ -165,4 +165,34 @@ RSpec.describe AgentActions::PolicyEngine do
     expect(decision.reasons).to include("Lifecycle operation is blocked by workspace policy")
     expect(decision.reasons).to include("Estimated cost exceeds workspace policy")
   end
+
+  it "can require approval for specific draft types even when global approval is off" do
+    workspace = Workspace.create!(name: "Policy Engine Draft Approval", slug: "policy-engine-draft-approval")
+    owner = User.create!(email: "policy-engine-draft-approval@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    AgentPolicy.create!(
+      workspace: workspace,
+      approval_required: false,
+      dry_run_required: true,
+      approval_required_draft_types_json: [ "calendar_hold" ]
+    )
+
+    email_decision = described_class.new(
+      workspace: workspace,
+      actor: owner,
+      target_system: "gmail",
+      draft_type: "email_draft",
+      lifecycle_operation: described_class::LIFECYCLE_DRAFT
+    ).evaluate
+    calendar_decision = described_class.new(
+      workspace: workspace,
+      actor: owner,
+      target_system: "calendar",
+      draft_type: "calendar_hold",
+      lifecycle_operation: described_class::LIFECYCLE_DRAFT
+    ).evaluate
+
+    expect(email_decision.approval_required).to eq(false)
+    expect(calendar_decision.approval_required).to eq(true)
+  end
 end

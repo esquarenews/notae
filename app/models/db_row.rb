@@ -68,6 +68,18 @@ class DbRow < ApplicationRecord
     update!(data_json: serialized_data)
   end
 
+  def archive!
+    update!(archived_at: Time.current)
+  end
+
+  def restore!
+    update!(archived_at: nil)
+  end
+
+  def archived?
+    archived_at.present?
+  end
+
   def refresh_cached_data_json!(payload, enqueue_reindex: true)
     normalized_payload = payload.is_a?(Hash) ? payload : {}
     normalized_search_text = self.class.search_text_from(title:, data_json: normalized_payload)

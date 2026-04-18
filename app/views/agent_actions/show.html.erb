@@ -104,12 +104,25 @@
         <% if @agent_action.result_json["summary"].present? %>
           <p><%= @agent_action.result_json["summary"] %></p>
         <% end %>
+        <% if @agent_action.result_json.dig("reversal", "summary").present? %>
+          <p class="notae-page-subtle">Reversal</p>
+          <p><%= @agent_action.result_json.dig("reversal", "summary") %></p>
+        <% end %>
         <% if @agent_action.result_json["url"].present? %>
           <p><%= link_to "Open created item", @agent_action.result_json["url"], class: "notae-chip-button notae-chip-button-subtle" %></p>
         <% end %>
         <div class="notae-workspace-home-json"><%= @agent_action.result_json.to_json %></div>
       <% else %>
         <p class="notae-page-subtle">No execution result yet.</p>
+      <% end %>
+
+      <% if policy(@agent_action).reverse? %>
+        <%= form_with url: reverse_agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), method: :post, class: "notae-workspace-home-stack" do |form| %>
+          <%= form.text_area :decision_comment, placeholder: "Why this action is being reversed", class: "notae-auth-input", rows: 3 %>
+          <%= form.submit "Reverse created item", class: "notae-chip-button notae-chip-button-subtle" %>
+        <% end %>
+      <% elsif @agent_action.reversed? %>
+        <p class="notae-page-subtle">This approved action has already been reversed.</p>
       <% end %>
     </section>
   </div>

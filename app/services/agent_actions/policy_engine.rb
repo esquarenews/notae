@@ -99,7 +99,7 @@ module AgentActions
         allowed: reasons.empty?,
         role: role,
         policy_id: active_policy.id,
-        approval_required: active_policy.approval_required?,
+        approval_required: active_policy.approval_required_for_draft_type?(draft_type),
         dry_run_only: active_policy.dry_run_required?,
         estimated_cost_usd: estimated_cost_usd,
         max_estimated_cost_usd: active_policy.max_estimated_cost_usd,

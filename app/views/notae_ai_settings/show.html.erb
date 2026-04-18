@@ -185,6 +185,23 @@
 
             <div class="notae-pref-row notae-pref-row--stacked">
               <div class="notae-pref-copy">
+                <p class="notae-pref-label">Approval required by draft type</p>
+                <p class="notae-pref-description">Use this when global approval is off but specific action types must still be reviewed by a human.</p>
+              </div>
+              <div class="notae-ai-loader-options-grid is-two-column">
+                <% AgentAction::DRAFT_TYPE_OPTIONS.each do |value| %>
+                  <label class="notae-ai-loader-option">
+                    <%= check_box_tag "agent_policy[approval_required_draft_types_json][]",
+                                      value,
+                                      @agent_policy.approval_required_draft_types.include?(value) %>
+                    <span class="notae-ai-loader-option-title"><%= value.humanize %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="notae-pref-row notae-pref-row--stacked">
+              <div class="notae-pref-copy">
                 <p class="notae-pref-label">Allowed lifecycle operations</p>
               </div>
               <div class="notae-ai-loader-options-grid is-two-column">

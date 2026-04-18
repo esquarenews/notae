@@ -52,6 +52,24 @@ class AgentPolicy < ApplicationRecord
     normalize_collection(allowed_internal_actions_json.presence || DEFAULT_ALLOWED_INTERNAL_ACTIONS, INTERNAL_ACTION_OPTIONS)
   end
 
+  def approval_required_draft_types
+    normalize_collection(metadata_json.to_h["approval_required_draft_types"], AgentAction::DRAFT_TYPE_OPTIONS)
+  end
+
+  def approval_required_draft_types_json
+    approval_required_draft_types
+  end
+
+  def approval_required_draft_types_json=(values)
+    self.metadata_json = metadata_json.to_h.merge(
+      "approval_required_draft_types" => normalize_collection(values, AgentAction::DRAFT_TYPE_OPTIONS)
+    )
+  end
+
+  def approval_required_for_draft_type?(draft_type)
+    approval_required? || approval_required_draft_types.include?(draft_type.to_s)
+  end
+
   def role_allowed_for_operation?(role, lifecycle_operation)
     normalized_role = role.to_s
     return false if normalized_role.blank?
@@ -67,6 +85,7 @@ class AgentPolicy < ApplicationRecord
       "author_roles" => author_roles,
       "approver_roles" => approver_roles,
       "approval_required" => approval_required,
+      "approval_required_draft_types" => approval_required_draft_types,
       "dry_run_required" => dry_run_required,
       "max_estimated_cost_usd" => max_estimated_cost_usd.to_f,
       "allow_internal_automation" => allow_internal_automation,
@@ -86,6 +105,7 @@ class AgentPolicy < ApplicationRecord
     self.author_roles_json = DEFAULT_AUTHOR_ROLES if author_roles_json.blank?
     self.approver_roles_json = DEFAULT_APPROVER_ROLES if approver_roles_json.blank?
     self.max_estimated_cost_usd = DEFAULT_MAX_ESTIMATED_COST_USD if max_estimated_cost_usd.blank?
+    self.metadata_json = metadata_json.to_h
     self.allowed_internal_actions_json = DEFAULT_ALLOWED_INTERNAL_ACTIONS if allowed_internal_actions_json.blank?
     self.automation_retry_limit = DEFAULT_AUTOMATION_RETRY_LIMIT if automation_retry_limit.blank?
     self.automation_confidence_threshold = DEFAULT_AUTOMATION_CONFIDENCE_THRESHOLD if automation_confidence_threshold.blank?

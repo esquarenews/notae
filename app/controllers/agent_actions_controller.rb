@@ -1,7 +1,7 @@
 class AgentActionsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_agent_action, only: %i[show update approve reject request_changes]
+  before_action :set_agent_action, only: %i[show update approve reject request_changes reverse]
   before_action :load_approval_targets, only: %i[show]
 
   def index
@@ -120,6 +120,23 @@ class AgentActionsController < ApplicationController
     render :show, status: :unprocessable_entity
   end
 
+  def reverse
+    authorize @agent_action, :reverse?
+
+    AgentActions::ReversalService.new(
+      agent_action: @agent_action,
+      actor: current_user,
+      comment: params[:decision_comment]
+    ).call
+
+    redirect_to agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), notice: "Approved action reversed."
+  rescue AgentActions::ReversalService::Error => error
+    @review_history = @agent_action.review_history
+    load_approval_targets
+    flash.now[:alert] = error.message
+    render :show, status: :unprocessable_entity
+  end
+
   private
 
   def set_workspace
@@ -225,14 +242,14 @@ class AgentActionsController < ApplicationController
   def load_approval_targets
     @approval_target_databases =
       if @agent_action&.draft_type == "task_ticket"
-        policy_scope(Database).for_workspace(@workspace).active.order(:name)
+        policy_scope(Database).for_workspace(@workspace).active.order(:name).select { |database| policy(database).update? }
       else
         Database.none
       end
 
     @approval_target_calendars =
       if @agent_action&.draft_type == "calendar_hold"
-        policy_scope(KalendariumCalendar).for_workspace(@workspace).enabled.user_writable.order(:name)
+        policy_scope(KalendariumCalendar).for_workspace(@workspace).enabled.user_writable.order(:name).select { |calendar| policy(calendar).update? }
       else
         KalendariumCalendar.none
       end

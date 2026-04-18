@@ -12,5 +12,6 @@ RSpec.describe AgentPolicy, type: :model do
     expect(policy.author_roles).to include("member", "admin", "owner", "automation_agent")
     expect(policy.approver_roles).to include("admin", "owner")
     expect(policy.policy_snapshot.fetch("approval_required")).to eq(true)
+    expect(policy.policy_snapshot.fetch("approval_required_draft_types")).to eq([])
   end
 end

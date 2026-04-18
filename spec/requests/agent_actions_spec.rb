@@ -71,6 +71,13 @@ RSpec.describe "Agent actions", type: :request do
     expect(agent_action.reload.title).to eq("Draft issue comment v2")
     expect(agent_action.payload_json.fetch("body")).to eq("Updated comment.")
     expect(agent_action.review_history.find_by!(event_type: "draft_updated").comment).to eq("Tone down the certainty.")
+
+    get agent_action_path(workspace_slug: workspace.slug, id: agent_action.id)
+
+    expect(response.body).to include("Changed fields")
+    expect(response.body).to include("Before")
+    expect(response.body).to include("Initial comment.")
+    expect(response.body).to include("Updated comment.")
   end
 
   it "approves a calendar draft into a selected calendar and shows the execution result afterwards" do
@@ -188,6 +195,72 @@ RSpec.describe "Agent actions", type: :request do
     expect(response.body).to include("Select a calendar before approving.")
   end
 
+  it "only shows and accepts calendars the approver can actually update" do
+    private_calendar_owner = User.create!(email: "agent-actions-private-calendar-owner@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: private_calendar_owner, role: :member)
+    private_connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: private_calendar_owner,
+      created_by: private_calendar_owner,
+      label: "Private Google",
+      provider: "google",
+      status: "connected",
+      refresh_token: "token"
+    )
+    blocked_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: private_connection,
+      created_by: private_calendar_owner,
+      name: "Family and kids",
+      color_hex: "#7C3AED",
+      time_zone: "Australia/Melbourne",
+      source_kind: "provider",
+      provider: "google",
+      enabled: true,
+      read_only: false
+    )
+    accessible_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Ops Calendar",
+      color_hex: "#059669",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local",
+      enabled: true
+    )
+    calendar_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: member,
+      attributes: {
+        title: "Hold discovery call",
+        proposed_by: "manual",
+        target_system: "calendar",
+        draft_type: "calendar_hold",
+        payload_json: {
+          "title" => "Discovery call",
+          "starts_at" => "2026-03-20T10:00",
+          "ends_at" => "2026-03-20T10:30",
+          "attendees" => [],
+          "body" => "Discuss the open questions."
+        }
+      }
+    ).call
+
+    sign_in owner
+
+    get agent_action_path(workspace_slug: workspace.slug, id: calendar_action.id)
+    expect(response.body).to include(accessible_calendar.name)
+    expect(response.body).not_to include(blocked_calendar.name)
+
+    post approve_agent_action_path(workspace_slug: workspace.slug, id: calendar_action.id), params: {
+      destination_calendar_id: blocked_calendar.id,
+      decision_comment: "Should not be able to write here."
+    }
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.body).to include("Selected calendar could not be found.")
+  end
+
   it "approves a Nota draft into a real Nota without asking for a destination" do
     agent_action = AgentActions::DraftCreator.new(
       workspace: workspace,
@@ -220,6 +293,38 @@ RSpec.describe "Agent actions", type: :request do
     created_page = Page.find(agent_action.result_json.fetch("target_id"))
     expect(agent_action.status).to eq(AgentAction::STATUS_APPROVED)
     expect(created_page.title).to eq("Summary note")
+  end
+
+  it "reverses an approved Nota draft by archiving the created page" do
+    agent_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: member,
+      attributes: {
+        title: "Draft summary note",
+        proposed_by: "manual",
+        target_system: "notae",
+        draft_type: "nota_draft",
+        payload_json: {
+          "title" => "Summary note",
+          "body" => "Capture the meeting summary and next actions."
+        }
+      }
+    ).call
+
+    AgentActions::ApprovalService.new(agent_action: agent_action, actor: owner, comment: "Ship it.").call
+    created_page = Page.find(agent_action.reload.result_json.fetch("target_id"))
+
+    sign_in owner
+
+    post reverse_agent_action_path(workspace_slug: workspace.slug, id: agent_action.id), params: {
+      decision_comment: "Wrong destination."
+    }
+
+    expect(response).to redirect_to(agent_action_path(workspace_slug: workspace.slug, id: agent_action.id))
+    expect(created_page.reload).to be_archived
+    expect(agent_action.reload.reversed?).to be(true)
+    expect(agent_action.result_json.dig("reversal", "summary")).to eq("Archived the created Nota.")
+    expect(agent_action.review_history.find_by!(event_type: "reversed").comment).to eq("Wrong destination.")
   end
 
   it "rejects a draft and records the decision comment" do

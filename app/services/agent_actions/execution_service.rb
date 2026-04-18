@@ -234,21 +234,21 @@ module AgentActions
     def selected_database
       raise Error, "Select a task list before approving." if destination_database_id.blank?
 
-      @selected_database ||= scoped_databases.find_by(id: destination_database_id) || raise(Error, "Selected task list could not be found.")
+      @selected_database ||= scoped_databases.find { |database| database.id == destination_database_id } || raise(Error, "Selected task list could not be found.")
     end
 
     def selected_calendar
       raise Error, "Select a calendar before approving." if destination_calendar_id.blank?
 
-      @selected_calendar ||= scoped_calendars.find_by(id: destination_calendar_id) || raise(Error, "Selected calendar could not be found.")
+      @selected_calendar ||= scoped_calendars.find { |calendar| calendar.id == destination_calendar_id } || raise(Error, "Selected calendar could not be found.")
     end
 
     def scoped_databases
-      workspace.databases.active
+      workspace.databases.active.select { |database| Pundit.policy!(actor, database).update? }
     end
 
     def scoped_calendars
-      workspace.kalendarium_calendars.enabled.user_writable
+      workspace.kalendarium_calendars.enabled.user_writable.select { |calendar| Pundit.policy!(actor, calendar).update? }
     end
 
     def parse_time!(raw_value, label:)

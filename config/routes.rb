@@ -112,6 +112,7 @@ Rails.application.routes.draw do
     resources :agent_actions, path: "agent-actions", only: %i[index show new create update] do
       member do
         post :approve
+        post :reverse
         post :request_changes
         post :reject
       end
@@ -244,6 +245,7 @@ Rails.application.routes.draw do
         resources :agent_actions, only: %i[index show create] do
           member do
             post :approve
+            post :reverse
           end
         end
         resources :databases, only: %i[index show create update]

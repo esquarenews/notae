@@ -26,6 +26,7 @@ module AgentActions
           dry_run: decision.dry_run_only,
           metadata_json: attributes.fetch(:metadata_json, {})
         )
+        preview_after = AgentActions::PreviewBuilder.new(agent_action).to_h["after"]
         agent_action.log_event!(event_type: "policy_evaluated", actor: actor, details: decision.to_h)
         agent_action.log_event!(
           event_type: "draft_created",
@@ -33,7 +34,8 @@ module AgentActions
           details: {
             "target_system" => agent_action.target_system,
             "draft_type" => agent_action.draft_type,
-            "title" => agent_action.title
+            "title" => agent_action.title,
+            "preview_after" => preview_after
           }
         )
         NotificationService.new(agent_action: agent_action, actor: actor).notify_approval_requested!

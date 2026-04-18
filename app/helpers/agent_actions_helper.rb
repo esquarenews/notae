@@ -6,6 +6,7 @@ module AgentActionsHelper
     "changes_requested" => "Changes requested",
     "resubmitted" => "Resubmitted for review",
     "approved" => "Approved",
+    "reversed" => "Reversed",
     "rejected" => "Rejected",
     "tool_used" => "Dry-run adapter used",
     "failed" => "Failed"
@@ -53,5 +54,9 @@ module AgentActionsHelper
 
   def agent_action_target_matrix_json
     AgentAction::TARGET_SYSTEMS_BY_DRAFT_TYPE.to_json
+  end
+
+  def agent_action_preview_data(agent_action)
+    AgentActions::PreviewBuilder.new(agent_action).to_h
   end
 end
