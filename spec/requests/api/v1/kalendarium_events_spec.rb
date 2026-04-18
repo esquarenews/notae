@@ -203,4 +203,51 @@ RSpec.describe "API V1 Kalendarium events", type: :request do
     expect(response).to have_http_status(:forbidden)
     expect(json_body.dig("error", "code")).to eq("forbidden")
   end
+
+  it "allows event creation on a legacy writable iCloud calendar" do
+    owner = User.create!(email: "api-kal-events-legacy-icloud@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Kal events legacy iCloud", slug: "api-kal-events-legacy-icloud")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: owner,
+      created_by: owner,
+      provider: "icloud_caldav",
+      label: "iCloud sync",
+      provider_username: "apple-id@example.com",
+      provider_password: "abcd-efgh-ijkl-mnop",
+      enabled: true,
+      status: "connected"
+    )
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: owner,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/family-and-kids/",
+      name: "Family and kids",
+      color_hex: "#CC73E1",
+      time_zone: "Australia/Melbourne",
+      source_kind: "provider",
+      read_only: true,
+      enabled: true,
+      metadata_json: { "subscribed" => false }
+    )
+    token = ApiToken.create!(user: owner, name: "Kal legacy iCloud API")
+
+    post "/api/v1/workspaces/#{workspace.slug}/kalendarium/events",
+         params: {
+           kalendarium_event: {
+             kalendarium_calendar_id: calendar.id,
+             title: "Family review",
+             starts_at: "2026-04-20T10:30:00+10:00",
+             ends_at: "2026-04-20T11:30:00+10:00"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    expect(KalendariumEvent.order(:created_at).last.kalendarium_calendar_id).to eq(calendar.id)
+  end
 end

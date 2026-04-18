@@ -228,7 +228,9 @@ server.registerTool(
     outputSchema: {
       calendars: z.array(z.object({
         id: z.string(),
-        name: z.string()
+        name: z.string(),
+        read_only: z.boolean().optional(),
+        writable: z.boolean().optional()
       }))
     }
   },
@@ -438,7 +440,9 @@ function renderTaskLists(taskLists) {
 
 function renderCalendars(calendars) {
   if (!calendars.length) return "No calendars found.";
-  return calendars.map((calendar) => `- ${calendar.name} (${calendar.id})`).join("\n");
+  return calendars
+    .map((calendar) => `- ${calendar.name} (${calendar.id}) writable=${calendar.writable === false ? "no" : "yes"}`)
+    .join("\n");
 }
 
 function renderCreatedCalendarEvent(result) {

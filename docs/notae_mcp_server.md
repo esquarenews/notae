@@ -84,6 +84,7 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
 - page resources are also exposed through the MCP resource template:
   - `notae://workspace/{workspaceSlug}/pages/{pageId}.md`
 - direct calendar event creation requires a writable calendar in the target workspace
+- `list_calendars` returns effective `writable` state alongside the raw `read_only` flag so legacy writable provider calendars can still be selected correctly
 - task drafts still need a destination task list at approval time
 - calendar drafts still need a destination calendar at approval time
 - the MCP server does not bypass Notae permissions or workspace policy

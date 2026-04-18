@@ -15,6 +15,7 @@ module Api
             color_hex: calendar.color_hex,
             enabled: calendar.enabled,
             read_only: calendar.read_only,
+            writable: calendar.user_writable?,
             time_zone: calendar.time_zone,
             source_kind: calendar.source_kind,
             created_at: calendar.created_at&.iso8601(6),

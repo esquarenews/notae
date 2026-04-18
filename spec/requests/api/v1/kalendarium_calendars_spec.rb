@@ -49,5 +49,54 @@ RSpec.describe "API V1 Kalendarium calendars", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(json_body.fetch("data").map { |row| row.fetch("id") }).to eq([ writable_calendar.id ])
+    expect(json_body.fetch("data").first.fetch("writable")).to eq(true)
+  end
+
+  it "marks legacy writable iCloud calendars as writable in the API payload" do
+    owner = User.create!(email: "api-kal-calendars-icloud@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Kal calendars iCloud", slug: "api-kal-calendars-icloud")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: owner,
+      created_by: owner,
+      provider: "icloud_caldav",
+      label: "iCloud sync",
+      provider_username: "apple-id@example.com",
+      provider_password: "abcd-efgh-ijkl-mnop",
+      enabled: true,
+      status: "connected"
+    )
+
+    legacy_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: owner,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/family-and-kids/",
+      name: "Family and kids",
+      color_hex: "#CC73E1",
+      time_zone: "Australia/Melbourne",
+      source_kind: "provider",
+      read_only: true,
+      enabled: true,
+      metadata_json: { "subscribed" => false }
+    )
+
+    token = ApiToken.create!(user: owner, name: "Kal calendars iCloud API")
+
+    get "/api/v1/workspaces/#{workspace.slug}/kalendarium/calendars",
+        params: { writable: true },
+        headers: auth_headers(token)
+
+    expect(response).to have_http_status(:ok)
+    row = json_body.fetch("data").find { |calendar| calendar.fetch("id") == legacy_calendar.id }
+
+    expect(row).to include(
+      "id" => legacy_calendar.id,
+      "read_only" => true,
+      "writable" => true
+    )
   end
 end
