@@ -19,9 +19,18 @@ class KalendariumSettingsController < ApplicationController
 
     time_zones = Array(settings_params[:calendar_extra_time_zones]).map(&:to_s).reject(&:blank?).uniq
     if current_user.update(calendar_extra_time_zones: time_zones)
-      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), notice: "Kalendarium settings updated."
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: settings_flash_stream("notice", "Kalendarium settings updated.") }
+        format.html { redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), notice: "Kalendarium settings updated." }
+      end
     else
-      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: current_user.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: settings_flash_stream("alert", current_user.errors.full_messages.to_sentence),
+                 status: :unprocessable_entity
+        end
+        format.html { redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: current_user.errors.full_messages.to_sentence }
+      end
     end
   end
 

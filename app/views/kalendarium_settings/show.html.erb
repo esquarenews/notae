@@ -100,39 +100,7 @@
       <% if @connections.any? %>
         <ul class="notae-kalendarium-connections-list">
           <% @connections.each do |connection| %>
-            <li>
-              <div>
-                <strong><%= connection.label %></strong>
-                <p><%= connection.provider %> · <%= connection.shared_connection? ? "Workspace shared" : "Personal" %></p>
-                <p>
-                  Scope:
-                  <%= connection.settings_json.to_h["workspace_scope"] == "all_workspaces" ? "All workspaces" : "This workspace" %>
-                  · Workspace: <%= connection.workspace.name %>
-                </p>
-                <p>Status: <%= connection.status %> <% if connection.last_synced_at.present? %>· Last sync <%= time_ago_in_words(connection.last_synced_at) %> ago<% end %></p>
-                <% if connection.last_error.present? %>
-                  <p class="notae-page-subtle"><%= connection.last_error %></p>
-                <% end %>
-              </div>
-              <div class="notae-kalendarium-connection-actions">
-                <% if connection.provider == "google" %>
-                  <%= link_to "Authorize Google",
-                              google_authorize_kalendarium_connections_path(workspace_slug: @workspace.slug, connection_id: connection.id),
-                              class: "notae-chip-button",
-                              data: { turbo: false } %>
-                <% end %>
-                <%= button_to "Sync", sync_kalendarium_connection_path(workspace_slug: @workspace.slug, id: connection.id), method: :post, class: "notae-chip-button" %>
-                <%= button_to(connection.enabled? ? "Disable" : "Enable",
-                              kalendarium_connection_path(workspace_slug: @workspace.slug, id: connection.id),
-                              method: :patch,
-                              params: { kalendarium_connection: { enabled: !connection.enabled? } },
-                              class: "notae-chip-button") %>
-                <%= button_to "Delete",
-                              kalendarium_connection_path(workspace_slug: @workspace.slug, id: connection.id),
-                              method: :delete,
-                              class: "notae-chip-button" %>
-              </div>
-            </li>
+            <%= render "connection_row", connection: connection, workspace: @workspace %>
           <% end %>
         </ul>
       <% else %>

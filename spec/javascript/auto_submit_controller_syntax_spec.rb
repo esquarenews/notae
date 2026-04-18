@@ -40,5 +40,6 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("window.scrollTo")
     expect(source).to include("preventScroll: true")
     expect(source).to include('form.dataset.preserveScroll = "true"')
+    expect(source).to include('form.dataset.turboStream = "true"')
   end
 end

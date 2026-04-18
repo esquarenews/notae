@@ -141,7 +141,7 @@
       </div>
     <% else %>
       <main class="notae-auth-shell">
-        <%= render "shared/flash_messages" %>
+        <%= render "shared/flash_messages", flash_host_class: "notae-auth-flash-host" %>
         <%= yield %>
       </main>
     <% end %>

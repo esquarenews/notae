@@ -13,9 +13,18 @@ class PreferencesController < ApplicationController
     authorize @user, :update?
 
     if @user.update(preference_params)
-      redirect_to workspace_preferences_path(workspace_slug: @workspace.slug), notice: "Preferences updated."
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: settings_flash_stream("notice", "Preferences updated.") }
+        format.html { redirect_to workspace_preferences_path(workspace_slug: @workspace.slug), notice: "Preferences updated." }
+      end
     else
-      redirect_to workspace_preferences_path(workspace_slug: @workspace.slug), alert: @user.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: settings_flash_stream("alert", @user.errors.full_messages.to_sentence),
+                 status: :unprocessable_entity
+        end
+        format.html { redirect_to workspace_preferences_path(workspace_slug: @workspace.slug), alert: @user.errors.full_messages.to_sentence }
+      end
     end
   end
 

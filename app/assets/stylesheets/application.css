@@ -1552,7 +1552,8 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-page-inline-flash-host,
 .notae-db-inline-flash-host,
-.notae-settings-inline-flash-host {
+.notae-settings-inline-flash-host,
+.notae-auth-flash-host {
   position: fixed;
   top: var(--notae-topbar-content-clearance);
   left: 0;
@@ -1568,7 +1569,8 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-page-inline-flash-host .notae-flash-stack,
 .notae-db-inline-flash-host .notae-flash-stack,
-.notae-settings-inline-flash-host .notae-flash-stack {
+.notae-settings-inline-flash-host .notae-flash-stack,
+.notae-auth-flash-host .notae-flash-stack {
   width: min(44rem, calc(100% - 1.2rem));
   max-width: calc(100% - 1.2rem);
   margin: 0;
@@ -1577,14 +1579,16 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
 
 .notae-page-inline-flash-host .notae-flash,
 .notae-db-inline-flash-host .notae-flash,
-.notae-settings-inline-flash-host .notae-flash {
+.notae-settings-inline-flash-host .notae-flash,
+.notae-auth-flash-host .notae-flash {
   margin: 0;
   animation: notae-flash-fade 420ms ease 3.8s forwards;
 }
 
 .notae-page-inline-flash-host .notae-flash.alert,
 .notae-db-inline-flash-host .notae-flash.alert,
-.notae-settings-inline-flash-host .notae-flash.alert {
+.notae-settings-inline-flash-host .notae-flash.alert,
+.notae-auth-flash-host .notae-flash.alert {
   animation-delay: 4.2s;
 }
 
@@ -6239,6 +6243,21 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   place-items: center;
 }
 
+.notae-auth-shell > #notae_flash_messages.notae-auth-flash-host {
+  align-self: start;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.notae-auth-shell > #notae_flash_messages.notae-auth-flash-host .notae-flash-stack {
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+}
+
+.notae-auth-shell > #notae_flash_messages.notae-auth-flash-host .notae-flash {
+  white-space: nowrap;
+}
+
 .notae-theme section a {
   color: var(--notae-accent);
 }
@@ -6286,6 +6305,12 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   padding: 1.04rem;
   display: grid;
   gap: 0.78rem;
+}
+
+.notae-auth-card > .notae-flash {
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .notae-auth-card h2 {

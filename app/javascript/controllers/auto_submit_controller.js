@@ -138,6 +138,9 @@ export default class extends Controller {
     }
 
     form.dataset.preserveScroll = "true"
+    if (form.closest(".notae-settings-shell")) {
+      form.dataset.turboStream = "true"
+    }
     this.markSubmitting(form)
     if (submitter) {
       form.requestSubmit(submitter)

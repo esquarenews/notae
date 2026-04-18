@@ -112,6 +112,22 @@ RSpec.describe "Notification settings", type: :request do
     expect(membership.reload.workspace_email_notify_activity_override).to be(true)
   end
 
+  it "returns a local turbo stream flash instead of redirecting for auto-save updates" do
+    user = User.create!(email: "notification-settings-turbo@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification turbo", slug: "notification-settings-turbo")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_notification_settings_path(workspace_slug: workspace.slug),
+          params: { user: { email_notify_activity: "0" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include("Notification settings updated.")
+  end
+
   it "sends a test push to the current device subscription" do
     user = User.create!(email: "notification-settings-test-push@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notification settings push", slug: "notification-settings-push")

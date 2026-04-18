@@ -24,7 +24,7 @@
                           options_for_select(User::THEME_OPTIONS, @user.theme_preference),
                           {},
                           class: "notae-pref-select",
-                          data: { action: "change->auto-submit#submit" } %>
+                          data: { preferences_target: "themeSelect", action: "change->preferences#handleThemeChange change->auto-submit#submit" } %>
         <% end %>
       </div>
 
@@ -144,7 +144,7 @@
                           {},
                           class: "notae-pref-select",
                           disabled: @user.auto_time_zone?,
-                          data: { action: "change->auto-submit#submit" } %>
+                          data: { preferences_target: "timeZoneSelect", action: "change->auto-submit#submit" } %>
           <% unless @user.auto_time_zone? %>
             <%= form.hidden_field :auto_time_zone, value: "0" %>
           <% end %>
@@ -163,7 +163,7 @@
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">
             <%= form.check_box :open_links_in_desktop_app,
-                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
+                               { class: "notae-pref-toggle-input", data: { preferences_target: "openLinksToggle", action: "change->preferences#handleOpenLinksChange change->auto-submit#submit" } },
                                "1",
                                "0" %>
             <span class="notae-pref-toggle-track"></span>

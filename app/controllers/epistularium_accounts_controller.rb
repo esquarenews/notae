@@ -26,10 +26,19 @@ class EpistulariumAccountsController < ApplicationController
     if sync_requested?
       start_sync!(@account)
     else
-      redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Epistulum updated."
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: settings_flash_stream("notice", "Epistulum updated.") }
+        format.html { redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), notice: "Epistulum updated." }
+      end
     end
   rescue ActiveRecord::RecordInvalid => error
-    redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: settings_flash_stream("alert", error.record.errors.full_messages.to_sentence),
+               status: :unprocessable_entity
+      end
+      format.html { redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence }
+    end
   end
 
   def destroy

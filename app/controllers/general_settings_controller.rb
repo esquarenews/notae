@@ -10,9 +10,24 @@ class GeneralSettingsController < ApplicationController
     authorize @workspace, :update?
 
     if @workspace.update(general_settings_params)
-      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug), notice: "General settings updated."
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: settings_flash_stream("notice", "General settings updated.") }
+        format.html do
+          redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug),
+                      notice: "General settings updated."
+        end
+      end
     else
-      redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug), alert: @workspace.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: settings_flash_stream("alert", @workspace.errors.full_messages.to_sentence),
+                 status: :unprocessable_entity
+        end
+        format.html do
+          redirect_to workspace_general_settings_path(workspace_slug: @workspace.slug, settings_workspace_slug: @workspace.slug),
+                      alert: @workspace.errors.full_messages.to_sentence
+        end
+      end
     end
   end
 

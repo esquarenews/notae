@@ -16,14 +16,26 @@ class PeopleSettingsController < ApplicationController
 
     if regenerate_join_link?
       @workspace.rotate_join_link_token!
-      redirect_to workspace_people_settings_path(workspace_slug: @workspace.slug), notice: "New invite link generated."
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: settings_flash_stream("notice", "New invite link generated.") }
+        format.html { redirect_to workspace_people_settings_path(workspace_slug: @workspace.slug), notice: "New invite link generated." }
+      end
       return
     end
 
     if @workspace.update(people_settings_params)
-      redirect_to workspace_people_settings_path(workspace_slug: @workspace.slug), notice: "People settings updated."
+      respond_to do |format|
+        format.turbo_stream { render turbo_stream: settings_flash_stream("notice", "People settings updated.") }
+        format.html { redirect_to workspace_people_settings_path(workspace_slug: @workspace.slug), notice: "People settings updated." }
+      end
     else
-      redirect_to workspace_people_settings_path(workspace_slug: @workspace.slug), alert: @workspace.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: settings_flash_stream("alert", @workspace.errors.full_messages.to_sentence),
+                 status: :unprocessable_entity
+        end
+        format.html { redirect_to workspace_people_settings_path(workspace_slug: @workspace.slug), alert: @workspace.errors.full_messages.to_sentence }
+      end
     end
   end
 

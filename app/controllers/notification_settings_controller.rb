@@ -20,9 +20,18 @@ class NotificationSettingsController < ApplicationController
       update_workspace_notification_preferences!
     end
 
-    redirect_to workspace_notification_settings_path(workspace_slug: @workspace.slug), notice: "Notification settings updated."
+    respond_to do |format|
+      format.turbo_stream { render turbo_stream: settings_flash_stream("notice", "Notification settings updated.") }
+      format.html { redirect_to workspace_notification_settings_path(workspace_slug: @workspace.slug), notice: "Notification settings updated." }
+    end
   rescue ActiveRecord::RecordInvalid => error
-    redirect_to workspace_notification_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: settings_flash_stream("alert", error.record.errors.full_messages.to_sentence),
+               status: :unprocessable_entity
+      end
+      format.html { redirect_to workspace_notification_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence }
+    end
   end
 
   def send_test_push

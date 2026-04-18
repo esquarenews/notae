@@ -1,0 +1,174 @@
+<div id="ai_analytics_settings_content" class="notae-settings-content">
+  <section class="notae-settings-section">
+    <h2>AI usage trends</h2>
+    <p class="notae-pref-description">Rolling usage totals for this workspace and your account.</p>
+
+    <div class="notae-ai-analytics-grid">
+      <article class="notae-ai-analytics-card">
+        <p class="notae-pref-label">Past 7 days</p>
+        <div class="notae-ai-analytics-list">
+          <% max_tokens_7 = [@ai_analytics_7_days.map { |entry| entry[:tokens] }.max.to_i, 1].max %>
+          <% @ai_analytics_7_days.each do |entry| %>
+            <div class="notae-ai-analytics-row">
+              <span class="notae-ai-analytics-day"><%= entry[:date].strftime("%a %-d") %></span>
+              <span class="notae-ai-analytics-bar">
+                <span style="width: <%= ((entry[:tokens].to_f / max_tokens_7) * 100).round(1) %>%"></span>
+              </span>
+              <span class="notae-ai-analytics-value"><%= number_with_delimiter(entry[:tokens]) %> tokens</span>
+            </div>
+          <% end %>
+        </div>
+      </article>
+
+      <article class="notae-ai-analytics-card">
+        <p class="notae-pref-label">Past 30 days</p>
+        <div class="notae-ai-analytics-list">
+          <% max_tokens_30 = [@ai_analytics_30_days.map { |entry| entry[:tokens] }.max.to_i, 1].max %>
+          <% @ai_analytics_30_days.last(10).each do |entry| %>
+            <div class="notae-ai-analytics-row">
+              <span class="notae-ai-analytics-day"><%= entry[:date].strftime("%b %-d") %></span>
+              <span class="notae-ai-analytics-bar">
+                <span style="width: <%= ((entry[:tokens].to_f / max_tokens_30) * 100).round(1) %>%"></span>
+              </span>
+              <span class="notae-ai-analytics-value"><%= number_to_currency(entry[:cost]) %></span>
+            </div>
+          <% end %>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="notae-settings-section">
+    <h2>Operation breakdown (30 days)</h2>
+    <div class="notae-ai-analytics-table-wrap">
+      <table class="notae-data-table notae-ai-analytics-table">
+        <thead>
+          <tr>
+            <th>Operation</th>
+            <th>Requests</th>
+            <th>Tokens</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @ai_analytics_operations.any? %>
+            <% @ai_analytics_operations.each do |entry| %>
+              <tr>
+                <td><%= AiUsageLog.label_for(entry[:operation]) %></td>
+                <td><%= number_with_delimiter(entry[:count]) %></td>
+                <td><%= number_with_delimiter(entry[:tokens]) %></td>
+                <td><%= number_to_currency(entry[:cost]) %></td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="4" class="notae-table-empty">No AI usage recorded in the last 30 days.</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="notae-settings-section">
+    <h2>Workflow Metrics</h2>
+    <div class="notae-ai-analytics-grid">
+      <article class="notae-ai-analytics-card">
+        <p class="notae-pref-label">Suggestion quality</p>
+        <p class="notae-utility-title"><%= @suggestion_quality_rate.nil? ? "N/A" : number_to_percentage(@suggestion_quality_rate * 100, precision: 0) %></p>
+        <p class="notae-pref-description">Proxy metric based on knowledge suggestions converted into concrete outputs.</p>
+      </article>
+      <article class="notae-ai-analytics-card">
+        <p class="notae-pref-label">Approval rate</p>
+        <p class="notae-utility-title"><%= @approval_rate.nil? ? "N/A" : number_to_percentage(@approval_rate * 100, precision: 0) %></p>
+        <p class="notae-pref-description">Approved agent actions divided by total reviewed agent actions.</p>
+      </article>
+      <article class="notae-ai-analytics-card">
+        <p class="notae-pref-label">Automation success rate</p>
+        <p class="notae-utility-title"><%= @automation_success_rate.nil? ? "N/A" : number_to_percentage(@automation_success_rate * 100, precision: 0) %></p>
+        <p class="notae-pref-description">Successful internal workflow runs divided by all finished runs.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="notae-settings-section">
+    <h2>Suggestion health</h2>
+    <div class="notae-ai-analytics-grid">
+      <article class="notae-ai-analytics-card">
+        <p class="notae-pref-label">Suggestion misses</p>
+        <p class="notae-utility-title"><%= number_with_delimiter(@knowledge_suggestion_miss_count) %></p>
+        <p class="notae-pref-description">Calls that returned no suggestion because the request was blocked or no fresh context was available.</p>
+      </article>
+      <article class="notae-ai-analytics-card">
+        <p class="notae-pref-label">Suggestion failures</p>
+        <p class="notae-utility-title"><%= number_with_delimiter(@knowledge_suggestion_failure_count) %></p>
+        <p class="notae-pref-description">Provider or transport errors while generating knowledge suggestions.</p>
+      </article>
+    </div>
+
+    <% if @recent_suggestion_issues.any? %>
+      <ul class="notae-workspace-home-list">
+        <% @recent_suggestion_issues.each do |issue| %>
+          <% reason = issue.metadata.to_h["reason"].to_s.tr("_", " ").humanize.presence || "Unknown reason" %>
+          <li class="notae-workspace-home-list-item">
+            <strong><%= AiUsageLog.label_for(issue.operation) %></strong>
+            <div class="notae-page-subtle">
+              <%= issue.created_at.in_time_zone(@user.time_zone.presence || Time.zone).strftime("%b %-d %H:%M") %>
+              · <%= reason %>
+            </div>
+            <% if issue.metadata.to_h["error_message"].present? %>
+              <div class="notae-page-subtle"><%= issue.metadata.to_h["error_message"] %></div>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="notae-pref-description">No recent suggestion misses or failures.</p>
+    <% end %>
+  </section>
+
+  <section class="notae-settings-section">
+    <h2>Automation Safety</h2>
+    <%= form_with url: workspace_ai_analytics_settings_path(workspace_slug: @workspace.slug),
+                  method: :patch,
+                  class: "notae-ai-guardrails-form" do |form| %>
+      <div class="notae-ai-guardrails-grid">
+        <label>
+          <span>Automation enabled</span>
+          <%= form.check_box :enabled, { checked: @automation_control.enabled?, name: "automation_control[enabled]" }, "1", "0" %>
+        </label>
+        <label>
+          <span>Pause reason</span>
+          <%= form.text_field :pause_reason,
+                              value: @automation_control.pause_reason,
+                              name: "automation_control[pause_reason]",
+                              class: "notae-pref-select" %>
+        </label>
+        <button type="submit" class="notae-chip-button">Update kill switch</button>
+      </div>
+    <% end %>
+    <p class="notae-pref-description">
+      Kill switch status:
+      <strong><%= @automation_control.enabled? ? "Automation active" : "Automation paused" %></strong>
+    </p>
+  </section>
+
+  <section class="notae-settings-section">
+    <h2>Error Monitoring</h2>
+    <% if @recent_failed_workflows.any? %>
+      <ul class="notae-workspace-home-list">
+        <% @recent_failed_workflows.each do |workflow_run| %>
+          <li class="notae-workspace-home-list-item">
+            <strong><%= workflow_run.workflow_kind.humanize %></strong>
+            <div class="notae-page-subtle"><%= workflow_run.error_message.presence || "Workflow failed." %></div>
+            <%= link_to "Inspect workflow",
+                        workflow_run_path(workspace_slug: @workspace.slug, id: workflow_run.id),
+                        class: "notae-chip-button" %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="notae-pref-description">No recent workflow failures.</p>
+    <% end %>
+  </section>
+</div>

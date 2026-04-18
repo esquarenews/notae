@@ -1,0 +1,438 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: personal
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/personal
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/personal/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/personal/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/personal/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/personal/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/personal/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/personal/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/personal/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "personal" [ref=e82] [cursor=pointer]:
+                  - /url: /w/personal
+                  - generic [ref=e83]: personal
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - button "Notarum" [expanded] [ref=e87] [cursor=pointer]:
+                - generic [ref=e88]: ▾
+                - generic [ref=e89]: Notarum
+              - button "Create new Nota" [ref=e91] [cursor=pointer]: "[+]"
+            - paragraph [ref=e93]: No Notarum yet.
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - paragraph [ref=e102]: No grids yet.
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - button "Meetings" [expanded] [ref=e105] [cursor=pointer]:
+                - generic [ref=e106]: ▾
+                - generic [ref=e107]: Meetings
+              - button "Create new Meeting" [ref=e109] [cursor=pointer]: "[+]"
+            - paragraph [ref=e111]: No meetings yet.
+          - generic [ref=e112]:
+            - button "Favorites" [expanded] [ref=e114] [cursor=pointer]:
+              - generic [ref=e115]: ▾
+              - generic [ref=e116]: Favorites
+            - paragraph [ref=e118]: No favorites yet.
+      - generic [ref=e119]:
+        - link "Settings" [ref=e120] [cursor=pointer]:
+          - /url: /w/personal/settings/preferences
+          - generic [ref=e121]:
+            - img [ref=e123]
+            - generic [ref=e126]: Settings
+        - link "Trash" [ref=e127] [cursor=pointer]:
+          - /url: /w/personal/trash
+          - generic [ref=e128]:
+            - img [ref=e130]
+            - generic [ref=e133]: Trash
+        - button "Sign out" [ref=e135] [cursor=pointer]:
+          - generic [ref=e136]:
+            - img [ref=e138]
+            - generic [ref=e141]: Sign out
+  - generic [ref=e142]:
+    - banner [ref=e143]:
+      - generic [ref=e145]:
+        - generic [ref=e146]: 🔔
+        - generic [ref=e147]: Notifications settings
+        - generic [ref=e148]: Account
+      - link "Close" [ref=e150] [cursor=pointer]:
+        - /url: /w/personal
+    - main [ref=e151]:
+      - paragraph [ref=e152]: Signed in successfully.
+      - generic [ref=e153]:
+        - complementary [ref=e154]:
+          - group [ref=e155]:
+            - generic [ref=e157]:
+              - paragraph [ref=e158]: Account
+              - generic [ref=e159]:
+                - generic [ref=e160]: P
+                - generic [ref=e161]: playwright-local@example.com
+              - link "Preferences" [ref=e162] [cursor=pointer]:
+                - /url: /w/personal/settings/preferences
+                - generic [ref=e163]:
+                  - img [ref=e164]
+                  - generic [ref=e166]: Preferences
+              - link "Notifications" [ref=e167] [cursor=pointer]:
+                - /url: /w/personal/settings/notifications
+                - generic [ref=e168]:
+                  - img [ref=e169]
+                  - generic [ref=e172]: Notifications
+              - link "Connections" [ref=e173] [cursor=pointer]:
+                - /url: /w/personal/settings/connections
+                - generic [ref=e174]:
+                  - img [ref=e175]
+                  - generic [ref=e178]: Connections
+              - paragraph [ref=e179]: Workspace
+              - generic [ref=e180]:
+                - generic [ref=e181]: Active workspace
+                - combobox "Active workspace" [ref=e182]:
+                  - option "personal" [selected]
+              - link "General" [ref=e183] [cursor=pointer]:
+                - /url: /w/personal/settings/general?settings_workspace_slug=personal
+                - generic [ref=e184]:
+                  - img [ref=e185]
+                  - generic [ref=e188]: General
+              - link "People" [ref=e189] [cursor=pointer]:
+                - /url: /w/personal/settings/people?settings_workspace_slug=personal
+                - generic [ref=e190]:
+                  - img [ref=e191]
+                  - generic [ref=e196]: People
+              - link "Import" [ref=e197] [cursor=pointer]:
+                - /url: /w/personal/settings/import?settings_workspace_slug=personal
+                - generic [ref=e198]:
+                  - img [ref=e199]
+                  - generic [ref=e202]: Import
+              - paragraph [ref=e203]: Features
+              - link "Notae AI" [ref=e204] [cursor=pointer]:
+                - /url: /w/personal/settings/notae-ai?settings_workspace_slug=personal
+                - generic [ref=e205]:
+                  - img [ref=e206]
+                  - generic [ref=e208]: Notae AI
+              - link "AI Analytics" [ref=e209] [cursor=pointer]:
+                - /url: /w/personal/settings/ai-analytics?settings_workspace_slug=personal
+                - generic [ref=e210]:
+                  - img [ref=e211]
+                  - generic [ref=e212]: AI Analytics
+              - link "Kalendārium" [ref=e213] [cursor=pointer]:
+                - /url: /w/personal/settings/kalendarium?settings_workspace_slug=personal
+                - generic [ref=e214]:
+                  - img [ref=e215]
+                  - generic [ref=e218]: Kalendārium
+              - link "Epistularium" [ref=e219] [cursor=pointer]:
+                - /url: /w/personal/settings/epistularium?settings_workspace_slug=personal
+                - generic [ref=e220]:
+                  - img [ref=e221]
+                  - generic [ref=e224]: Epistularium
+              - generic [ref=e225]:
+                - generic [ref=e226]:
+                  - img [ref=e227]
+                  - generic [ref=e231]: Favicon Lab
+                - emphasis [ref=e232]: Internal
+              - generic [ref=e233]:
+                - generic [ref=e234]:
+                  - img [ref=e235]
+                  - generic [ref=e238]: Public Notarum
+                - emphasis [ref=e239]: Future
+              - link "Emoji" [ref=e240] [cursor=pointer]:
+                - /url: /w/personal/settings/emoji?settings_workspace_slug=personal
+                - generic [ref=e241]:
+                  - img [ref=e242]
+                  - generic [ref=e245]: Emoji
+              - paragraph [ref=e246]: Integrations
+              - generic [ref=e247]:
+                - generic [ref=e248]:
+                  - img [ref=e249]
+                  - generic [ref=e252]: Manage
+                - emphasis [ref=e253]: Future
+              - paragraph [ref=e254]: Admin
+              - link "Operations" [ref=e255] [cursor=pointer]:
+                - /url: /w/personal/settings/operations?settings_workspace_slug=personal
+                - generic [ref=e256]:
+                  - img [ref=e257]
+                  - generic [ref=e259]: Operations
+              - generic [ref=e260]:
+                - generic [ref=e261]:
+                  - img [ref=e262]
+                  - generic [ref=e267]: Teamspaces
+                - emphasis [ref=e268]: Future
+              - paragraph [ref=e269]: Access & billing
+              - generic [ref=e270]:
+                - generic [ref=e271]:
+                  - img [ref=e272]
+                  - generic [ref=e274]: Upgrade plan
+                - emphasis [ref=e275]: Future
+        - generic [ref=e276]:
+          - generic [ref=e277]:
+            - heading "In-app notifications" [level=2] [ref=e278]
+            - generic [ref=e279]:
+              - generic [ref=e280]:
+                - paragraph [ref=e281]: Push notifications on this device
+                - paragraph [ref=e282]: Push notifications are not configured on this server yet.
+              - generic [ref=e283]:
+                - switch "Push notifications" [disabled] [ref=e284]
+                - generic [ref=e286]: Unavailable
+                - generic [ref=e287]: Needs review
+                - button "Send test push" [disabled] [ref=e288] [cursor=pointer]
+              - paragraph
+              - generic [ref=e289]:
+                - generic [ref=e290]:
+                  - paragraph [ref=e291]: Notification readiness
+                  - paragraph [ref=e292]: Notae should only read as ready once browser permission, device subscription, and an observed banner are all confirmed on this device.
+                - generic [ref=e293]:
+                  - generic [ref=e294]:
+                    - generic [ref=e295]:
+                      - strong [ref=e296]: Browser permission
+                      - generic [ref=e297]: The browser has not granted notification permission yet.
+                    - generic [ref=e298]: Pending
+                  - generic [ref=e299]:
+                    - generic [ref=e300]:
+                      - strong [ref=e301]: Device subscription
+                      - generic [ref=e302]: Subscription cannot be created until permission is granted.
+                    - generic [ref=e303]: Missing
+                  - generic [ref=e304]:
+                    - generic [ref=e305]:
+                      - strong [ref=e306]: Test push delivery
+                      - generic [ref=e307]: Run a test push to verify server-to-device delivery for this browser.
+                    - generic [ref=e308]: Unverified
+                  - generic [ref=e309]:
+                    - generic [ref=e310]:
+                      - strong [ref=e311]: Banner seen on device
+                      - generic [ref=e312]: Banner confirmation starts after a successful test push.
+                    - generic [ref=e313]: Pending
+                - generic [ref=e314]:
+                  - generic [ref=e315]: After sending a test push, confirm whether you saw the on-device banner.
+                  - generic [ref=e316]:
+                    - button "I saw the banner" [disabled] [ref=e317] [cursor=pointer]
+                    - button "No banner appeared" [disabled] [ref=e318] [cursor=pointer]
+            - generic [ref=e319]:
+              - generic [ref=e320]:
+                - generic [ref=e321]:
+                  - paragraph [ref=e322]: Push notification types
+                  - paragraph [ref=e323]: Choose which Notae events are allowed to interrupt this device. Workflow failures bypass quiet hours.
+                - generic [ref=e324]:
+                  - generic [ref=e325]:
+                    - generic [ref=e326]:
+                      - paragraph [ref=e327]: Mentions and comments
+                      - paragraph [ref=e328]: New mentions and comment activity that needs attention.
+                    - checkbox [checked] [ref=e331] [cursor=pointer]
+                  - generic [ref=e333]:
+                    - generic [ref=e334]:
+                      - paragraph [ref=e335]: Calendar reminders
+                      - paragraph [ref=e336]: Upcoming Kalendārium reminders for events and meetings.
+                    - checkbox [checked] [ref=e339] [cursor=pointer]
+                  - generic [ref=e341]:
+                    - generic [ref=e342]:
+                      - paragraph [ref=e343]: Approval requests
+                      - paragraph [ref=e344]: Agent drafts waiting on your approval.
+                    - checkbox [checked] [ref=e347] [cursor=pointer]
+                  - generic [ref=e349]:
+                    - generic [ref=e350]:
+                      - paragraph [ref=e351]: Changes requested
+                      - paragraph [ref=e352]: Drafts that were sent back for changes.
+                    - checkbox [checked] [ref=e355] [cursor=pointer]
+                  - generic [ref=e357]:
+                    - generic [ref=e358]:
+                      - paragraph [ref=e359]: Resubmitted drafts
+                      - paragraph [ref=e360]: Drafts that were updated and re-submitted for review.
+                    - checkbox [checked] [ref=e363] [cursor=pointer]
+                  - generic [ref=e365]:
+                    - generic [ref=e366]:
+                      - paragraph [ref=e367]: Approved drafts
+                      - paragraph [ref=e368]: Confirmation that an agent draft was approved.
+                    - checkbox [checked] [ref=e371] [cursor=pointer]
+                  - generic [ref=e373]:
+                    - generic [ref=e374]:
+                      - paragraph [ref=e375]: Rejected drafts
+                      - paragraph [ref=e376]: Confirmation that an agent draft was rejected.
+                    - checkbox [checked] [ref=e379] [cursor=pointer]
+                  - generic [ref=e381]:
+                    - generic [ref=e382]:
+                      - paragraph [ref=e383]: Workflow failures
+                      - paragraph [ref=e384]: Critical workflow failures. These bypass quiet hours.
+                    - checkbox [checked] [ref=e387] [cursor=pointer]
+                  - generic [ref=e389]:
+                    - generic [ref=e390]:
+                      - paragraph [ref=e391]: AI suggestions
+                      - paragraph [ref=e392]: Knowledge suggestions and daily AI briefs that are ready.
+                    - checkbox [checked] [ref=e395] [cursor=pointer]
+                  - generic [ref=e397]:
+                    - generic [ref=e398]:
+                      - paragraph [ref=e399]: Codex completions
+                      - paragraph [ref=e400]: Completion pushes sent from Codex into Notae.
+                    - checkbox [checked] [ref=e403] [cursor=pointer]
+              - generic [ref=e405]:
+                - generic [ref=e406]:
+                  - paragraph [ref=e407]: Quiet hours
+                  - paragraph [ref=e408]: Suppress routine push notifications during your local quiet hours. Workflow failures still break through.
+                - generic [ref=e409]:
+                  - generic [ref=e410]:
+                    - generic [ref=e411]:
+                      - paragraph [ref=e412]: Enable quiet hours
+                      - paragraph [ref=e413]:
+                        - text: "Current Notae time zone:"
+                        - strong [ref=e414]: Australia/Melbourne
+                        - text: .
+                    - checkbox [ref=e417] [cursor=pointer]
+                  - generic [ref=e419]:
+                    - generic [ref=e420]:
+                      - paragraph [ref=e421]: Quiet hours window
+                      - paragraph [ref=e422]: Cross-midnight windows are supported, for example 22:00 to 07:00.
+                    - generic [ref=e423]:
+                      - generic [ref=e424]:
+                        - generic [ref=e425]: Start
+                        - textbox "Start" [ref=e426]: 22:00
+                      - generic [ref=e427]:
+                        - generic [ref=e428]: End
+                        - textbox "End" [ref=e429]: 07:00
+            - generic [ref=e430]:
+              - generic [ref=e431]:
+                - paragraph [ref=e432]:
+                  - text: Join video conferencing and start transcribing
+                  - generic [ref=e433]: Future implementation
+                - paragraph [ref=e434]: Planned for meeting integrations. Preference is saved now.
+              - checkbox [ref=e437] [cursor=pointer]
+            - generic [ref=e439]:
+              - generic [ref=e440]:
+                - paragraph [ref=e441]:
+                  - text: Meeting is being transcribed
+                  - generic [ref=e442]: Future implementation
+                - paragraph [ref=e443]: Planned in-app meeting status events. Preference is saved now.
+              - checkbox [checked] [ref=e446] [cursor=pointer]
+            - generic [ref=e448]:
+              - generic [ref=e449]:
+                - paragraph [ref=e450]:
+                  - text: Meeting is being summarized
+                  - generic [ref=e451]: Future implementation
+                - paragraph [ref=e452]: Planned in-app summary lifecycle notifications. Preference is saved now.
+              - checkbox [ref=e455] [cursor=pointer]
+          - generic [ref=e457]:
+            - heading "Push delivery state" [level=2] [ref=e458]
+            - generic [ref=e459]:
+              - generic [ref=e460]:
+                - paragraph [ref=e461]: Current workspace override
+                - paragraph [ref=e462]:
+                  - text: Override the global activity-email default for
+                  - strong [ref=e463]: personal
+                  - text: when it makes sense to treat this workspace differently.
+              - checkbox [checked] [ref=e466] [cursor=pointer]
+            - paragraph [ref=e468]: No push subscriptions are registered for this account yet.
+          - generic [ref=e469]:
+            - heading "Slack notifications" [level=2] [ref=e470]
+            - generic [ref=e471]:
+              - generic [ref=e472]:
+                - paragraph [ref=e473]:
+                  - text: Slack notifications
+                  - generic [ref=e474]: Future implementation
+                - paragraph [ref=e475]: Slack delivery is planned; your preference is persisted now.
+              - combobox [ref=e477]:
+                - option "Off"
+                - option "Mentions"
+                - option "All activity" [selected]
+          - generic [ref=e478]:
+            - heading "Discord notifications" [level=2] [ref=e479]
+            - generic [ref=e480]:
+              - generic [ref=e481]:
+                - paragraph [ref=e482]:
+                  - text: Discord notifications
+                  - generic [ref=e483]: Future implementation
+                - paragraph [ref=e484]: Discord delivery is planned; your preference is persisted now.
+              - combobox [ref=e486]:
+                - option "Off" [selected]
+                - option "Mentions"
+                - option "All activity"
+          - generic [ref=e487]:
+            - heading "Email notifications" [level=2] [ref=e488]
+            - generic [ref=e489]:
+              - generic [ref=e490]:
+                - paragraph [ref=e491]: Activity email default
+                - paragraph [ref=e492]: Default email behaviour for comments, mentions, invites, reminders, and access requests across workspaces.
+              - checkbox [checked] [ref=e495] [cursor=pointer]
+            - generic [ref=e497]:
+              - generic [ref=e498]:
+                - paragraph [ref=e499]: Always send email notifications
+                - paragraph [ref=e500]: Send workspace emails even while active in Notae.
+              - checkbox [ref=e503] [cursor=pointer]
+            - generic [ref=e505]:
+              - generic [ref=e506]:
+                - paragraph [ref=e507]: Nota updates
+                - paragraph [ref=e508]: Digest emails for followed and owned Notarum.
+              - checkbox [checked] [ref=e511] [cursor=pointer]
+            - generic [ref=e513]:
+              - generic [ref=e514]:
+                - paragraph [ref=e515]: Workspace digest
+                - paragraph [ref=e516]: Digest emails about workspace activity summaries.
+              - checkbox [checked] [ref=e519] [cursor=pointer]
+  - complementary "Workspace notification bar" [ref=e521]:
+    - button "Open compact Kalendārium" [ref=e522] [cursor=pointer]:
+      - generic [ref=e523]: Sun 19 Apr · 9:18
+  - complementary [ref=e527]:
+    - generic [ref=e528]:
+      - generic [ref=e529]: New AI chat
+      - generic [ref=e530]:
+        - combobox [ref=e531]:
+          - option "Auto" [selected]
+          - option "This document only"
+          - option "This workspace only"
+          - option "Whole account"
+        - button "Minimize AI assistant rail" [ref=e532] [cursor=pointer]: ▸
+    - generic [ref=e533]:
+      - paragraph [ref=e534]: Notae AI assistant
+      - paragraph [ref=e535]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - generic [ref=e537]:
+      - generic [ref=e538]: Prompt
+      - textbox "Prompt" [ref=e540]:
+        - /placeholder: Ask a question or request a draft action for review.
+      - button "Send" [ref=e542] [cursor=pointer]
+    - button "Usage" [ref=e544] [cursor=pointer]

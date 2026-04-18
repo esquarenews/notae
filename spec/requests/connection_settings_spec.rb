@@ -87,6 +87,23 @@ RSpec.describe "Connection settings", type: :request do
     expect(user.smtp_enable_starttls_auto).to be(true)
   end
 
+  it "returns turbo stream updates for connection settings saves" do
+    user = User.create!(email: "connection-settings-turbo@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Connection settings turbo", slug: "connection-settings-turbo")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_connection_settings_path(workspace_slug: workspace.slug),
+          params: { user: { openai_api_key: "sk-test-turbo-123" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include('turbo-stream action="replace" target="connection_settings_content"')
+    expect(response.body).to include("OpenAI API key saved.")
+  end
+
   it "recovers missing encryption config before saving connection secrets" do
     user = User.create!(email: "connection-settings-bootstrap@example.com", password: "password123")
     workspace = Workspace.create!(name: "Connection settings bootstrap", slug: "connection-settings-bootstrap")

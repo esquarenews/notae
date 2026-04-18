@@ -126,6 +126,22 @@ RSpec.describe "General settings", type: :request do
     expect(workspace.shell_status_bar_mode).to eq("alerts_only")
   end
 
+  it "returns a local turbo stream flash instead of redirecting for auto-save updates" do
+    user = User.create!(email: "general-settings-turbo@example.com", password: "password123")
+    workspace = Workspace.create!(name: "General turbo", slug: "general-settings-turbo")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_general_settings_path(workspace_slug: workspace.slug),
+          params: { workspace: { name: "General turbo renamed" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include("General settings updated.")
+  end
+
   it "requires exact name to archive workspace" do
     user = User.create!(email: "general-settings-delete-name-check@example.com", password: "password123")
     workspace = Workspace.create!(name: "Delete check", slug: "general-settings-delete-name-check")

@@ -130,4 +130,21 @@ RSpec.describe "AI Analytics settings", type: :request do
     expect(control.enabled).to eq(false)
     expect(control.pause_reason).to eq("Maintenance window")
   end
+
+  it "returns turbo stream updates for automation safety changes" do
+    user = User.create!(email: "ai-analytics-turbo@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Analytics Turbo", slug: "ai-analytics-turbo")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_ai_analytics_settings_path(workspace_slug: workspace.slug),
+          params: { automation_control: { enabled: "0", pause_reason: "Ops freeze" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include('turbo-stream action="replace" target="ai_analytics_settings_content"')
+    expect(response.body).to include("Automation kill switch enabled.")
+  end
 end

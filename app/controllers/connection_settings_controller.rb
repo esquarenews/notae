@@ -41,7 +41,13 @@ class ConnectionSettingsController < ApplicationController
 
     candidate_key = connection_setting_params[:openai_api_key].to_s.strip
     if candidate_key.blank?
-      redirect_to workspace_connection_settings_path(workspace_slug: @workspace.slug), alert: "Enter an OpenAI API key to save."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: settings_flash_stream("alert", "Enter an OpenAI API key to save."),
+                 status: :unprocessable_entity
+        end
+        format.html { redirect_to workspace_connection_settings_path(workspace_slug: @workspace.slug), alert: "Enter an OpenAI API key to save." }
+      end
       return
     end
 
@@ -81,9 +87,9 @@ class ConnectionSettingsController < ApplicationController
 
   def persist_openai_api_key(value, success_notice)
     if @user.update(openai_api_key: value)
-      redirect_to workspace_connection_settings_path(workspace_slug: @workspace.slug), notice: success_notice
+      render_connection_settings_response("notice", success_notice)
     else
-      redirect_to workspace_connection_settings_path(workspace_slug: @workspace.slug), alert: @user.errors.full_messages.to_sentence
+      render_connection_settings_response("alert", @user.errors.full_messages.to_sentence, status: :unprocessable_entity)
     end
   end
 
@@ -107,9 +113,23 @@ class ConnectionSettingsController < ApplicationController
 
     if @user.update(attributes)
       message = clear ? "Email SMTP settings removed." : "Email SMTP settings saved."
-      redirect_to workspace_connection_settings_path(workspace_slug: @workspace.slug), notice: message
+      render_connection_settings_response("notice", message)
     else
-      redirect_to workspace_connection_settings_path(workspace_slug: @workspace.slug), alert: @user.errors.full_messages.to_sentence
+      render_connection_settings_response("alert", @user.errors.full_messages.to_sentence, status: :unprocessable_entity)
+    end
+  end
+
+  def render_connection_settings_response(type, message, status: :ok)
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: [
+          settings_flash_stream(type, message),
+          turbo_stream.replace("connection_settings_content", partial: "connection_settings/content")
+        ], status: status
+      end
+      format.html do
+        redirect_to workspace_connection_settings_path(workspace_slug: @workspace.slug), type => message
+      end
     end
   end
 

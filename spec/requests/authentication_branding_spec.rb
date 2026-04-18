@@ -20,6 +20,20 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include('data-turbo="false"')
   end
 
+  it "renders auth flow flash messages in the dedicated auth flash host" do
+    User.create!(email: "auth-flash-host@example.com", password: "password123")
+
+    post user_session_path,
+         params: { user: { email: "auth-flash-host@example.com", password: "wrong-password" } }
+
+    expect(response).to have_http_status(:see_other)
+    follow_redirect!
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-auth-flash-host")
+    expect(response.body).to include("Invalid email or password.")
+  end
+
   it "renders a branded sign up page with the shared auth shell classes" do
     get new_user_registration_path
 

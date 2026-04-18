@@ -37,6 +37,30 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(user.reload.calendar_extra_time_zone_list).to eq([ "UTC", "America/New_York" ])
   end
 
+  it "returns a local turbo stream flash for calendar row updates" do
+    user, workspace = build_stack(suffix: "calendar-row-turbo")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Family",
+      color_hex: "#336699",
+      time_zone: "UTC",
+      enabled: true
+    )
+    sign_in user
+
+    patch kalendarium_calendar_path(workspace_slug: workspace.slug, id: calendar.id),
+          params: { kalendarium_calendar: { enabled: "0", time_zone: "Australia/Melbourne" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include("Calendar updated.")
+    expect(calendar.reload.enabled).to be(false)
+    expect(calendar.time_zone).to eq("Australia/Melbourne")
+  end
+
   it "renders Google connections as OAuth-only in settings UI" do
     user, workspace = build_stack(suffix: "oauth-only-ui")
     sign_in user
@@ -81,6 +105,32 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(connection.ics_url).to eq("https://example.com/team.ics")
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: connection)
     expect(sync_service).to have_received(:call)
+  end
+
+  it "returns turbo stream updates for connection toggles in settings" do
+    user, workspace = build_stack(suffix: "connection-toggle-turbo")
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: workspace,
+      created_by: user,
+      provider: "ics",
+      label: "School calendar",
+      ics_url: "https://example.com/school.ics",
+      enabled: true,
+      status: "connected"
+    )
+    sign_in user
+
+    patch kalendarium_connection_path(workspace_slug: workspace.slug, id: connection.id),
+          params: { kalendarium_connection: { enabled: "0" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include(%(turbo-stream action="replace" target="settings_row_kalendarium_connection_#{connection.id}"))
+    expect(response.body).to include("Connection updated.")
+    expect(connection.reload.enabled).to be(false)
   end
 
   it "creates per-workspace copies when adding a connection from another workspace" do

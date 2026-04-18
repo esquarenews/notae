@@ -35,9 +35,33 @@ class KalendariumConnectionsController < ApplicationController
         success_message: "Connection updated and synced.",
         fallback_message: "Connection updated."
       )
-      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), flash_type => message
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: [
+            settings_flash_stream(flash_type.to_s, message),
+            turbo_stream.replace(
+              view_context.dom_id(@connection, :settings_row),
+              partial: "kalendarium_settings/connection_row",
+              locals: { connection: @connection, workspace: @workspace }
+            )
+          ]
+        end
+        format.html { redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), flash_type => message }
+      end
     else
-      redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: @connection.errors.full_messages.to_sentence
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: [
+            settings_flash_stream("alert", @connection.errors.full_messages.to_sentence),
+            turbo_stream.replace(
+              view_context.dom_id(@connection, :settings_row),
+              partial: "kalendarium_settings/connection_row",
+              locals: { connection: @connection, workspace: @workspace }
+            )
+          ], status: :unprocessable_entity
+        end
+        format.html { redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: @connection.errors.full_messages.to_sentence }
+      end
     end
   end
 

@@ -81,6 +81,18 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  def settings_flash_stream(type, message)
+    turbo_stream.replace(
+      "settings_flash_messages",
+      partial: "shared/flash_messages",
+      locals: {
+        flash_messages: [ [ type, message ] ],
+        flash_dom_id: "settings_flash_messages",
+        flash_host_class: "notae-settings-inline-flash-host"
+      }
+    )
+  end
+
   def prune_workspace_session_state
     prune_legacy_workspace_session_state!
     last_page_visit_store

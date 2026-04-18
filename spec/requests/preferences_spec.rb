@@ -70,6 +70,22 @@ RSpec.describe "Preferences", type: :request do
     expect(user.profile_discoverability).to be(false)
   end
 
+  it "returns a local turbo stream flash instead of redirecting for auto-save updates" do
+    user = User.create!(email: "preferences-turbo-stream@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Prefs turbo", slug: "prefs-turbo")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_preferences_path(workspace_slug: workspace.slug),
+          params: { user: { theme_preference: "dark" } },
+          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include("Preferences updated.")
+  end
+
   it "still updates preferences when legacy SMTP settings are incomplete" do
     user = User.create!(email: "preferences-smtp-legacy@example.com", password: "password123")
     user.update_columns(
