@@ -123,11 +123,19 @@ RSpec.describe "Notification settings", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(JSON.parse(response.body)).to include("ok" => true, "message" => "Test push sent to this device.")
+    notification = Notification.order(:created_at).last
+    expect(notification.notification_type).to eq(Notification::TYPE_TEST_PUSH)
+    expect(notification.recipient).to eq(user)
+    expect(notification.metadata).to include(
+      "title" => "Notae test notification",
+      "path" => workspace_notification_settings_path(workspace_slug: workspace.slug),
+      "endpoint" => subscription.endpoint
+    )
     expect(WebPush::DeliveryService).to have_received(:new).with(
       subscription: subscription,
       payload: hash_including(
         title: "Notae test notification",
-        url: workspace_notification_settings_path(workspace_slug: workspace.slug)
+        url: "/app/notifications/#{notification.id}"
       )
     )
   end

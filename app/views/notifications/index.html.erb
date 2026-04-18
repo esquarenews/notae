@@ -32,6 +32,8 @@
                 Workflow failed
               <% elsif notification.notification_type == Notification::TYPE_CODEX_REQUEST_COMPLETED %>
                 <%= notification.metadata["title"].presence || "Codex request completed" %>
+              <% elsif notification.notification_type == Notification::TYPE_TEST_PUSH %>
+                <%= notification.metadata["title"].presence || "Notae test notification" %>
               <% elsif notification.knowledge_suggestion_notification? %>
                 <%= notification.metadata["kind"] == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief ready" : "New AI suggestion" %>
               <% else %>
@@ -120,6 +122,14 @@
                         workflow_run_path(workspace_slug: @workspace.slug, id: workflow_run.id),
                         class: "notae-utility-link notae-utility-mini-link" %>
           <% elsif notification.notification_type == Notification::TYPE_CODEX_REQUEST_COMPLETED %>
+            <% destination = Notifications::DestinationResolver.new(notification: notification).call %>
+            <% if notification.metadata["body"].present? %>
+              <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>
+            <% end %>
+            <%= link_to "Open destination",
+                        destination,
+                        class: "notae-utility-link notae-utility-mini-link" %>
+          <% elsif notification.notification_type == Notification::TYPE_TEST_PUSH %>
             <% destination = Notifications::DestinationResolver.new(notification: notification).call %>
             <% if notification.metadata["body"].present? %>
               <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>

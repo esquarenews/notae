@@ -42,6 +42,8 @@ module WebPush
         knowledge_suggestion_title
       when Notification::TYPE_CODEX_REQUEST_COMPLETED
         codex_completion_title
+      when Notification::TYPE_TEST_PUSH
+        notification.metadata["title"].to_s.presence || "Notae test notification"
       else
         "#{actor_name} mentioned you"
       end
@@ -66,6 +68,8 @@ module WebPush
         knowledge_suggestion_body(suggestion)
       when Notification::TYPE_CODEX_REQUEST_COMPLETED
         codex_completion_body
+      when Notification::TYPE_TEST_PUSH
+        comment_excerpt(notification.metadata["body"].to_s)
       when Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
            Notification::TYPE_AGENT_ACTION_RESUBMITTED,
            Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,

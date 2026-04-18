@@ -34,13 +34,28 @@ class NotificationSettingsController < ApplicationController
     subscription = current_user.web_push_subscriptions.find_by(endpoint: test_push_endpoint)
     return render json: { ok: false, error: "This device is not subscribed for push notifications." }, status: :unprocessable_entity if subscription.blank?
 
+    test_payload = WebPush::TestPayloadBuilder.new(user: current_user, workspace: @workspace).call
+
+    notification = Notification.create!(
+      workspace: @workspace,
+      actor: current_user,
+      recipient: current_user,
+      notification_type: Notification::TYPE_TEST_PUSH,
+      metadata: {
+        "title" => "Notae test notification",
+        "body" => test_payload[:body],
+        "path" => workspace_notification_settings_path(workspace_slug: @workspace.slug),
+        "endpoint" => subscription.endpoint
+      }
+    )
+
     delivered = WebPush::DeliveryService.new(
       subscription: subscription,
-      payload: WebPush::TestPayloadBuilder.new(user: current_user, workspace: @workspace).call
+      payload: WebPush::NotificationPayloadBuilder.new(notification: notification).call
     ).call
 
     if delivered
-      render json: { ok: true, message: "Test push sent to this device." }
+      render json: { ok: true, message: "Test push sent to this device.", notification_id: notification.id }
     else
       render json: {
         ok: false,

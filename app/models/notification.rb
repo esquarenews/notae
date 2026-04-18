@@ -9,6 +9,7 @@ class Notification < ApplicationRecord
   TYPE_WORKFLOW_FAILED = "workflow_failed".freeze
   TYPE_KNOWLEDGE_SUGGESTION_READY = "knowledge_suggestion_ready".freeze
   TYPE_CODEX_REQUEST_COMPLETED = "codex_request_completed".freeze
+  TYPE_TEST_PUSH = "test_push".freeze
   TYPES = [
     TYPE_MENTION,
     TYPE_CALENDAR_REMINDER,
@@ -19,7 +20,8 @@ class Notification < ApplicationRecord
     TYPE_AGENT_ACTION_REJECTED,
     TYPE_WORKFLOW_FAILED,
     TYPE_KNOWLEDGE_SUGGESTION_READY,
-    TYPE_CODEX_REQUEST_COMPLETED
+    TYPE_CODEX_REQUEST_COMPLETED,
+    TYPE_TEST_PUSH
   ].freeze
 
   belongs_to :workspace
@@ -51,6 +53,7 @@ class Notification < ApplicationRecord
 
   def enqueue_web_push_delivery
     return unless WebPush::Configuration.configured?
+    return if notification_type == TYPE_TEST_PUSH
     return unless recipient.web_push_subscriptions.exists?
 
     WebPush::DeliverNotificationJob.perform_later(id)
