@@ -15,6 +15,7 @@ export default class extends Controller {
 
   connect() {
     this.element.style.setProperty("--kal-all-day-offset", `${this.allDayOffsetForScroll()}px`)
+    this.runtimeTimeZone = null
 
     this.onLayoutChange = () => this.updateNowLine()
     this.onScrollerScroll = () => this.updateNowLine()
@@ -33,7 +34,7 @@ export default class extends Controller {
       const fallbackTop = startHour * slotsPerHour * slotHeight
 
       if (this.hasInitialFocusMinutesValue) {
-        const rawTop = this.focusedScrollTop(((this.initialFocusMinutesValue / 30.0) * slotHeight), this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue ? 0.5 : 0.2)
+        const rawTop = this.focusedScrollTop(((this.initialFocusMinutesValue / 30.0) * slotHeight), this.currentTimeViewportRatio())
         this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
       } else if (!this.centerOnCurrentTime()) {
         this.scrollerTarget.scrollTop = this.allDayOffsetForScroll() + fallbackTop
@@ -67,11 +68,26 @@ export default class extends Controller {
     const canFocusNow = now && this.hasNowDateInView(now.date)
     if (!canFocusNow) return false
 
+    this.updateNowLine()
+
+    const viewportRatio = this.currentTimeViewportRatio()
+    const activeNowLine = this.nowLineTargets.find((line) => !line.hidden && line.dataset.nowDate === now.date)
+    if (activeNowLine) {
+      const scrollerRect = this.scrollerTarget.getBoundingClientRect()
+      const lineRect = activeNowLine.getBoundingClientRect()
+      const currentLineMidpoint = lineRect.top + (lineRect.height / 2)
+      const desiredViewportPoint = scrollerRect.top + (scrollerRect.height * viewportRatio)
+      const delta = currentLineMidpoint - desiredViewportPoint
+
+      this.scrollerTarget.scrollTop = Math.max(this.scrollerTarget.scrollTop + delta, 0)
+      return true
+    }
+
     const slotHeight = this.hasSlotHeightValue ? this.slotHeightValue : 28
     const minutesIntoDay = (now.hour * 60) + now.minute
     const rawTop = this.focusedScrollTop(
       ((minutesIntoDay / 30.0) * slotHeight),
-      this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue ? 0.5 : 0.35
+      viewportRatio
     )
     this.scrollerTarget.scrollTop = Math.max(rawTop, 0)
     return true
@@ -82,6 +98,11 @@ export default class extends Controller {
 
     const messageType = event.data?.type
     if (messageType === "notae:kalendarium-widget:center-current-time") {
+      const overrideTimeZone = event.data?.timeZone
+      if (typeof overrideTimeZone === "string" && overrideTimeZone.trim().length > 0) {
+        this.runtimeTimeZone = overrideTimeZone.trim()
+        this._zonedFormatter = null
+      }
       this.centerOnCurrentTime()
       this.updateNowLine()
     }
@@ -202,6 +223,14 @@ export default class extends Controller {
     return this.allDayOffsetForScroll() + focusPixels - (this.scrollerTarget.clientHeight * viewportRatio)
   }
 
+  currentTimeViewportRatio() {
+    if (this.hasCenterCurrentTimeValue && this.centerCurrentTimeValue) {
+      return 0.3
+    }
+
+    return 0.35
+  }
+
   currentZonedTime() {
     const formatter = this.zonedFormatter()
     const parts = formatter.formatToParts(new Date())
@@ -235,7 +264,7 @@ export default class extends Controller {
     if (this._zonedFormatter) return this._zonedFormatter
 
     this._zonedFormatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: this.hasTimeZoneValue ? this.timeZoneValue : Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: this.runtimeTimeZone || (this.hasTimeZoneValue ? this.timeZoneValue : Intl.DateTimeFormat().resolvedOptions().timeZone),
       year: "numeric",
       month: "2-digit",
       day: "2-digit",

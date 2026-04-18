@@ -192,11 +192,18 @@ export default class extends Controller {
       return
     }
 
-    frameWindow.postMessage({ type: "notae:kalendarium-widget:center-current-time" }, window.location.origin)
+    frameWindow.postMessage({
+      type: "notae:kalendarium-widget:center-current-time",
+      timeZone: this.browserTimeZone()
+    }, window.location.origin)
 
     if (retries > 0) {
       window.setTimeout(() => this.requestCalendarRecenter({ retries: retries - 1 }), 120)
     }
+  }
+
+  browserTimeZone() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone
   }
 
   alertForEvent(event) {

@@ -1958,3 +1958,81 @@
 [67269089ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
 [67284090ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
 [67284090ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67299322ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67299322ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67314088ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67314090ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67329136ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67329137ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67344123ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67344126ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67359123ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67359123ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67374813ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67374824ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67389216ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67389217ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67404182ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67404188ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67419149ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67419153ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67434200ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67434207ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67449143ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67449144ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67464152ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67464153ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67479124ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67479124ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67494168ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67494170ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67511287ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67511300ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67524127ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67524129ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67539117ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67539118ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67554330ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67554341ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67569125ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67569126ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67584199ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67584201ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67599132ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67599133ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67614123ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67614125ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67629125ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67629126ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67645108ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67645136ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67659139ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67659139ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67674131ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67674133ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67689124ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67689124ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67704141ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67704143ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67719149ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67719149ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67734313ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67734351ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67749140ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67749143ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67764137ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67764138ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67779167ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67779167ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67794182ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67794182ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67809147ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67809149ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67824456ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67824480ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67839178ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67839180ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67854525ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
+[67854565ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67869294ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/ai-assistant/updates?since=2026-04-17T21%3A03%3A24%2B10%3A00:0
+[67869310ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:4000/w/desktop-ai-alert/notification-bar:0
