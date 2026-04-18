@@ -118,6 +118,20 @@ export class NotaeApiClient {
     return payload.data;
   }
 
+  async sendCodexCompletionPush({ workspaceSlug, title, body, path } = {}) {
+    const payload = await this.request(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/notifications/codex_completion`, {
+      method: "POST",
+      body: {
+        notification: compactObject({
+          title,
+          body,
+          path
+        })
+      }
+    });
+    return payload.data;
+  }
+
   async listAgentActions({ workspaceSlug, status, limit } = {}) {
     const payload = await this.request(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/agent_actions`, {
       query: compactQuery({ status, limit })

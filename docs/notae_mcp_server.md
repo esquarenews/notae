@@ -75,6 +75,7 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
 - `list_task_lists`
 - `list_calendars`
 - `create_calendar_event`
+- `send_codex_completion_push`
 - `list_agent_actions`
 - `create_agent_action`
 - `approve_agent_action`
@@ -85,6 +86,7 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
   - `notae://workspace/{workspaceSlug}/pages/{pageId}.md`
 - direct calendar event creation requires a writable calendar in the target workspace
 - `list_calendars` returns effective `writable` state alongside the raw `read_only` flag so legacy writable provider calendars can still be selected correctly
+- `send_codex_completion_push` creates a Notae notification of type `codex_request_completed` and triggers normal web-push delivery for the authenticated user
 - task drafts still need a destination task list at approval time
 - calendar drafts still need a destination calendar at approval time
 - the MCP server does not bypass Notae permissions or workspace policy

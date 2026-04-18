@@ -56,4 +56,25 @@ RSpec.describe Notifications::DestinationResolver do
 
     expect(destination).to eq("/w/#{workspace.slug}/notifications")
   end
+
+  it "uses the stored internal path for codex completion notifications" do
+    workspace = Workspace.create!(name: "Resolver Codex", slug: "resolver-codex")
+    user = User.create!(email: "resolver-codex@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "Codex request completed",
+        "path" => "/w/#{workspace.slug}/library"
+      }
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq("/w/#{workspace.slug}/library")
+  end
 end

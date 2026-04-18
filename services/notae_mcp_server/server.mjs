@@ -298,6 +298,40 @@ server.registerTool(
 );
 
 server.registerTool(
+  "send_codex_completion_push",
+  {
+    title: "Send Codex Completion Push",
+    description: "Force a Notae mobile/web push notification for the current user when a Codex task is completed.",
+    inputSchema: {
+      workspace_slug: z.string(),
+      title: z.string().optional(),
+      body: z.string().optional(),
+      path: z.string().optional()
+    },
+    outputSchema: {
+      notification: z.object({
+        id: z.string(),
+        workspace_id: z.string(),
+        recipient_id: z.string(),
+        notification_type: z.string(),
+        title: z.string(),
+        body: z.string().optional(),
+        path: z.string().optional(),
+        created_at: z.string()
+      }),
+      url: z.string().optional()
+    }
+  },
+  async ({ workspace_slug: workspaceSlug, title, body, path }) => runTool(async () => {
+    const result = await client.sendCodexCompletionPush({ workspaceSlug, title, body, path });
+    return successResult({
+      text: renderCodexCompletionPush(result),
+      data: result
+    });
+  })
+);
+
+server.registerTool(
   "list_agent_actions",
   {
     title: "List Notae Agent Actions",
@@ -453,6 +487,20 @@ function renderCreatedCalendarEvent(result) {
     `Created event "${event.title}" (${event.id}) on calendar ${event.calendar_id}.`,
     event.starts_at_utc && event.ends_at_utc ? `Time: ${event.starts_at_utc} -> ${event.ends_at_utc}` : null,
     result?.warning ? `Warning: ${result.warning}` : null,
+    result?.url ? `Open: ${result.url}` : null
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function renderCodexCompletionPush(result) {
+  const notification = result?.notification;
+  if (!notification) return "Sent Codex completion push notification.";
+
+  const lines = [
+    `Sent Codex completion push "${notification.title}" (${notification.id}).`,
+    notification.body ? `Body: ${notification.body}` : null,
+    notification.path ? `Destination: ${notification.path}` : null,
     result?.url ? `Open: ${result.url}` : null
   ].filter(Boolean);
 

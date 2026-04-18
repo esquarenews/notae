@@ -14,6 +14,8 @@ module Notifications
         workflow_destination_url
       when Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
         knowledge_suggestion_destination_url
+      when Notification::TYPE_CODEX_REQUEST_COMPLETED
+        codex_completion_destination_url
       when Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
            Notification::TYPE_AGENT_ACTION_RESUBMITTED,
            Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
@@ -57,6 +59,14 @@ module Notifications
         show_home: 1,
         anchor: "knowledge-suggestion-#{suggestion.id}"
       )
+    end
+
+    def codex_completion_destination_url
+      path = notification.metadata["path"].to_s.strip
+      return if path.blank?
+      return path if path.start_with?("/")
+
+      nil
     end
 
     def agent_action_destination_url

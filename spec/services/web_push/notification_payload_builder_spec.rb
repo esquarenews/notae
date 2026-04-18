@@ -114,4 +114,27 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:body]).to include("+1 more today")
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
   end
+
+  it "builds a codex completion payload from notification metadata" do
+    workspace = Workspace.create!(name: "Codex Push", slug: "codex-push")
+    user = User.create!(email: "codex-push@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "Codex request completed",
+        "body" => "The grid cleanup is ready for review.",
+        "path" => "/w/#{workspace.slug}/library"
+      }
+    )
+
+    payload = described_class.new(notification: notification).call
+
+    expect(payload[:title]).to eq("Codex request completed")
+    expect(payload[:body]).to eq("The grid cleanup is ready for review.")
+    expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
+  end
 end

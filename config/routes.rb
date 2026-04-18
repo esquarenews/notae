@@ -225,6 +225,11 @@ Rails.application.routes.draw do
     namespace :v1 do
       resources :workspaces, only: :index
       scope "workspaces/:workspace_slug" do
+        resources :notifications, only: [] do
+          collection do
+            post :codex_completion
+          end
+        end
         resources :pages, only: %i[index show create update] do
           collection do
             post :import_markdown, to: "page_documents#create"

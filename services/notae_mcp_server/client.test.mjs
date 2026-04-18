@@ -147,3 +147,51 @@ test("createCalendarEvent posts structured event data", async () => {
   assert.equal(result.event.id, "event-1");
   assert.equal(result.url, "/w/test-space/kalendarium?view=day");
 });
+
+test("sendCodexCompletionPush posts notification payload", async () => {
+  let receivedRequest = null;
+  const client = new NotaeApiClient({
+    baseUrl: "https://notae.example.com",
+    token: "secret-token",
+    fetchImpl: async (url, options) => {
+      receivedRequest = { url: url.toString(), options };
+      return new Response(JSON.stringify({
+        data: {
+          notification: {
+            id: "notification-1",
+            workspace_id: "workspace-1",
+            recipient_id: "user-1",
+            notification_type: "codex_request_completed",
+            title: "Codex finished",
+            body: "The task is complete.",
+            path: "/w/test-space",
+            created_at: "2026-04-18T05:00:00Z"
+          },
+          url: "/app/notifications/notification-1"
+        }
+      }), {
+        status: 201,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  const result = await client.sendCodexCompletionPush({
+    workspaceSlug: "test-space",
+    title: "Codex finished",
+    body: "The task is complete.",
+    path: "/w/test-space"
+  });
+
+  assert.equal(receivedRequest.url, "https://notae.example.com/api/v1/workspaces/test-space/notifications/codex_completion");
+  assert.equal(receivedRequest.options.method, "POST");
+  assert.deepEqual(JSON.parse(receivedRequest.options.body), {
+    notification: {
+      title: "Codex finished",
+      body: "The task is complete.",
+      path: "/w/test-space"
+    }
+  });
+  assert.equal(result.notification.id, "notification-1");
+  assert.equal(result.url, "/app/notifications/notification-1");
+});

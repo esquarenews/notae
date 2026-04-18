@@ -40,6 +40,8 @@ module WebPush
         "Workflow failed"
       when Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
         knowledge_suggestion_title
+      when Notification::TYPE_CODEX_REQUEST_COMPLETED
+        codex_completion_title
       else
         "#{actor_name} mentioned you"
       end
@@ -62,6 +64,8 @@ module WebPush
         return "Open Notifications in Notae." if suggestion.blank?
 
         knowledge_suggestion_body(suggestion)
+      when Notification::TYPE_CODEX_REQUEST_COMPLETED
+        codex_completion_body
       when Notification::TYPE_AGENT_ACTION_APPROVAL_REQUESTED,
            Notification::TYPE_AGENT_ACTION_RESUBMITTED,
            Notification::TYPE_AGENT_ACTION_CHANGES_REQUESTED,
@@ -100,6 +104,14 @@ module WebPush
       return "New AI suggestion" unless suggestion.is_a?(KnowledgeSuggestion)
 
       suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief ready" : "New AI suggestion"
+    end
+
+    def codex_completion_title
+      notification.metadata["title"].to_s.presence || "Codex request completed"
+    end
+
+    def codex_completion_body
+      comment_excerpt(notification.metadata["body"].to_s)
     end
 
     def knowledge_suggestion_body(suggestion)

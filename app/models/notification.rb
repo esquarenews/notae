@@ -8,6 +8,7 @@ class Notification < ApplicationRecord
   TYPE_AGENT_ACTION_REJECTED = "agent_action_rejected".freeze
   TYPE_WORKFLOW_FAILED = "workflow_failed".freeze
   TYPE_KNOWLEDGE_SUGGESTION_READY = "knowledge_suggestion_ready".freeze
+  TYPE_CODEX_REQUEST_COMPLETED = "codex_request_completed".freeze
   TYPES = [
     TYPE_MENTION,
     TYPE_CALENDAR_REMINDER,
@@ -17,7 +18,8 @@ class Notification < ApplicationRecord
     TYPE_AGENT_ACTION_APPROVED,
     TYPE_AGENT_ACTION_REJECTED,
     TYPE_WORKFLOW_FAILED,
-    TYPE_KNOWLEDGE_SUGGESTION_READY
+    TYPE_KNOWLEDGE_SUGGESTION_READY,
+    TYPE_CODEX_REQUEST_COMPLETED
   ].freeze
 
   belongs_to :workspace
