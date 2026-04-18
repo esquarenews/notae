@@ -80,6 +80,14 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
 - `create_agent_action`
 - `approve_agent_action`
 
+Successful Notae write tools also auto-send a completion push for the authenticated user:
+
+- `create_page_from_markdown`
+- `append_markdown_to_page`
+- `create_calendar_event`
+- `create_agent_action`
+- `approve_agent_action`
+
 ## Notes
 
 - page resources are also exposed through the MCP resource template:
@@ -87,6 +95,7 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
 - direct calendar event creation requires a writable calendar in the target workspace
 - `list_calendars` returns effective `writable` state alongside the raw `read_only` flag so legacy writable provider calendars can still be selected correctly
 - `send_codex_completion_push` creates a Notae notification of type `codex_request_completed` and triggers normal web-push delivery for the authenticated user
+- the MCP server auto-sends that same push after each successful write action so Codex completions surface on mobile without a second manual tool call
 - task drafts still need a destination task list at approval time
 - calendar drafts still need a destination calendar at approval time
 - the MCP server does not bypass Notae permissions or workspace policy

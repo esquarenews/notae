@@ -2,6 +2,7 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
+import { buildAutoPushPayload } from "./auto_push.mjs";
 import { NotaeApiClient, NotaeApiError } from "./client.mjs";
 
 const server = new McpServer({
@@ -149,7 +150,7 @@ server.registerTool(
       skipped_documents: z.array(z.string())
     }
   },
-  async ({ workspace_slug: workspaceSlug, title, markdown, parent_page_id: parentPageId, permission_mode: permissionMode, filename }) => runTool(async () => {
+  async ({ workspace_slug: workspaceSlug, title, markdown, parent_page_id: parentPageId, permission_mode: permissionMode, filename }) => runTool("create_page_from_markdown", workspaceSlug, async () => {
     const result = await client.createPageFromMarkdown({ workspaceSlug, title, markdown, parentPageId, permissionMode, filename });
     return successResult({
       text: `Created page "${result.page.title}" (${result.page.id}) with ${result.imported_blocks.length} imported block(s).`,
@@ -182,7 +183,7 @@ server.registerTool(
       skipped_documents: z.array(z.string())
     }
   },
-  async ({ workspace_slug: workspaceSlug, page_id: pageId, markdown, insert_after_block_id: insertAfterBlockId, filename }) => runTool(async () => {
+  async ({ workspace_slug: workspaceSlug, page_id: pageId, markdown, insert_after_block_id: insertAfterBlockId, filename }) => runTool("append_markdown_to_page", workspaceSlug, async () => {
     const result = await client.appendMarkdownToPage({ workspaceSlug, pageId, markdown, insertAfterBlockId, filename });
     return successResult({
       text: `Appended ${result.imported_blocks.length} block(s) to page ${result.page.title}.`,
@@ -276,7 +277,7 @@ server.registerTool(
       warning: z.string().optional()
     }
   },
-  async ({ workspace_slug: workspaceSlug, calendar_id: calendarId, title, starts_at: startsAt, ends_at: endsAt, time_zone: timeZone, all_day: allDay, description, location, meeting_join_url: meetingJoinUrl, reminder_offsets_minutes: reminderOffsetsMinutes }) => runTool(async () => {
+  async ({ workspace_slug: workspaceSlug, calendar_id: calendarId, title, starts_at: startsAt, ends_at: endsAt, time_zone: timeZone, all_day: allDay, description, location, meeting_join_url: meetingJoinUrl, reminder_offsets_minutes: reminderOffsetsMinutes }) => runTool("create_calendar_event", workspaceSlug, async () => {
     const result = await client.createCalendarEvent({
       workspaceSlug,
       calendarId,
@@ -322,7 +323,7 @@ server.registerTool(
       url: z.string().optional()
     }
   },
-  async ({ workspace_slug: workspaceSlug, title, body, path }) => runTool(async () => {
+  async ({ workspace_slug: workspaceSlug, title, body, path }) => runTool("send_codex_completion_push", workspaceSlug, async () => {
     const result = await client.sendCodexCompletionPush({ workspaceSlug, title, body, path });
     return successResult({
       text: renderCodexCompletionPush(result),
@@ -384,7 +385,7 @@ server.registerTool(
       })
     }
   },
-  async ({ workspace_slug: workspaceSlug, title, target_system: targetSystem, draft_type: draftType, payload_json: payloadJson, metadata_json: metadataJson, proposed_by: proposedBy }) => runTool(async () => {
+  async ({ workspace_slug: workspaceSlug, title, target_system: targetSystem, draft_type: draftType, payload_json: payloadJson, metadata_json: metadataJson, proposed_by: proposedBy }) => runTool("create_agent_action", workspaceSlug, async () => {
     const agentAction = await client.createAgentAction({ workspaceSlug, title, targetSystem, draftType, payloadJson, metadataJson, proposedBy });
     return successResult({
       text: `Created agent action "${agentAction.title}" (${agentAction.id}) with status ${agentAction.status}.`,
@@ -413,7 +414,7 @@ server.registerTool(
       })
     }
   },
-  async ({ workspace_slug: workspaceSlug, agent_action_id: agentActionId, decision_comment: decisionComment, destination_database_id: destinationDatabaseId, destination_calendar_id: destinationCalendarId }) => runTool(async () => {
+  async ({ workspace_slug: workspaceSlug, agent_action_id: agentActionId, decision_comment: decisionComment, destination_database_id: destinationDatabaseId, destination_calendar_id: destinationCalendarId }) => runTool("approve_agent_action", workspaceSlug, async () => {
     const agentAction = await client.approveAgentAction({
       workspaceSlug,
       agentActionId,
@@ -438,14 +439,38 @@ function successResult({ text, data }) {
   };
 }
 
-async function runTool(callback) {
+async function runTool(toolName, workspaceSlug, callback) {
+  if (typeof toolName === "function") {
+    callback = toolName;
+    toolName = undefined;
+    workspaceSlug = undefined;
+  } else if (typeof workspaceSlug === "function") {
+    callback = workspaceSlug;
+    workspaceSlug = undefined;
+  }
+
   try {
-    return await callback();
+    const result = await callback();
+    await sendAutoCompletionPush(toolName, workspaceSlug, result?.structuredContent);
+    return result;
   } catch (error) {
     return {
       content: [ { type: "text", text: formatError(error) } ],
       isError: true
     };
+  }
+}
+
+async function sendAutoCompletionPush(toolName, workspaceSlug, result) {
+  if (toolName === "send_codex_completion_push") return;
+
+  const payload = buildAutoPushPayload(toolName, { workspaceSlug, result });
+  if (!payload) return;
+
+  try {
+    await client.sendCodexCompletionPush(payload);
+  } catch (error) {
+    console.error(`[notae-mcp] auto push failed after ${toolName}: ${formatError(error)}`);
   }
 }
 

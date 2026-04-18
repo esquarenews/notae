@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test client.test.mjs",
-    "check": "node --check server.mjs && node --check client.mjs"
+    "test": "node --test client.test.mjs auto_push.test.mjs",
+    "check": "node --check server.mjs && node --check client.mjs && node --check auto_push.mjs"
   }
 }
