@@ -137,6 +137,7 @@ export default class extends Controller {
       return
     }
 
+    form.dataset.preserveScroll = "true"
     this.markSubmitting(form)
     if (submitter) {
       form.requestSubmit(submitter)
