@@ -139,6 +139,53 @@ RSpec.describe "API V1 Kalendarium events", type: :request do
     expect(payload.fetch("url")).to include("/w/#{workspace.slug}/kalendarium")
   end
 
+  it "syncs provider-backed calendar events without namespace resolution errors" do
+    owner = User.create!(email: "api-kal-events-provider-sync@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Kal events provider sync", slug: "api-kal-events-provider-sync")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: owner,
+      created_by: owner,
+      provider: "google",
+      label: "Google Calendar",
+      provider_username: "owner@example.com",
+      refresh_token: "refresh-token",
+      enabled: true,
+      status: "connected"
+    )
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: owner,
+      provider: "google",
+      remote_id: "primary",
+      name: "Primary",
+      color_hex: "#3B82F6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "provider",
+      read_only: false
+    )
+    token = ApiToken.create!(user: owner, name: "Kal provider sync API")
+    sync_service = instance_double(::Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    allow(::Kalendarium::ProviderEventSyncService).to receive(:new).and_return(sync_service)
+
+    post "/api/v1/workspaces/#{workspace.slug}/kalendarium/events",
+         params: {
+           kalendarium_event: {
+             kalendarium_calendar_id: calendar.id,
+             title: "Synced provider event",
+             starts_at: "2026-04-20T10:30:00+10:00",
+             ends_at: "2026-04-20T11:30:00+10:00"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    expect(sync_service).to have_received(:upsert_remote!)
+    expect(json_body.dig("data", "warning")).to be_nil
+  end
+
   it "normalizes all-day events using the supplied time zone" do
     owner = User.create!(email: "api-kal-events-all-day@example.com", password: "password123")
     workspace = Workspace.create!(name: "API Kal events all day", slug: "api-kal-events-all-day")

@@ -188,7 +188,7 @@ module Api
         def sync_event_to_provider(event)
           return nil if event.kalendarium_calendar.kalendarium_connection.blank?
 
-          Kalendarium::ProviderEventSyncService.new(event: event).upsert_remote!
+          ::Kalendarium::ProviderEventSyncService.new(event: event).upsert_remote!
           clear_pending_sync_marker!(event)
           nil
         rescue StandardError => error
