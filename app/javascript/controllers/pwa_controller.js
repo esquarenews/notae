@@ -3,6 +3,10 @@ import { Controller } from "@hotwired/stimulus"
 const INSTALL_DISMISS_KEY = "notae-pwa-install-dismissed-at"
 const IOS_DISMISS_KEY = "notae-pwa-ios-dismissed-at"
 const PUSH_DISMISS_KEY = "notae-pwa-push-dismissed-at"
+const PUSH_TEST_SENT_KEY = "notae-pwa-push-test-sent-at"
+const PUSH_TEST_DELIVERED_KEY = "notae-pwa-push-test-delivered-at"
+const PUSH_BANNER_CONFIRMED_KEY = "notae-pwa-push-banner-confirmed-at"
+const PUSH_BANNER_MISSED_KEY = "notae-pwa-push-banner-missed-at"
 const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 const NETWORK_TOAST_MS = 2600
 
@@ -17,7 +21,20 @@ export default class extends Controller {
     "pushSettingsStateLabel",
     "pushSettingsStatus",
     "pushSettingsTestButton",
-    "pushSettingsFeedback"
+    "pushSettingsFeedback",
+    "pushSettingsReadinessBadge",
+    "pushReadinessCard",
+    "pushReadinessPermissionPill",
+    "pushReadinessPermissionDetail",
+    "pushReadinessSubscriptionPill",
+    "pushReadinessSubscriptionDetail",
+    "pushReadinessDeliveryPill",
+    "pushReadinessDeliveryDetail",
+    "pushReadinessBannerPill",
+    "pushReadinessBannerDetail",
+    "pushBannerActions",
+    "pushBannerSeenButton",
+    "pushBannerMissedButton"
   ]
   static values = {
     authenticated: Boolean,
@@ -158,6 +175,7 @@ export default class extends Controller {
     }
 
     this.pushTestPending = true
+    this.markPushTestAttempted()
     this.refreshPushUi()
 
     try {
@@ -174,7 +192,8 @@ export default class extends Controller {
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || "Test push could not be sent.")
 
-      this.setPushSettingsFeedback(payload.message || "Test push sent to this device.", "success")
+      this.markPushTestDelivered()
+      this.setPushSettingsFeedback("Test push delivered to this browser. Confirm whether you also saw the device banner.", "pending")
       this.showNetworkToast(payload.message || "Test push sent to this device.")
     } catch (error) {
       this.setPushSettingsFeedback(error.message || "Test push could not be sent.", "error")
@@ -252,6 +271,7 @@ export default class extends Controller {
     if (!this.hasPushSettingsToggleTarget && !this.hasPushSettingsStatusTarget && !this.hasPushSettingsStateLabelTarget) return
 
     const state = this.pushSettingsState()
+    const readiness = this.pushReadinessState(state)
 
     this.pushSettingsStatusTargets.forEach((element) => {
       element.textContent = state.message
@@ -268,8 +288,14 @@ export default class extends Controller {
 
     this.pushSettingsStateLabelTargets.forEach((label) => {
       label.textContent = state.label
-      label.classList.toggle("is-active", state.checked)
+      label.classList.toggle("is-active", readiness.overallTone === "ok")
       label.classList.toggle("is-pending", state.pending)
+    })
+
+    this.pushSettingsReadinessBadgeTargets.forEach((badge) => {
+      badge.hidden = state.hidden
+      badge.textContent = readiness.overallLabel
+      this.applyPillTone(badge, readiness.overallTone)
     })
 
     this.pushSettingsTestButtonTargets.forEach((button) => {
@@ -281,6 +307,41 @@ export default class extends Controller {
     this.pushSettingsFeedbackTargets.forEach((element) => {
       element.hidden = state.hidden
       element.dataset.state = this.pushSettingsFeedbackTone
+    })
+
+    this.pushReadinessCardTargets.forEach((card) => {
+      card.hidden = state.hidden
+    })
+
+    this.updateReadinessItem(
+      this.pushReadinessPermissionPillTargets,
+      this.pushReadinessPermissionDetailTargets,
+      readiness.permission
+    )
+    this.updateReadinessItem(
+      this.pushReadinessSubscriptionPillTargets,
+      this.pushReadinessSubscriptionDetailTargets,
+      readiness.subscription
+    )
+    this.updateReadinessItem(
+      this.pushReadinessDeliveryPillTargets,
+      this.pushReadinessDeliveryDetailTargets,
+      readiness.delivery
+    )
+    this.updateReadinessItem(
+      this.pushReadinessBannerPillTargets,
+      this.pushReadinessBannerDetailTargets,
+      readiness.banner
+    )
+
+    this.pushBannerActionsTargets.forEach((actions) => {
+      actions.hidden = state.hidden || !readiness.showBannerPrompt
+    })
+    this.pushBannerSeenButtonTargets.forEach((button) => {
+      button.disabled = state.hidden || !readiness.showBannerPrompt
+    })
+    this.pushBannerMissedButtonTargets.forEach((button) => {
+      button.disabled = state.hidden || !readiness.showBannerPrompt
     })
   }
 
@@ -426,13 +487,18 @@ export default class extends Controller {
     }
 
     if (permission === "granted") {
+      const ready = this.pushBannerConfirmed()
       return {
         hidden: false,
         disabled: false,
         checked: this.devicePushSubscribed,
         pending: false,
-        label: this.devicePushSubscribed ? "On" : "Off",
-        message: this.devicePushSubscribed ? "Push notifications are enabled on this device." : "Notifications are allowed, but this device is not currently subscribed."
+        label: this.devicePushSubscribed ? (ready ? "Ready" : "Needs review") : "Off",
+        message: this.devicePushSubscribed
+          ? (ready
+            ? "Push notifications are ready on this device."
+            : "Push is enabled, but banner visibility still needs verification on this device.")
+          : "Notifications are allowed, but this device is not currently subscribed."
       }
     }
 
@@ -456,6 +522,103 @@ export default class extends Controller {
       pending: false,
       label: "Off",
       message: "Enable push notifications for reminders, mentions, approvals, and workflow failures on this device."
+    }
+  }
+
+  pushReadinessState(state) {
+    const permission = this.pushPermissionState()
+    const permissionReady = permission === "granted"
+    const subscribed = this.devicePushSubscribed
+    const delivered = this.pushTestDelivered()
+    const bannerConfirmed = this.pushBannerConfirmed()
+    const bannerMissed = this.pushBannerMissed()
+
+    const permissionState = permission === "denied"
+      ? {
+          label: "Blocked",
+          tone: "error",
+          detail: this.iosDevice()
+            ? "iPhone notifications are blocked for this Home Screen app."
+            : "Browser notifications are blocked for this site."
+        }
+      : permissionReady
+        ? {
+            label: "Allowed",
+            tone: "ok",
+            detail: "The browser has granted notification permission to Notae."
+          }
+        : {
+            label: "Pending",
+            tone: "warn",
+            detail: "The browser has not granted notification permission yet."
+          }
+
+    const subscriptionState = subscribed
+      ? {
+          label: "Connected",
+          tone: "ok",
+          detail: "This browser has an active push subscription for Notae."
+        }
+      : {
+          label: "Missing",
+          tone: permissionReady ? "error" : "warn",
+          detail: permissionReady
+            ? "Permission exists, but this browser is not currently subscribed."
+            : "Subscription cannot be created until permission is granted."
+        }
+
+    const deliveryState = delivered
+      ? {
+          label: "Delivered",
+          tone: "ok",
+          detail: "A test push was delivered to this browser recently."
+        }
+      : {
+          label: "Unverified",
+          tone: subscribed ? "warn" : "warn",
+          detail: "Run a test push to verify server-to-device delivery for this browser."
+        }
+
+    let bannerState
+    if (bannerConfirmed) {
+      bannerState = {
+        label: "Confirmed",
+        tone: "ok",
+        detail: "A user on this device confirmed seeing the OS-level banner."
+      }
+    } else if (bannerMissed) {
+      bannerState = {
+        label: "Missing",
+        tone: "error",
+        detail: "The browser received a push, but no device banner was seen. Check browser and OS notification presentation settings."
+      }
+    } else if (delivered) {
+      bannerState = {
+        label: "Needs check",
+        tone: "warn",
+        detail: "The push reached this browser. Confirm whether the OS actually showed a banner."
+      }
+    } else {
+      bannerState = {
+        label: "Pending",
+        tone: "warn",
+        detail: "Banner confirmation starts after a successful test push."
+      }
+    }
+
+    const overallReady = permissionReady && subscribed && delivered && bannerConfirmed
+    const overallBlocked = permission === "denied"
+    const overallTone = overallReady ? "ok" : (overallBlocked || bannerMissed ? "error" : "warn")
+    const overallLabel = overallReady ? "Ready" : (overallBlocked ? "Blocked" : "Needs review")
+
+    return {
+      permission: permissionState,
+      subscription: subscriptionState,
+      delivery: deliveryState,
+      banner: bannerState,
+      overallTone,
+      overallLabel,
+      showBannerPrompt: delivered && !bannerConfirmed
     }
   }
 
@@ -584,6 +747,7 @@ export default class extends Controller {
 
     await this.persistPushSubscription(subscription)
     this.devicePushSubscribed = true
+    this.resetBannerConfirmation()
     window.localStorage.removeItem(PUSH_DISMISS_KEY)
     this.syncPushPrompt()
     this.showNetworkToast("Push notifications enabled.")
@@ -624,6 +788,7 @@ export default class extends Controller {
 
     await this.detachPushSubscription()
     this.devicePushSubscribed = false
+    this.clearPushReadinessState()
     this.syncPushPrompt()
     this.showNetworkToast("Push notifications turned off on this device.")
     this.refreshPushUi()
@@ -678,6 +843,86 @@ export default class extends Controller {
     }
 
     this.devicePushSubscribed = false
+  }
+
+  confirmPushBannerSeen(event) {
+    event.preventDefault()
+    this.markPushBannerConfirmed()
+    this.setPushSettingsFeedback("Banner confirmed on this device. Push notifications now count as ready here.", "success")
+    this.showNetworkToast("Banner confirmed on this device.")
+    this.refreshPushUi()
+  }
+
+  confirmPushBannerMissed(event) {
+    event.preventDefault()
+    this.markPushBannerMissed()
+    this.setPushSettingsFeedback("No device banner was seen. Check browser and OS notification presentation settings for this device.", "error")
+    this.showNetworkToast("No device banner was seen.")
+    this.refreshPushUi()
+  }
+
+  updateReadinessItem(pills, details, itemState) {
+    pills.forEach((pill) => {
+      pill.textContent = itemState.label
+      this.applyPillTone(pill, itemState.tone)
+    })
+    details.forEach((detail) => {
+      detail.textContent = itemState.detail
+    })
+  }
+
+  applyPillTone(element, tone) {
+    element.classList.remove("is-ok", "is-warn", "is-error")
+    if (tone === "ok") element.classList.add("is-ok")
+    if (tone === "warn") element.classList.add("is-warn")
+    if (tone === "error") element.classList.add("is-error")
+  }
+
+  markPushTestAttempted() {
+    window.localStorage.setItem(PUSH_TEST_SENT_KEY, String(Date.now()))
+    this.clearPushBannerMarkers()
+  }
+
+  markPushTestDelivered() {
+    window.localStorage.setItem(PUSH_TEST_DELIVERED_KEY, String(Date.now()))
+    this.clearPushBannerMarkers()
+  }
+
+  markPushBannerConfirmed() {
+    window.localStorage.setItem(PUSH_BANNER_CONFIRMED_KEY, String(Date.now()))
+    window.localStorage.removeItem(PUSH_BANNER_MISSED_KEY)
+  }
+
+  markPushBannerMissed() {
+    window.localStorage.setItem(PUSH_BANNER_MISSED_KEY, String(Date.now()))
+    window.localStorage.removeItem(PUSH_BANNER_CONFIRMED_KEY)
+  }
+
+  clearPushBannerMarkers() {
+    window.localStorage.removeItem(PUSH_BANNER_CONFIRMED_KEY)
+    window.localStorage.removeItem(PUSH_BANNER_MISSED_KEY)
+  }
+
+  resetBannerConfirmation() {
+    this.clearPushBannerMarkers()
+  }
+
+  clearPushReadinessState() {
+    window.localStorage.removeItem(PUSH_TEST_SENT_KEY)
+    window.localStorage.removeItem(PUSH_TEST_DELIVERED_KEY)
+    this.clearPushBannerMarkers()
+  }
+
+  pushTestDelivered() {
+    return window.localStorage.getItem(PUSH_TEST_DELIVERED_KEY)?.length > 0
+  }
+
+  pushBannerConfirmed() {
+    return window.localStorage.getItem(PUSH_BANNER_CONFIRMED_KEY)?.length > 0
+  }
+
+  pushBannerMissed() {
+    return window.localStorage.getItem(PUSH_BANNER_MISSED_KEY)?.length > 0
   }
 
   csrfToken() {

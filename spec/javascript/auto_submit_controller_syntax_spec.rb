@@ -34,5 +34,10 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("focusNextCreatedRow")
     expect(source).to include("nextRowFocusRequested")
     expect(source).to include("turbo:submit-start")
+    expect(source).to include("captureViewState")
+    expect(source).to include("restoreViewState")
+    expect(source).to include("window.sessionStorage")
+    expect(source).to include("window.scrollTo")
+    expect(source).to include("preventScroll: true")
   end
 end

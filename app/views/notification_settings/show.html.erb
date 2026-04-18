@@ -4,11 +4,13 @@
 <% content_for :topbar_actions do %>
   <%= link_to "Close", workspace_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
 <% end %>
+<% content_for :suppress_layout_flash, true %>
 
 <section class="notae-settings-shell" data-controller="auto-submit">
   <%= render "shared/settings_nav", workspace: @workspace, active_item: :notifications %>
 
   <div class="notae-settings-content">
+    <%= render "shared/settings_flash_messages" %>
     <section class="notae-settings-section">
       <h2>In-app notifications</h2>
 
@@ -33,6 +35,10 @@
                 data-pwa-target="pushSettingsStateLabel">
             Off
           </span>
+          <span class="notae-operations-pill is-warn"
+                data-pwa-target="pushSettingsReadinessBadge">
+            Needs review
+          </span>
           <button type="button"
                   class="notae-chip-button notae-chip-button-subtle"
                   data-pwa-target="pushSettingsTestButton"
@@ -45,6 +51,60 @@
         <p class="notae-pref-inline-feedback"
            data-pwa-target="pushSettingsFeedback"
            aria-live="polite"></p>
+
+        <div class="notae-push-readiness-card" data-pwa-target="pushReadinessCard">
+          <div class="notae-push-readiness-header">
+            <p class="notae-pref-label">Notification readiness</p>
+            <p class="notae-pref-description">Notae should only read as ready once browser permission, device subscription, and an observed banner are all confirmed on this device.</p>
+          </div>
+          <div class="notae-push-readiness-list">
+            <div class="notae-push-readiness-item">
+              <span class="notae-push-readiness-item-copy">
+                <strong>Browser permission</strong>
+                <span data-pwa-target="pushReadinessPermissionDetail">Waiting for permission.</span>
+              </span>
+              <span class="notae-operations-pill is-warn" data-pwa-target="pushReadinessPermissionPill">Pending</span>
+            </div>
+            <div class="notae-push-readiness-item">
+              <span class="notae-push-readiness-item-copy">
+                <strong>Device subscription</strong>
+                <span data-pwa-target="pushReadinessSubscriptionDetail">This browser has not subscribed yet.</span>
+              </span>
+              <span class="notae-operations-pill is-warn" data-pwa-target="pushReadinessSubscriptionPill">Pending</span>
+            </div>
+            <div class="notae-push-readiness-item">
+              <span class="notae-push-readiness-item-copy">
+                <strong>Test push delivery</strong>
+                <span data-pwa-target="pushReadinessDeliveryDetail">Run a test push to verify server-to-device delivery for this browser.</span>
+              </span>
+              <span class="notae-operations-pill is-warn" data-pwa-target="pushReadinessDeliveryPill">Pending</span>
+            </div>
+            <div class="notae-push-readiness-item">
+              <span class="notae-push-readiness-item-copy">
+                <strong>Banner seen on device</strong>
+                <span data-pwa-target="pushReadinessBannerDetail">Confirm that the operating system actually showed a banner, not just a Notification Center entry.</span>
+              </span>
+              <span class="notae-operations-pill is-warn" data-pwa-target="pushReadinessBannerPill">Pending</span>
+            </div>
+          </div>
+          <div class="notae-push-banner-actions" data-pwa-target="pushBannerActions">
+            <span class="notae-pref-description">After sending a test push, confirm whether you saw the on-device banner.</span>
+            <div class="notae-push-banner-action-buttons">
+              <button type="button"
+                      class="notae-chip-button notae-chip-button-subtle"
+                      data-pwa-target="pushBannerSeenButton"
+                      data-action="pwa#confirmPushBannerSeen">
+                I saw the banner
+              </button>
+              <button type="button"
+                      class="notae-chip-button notae-chip-button-subtle"
+                      data-pwa-target="pushBannerMissedButton"
+                      data-action="pwa#confirmPushBannerMissed">
+                No banner appeared
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-workspace-home-stack" do %>

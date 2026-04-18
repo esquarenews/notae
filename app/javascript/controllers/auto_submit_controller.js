@@ -1,6 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
+  static VIEW_STATE_KEY = "notae:auto-submit:view-state"
+  static VIEW_STATE_TTL_MS = 10_000
   static values = {
     focusOnConnect: Boolean
   }
@@ -42,6 +44,8 @@ export default class extends Controller {
     if (this.focusOnConnectValue) {
       this.focusPrimaryInput()
     }
+
+    this.restoreViewState()
   }
 
   disconnect() {
@@ -61,6 +65,7 @@ export default class extends Controller {
     const form = this.formFor(event)
     if (!form) return
 
+    this.captureViewState(event.target, form)
     this.requestSubmitOnce(form)
   }
 
@@ -76,6 +81,7 @@ export default class extends Controller {
     }
 
     this.nextRowFocusRequested = createNextOnEnter
+    this.captureViewState(event.target, form)
     if (createNextOnEnter) {
       this.focusNextCreatedRow()
     }
@@ -137,6 +143,71 @@ export default class extends Controller {
     } else {
       form.requestSubmit()
     }
+  }
+
+  captureViewState(target, form) {
+    const focusSelector = this.focusSelectorFor(target)
+    if (!focusSelector) return
+
+    const payload = {
+      path: window.location.pathname,
+      search: window.location.search,
+      focusSelector,
+      scrollY: window.scrollY,
+      capturedAt: Date.now(),
+      formAction: form?.action || ""
+    }
+
+    window.sessionStorage.setItem(this.constructor.VIEW_STATE_KEY, JSON.stringify(payload))
+  }
+
+  restoreViewState() {
+    const raw = window.sessionStorage.getItem(this.constructor.VIEW_STATE_KEY)
+    if (!raw) return
+
+    let payload
+    try {
+      payload = JSON.parse(raw)
+    } catch (_error) {
+      window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)
+      return
+    }
+
+    const stale = !payload?.capturedAt || (Date.now() - payload.capturedAt) > this.constructor.VIEW_STATE_TTL_MS
+    const wrongPath = payload?.path !== window.location.pathname || (payload?.search || "") !== window.location.search
+    if (stale || wrongPath) {
+      window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)
+      return
+    }
+
+    const target = payload?.focusSelector ? document.querySelector(payload.focusSelector) : null
+    if (!(target instanceof HTMLElement)) return
+
+    window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: Number(payload.scrollY) || 0, behavior: "auto" })
+      requestAnimationFrame(() => {
+        target.focus({ preventScroll: true })
+        if (typeof target.select === "function" && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+          target.select()
+        }
+      })
+    })
+  }
+
+  focusSelectorFor(target) {
+    if (!(target instanceof HTMLElement)) return ""
+
+    if (target.id) return `#${CSS.escape(target.id)}`
+
+    const name = target.getAttribute("name")?.trim()
+    if (name) return `[name="${this.escapeAttribute(name)}"]`
+
+    return ""
+  }
+
+  escapeAttribute(value) {
+    return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
   }
 
   markSubmitting(form = this.element) {

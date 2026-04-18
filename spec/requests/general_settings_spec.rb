@@ -23,8 +23,11 @@ RSpec.describe "General settings", type: :request do
     expect(response.body).to include("notae-workspace-color-option")
     expect(response.body).to include("Final confirmation")
     expect(response.body).to include("Favicon Lab")
+    expect(response.body).to include('id="settings_flash_messages"')
+    expect(response.body).to include("notae-settings-inline-flash-host")
     expect(response.body).to include("Internal")
     expect(response.body).not_to include(workspace_favicon_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
+    expect(response.body).not_to include('id="notae_flash_messages"')
 
     document = Nokogiri::HTML(response.body)
     workspace_picker = document.at_css(".notae-settings-workspace-picker select[name='workspace_nav_picker']")

@@ -22,6 +22,9 @@ RSpec.describe "Preferences", type: :request do
     expect(response.body).to include(" open>")
     expect(response.body).to include("notae-settings-mobile-trigger")
     expect(response.body).to include("notae-settings-nav-body")
+    expect(response.body).to include('id="settings_flash_messages"')
+    expect(response.body).to include("notae-settings-inline-flash-host")
+    expect(response.body).not_to include('id="notae_flash_messages"')
   end
 
   it "updates preference values for the signed-in user" do
