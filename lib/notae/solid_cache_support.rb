@@ -3,7 +3,7 @@ module Notae
     module_function
 
     def session_store
-      use_solid_cache? ? :cache_store : :cookie_store
+      server_side_sessions_requested? && use_solid_cache? ? :cache_store : :cookie_store
     end
 
     def cache_store
@@ -22,6 +22,10 @@ module Notae
       return true if raw_value.nil?
 
       ActiveModel::Type::Boolean.new.cast(raw_value)
+    end
+
+    def server_side_sessions_requested?
+      ActiveModel::Type::Boolean.new.cast(ENV.fetch("NOTAE_SERVER_SIDE_SESSIONS", "false"))
     end
 
     def solid_cache_table_available?

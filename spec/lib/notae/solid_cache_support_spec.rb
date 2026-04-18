@@ -10,10 +10,12 @@ RSpec.describe Notae::SolidCacheSupport do
   describe ".cache_store" do
     around do |example|
       original_env = ENV["NOTAE_SOLID_CACHE"]
+      original_server_side_sessions = ENV["NOTAE_SERVER_SIDE_SESSIONS"]
       ENV["NOTAE_SOLID_CACHE"] = env_value
       example.run
     ensure
       ENV["NOTAE_SOLID_CACHE"] = original_env
+      ENV["NOTAE_SERVER_SIDE_SESSIONS"] = original_server_side_sessions
     end
 
     let(:connection) { instance_double(ActiveRecord::ConnectionAdapters::AbstractAdapter) }
@@ -26,6 +28,14 @@ RSpec.describe Notae::SolidCacheSupport do
 
     it "uses Solid Cache when requested and available" do
       allow(connection).to receive(:data_source_exists?).with("solid_cache_entries").and_return(true)
+
+      expect(described_class.cache_store).to eq(:solid_cache_store)
+      expect(described_class.session_store).to eq(:cookie_store)
+    end
+
+    it "uses cache-backed sessions only when explicitly enabled" do
+      allow(connection).to receive(:data_source_exists?).with("solid_cache_entries").and_return(true)
+      ENV["NOTAE_SERVER_SIDE_SESSIONS"] = "true"
 
       expect(described_class.cache_store).to eq(:solid_cache_store)
       expect(described_class.session_store).to eq(:cache_store)

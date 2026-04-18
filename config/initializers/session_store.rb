@@ -4,9 +4,10 @@ require Rails.root.join("lib/notae/solid_cache_support")
 
 # iOS standalone PWAs do not reliably preserve browser-session cookies across
 # app relaunches, so make the auth session explicit and persistent.
-# Use a server-side session store when Solid Cache is available. If the cache
-# table has not been migrated yet, fall back to cookie_store so the app stays
-# up during deploy ordering mistakes.
+# Default auth sessions to cookie_store so cache eviction cannot silently sign
+# users out. Server-side sessions remain available as an explicit opt-in via
+# NOTAE_SERVER_SIDE_SESSIONS=true when Solid Cache is provisioned and intended
+# to carry authentication state.
 Rails.application.config.session_store(
   Notae::SolidCacheSupport.session_store,
   key: "_notae_session",
