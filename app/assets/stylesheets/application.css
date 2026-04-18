@@ -7310,14 +7310,15 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
 
 .notae-pref-row--quiet-hours-window {
   align-items: start;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  grid-template-columns: minmax(0, 1fr) fit-content(18rem);
 }
 
 .notae-pref-control-form--quiet-hours {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.72rem;
-  width: min(22rem, 100%);
+  grid-template-columns: repeat(2, minmax(0, 8.4rem));
+  justify-content: end;
+  gap: 0.56rem;
+  width: min(17.4rem, 100%);
   max-width: 100%;
 }
 
@@ -7342,7 +7343,7 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   width: 100%;
   min-width: 0;
   min-inline-size: 0;
-  max-width: 100%;
+  max-width: 8.4rem;
   inline-size: 100%;
   box-sizing: border-box;
   overflow: hidden;
