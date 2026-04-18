@@ -150,7 +150,7 @@ export default class extends Controller {
       return
     }
 
-    const path = event.currentTarget?.dataset?.pushTestPath
+    const path = this.testPushPathFor(event.currentTarget)
     if (!path) {
       this.setPushSettingsFeedback("The test push endpoint is missing on this page.", "error")
       this.showNetworkToast("The test push endpoint is missing.")
@@ -457,6 +457,13 @@ export default class extends Controller {
       label: "Off",
       message: "Enable push notifications for reminders, mentions, approvals, and workflow failures on this device."
     }
+  }
+
+  testPushPathFor(element) {
+    const directPath = element?.dataset?.pushTestPath
+    if (directPath) return directPath
+
+    return this.pushSettingsTestButtonTargets.find((button) => button?.dataset?.pushTestPath)?.dataset?.pushTestPath || ""
   }
 
   standaloneMode() {
