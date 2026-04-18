@@ -13754,6 +13754,11 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   background: color-mix(in srgb, var(--notae-surface, #fff) 96%, #0ea5e9 4%);
 }
 
+.notae-kalendarium-all-day-strip > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .notae-kalendarium-now-line {
   position: absolute;
   left: 0;
@@ -14218,6 +14223,9 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 }
 
 .notae-kalendarium-event-card {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, var(--kal-color) 35%, #d6d3d1 65%);
   border-left: 4px solid var(--kal-color);
   border-radius: 0.6rem;
@@ -14247,17 +14255,23 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 .notae-kalendarium-event-card.is-compact header {
   align-items: flex-start;
   font-size: 0.72rem;
+  min-width: 0;
 }
 
 .notae-kalendarium-event-header-compact {
   display: block;
+  min-width: 0;
 }
 
 .notae-kalendarium-event-header-compact strong {
   display: block;
+  max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .notae-kalendarium-event-time-line {
@@ -14292,6 +14306,14 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   justify-content: space-between;
   gap: 0.4rem;
   font-size: 0.8rem;
+  min-width: 0;
+}
+
+.notae-kalendarium-event-card header strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .notae-kalendarium-event-card:focus-visible {
