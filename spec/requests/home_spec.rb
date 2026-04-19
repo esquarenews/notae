@@ -14,6 +14,21 @@ RSpec.describe "Home", type: :request do
     expect(response.headers["Referrer-Policy"]).to eq("strict-origin-when-cross-origin")
   end
 
+  it "links the compiled application stylesheet from the base layout" do
+    get root_path
+
+    expect(response).to have_http_status(:ok)
+
+    html = Nokogiri::HTML(response.body)
+    asset_stylesheets = html.css("link[rel='stylesheet']").filter_map do |node|
+      href = node["href"].to_s
+      href if href.start_with?("/assets/")
+    end
+
+    expect(asset_stylesheets).to include(a_string_matching(%r{\A/assets/application(?:-[0-9a-f]+)?\.css\z}))
+    expect(asset_stylesheets).not_to include(a_string_matching(%r{\A/assets/app(?:-[0-9a-f]+)?\.css\z}))
+  end
+
   it "shows only policy-scoped workspaces for an authenticated user" do
     user = User.create!(email: "member@example.com", password: "password123")
     other_user = User.create!(email: "other@example.com", password: "password123")
