@@ -44,6 +44,9 @@
               <span class="notae-utility-kind">Unread</span>
             <% end %>
           </div>
+          <p class="notae-utility-meta">
+            <%= notification.created_at.in_time_zone(current_user.time_zone).strftime("%a %-d %b %Y · %-I:%M %p") %>
+          </p>
 
           <% if notification.notification_type == Notification::TYPE_CALENDAR_REMINDER && notification.notifiable.is_a?(KalendariumEvent) %>
             <% event = notification.notifiable %>

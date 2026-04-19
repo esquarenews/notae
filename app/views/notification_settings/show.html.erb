@@ -136,8 +136,7 @@
               </div>
               <div class="notae-pref-control-form">
                 <label class="notae-pref-toggle">
-                  <%= hidden_field_tag "user[push_notifications_master]", "0" %>
-                  <%= check_box_tag "user[push_notifications_master]",
+                  <%= check_box_tag "push_notifications_master",
                                     "1",
                                     User.push_notification_types.all? { |type| @user.push_notification_enabled_for?(type) },
                                     class: "notae-pref-toggle-input",

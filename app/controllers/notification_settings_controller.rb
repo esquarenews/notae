@@ -105,11 +105,6 @@ class NotificationSettingsController < ApplicationController
   end
 
   def merged_push_notification_preferences
-    if params.dig(:user, :push_notifications_master).present?
-      enabled = ActiveModel::Type::Boolean.new.cast(params.dig(:user, :push_notifications_master))
-      return User.push_notification_types.index_with { enabled }
-    end
-
     submitted_preferences = push_notification_preferences_params
     return @user.push_notification_preferences if submitted_preferences.empty?
 

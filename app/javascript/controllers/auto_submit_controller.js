@@ -26,9 +26,13 @@ export default class extends Controller {
   static STATUS_CLASSES = Object.values(this.STATUS_CLASS_BY_VALUE)
 
   connect() {
-    this.handleSubmitStart = () => this.markSubmitting()
-    this.handleSubmitEnd = () => {
-      this.clearSubmitting()
+    this.handleSubmitStart = (event) => {
+      const form = this.eventForm(event)
+      this.markSubmitting(form)
+    }
+    this.handleSubmitEnd = (event) => {
+      const form = this.eventForm(event)
+      this.clearSubmitting(form)
       if (!this.nextRowFocusRequested) return
 
       this.nextRowFocusRequested = false
@@ -36,10 +40,8 @@ export default class extends Controller {
     }
     this.clearSubmitting()
 
-    if (this.element instanceof HTMLFormElement) {
-      this.element.addEventListener("turbo:submit-start", this.handleSubmitStart)
-      this.element.addEventListener("turbo:submit-end", this.handleSubmitEnd)
-    }
+    this.element.addEventListener("turbo:submit-start", this.handleSubmitStart)
+    this.element.addEventListener("turbo:submit-end", this.handleSubmitEnd)
 
     if (this.focusOnConnectValue) {
       this.focusPrimaryInput()
@@ -49,14 +51,19 @@ export default class extends Controller {
   }
 
   disconnect() {
-    if (this.element instanceof HTMLFormElement) {
-      this.element.removeEventListener("turbo:submit-start", this.handleSubmitStart)
-      this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd)
-    }
+    this.element.removeEventListener("turbo:submit-start", this.handleSubmitStart)
+    this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd)
   }
 
   formFor(event) {
     return event.target?.form || event.target?.closest("form")
+  }
+
+  eventForm(event) {
+    const target = event?.target
+    if (target instanceof HTMLFormElement) return target
+
+    return this.formFor(event)
   }
 
   submit(event) {

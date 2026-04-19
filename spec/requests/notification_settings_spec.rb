@@ -108,23 +108,23 @@ RSpec.describe "Notification settings", type: :request do
     expect(membership.reload.workspace_email_notify_activity_override).to be(true)
   end
 
-  it "updates all push notification categories through the master switch" do
+  it "persists individual push notification choices without the master toggle overwriting them" do
     user = User.create!(email: "notification-settings-master-switch@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notification master switch", slug: "notification-master-switch")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     sign_in user
 
-    patch workspace_notification_settings_path(workspace_slug: workspace.slug),
-          params: { user: { push_notifications_master: "0" } }
-
-    user.reload
-    expect(User.push_notification_types).to all(satisfy { |type| user.push_notification_enabled_for?(type) == false })
+    push_params = User::PUSH_NOTIFICATION_OPTIONS.each_with_object({}) do |option, params_hash|
+      params_hash[option[:param_key]] = option[:type] == Notification::TYPE_WORKFLOW_FAILED ? "1" : "0"
+    end
 
     patch workspace_notification_settings_path(workspace_slug: workspace.slug),
-          params: { user: { push_notifications_master: "1" } }
+          params: { user: push_params }
 
     user.reload
-    expect(User.push_notification_types).to all(satisfy { |type| user.push_notification_enabled_for?(type) == true })
+    expect(user.push_notification_enabled_for?(Notification::TYPE_WORKFLOW_FAILED)).to be(true)
+    expect(user.push_notification_enabled_for?(Notification::TYPE_MENTION)).to be(false)
+    expect(user.push_notification_enabled_for?(Notification::TYPE_CALENDAR_REMINDER)).to be(false)
   end
 
   it "returns a local turbo stream flash instead of redirecting for auto-save updates" do
