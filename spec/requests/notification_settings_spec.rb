@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Notification settings", type: :request do
-  it "renders notifications settings and keeps completed menu items untagged" do
+  it "renders notifications settings with the readiness center and master push switch" do
     user = User.create!(email: "notification-settings-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notification settings", slug: "notification-settings")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -33,12 +33,17 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("Banner seen on device")
     expect(response.body).to include("I saw the banner")
     expect(response.body).to include("No banner appeared")
+    expect(response.body).to include("Collapse this once the device is fully configured.")
+    expect(response.body).to include("Master push switch")
     expect(response.body).to include("data-pwa-target=\"pushSettingsReadinessBadge\"")
     expect(response.body).to include("data-pwa-target=\"pushReadinessPermissionPill\"")
     expect(response.body).to include("data-pwa-target=\"pushReadinessBannerPill\"")
     expect(response.body).to include("Push notification types")
     expect(response.body).to include("Mentions and comments")
     expect(response.body).to include("Workflow failures")
+    expect(response.body).to include('data-controller="notification-preferences"')
+    expect(response.body).to include('data-notification-preferences-target="masterToggle"')
+    expect(response.body).to include('data-notification-preferences-target="itemToggle"')
     expect(response.body).to include("Quiet hours")
     expect(response.body).to include("notae-pref-row--quiet-hours-window")
     expect(response.body).to include("notae-pref-control-form--quiet-hours")
@@ -51,13 +56,14 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("data-action=\"pwa#sendTestPush\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsTestButton\"")
     expect(response.body).to include(%(data-push-test-path="/w/#{workspace.slug}/settings/notifications/test-push"))
-    expect(response.body).to include("Slack notifications")
-    expect(response.body).to include("Discord notifications")
     expect(response.body).to include("Email notifications")
     expect(response.body).to include(%(href="/w/#{workspace.slug}/settings/preferences"))
     expect(response.body).to include("Preferences")
     expect(response.body).to include(%(href="/w/#{workspace.slug}/settings/notifications"))
     expect(response.body).to include("Notifications")
+    expect(response.body).not_to include("Join video conferencing and start transcribing")
+    expect(response.body).not_to include("Slack notifications")
+    expect(response.body).not_to include("Discord notifications")
     expect(response.body).not_to include("Preferences <em>Future</em>")
     expect(response.body).not_to include("Notifications <em>Future</em>")
   end
@@ -71,16 +77,11 @@ RSpec.describe "Notification settings", type: :request do
     patch workspace_notification_settings_path(workspace_slug: workspace.slug),
           params: {
             user: {
-              meeting_notify_join_transcribing: "1",
-              meeting_notify_transcribed: "0",
-              meeting_notify_summarized: "1",
               push_notify_mentions: "0",
               push_notify_workflow_failures: "1",
               push_quiet_hours_enabled: "1",
               push_quiet_hours_starts_at: "21:30",
               push_quiet_hours_ends_at: "06:45",
-              slack_notification_preference: "mentions",
-              discord_notification_preference: "all_activity",
               email_notify_activity: "0",
               email_notify_always_send: "1",
               email_notify_page_updates: "0",
@@ -94,22 +95,36 @@ RSpec.describe "Notification settings", type: :request do
     expect(response).to redirect_to(workspace_notification_settings_path(workspace_slug: workspace.slug))
 
     user.reload
-    expect(user.meeting_notify_join_transcribing).to be(true)
-    expect(user.meeting_notify_transcribed).to be(false)
-    expect(user.meeting_notify_summarized).to be(true)
     expect(user.push_notification_enabled_for?(Notification::TYPE_MENTION)).to be(false)
     expect(user.push_notification_enabled_for?(Notification::TYPE_WORKFLOW_FAILED)).to be(true)
     expect(user.push_quiet_hours_enabled).to be(true)
     expect(user.push_quiet_hours_starts_at).to eq("21:30")
     expect(user.push_quiet_hours_ends_at).to eq("06:45")
-    expect(user.slack_notification_preference).to eq("mentions")
-    expect(user.discord_notification_preference).to eq("all_activity")
     expect(user.email_notify_activity).to be(false)
     expect(user.email_notify_always_send).to be(true)
     expect(user.email_notify_page_updates).to be(false)
     expect(user.email_notify_workspace_digest).to be(false)
 
     expect(membership.reload.workspace_email_notify_activity_override).to be(true)
+  end
+
+  it "updates all push notification categories through the master switch" do
+    user = User.create!(email: "notification-settings-master-switch@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification master switch", slug: "notification-master-switch")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_notification_settings_path(workspace_slug: workspace.slug),
+          params: { user: { push_notifications_master: "0" } }
+
+    user.reload
+    expect(User.push_notification_types).to all(satisfy { |type| user.push_notification_enabled_for?(type) == false })
+
+    patch workspace_notification_settings_path(workspace_slug: workspace.slug),
+          params: { user: { push_notifications_master: "1" } }
+
+    user.reload
+    expect(User.push_notification_types).to all(satisfy { |type| user.push_notification_enabled_for?(type) == true })
   end
 
   it "returns a local turbo stream flash instead of redirecting for auto-save updates" do

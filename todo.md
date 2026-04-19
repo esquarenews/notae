@@ -18,6 +18,14 @@
 - Workspace settings: domain access controls
 - Workspace settings (People): groups tab behavior
 - Workspace settings (People): contacts import flow
+- Preferences: additional language support
+- Preferences: text direction controls
+- Privacy: view history controls
+- Notifications: Slack delivery
+- Notifications: Discord delivery
+- Admin: move operations controls into a dedicated admin panel
+- Teamspaces
+- Billing and subscription management
 
 ---
 

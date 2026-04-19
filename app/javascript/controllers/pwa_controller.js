@@ -7,6 +7,7 @@ const PUSH_TEST_SENT_KEY = "notae-pwa-push-test-sent-at"
 const PUSH_TEST_DELIVERED_KEY = "notae-pwa-push-test-delivered-at"
 const PUSH_BANNER_CONFIRMED_KEY = "notae-pwa-push-banner-confirmed-at"
 const PUSH_BANNER_MISSED_KEY = "notae-pwa-push-banner-missed-at"
+const PUSH_READINESS_COLLAPSED_KEY = "notae-pwa-push-readiness-collapsed"
 const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 const NETWORK_TOAST_MS = 2600
 
@@ -67,6 +68,7 @@ export default class extends Controller {
     if (!this.authenticatedValue) this.clearPrivateCaches()
 
     this.refreshNetworkState()
+    this.syncPushReadinessCardState()
     this.syncPushSubscription().catch(() => {}).finally(() => this.refreshPushUi())
   }
 
@@ -105,6 +107,24 @@ export default class extends Controller {
     event.preventDefault()
     this.rememberDismissal(IOS_DISMISS_KEY)
     this.syncInstallPrompts()
+  }
+
+  openInstallExperience(event) {
+    event.preventDefault()
+    window.localStorage.removeItem(INSTALL_DISMISS_KEY)
+    window.localStorage.removeItem(IOS_DISMISS_KEY)
+    this.syncInstallPrompts()
+
+    if (this.deferredPrompt) {
+      this.install(event)
+      return
+    }
+
+    const prompt = this.hasIosPromptTarget ? this.iosPromptTarget : (this.hasInstallPromptTarget ? this.installPromptTarget : null)
+    if (!prompt) return
+
+    prompt.hidden = false
+    prompt.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 
   enablePush(event) {
@@ -312,6 +332,7 @@ export default class extends Controller {
     this.pushReadinessCardTargets.forEach((card) => {
       card.hidden = state.hidden
     })
+    this.syncPushReadinessCardState()
 
     this.updateReadinessItem(
       this.pushReadinessPermissionPillTargets,
@@ -861,6 +882,13 @@ export default class extends Controller {
     this.refreshPushUi()
   }
 
+  toggleReadinessCenter(event) {
+    const panel = event.currentTarget
+    if (!(panel instanceof HTMLDetailsElement)) return
+
+    window.localStorage.setItem(PUSH_READINESS_COLLAPSED_KEY, panel.open ? "0" : "1")
+  }
+
   updateReadinessItem(pills, details, itemState) {
     pills.forEach((pill) => {
       pill.textContent = itemState.label
@@ -896,6 +924,18 @@ export default class extends Controller {
   markPushBannerMissed() {
     window.localStorage.setItem(PUSH_BANNER_MISSED_KEY, String(Date.now()))
     window.localStorage.removeItem(PUSH_BANNER_CONFIRMED_KEY)
+  }
+
+  syncPushReadinessCardState() {
+    this.pushReadinessCardTargets.forEach((card) => {
+      if (!(card instanceof HTMLDetailsElement) || card.hidden) return
+
+      card.open = !this.pushReadinessCollapsed()
+    })
+  }
+
+  pushReadinessCollapsed() {
+    return window.localStorage.getItem(PUSH_READINESS_COLLAPSED_KEY) === "1"
   }
 
   clearPushBannerMarkers() {

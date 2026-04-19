@@ -50,32 +50,12 @@
 
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
-          <p class="notae-pref-label">Language <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Choose the language you want to use in Notae.</p>
+          <p class="notae-pref-label">Language</p>
+          <p class="notae-pref-description">English is the current app language.</p>
         </div>
-        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <%= form.select :language_preference,
-                          options_for_select(User::LANGUAGE_OPTIONS, @user.language_preference),
-                          {},
-                          class: "notae-pref-select",
-                          data: { action: "change->auto-submit#submit" } %>
-        <% end %>
-      </div>
-
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Always show text direction controls <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Show left-to-right and right-to-left controls in the editor.</p>
+        <div class="notae-pref-control-form">
+          <span class="notae-pref-static-value">English</span>
         </div>
-        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <label class="notae-pref-toggle">
-            <%= form.check_box :show_text_direction_controls,
-                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
-                               "1",
-                               "0" %>
-            <span class="notae-pref-toggle-track"></span>
-          </label>
-        <% end %>
       </div>
 
       <div class="notae-pref-row">
@@ -171,13 +151,13 @@
         <% end %>
       </div>
 
-      <div class="notae-pref-row">
+      <div class="notae-pref-row notae-pref-row--stacked">
         <div class="notae-pref-copy">
-          <p class="notae-pref-label">Open desktop app <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Directly opening the native app from web is not wired yet.</p>
+          <p class="notae-pref-label">Install or open the Notae app</p>
+          <p class="notae-pref-description">Browsers do not reliably jump straight into an installed PWA. The practical path is to trigger the install flow here, then open Notae from your app icon after install.</p>
         </div>
         <div class="notae-pref-control-form">
-          <button type="button" class="notae-pref-select" disabled>Open desktop app</button>
+          <button type="button" class="notae-chip-button" data-action="pwa#openInstallExperience">Install Notae app</button>
         </div>
       </div>
 
@@ -201,8 +181,8 @@
 
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
-          <p class="notae-pref-label">Cookie settings <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Granular cookie controls will be connected to runtime consent gates later.</p>
+          <p class="notae-pref-label">Cookie settings</p>
+          <p class="notae-pref-description">Choose how much client-side storage Notae should use for this device experience.</p>
         </div>
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <%= form.select :cookie_settings_preference,
@@ -215,24 +195,8 @@
 
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
-          <p class="notae-pref-label">Show my view history <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Visibility of viewing history will be respected when view-tracking is fully enabled.</p>
-        </div>
-        <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <label class="notae-pref-toggle">
-            <%= form.check_box :show_view_history,
-                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
-                               "1",
-                               "0" %>
-            <span class="notae-pref-toggle-track"></span>
-          </label>
-        <% end %>
-      </div>
-
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Profile discoverability <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Controls who can discover your profile when inviting collaborators.</p>
+          <p class="notae-pref-label">Profile discoverability</p>
+          <p class="notae-pref-description">Allow other people in Notae to discover your profile when inviting or searching for collaborators.</p>
         </div>
         <%= form_with model: @user, url: workspace_preferences_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
           <label class="notae-pref-toggle">

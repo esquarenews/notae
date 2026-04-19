@@ -7,10 +7,12 @@
        .sort_by { |candidate_workspace| [ candidate_workspace.name.to_s.downcase, candidate_workspace.created_at || Time.at(0) ] } %>
   <% selected_workspace = workspace_options.find { |candidate_workspace| candidate_workspace.slug == settings_workspace_slug } || workspace %>
   <% active_item_labels = {
+       account: "Account",
        preferences: "Preferences",
        notifications: "Notifications",
+       subscription: "Subscription",
        operations: "Operations",
-       connections: "Connections",
+        connections: "Connections",
        general: "General",
        people: "People",
        import: "Import",
@@ -49,10 +51,15 @@
       <div class="notae-settings-nav-body">
 
   <p class="notae-settings-nav-group">Account</p>
-  <div class="notae-settings-nav-user">
-    <span class="notae-settings-nav-avatar"><%= current_user.email.first.upcase %></span>
+  <%= link_to workspace_account_settings_path(workspace_slug: workspace.slug),
+              class: [ "notae-settings-nav-user", ("active" if active_item == :account) ].compact.join(" ") do %>
+    <% if current_user.avatar.attached? %>
+      <%= image_tag current_user.avatar, alt: current_user.display_name, class: "notae-settings-nav-avatar-image" %>
+    <% else %>
+      <span class="notae-settings-nav-avatar"><%= current_user.avatar_initials %></span>
+    <% end %>
     <span class="notae-settings-nav-name"><%= current_user.email %></span>
-  </div>
+  <% end %>
   <%= link_to workspace_preferences_path(workspace_slug: workspace.slug),
               class: [ "notae-settings-nav-item", ("active" if active_item == :preferences) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
@@ -141,13 +148,6 @@
     </span>
     <em>Internal</em>
   </span>
-  <span class="notae-settings-nav-item is-disabled">
-    <span class="notae-settings-nav-item-label">
-      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
-      <span>Public Notarum</span>
-    </span>
-    <em>Future</em>
-  </span>
   <%= link_to workspace_emoji_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
               class: [ "notae-settings-nav-item", ("active" if active_item == :emoji) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
@@ -156,39 +156,25 @@
     </span>
   <% end %>
 
-  <p class="notae-settings-nav-group">Integrations</p>
-  <span class="notae-settings-nav-item is-disabled">
-    <span class="notae-settings-nav-item-label">
-      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8a3 3 0 0 1 0 6l-2 2a3 3 0 1 1-4-4l2-2"/><path d="M15 16a3 3 0 0 1 0-6l2-2a3 3 0 1 1 4 4l-2 2"/><path d="M8 12h8"/></svg>
-      <span>Manage</span>
-    </span>
-    <em>Future</em>
-  </span>
+  <% unless Rails.env.production? %>
+    <p class="notae-settings-nav-group">Admin</p>
+    <%= link_to workspace_operations_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
+                class: [ "notae-settings-nav-item", ("active" if active_item == :operations) ].compact.join(" ") do %>
+      <span class="notae-settings-nav-item-label">
+        <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg>
+        <span>Operations</span>
+      </span>
+    <% end %>
+  <% end %>
 
-  <p class="notae-settings-nav-group">Admin</p>
-  <%= link_to workspace_operations_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
-              class: [ "notae-settings-nav-item", ("active" if active_item == :operations) ].compact.join(" ") do %>
+  <p class="notae-settings-nav-group">Subscription</p>
+  <%= link_to workspace_subscription_settings_path(workspace_slug: workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :subscription) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
-      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/><circle cx="12" cy="12" r="8"/></svg>
-      <span>Operations</span>
+      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z"/><path d="M4 11h16"/><path d="M8 15h3"/></svg>
+      <span>Subscription</span>
     </span>
   <% end %>
-  <span class="notae-settings-nav-item is-disabled">
-    <span class="notae-settings-nav-item-label">
-      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
-      <span>Teamspaces</span>
-    </span>
-    <em>Future</em>
-  </span>
-
-  <p class="notae-settings-nav-group">Access & billing</p>
-  <span class="notae-settings-nav-item is-disabled">
-    <span class="notae-settings-nav-item-label">
-      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V6"/><path d="m7 11 5-5 5 5"/><path d="M4 20h16"/></svg>
-      <span>Upgrade plan</span>
-    </span>
-    <em>Future</em>
-  </span>
       </div>
     </div>
   </details>

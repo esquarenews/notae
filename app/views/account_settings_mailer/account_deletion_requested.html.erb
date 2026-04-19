@@ -1,0 +1,11 @@
+<p>A Notae account deletion request was submitted for <strong><%= @user.email %></strong>.</p>
+
+<p>
+  Workspace context: <strong><%= @workspace.name %></strong><br>
+  Requested at: <strong><%= Time.current.in_time_zone(@user.time_zone).strftime("%d %b %Y %H:%M %Z") %></strong>
+</p>
+
+<p>
+  This message was sent to confirm the request reached Notae. If you did not expect this request, sign in and review your
+  account settings immediately.
+</p>

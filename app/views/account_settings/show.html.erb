@@ -1,0 +1,96 @@
+<% content_for :title, "Account" %>
+<% content_for :topbar_page_icon, "👤" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+<% content_for :suppress_layout_flash, true %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :account %>
+
+  <div class="notae-settings-content">
+    <%= render "shared/settings_flash_messages" %>
+
+    <section class="notae-settings-section">
+      <h2>Account profile</h2>
+
+      <%= form_with model: @user,
+                    url: workspace_account_settings_path(workspace_slug: @workspace.slug),
+                    method: :patch,
+                    html: { multipart: true },
+                    class: "notae-account-form" do |form| %>
+        <div class="notae-account-profile-head">
+          <div class="notae-account-avatar-panel">
+            <% if @user.avatar.attached? %>
+              <%= image_tag @user.avatar, alt: @user.display_name, class: "notae-account-avatar-image" %>
+            <% else %>
+              <span class="notae-account-avatar-fallback"><%= @user.avatar_initials %></span>
+            <% end %>
+          </div>
+
+          <div class="notae-account-profile-copy">
+            <p class="notae-pref-label">Profile</p>
+            <p class="notae-pref-description">Your details are shown in settings, invitations, and collaboration surfaces. Every field here is optional.</p>
+          </div>
+        </div>
+
+        <div class="notae-ai-guardrails-grid">
+          <label>
+            <span>Avatar</span>
+            <%= form.file_field :avatar, accept: "image/png,image/jpeg,image/webp,image/gif", class: "notae-pref-select" %>
+          </label>
+
+          <label>
+            <span>Full name</span>
+            <%= form.text_field :full_name, class: "notae-pref-select", placeholder: "Your preferred display name" %>
+          </label>
+
+          <label>
+            <span>Backup email</span>
+            <%= form.email_field :backup_email, class: "notae-pref-select", placeholder: "Optional recovery or contact email" %>
+          </label>
+        </div>
+
+        <label class="notae-account-bio-field">
+          <span>Personal bio</span>
+          <%= form.text_area :personal_bio,
+                             class: "notae-pref-select",
+                             rows: 5,
+                             placeholder: "A short profile note for collaborators." %>
+        </label>
+
+        <div class="notae-account-form-actions">
+          <% if @user.avatar.attached? %>
+            <label class="notae-account-remove-avatar">
+              <%= form.check_box :remove_avatar, {}, "1", "0" %>
+              <span>Remove current avatar</span>
+            </label>
+          <% end %>
+
+          <%= form.submit "Save profile", class: "notae-chip-button is-primary" %>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Privacy & deletion</h2>
+
+      <div class="notae-pref-row notae-pref-row--stacked">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Request account deletion</p>
+          <p class="notae-pref-description">
+            A confirmation notice will be sent to <strong><%= @user.email %></strong><% if @user.backup_email.present? %> and <strong><%= @user.backup_email %></strong><% end %>.
+          </p>
+          <p class="notae-pref-description">Use this when you want Notae to record and confirm an account removal request before the account is deleted.</p>
+        </div>
+
+        <%= button_to "Request account deletion",
+                      workspace_account_delete_request_path(workspace_slug: @workspace.slug),
+                      method: :post,
+                      class: "notae-chip-button notae-account-delete-button",
+                      data: { turbo_confirm: "Send an account deletion confirmation email now?" } %>
+      </div>
+    </section>
+  </div>
+</section>

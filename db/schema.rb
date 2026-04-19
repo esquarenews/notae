@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_18_113000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_19_100112) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -969,6 +969,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_18_113000) do
     t.decimal "ai_search_daily_budget_usd", precision: 12, scale: 4, default: "1.5", null: false
     t.integer "ai_search_semantic_rate_limit_per_minute", default: 24, null: false
     t.boolean "auto_time_zone", default: true, null: false
+    t.string "backup_email"
     t.jsonb "calendar_extra_time_zones", default: [], null: false
     t.string "cookie_settings_preference", default: "customize", null: false
     t.datetime "created_at", null: false
@@ -980,6 +981,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_18_113000) do
     t.boolean "email_notify_page_updates", default: true, null: false
     t.boolean "email_notify_workspace_digest", default: true, null: false
     t.string "encrypted_password", default: "", null: false
+    t.string "full_name"
     t.string "language_preference", default: "en-US", null: false
     t.boolean "meeting_notify_join_transcribing", default: false, null: false
     t.boolean "meeting_notify_summarized", default: false, null: false
@@ -987,6 +989,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_18_113000) do
     t.boolean "open_links_in_desktop_app", default: true, null: false
     t.string "open_on_start_preference", default: "workspace_home", null: false
     t.string "openai_api_key"
+    t.text "personal_bio"
     t.boolean "profile_discoverability", default: true, null: false
     t.jsonb "push_notification_preferences", default: {}, null: false
     t.boolean "push_quiet_hours_enabled", default: false, null: false

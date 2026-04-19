@@ -52,11 +52,20 @@
            data-pwa-target="pushSettingsFeedback"
            aria-live="polite"></p>
 
-        <div class="notae-push-readiness-card" data-pwa-target="pushReadinessCard">
-          <div class="notae-push-readiness-header">
-            <p class="notae-pref-label">Notification readiness</p>
-            <p class="notae-pref-description">Notae should only read as ready once browser permission, device subscription, and an observed banner are all confirmed on this device.</p>
-          </div>
+        <details class="notae-push-readiness-card" data-pwa-target="pushReadinessCard" data-action="toggle->pwa#toggleReadinessCenter" open>
+          <summary class="notae-push-readiness-summary">
+            <span class="notae-push-readiness-summary-copy">
+              <span class="notae-push-readiness-summary-caret">▾</span>
+              <span class="notae-push-readiness-header">
+                <span class="notae-pref-label">Notification readiness</span>
+                <span class="notae-pref-description">Collapse this once the device is fully configured.</span>
+              </span>
+            </span>
+            <span class="notae-push-readiness-summary-meta">
+              <span class="notae-operations-pill is-warn" data-pwa-target="pushSettingsReadinessBadge">Needs review</span>
+            </span>
+          </summary>
+
           <div class="notae-push-readiness-list">
             <div class="notae-push-readiness-item">
               <span class="notae-push-readiness-item-copy">
@@ -87,6 +96,7 @@
               <span class="notae-operations-pill is-warn" data-pwa-target="pushReadinessBannerPill">Pending</span>
             </div>
           </div>
+
           <div class="notae-push-banner-actions" data-pwa-target="pushBannerActions">
             <span class="notae-pref-description">After sending a test push, confirm whether you saw the on-device banner.</span>
             <div class="notae-push-banner-action-buttons">
@@ -104,10 +114,14 @@
               </button>
             </div>
           </div>
-        </div>
+        </details>
       </div>
 
-      <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-workspace-home-stack" do %>
+      <%= form_with model: @user,
+                    url: workspace_notification_settings_path(workspace_slug: @workspace.slug),
+                    method: :patch,
+                    class: "notae-workspace-home-stack",
+                    data: { controller: "notification-preferences" } do %>
         <div class="notae-pref-row notae-pref-row--stacked">
           <div class="notae-pref-copy">
             <p class="notae-pref-label">Push notification types</p>
@@ -115,6 +129,27 @@
           </div>
 
           <div class="notae-workspace-home-stack">
+            <div class="notae-pref-row">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Master push switch</p>
+                <p class="notae-pref-description">Enable or disable all Notae push notification categories at once.</p>
+              </div>
+              <div class="notae-pref-control-form">
+                <label class="notae-pref-toggle">
+                  <%= hidden_field_tag "user[push_notifications_master]", "0" %>
+                  <%= check_box_tag "user[push_notifications_master]",
+                                    "1",
+                                    User.push_notification_types.all? { |type| @user.push_notification_enabled_for?(type) },
+                                    class: "notae-pref-toggle-input",
+                                    data: {
+                                      action: "change->notification-preferences#toggleAll change->auto-submit#submit",
+                                      notification_preferences_target: "masterToggle"
+                                    } %>
+                  <span class="notae-pref-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
             <% User::PUSH_NOTIFICATION_OPTIONS.each do |option| %>
               <div class="notae-pref-row">
                 <div class="notae-pref-copy">
@@ -128,7 +163,10 @@
                                       "1",
                                       @user.push_notification_enabled_for?(option[:type]),
                                       class: "notae-pref-toggle-input",
-                                      data: { action: "change->auto-submit#submit" } %>
+                                      data: {
+                                        action: "change->notification-preferences#syncMaster change->auto-submit#submit",
+                                        notification_preferences_target: "itemToggle"
+                                      } %>
                     <span class="notae-pref-toggle-track"></span>
                   </label>
                 </div>
@@ -187,54 +225,6 @@
           </div>
         </div>
       <% end %>
-
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Join video conferencing and start transcribing <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Planned for meeting integrations. Preference is saved now.</p>
-        </div>
-        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <label class="notae-pref-toggle">
-            <%= form.check_box :meeting_notify_join_transcribing,
-                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
-                               "1",
-                               "0" %>
-            <span class="notae-pref-toggle-track"></span>
-          </label>
-        <% end %>
-      </div>
-
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Meeting is being transcribed <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Planned in-app meeting status events. Preference is saved now.</p>
-        </div>
-        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <label class="notae-pref-toggle">
-            <%= form.check_box :meeting_notify_transcribed,
-                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
-                               "1",
-                               "0" %>
-            <span class="notae-pref-toggle-track"></span>
-          </label>
-        <% end %>
-      </div>
-
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Meeting is being summarized <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Planned in-app summary lifecycle notifications. Preference is saved now.</p>
-        </div>
-        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <label class="notae-pref-toggle">
-            <%= form.check_box :meeting_notify_summarized,
-                               { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
-                               "1",
-                               "0" %>
-            <span class="notae-pref-toggle-track"></span>
-          </label>
-        <% end %>
-      </div>
     </section>
 
     <section class="notae-settings-section">
@@ -284,41 +274,6 @@
       <% end %>
     </section>
 
-    <section class="notae-settings-section">
-      <h2>Slack notifications</h2>
-
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Slack notifications <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Slack delivery is planned; your preference is persisted now.</p>
-        </div>
-        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <%= form.select :slack_notification_preference,
-                          options_for_select(User::CHANNEL_NOTIFICATION_OPTIONS, @user.slack_notification_preference),
-                          {},
-                          class: "notae-pref-select",
-                          data: { action: "change->auto-submit#submit" } %>
-        <% end %>
-      </div>
-    </section>
-
-    <section class="notae-settings-section">
-      <h2>Discord notifications</h2>
-
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Discord notifications <span class="notae-pref-future">Future implementation</span></p>
-          <p class="notae-pref-description">Discord delivery is planned; your preference is persisted now.</p>
-        </div>
-        <%= form_with model: @user, url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-          <%= form.select :discord_notification_preference,
-                          options_for_select(User::CHANNEL_NOTIFICATION_OPTIONS, @user.discord_notification_preference),
-                          {},
-                          class: "notae-pref-select",
-                          data: { action: "change->auto-submit#submit" } %>
-        <% end %>
-      </div>
-    </section>
 
     <section class="notae-settings-section">
       <h2>Email notifications</h2>

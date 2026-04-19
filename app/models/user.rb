@@ -191,6 +191,7 @@ class User < ApplicationRecord
   has_many :kalendarium_write_proposals, dependent: :destroy
   has_many :created_meeting_sessions, class_name: "MeetingSession", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :updated_meeting_sessions, class_name: "MeetingSession", foreign_key: :updated_by_id, inverse_of: :updated_by, dependent: :destroy
+  has_one_attached :avatar
 
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
@@ -224,6 +225,10 @@ class User < ApplicationRecord
   validates :push_quiet_hours_ends_at, format: { with: CLOCK_TIME_PATTERN }
   validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
   validates :smtp_address, length: { maximum: 255 }, allow_blank: true
+  validates :full_name, length: { maximum: 120 }, allow_blank: true
+  validates :backup_email, length: { maximum: 255 }, allow_blank: true
+  validates :backup_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  validates :personal_bio, length: { maximum: 1000 }, allow_blank: true
   validates :smtp_domain, length: { maximum: 255 }, allow_blank: true
   validates :smtp_username, length: { maximum: 255 }, allow_blank: true
   validates :smtp_password, length: { maximum: 255 }, allow_blank: true
@@ -253,6 +258,22 @@ class User < ApplicationRecord
 
   def start_week_preference
     start_week_on_monday? ? "monday" : "sunday"
+  end
+
+  def display_name
+    full_name.to_s.strip.presence || email.to_s
+  end
+
+  def avatar_initials
+    name = display_name.to_s.strip
+    return email.to_s.first.to_s.upcase if name.blank?
+
+    initials = name.split(/\s+/).filter_map { |part| part.first&.upcase }.first(2).join
+    initials.presence || email.to_s.first.to_s.upcase
+  end
+
+  def account_deletion_recipients
+    [ email, backup_email.presence ].compact.uniq
   end
 
   def openai_api_key_configured?

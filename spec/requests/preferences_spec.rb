@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Preferences", type: :request do
-  it "renders the account preferences menu with future markers" do
+  it "renders the account preferences menu with implemented account controls" do
     user = User.create!(email: "preferences-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Prefs", slug: "prefs")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -16,7 +16,15 @@ RSpec.describe "Preferences", type: :request do
     expect(response.body).to include("Desktop app")
     expect(response.body).to include("Privacy")
     expect(response.body).to include("Reduce Notae AI loader motion")
-    expect(response.body).to include("Future implementation")
+    expect(response.body).to include("English is the current app language.")
+    expect(response.body).to include("Profile discoverability")
+    expect(response.body).to include("Cookie settings")
+    expect(response.body).to include("Install Notae app")
+    expect(response.body).to include(%(href="/w/#{workspace.slug}/settings/account"))
+    expect(response.body).to include(%(href="/w/#{workspace.slug}/settings/subscription"))
+    expect(response.body).not_to include("Future implementation")
+    expect(response.body).not_to include("Always show text direction controls")
+    expect(response.body).not_to include("Show my view history")
     expect(response.body).to include("<details class=\"notae-settings-mobile-accordion\"")
     expect(response.body).to include("data-controller=\"settings-nav\"")
     expect(response.body).to include(" open>")
@@ -37,8 +45,6 @@ RSpec.describe "Preferences", type: :request do
           params: {
             user: {
               theme_preference: "dark",
-              language_preference: "en-GB",
-              show_text_direction_controls: "1",
               start_week_preference: "sunday",
               date_format_preference: "full_date",
               auto_time_zone: "0",
@@ -47,7 +53,6 @@ RSpec.describe "Preferences", type: :request do
               open_on_start_preference: "workspace_home",
               reduce_ai_loader_motion: "1",
               cookie_settings_preference: "strict",
-              show_view_history: "0",
               profile_discoverability: "0"
             }
           }
@@ -56,8 +61,6 @@ RSpec.describe "Preferences", type: :request do
 
     user.reload
     expect(user.theme_preference).to eq("dark")
-    expect(user.language_preference).to eq("en-GB")
-    expect(user.show_text_direction_controls).to be(true)
     expect(user.start_week_on_monday).to be(false)
     expect(user.date_format_preference).to eq("full_date")
     expect(user.auto_time_zone).to be(false)
@@ -66,7 +69,6 @@ RSpec.describe "Preferences", type: :request do
     expect(user.open_on_start_preference).to eq("workspace_home")
     expect(user.reduce_ai_loader_motion).to be(true)
     expect(user.cookie_settings_preference).to eq("strict")
-    expect(user.show_view_history).to be(false)
     expect(user.profile_discoverability).to be(false)
   end
 

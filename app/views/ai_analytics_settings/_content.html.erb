@@ -1,3 +1,4 @@
+<% show_ai_costs = !Rails.env.production? %>
 <div id="ai_analytics_settings_content" class="notae-settings-content">
   <section class="notae-settings-section">
     <h2>AI usage trends</h2>
@@ -30,7 +31,9 @@
               <span class="notae-ai-analytics-bar">
                 <span style="width: <%= ((entry[:tokens].to_f / max_tokens_30) * 100).round(1) %>%"></span>
               </span>
-              <span class="notae-ai-analytics-value"><%= number_to_currency(entry[:cost]) %></span>
+              <span class="notae-ai-analytics-value">
+                <%= show_ai_costs ? number_to_currency(entry[:cost]) : "#{number_with_delimiter(entry[:tokens])} tokens" %>
+              </span>
             </div>
           <% end %>
         </div>
@@ -47,7 +50,9 @@
             <th>Operation</th>
             <th>Requests</th>
             <th>Tokens</th>
-            <th>Cost</th>
+            <% if show_ai_costs %>
+              <th>Cost</th>
+            <% end %>
           </tr>
         </thead>
         <tbody>
@@ -57,12 +62,14 @@
                 <td><%= AiUsageLog.label_for(entry[:operation]) %></td>
                 <td><%= number_with_delimiter(entry[:count]) %></td>
                 <td><%= number_with_delimiter(entry[:tokens]) %></td>
-                <td><%= number_to_currency(entry[:cost]) %></td>
+                <% if show_ai_costs %>
+                  <td><%= number_to_currency(entry[:cost]) %></td>
+                <% end %>
               </tr>
             <% end %>
           <% else %>
             <tr>
-              <td colspan="4" class="notae-table-empty">No AI usage recorded in the last 30 days.</td>
+              <td colspan="<%= show_ai_costs ? 4 : 3 %>" class="notae-table-empty">No AI usage recorded in the last 30 days.</td>
             </tr>
           <% end %>
         </tbody>

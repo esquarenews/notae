@@ -1,6 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
 const ALERT_POLL_INTERVAL_MS = 15000
+const BAR_GUTTER_PX = 20
+const DRAG_THRESHOLD_PX = 4
 
 export default class extends Controller {
   static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel", "calendarFrame"]
@@ -14,14 +16,23 @@ export default class extends Controller {
     this.beforeCache = this.beforeCache.bind(this)
     this.visibilityChangeHandler = () => this.syncAlertPolling({ immediate: document.visibilityState === "visible" })
     this.calendarFrameLoadHandler = () => this.requestCalendarRecenter()
+    this.pointerMoveHandler = (event) => this.drag(event)
+    this.pointerUpHandler = () => this.stopDrag()
+    this.resizeHandler = () => this.applyStoredBarPosition()
     this.alertPollTimer = null
     this.alertPollRequest = null
+    this.dragPointerId = null
+    this.dragOriginX = null
+    this.dragOriginLeft = null
+    this.dragMoved = false
     window.addEventListener("message", this.handleWidgetMessage)
     document.addEventListener("turbo:before-cache", this.beforeCache)
     document.addEventListener("visibilitychange", this.visibilityChangeHandler)
+    window.addEventListener("resize", this.resizeHandler)
     if (this.hasCalendarFrameTarget) {
       this.calendarFrameTarget.addEventListener("load", this.calendarFrameLoadHandler)
     }
+    this.applyStoredBarPosition()
     this.syncCalendarState()
     this.syncAlertPolling({ immediate: true })
   }
@@ -31,6 +42,8 @@ export default class extends Controller {
     window.removeEventListener("message", this.handleWidgetMessage)
     document.removeEventListener("turbo:before-cache", this.beforeCache)
     document.removeEventListener("visibilitychange", this.visibilityChangeHandler)
+    window.removeEventListener("resize", this.resizeHandler)
+    this.releaseDragListeners()
     if (this.hasCalendarFrameTarget) {
       this.calendarFrameTarget.removeEventListener("load", this.calendarFrameLoadHandler)
     }
@@ -69,6 +82,45 @@ export default class extends Controller {
     this.clockTarget.textContent = `${dateLabel} · ${timeLabel}`
   }
 
+  startDrag(event) {
+    if (!this.hasClockButtonTarget) return
+    if (event.button !== 0) return
+
+    this.dragPointerId = event.pointerId
+    this.dragOriginX = event.clientX
+    this.dragOriginLeft = this.currentBarLeft()
+    this.dragMoved = false
+
+    this.clockButtonTarget.setPointerCapture?.(event.pointerId)
+    this.clockButtonTarget.classList.add("is-dragging")
+    window.addEventListener("pointermove", this.pointerMoveHandler)
+    window.addEventListener("pointerup", this.pointerUpHandler, { once: false })
+  }
+
+  drag(event) {
+    if (this.dragPointerId === null || event.pointerId !== this.dragPointerId) return
+
+    const deltaX = event.clientX - this.dragOriginX
+    if (!this.dragMoved && Math.abs(deltaX) < DRAG_THRESHOLD_PX) return
+
+    this.dragMoved = true
+    const nextLeft = this.clampBarLeft(this.dragOriginLeft + deltaX)
+    this.applyBarLeft(nextLeft)
+    this.persistBarLeft(nextLeft)
+    event.preventDefault()
+  }
+
+  stopDrag() {
+    if (this.dragPointerId === null) return
+
+    this.clockButtonTarget?.classList.remove("is-dragging")
+    this.releaseDragListeners()
+    this.dragPointerId = null
+    this.dragOriginX = null
+    this.dragOriginLeft = null
+    this.dragMoved = false
+  }
+
   toggleCalendar(event) {
     event?.preventDefault()
 
@@ -99,6 +151,7 @@ export default class extends Controller {
   }
 
   beforeCache() {
+    this.stopDrag()
     this.closeCalendar()
   }
 
@@ -172,6 +225,13 @@ export default class extends Controller {
     this.clockButtonTarget.setAttribute("aria-label", expanded ? "Close compact Kalendārium" : "Open compact Kalendārium")
   }
 
+  applyStoredBarPosition() {
+    const storedLeft = this.readStoredBarLeft()
+    if (!Number.isFinite(storedLeft)) return
+
+    this.applyBarLeft(this.clampBarLeft(storedLeft))
+  }
+
   handleWidgetMessage(event) {
     if (event.origin !== window.location.origin) return
 
@@ -204,6 +264,53 @@ export default class extends Controller {
 
   browserTimeZone() {
     return Intl.DateTimeFormat().resolvedOptions().timeZone
+  }
+
+  currentBarLeft() {
+    const computedLeft = Number.parseFloat(window.getComputedStyle(this.element).left)
+    if (Number.isFinite(computedLeft)) return computedLeft
+
+    const rect = this.element.getBoundingClientRect()
+    return rect.left
+  }
+
+  clampBarLeft(value) {
+    const maxLeft = Math.max(BAR_GUTTER_PX, window.innerWidth - this.element.offsetWidth - BAR_GUTTER_PX)
+    return Math.min(Math.max(value, BAR_GUTTER_PX), maxLeft)
+  }
+
+  applyBarLeft(value) {
+    this.element.style.left = `${value}px`
+    this.element.style.right = "auto"
+  }
+
+  persistBarLeft(value) {
+    try {
+      window.localStorage.setItem(this.barPositionStorageKey(), String(Math.round(value)))
+    } catch (_error) {
+      // Ignore storage failures and keep the dragged position for the current page only.
+    }
+  }
+
+  readStoredBarLeft() {
+    try {
+      const raw = window.localStorage.getItem(this.barPositionStorageKey())
+      if (!raw) return null
+
+      const parsed = Number.parseFloat(raw)
+      return Number.isFinite(parsed) ? parsed : null
+    } catch (_error) {
+      return null
+    }
+  }
+
+  barPositionStorageKey() {
+    return `notae:notification-bar:left:${this.workspaceKeyValue || "global"}`
+  }
+
+  releaseDragListeners() {
+    window.removeEventListener("pointermove", this.pointerMoveHandler)
+    window.removeEventListener("pointerup", this.pointerUpHandler)
   }
 
   alertForEvent(event) {

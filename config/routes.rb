@@ -39,6 +39,9 @@ Rails.application.routes.draw do
     post "settings/import", to: "import_settings#create"
     get "settings/preferences", to: "preferences#show", as: :workspace_preferences
     patch "settings/preferences", to: "preferences#update"
+    get "settings/account", to: "account_settings#show", as: :workspace_account_settings
+    patch "settings/account", to: "account_settings#update"
+    post "settings/account/delete-request", to: "account_settings#request_deletion", as: :workspace_account_delete_request
     get "settings/notae-ai", to: "notae_ai_settings#show", as: :workspace_notae_ai_settings
     patch "settings/notae-ai", to: "notae_ai_settings#update"
     get "settings/ai-analytics", to: "ai_analytics_settings#show", as: :workspace_ai_analytics_settings
@@ -53,6 +56,7 @@ Rails.application.routes.draw do
     patch "settings/notifications", to: "notification_settings#update"
     post "settings/notifications/test-push", to: "notification_settings#send_test_push", as: :workspace_notification_settings_test_push
     get "settings/operations", to: "operations_settings#show", as: :workspace_operations_settings
+    get "settings/subscription", to: "subscription_settings#show", as: :workspace_subscription_settings
     get "settings/kalendarium", to: "kalendarium_settings#show", as: :workspace_kalendarium_settings
     patch "settings/kalendarium", to: "kalendarium_settings#update"
     get "settings/epistularium", to: "epistularium_settings#show", as: :workspace_epistularium_settings

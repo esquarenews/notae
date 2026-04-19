@@ -226,6 +226,7 @@ RSpec.describe "Workspace home", type: :request do
       expect(bar["data-notification-bar-time-zone-value"]).to eq("Australia/Melbourne")
       expect(bar["data-notification-bar-workspace-key-value"]).to eq(workspace.slug)
       expect(clock_button).to be_present
+      expect(clock_button["data-action"]).to include("pointerdown->notification-bar#startDrag")
       expect(clock_button["data-action"]).to include("dblclick->notification-bar#toggleCalendar")
       expect(clock_button["aria-expanded"]).to eq("false")
       expect(calendar_panel).to be_present
@@ -252,6 +253,8 @@ RSpec.describe "Workspace home", type: :request do
     expect(stylesheet).to include(".notae-shell-status-bar {\n  position: fixed;")
     expect(stylesheet).to include(".notae-shell-status-bar.is-calendar-open {\n  width: min(32rem, calc(100vw - 2.5rem));\n}")
     expect(stylesheet).to include(".notae-shell-status-bar-clock-button {\n  appearance: none;")
+    expect(stylesheet).to include("  cursor: grab;")
+    expect(stylesheet).to include(".notae-shell-status-bar-clock-button.is-dragging {\n  cursor: grabbing;\n}")
     expect(stylesheet).to include(".notae-shell-status-bar-calendar[hidden] {\n  display: none;\n}")
     expect(stylesheet).to include(".notae-shell-status-bar-calendar-frame {\n  width: 100%;")
     expect(stylesheet).to include("  border: 1px solid var(--notae-glass-border);")

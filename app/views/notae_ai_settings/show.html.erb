@@ -47,41 +47,43 @@
         </article>
       </div>
 
-      <div class="notae-pref-row notae-pref-row--stacked">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">AI guardrails</p>
-          <p class="notae-pref-description">Set your daily spend cap and per-minute query limits for semantic search and AI answers.</p>
-        </div>
-        <%= form_with model: @user,
-                      url: workspace_notae_ai_settings_path(workspace_slug: @workspace.slug),
-                      method: :patch,
-                      class: "notae-ai-guardrails-form" do |form| %>
-          <div class="notae-ai-guardrails-grid">
-            <label>
-              <span>Daily budget (USD)</span>
-              <%= form.number_field :ai_search_daily_budget_usd,
-                                    min: 0,
-                                    step: 0.01,
-                                    class: "notae-pref-select" %>
-            </label>
-            <label>
-              <span>Semantic / min</span>
-              <%= form.number_field :ai_search_semantic_rate_limit_per_minute,
-                                    min: 1,
-                                    step: 1,
-                                    class: "notae-pref-select" %>
-            </label>
-            <label>
-              <span>Answer / min</span>
-              <%= form.number_field :ai_search_answer_rate_limit_per_minute,
-                                    min: 1,
-                                    step: 1,
-                                    class: "notae-pref-select" %>
-            </label>
-            <button type="submit" class="notae-chip-button">Save guardrails</button>
+      <% unless Rails.env.production? %>
+        <div class="notae-pref-row notae-pref-row--stacked">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">AI guardrails</p>
+            <p class="notae-pref-description">Set your daily spend cap and per-minute query limits for semantic search and AI answers.</p>
           </div>
-        <% end %>
-      </div>
+          <%= form_with model: @user,
+                        url: workspace_notae_ai_settings_path(workspace_slug: @workspace.slug),
+                        method: :patch,
+                        class: "notae-ai-guardrails-form" do |form| %>
+            <div class="notae-ai-guardrails-grid">
+              <label>
+                <span>Daily budget (USD)</span>
+                <%= form.number_field :ai_search_daily_budget_usd,
+                                      min: 0,
+                                      step: 0.01,
+                                      class: "notae-pref-select" %>
+              </label>
+              <label>
+                <span>Semantic / min</span>
+                <%= form.number_field :ai_search_semantic_rate_limit_per_minute,
+                                      min: 1,
+                                      step: 1,
+                                      class: "notae-pref-select" %>
+              </label>
+              <label>
+                <span>Answer / min</span>
+                <%= form.number_field :ai_search_answer_rate_limit_per_minute,
+                                      min: 1,
+                                      step: 1,
+                                      class: "notae-pref-select" %>
+              </label>
+              <button type="submit" class="notae-chip-button">Save guardrails</button>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
     </section>
 
     <section class="notae-settings-section">
@@ -147,10 +149,12 @@
                 <span>Dry-run required</span>
                 <%= form.check_box :dry_run_required %>
               </label>
-              <label>
-                <span>Max estimated cost (USD)</span>
-                <%= form.number_field :max_estimated_cost_usd, min: 0, step: 0.01, class: "notae-pref-select" %>
-              </label>
+              <% unless Rails.env.production? %>
+                <label>
+                  <span>Max estimated cost (USD)</span>
+                  <%= form.number_field :max_estimated_cost_usd, min: 0, step: 0.01, class: "notae-pref-select" %>
+                </label>
+              <% end %>
             </div>
 
             <div class="notae-pref-row notae-pref-row--stacked">

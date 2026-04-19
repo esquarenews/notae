@@ -1,0 +1,42 @@
+<% content_for :title, "Subscription" %>
+<% content_for :topbar_page_icon, "💳" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+<% content_for :suppress_layout_flash, true %>
+
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :subscription %>
+
+  <div class="notae-settings-content">
+    <%= render "shared/settings_flash_messages" %>
+
+    <section class="notae-settings-section">
+      <h2>Subscription</h2>
+
+      <div class="notae-ai-analytics-grid">
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Info</p>
+          <p class="notae-utility-title">Free plan</p>
+          <p class="notae-pref-description">You are currently on free plan, no limits.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Billing</p>
+          <p class="notae-utility-title">No invoices</p>
+          <p class="notae-pref-description">No invoices to show.</p>
+        </article>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Plan changes</p>
+          <p class="notae-pref-description">Self-serve billing is not enabled yet in production.</p>
+        </div>
+
+        <button type="button" class="notae-chip-button notae-chip-button-subtle" disabled>Change plan</button>
+      </div>
+    </section>
+  </div>
+</section>

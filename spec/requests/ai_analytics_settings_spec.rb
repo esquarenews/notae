@@ -147,4 +147,30 @@ RSpec.describe "AI Analytics settings", type: :request do
     expect(response.body).to include('turbo-stream action="replace" target="ai_analytics_settings_content"')
     expect(response.body).to include("Automation kill switch enabled.")
   end
+
+  it "hides AI cost details in production while keeping token usage visible" do
+    user = User.create!(email: "ai-analytics-production@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Analytics Production", slug: "ai-analytics-production")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    AiUsageLog.create!(
+      user: user,
+      workspace: workspace,
+      operation: AiUsageLog::OP_SEARCH_ANSWER,
+      model: "gpt-4o-mini",
+      prompt_tokens: 100,
+      completion_tokens: 50,
+      total_tokens: 150,
+      estimated_cost_usd: 0.04
+    )
+    sign_in user
+
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+
+    get workspace_ai_analytics_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("150 tokens")
+    expect(response.body).not_to include("<th>Cost</th>")
+    expect(response.body).not_to include("$0.04")
+  end
 end

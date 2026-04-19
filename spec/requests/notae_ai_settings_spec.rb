@@ -169,4 +169,19 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(policy.automation_confidence_threshold.to_f).to eq(0.8)
     expect(policy.max_estimated_cost_usd.to_f).to eq(0.5)
   end
+
+  it "hides guardrail spend controls in production" do
+    user = User.create!(email: "notae-ai-settings-production@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notae AI production", slug: "notae-ai-production")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+
+    get workspace_notae_ai_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("AI guardrails")
+    expect(response.body).not_to include("Max estimated cost (USD)")
+  end
 end

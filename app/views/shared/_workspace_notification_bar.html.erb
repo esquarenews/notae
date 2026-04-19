@@ -11,7 +11,7 @@
             aria-label="Open compact Kalendārium"
             aria-expanded="false"
             data-notification-bar-target="clockButton"
-            data-action="dblclick->notification-bar#toggleCalendar">
+            data-action="pointerdown->notification-bar#startDrag dblclick->notification-bar#toggleCalendar">
       <div class="notae-shell-status-bar-clock"
            data-notification-bar-target="clock"><%= presenter.initial_clock_label %></div>
     </button>
