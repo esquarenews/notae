@@ -1,6 +1,7 @@
 class GeneralSettingsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
+  before_action :load_workspace_exports, only: :show
 
   def show
     authorize @workspace, :show?
@@ -61,5 +62,9 @@ class GeneralSettingsController < ApplicationController
 
   def destroy_confirmation_valid?
     params.fetch(:workspace, {}).fetch(:confirm_name, "").to_s == @workspace.name
+  end
+
+  def load_workspace_exports
+    @workspace_exports = policy_scope(WorkspaceExport).for_workspace(@workspace).recent_first.limit(8).to_a
   end
 end

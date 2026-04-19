@@ -1,0 +1,57 @@
+<div class="notae-general-backup-panel">
+  <div class="notae-pref-row">
+    <div class="notae-pref-copy">
+      <p class="notae-pref-label">Backup my data</p>
+      <p class="notae-pref-description">Download a workspace backup as a zip containing Markdown exports for pages, CSV exports for grids, Kalendarium events, and visible Epistularium mail.</p>
+    </div>
+    <% if can_export %>
+      <%= form_with url: workspace_backup_exports_path(workspace_slug: workspace.slug),
+                    method: :post,
+                    class: "notae-pref-control-form" do |form| %>
+        <%= form.submit "Backup my data", class: "notae-chip-button" %>
+      <% end %>
+    <% else %>
+      <p class="notae-pref-description">This backup is only available for accessible workspace content.</p>
+    <% end %>
+  </div>
+
+  <% if workspace_exports.any? %>
+    <div class="notae-general-backup-list">
+      <% workspace_exports.each do |workspace_export| %>
+        <article class="notae-general-backup-item">
+          <div class="notae-general-backup-item-copy">
+            <p class="notae-general-backup-item-title">
+              Backup requested <%= l(workspace_export.created_at, format: :long) %>
+            </p>
+            <p class="notae-general-backup-item-meta">
+              Requested by <%= workspace_export.requested_by.email %>
+              <% if workspace_export.completed_at.present? %>
+                · Ready <%= l(workspace_export.completed_at, format: :long) %>
+              <% elsif workspace_export.failed_at.present? %>
+                · Failed <%= l(workspace_export.failed_at, format: :long) %>
+              <% end %>
+            </p>
+            <% if workspace_export.failed? && workspace_export.error_message.present? %>
+              <p class="notae-pref-inline-feedback" data-state="error"><%= workspace_export.error_message %></p>
+            <% elsif workspace_export.pending? %>
+              <p class="notae-pref-inline-feedback" data-state="pending">Preparing archive.</p>
+            <% elsif workspace_export.ready? && workspace_export.expired? %>
+              <p class="notae-pref-inline-feedback">Download expired. Run a fresh backup to generate a new zip.</p>
+            <% end %>
+          </div>
+          <div class="notae-general-backup-item-actions">
+            <span class="notae-general-backup-status is-<%= workspace_export.status %>"><%= workspace_export.status.humanize %></span>
+            <% if workspace_export.downloadable? %>
+              <%= link_to "Download zip",
+                          workspace_backup_download_path(workspace_slug: workspace.slug, token: workspace_export.token),
+                          class: "notae-chip-button",
+                          data: { turbo: false } %>
+            <% end %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="notae-pref-description">No workspace backups have been generated yet.</p>
+  <% end %>
+</div>

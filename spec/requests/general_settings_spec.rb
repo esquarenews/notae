@@ -1,6 +1,9 @@
 require "rails_helper"
+require "zip"
 
 RSpec.describe "General settings", type: :request do
+  include ActiveJob::TestHelper
+
   it "renders workspace controls in general settings" do
     user = User.create!(email: "general-settings-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Zulu settings", slug: "general-settings")
@@ -20,6 +23,7 @@ RSpec.describe "General settings", type: :request do
     expect(response.body).to include("Workspace ID")
     expect(response.body).to include(workspace.id)
     expect(response.body).to include("Workspace colour")
+    expect(response.body).to include("Backup my data")
     expect(response.body).to include("notae-workspace-color-option")
     expect(response.body).to include("Final confirmation")
     expect(response.body).to include("Favicon Lab")
@@ -181,5 +185,120 @@ RSpec.describe "General settings", type: :request do
 
     expect(response).to redirect_to(root_path)
     expect(workspace.reload.archived_at).to be_present
+  end
+
+  it "queues a workspace backup export and downloads workspace data as a zip" do
+    user = User.create!(email: "general-settings-backup@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Backup workspace", slug: "general-settings-backup")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    page = Page.create!(workspace:, created_by: user, title: "Backup Page")
+    Block.create!(
+      workspace:,
+      page:,
+      created_by: user,
+      block_type: "text",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Important note" } ] }
+        ]
+      }
+    )
+
+    database = Database.create!(workspace:, created_by: user, name: "Project tracker")
+    property = DbProperty.create!(workspace:, database:, name: "Status")
+    active_row = DbRow.create!(workspace:, database:, title: "Active row")
+    archived_row = DbRow.create!(workspace:, database:, title: "Archived row", archived_at: 1.day.ago)
+    DbCell.create!(workspace:, db_row: active_row, db_property: property, value_text: "Open")
+    DbCell.create!(workspace:, db_row: archived_row, db_property: property, value_text: "Done")
+
+    calendar = KalendariumCalendar.create!(
+      workspace:,
+      created_by: user,
+      name: "Family",
+      color_hex: "#3B82F6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "local"
+    )
+    KalendariumEvent.create!(
+      workspace:,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Movie night",
+      starts_at_utc: Time.utc(2026, 4, 20, 2, 30),
+      ends_at_utc: Time.utc(2026, 4, 20, 4, 30),
+      metadata_json: { "meeting_join_url" => "https://example.com/join/movie-night" }
+    )
+
+    account = EpistulariumAccount.create!(
+      workspace:,
+      owner: workspace,
+      created_by: user,
+      provider: "imap",
+      label: "Shared inbox",
+      provider_username: "backup@example.com",
+      provider_password: "password123",
+      settings_json: { "imap_host" => "imap.example.com", "imap_port" => 993 }
+    )
+    EpistulariumMessage.create!(
+      workspace:,
+      epistularium_account: account,
+      provider_message_id: "message-1",
+      mailbox: "inbox",
+      subject: "Quarterly update",
+      from_name: "Sender",
+      from_email: "sender@example.com",
+      to_recipients_json: [ { "email" => "backup@example.com", "name" => "Backup" } ],
+      received_at: Time.utc(2026, 4, 19, 23, 15),
+      unread: true,
+      snippet: "Important mail",
+      body_text: "Important mail body"
+    )
+
+    expect do
+      post workspace_backup_exports_path(workspace_slug: workspace.slug),
+           headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    end.to have_enqueued_job(WorkspaceExports::BuildZipJob)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.body).to include('turbo-stream action="replace" target="workspace_backup_exports_panel"')
+
+    workspace_export = WorkspaceExport.order(created_at: :desc).first
+    perform_enqueued_jobs(only: WorkspaceExports::BuildZipJob)
+    workspace_export.reload
+
+    expect(workspace_export).to be_downloadable
+
+    get workspace_backup_download_path(workspace_slug: workspace.slug, token: workspace_export.token)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("application/zip")
+
+    entries = {}
+    Zip::File.open_buffer(StringIO.new(response.body)) do |zip_file|
+      zip_file.each do |entry|
+        entries[entry.name] = entry.get_input_stream.read
+      end
+    end
+
+    page_entry = entries.keys.find { |name| name.start_with?("pages/active/backup-page-") && name.end_with?(".md") }
+    database_entry = entries.keys.find { |name| name.start_with?("databases/active/project-tracker-") && name.end_with?(".csv") }
+
+    expect(entries["workspace.md"]).to include("Workspace backup")
+    expect(entries["workspace.md"]).to include(workspace.slug)
+    expect(page_entry).to be_present
+    expect(entries.fetch(page_entry)).to include("# Backup Page")
+    expect(entries.fetch(page_entry)).to include("Important note")
+    expect(database_entry).to be_present
+    expect(entries.fetch(database_entry)).to include("Archived at")
+    expect(entries.fetch(database_entry)).to include("Active row")
+    expect(entries.fetch(database_entry)).to include("Archived row")
+    expect(entries.fetch("kalendarium/events.csv")).to include("Movie night")
+    expect(entries.fetch("epistularium/messages.csv")).to include("Quarterly update")
+    expect(entries.fetch("epistularium/messages.csv")).to include("Important mail body")
   end
 end

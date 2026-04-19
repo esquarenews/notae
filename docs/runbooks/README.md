@@ -21,6 +21,7 @@ If production differs, adjust the paths and service names before running command
 - [Push notification failure](./push_notification_failure.md)
 - [MCP token setup](./mcp_token_setup.md)
 - [Calendar provider sync failure](./calendar_provider_sync_failure.md)
+- [Backup and restore](./backup_and_restore.md)
 
 ## Common checks
 

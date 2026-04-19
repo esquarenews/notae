@@ -8008,6 +8008,15 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
     flex-direction: column;
   }
 
+  .notae-general-backup-item {
+    flex-direction: column;
+  }
+
+  .notae-general-backup-item-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .notae-account-api-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -8199,6 +8208,89 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   display: grid;
   gap: 0.52rem;
   width: min(440px, 62vw);
+}
+
+.notae-general-backup-panel {
+  display: grid;
+  gap: 0.82rem;
+}
+
+.notae-general-backup-list {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.notae-general-backup-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--notae-border-muted);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--notae-panel-muted) 88%, transparent);
+}
+
+.notae-general-backup-item-copy {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.notae-general-backup-item-title {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--notae-heading-ink);
+}
+
+.notae-general-backup-item-meta {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--notae-text-muted);
+}
+
+.notae-general-backup-item-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.58rem;
+  flex-wrap: wrap;
+}
+
+.notae-general-backup-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6.2rem;
+  padding: 0.34rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--notae-border-muted);
+  background: color-mix(in srgb, var(--notae-panel-elevated) 92%, transparent);
+  color: var(--notae-text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notae-general-backup-status.is-ready {
+  border-color: color-mix(in srgb, #2b9b64 28%, var(--notae-border-muted));
+  color: color-mix(in srgb, #2b9b64 82%, var(--notae-text-strong));
+  background: color-mix(in srgb, #2b9b64 10%, var(--notae-panel-elevated));
+}
+
+.notae-general-backup-status.is-pending {
+  border-color: color-mix(in srgb, #d97706 28%, var(--notae-border-muted));
+  color: color-mix(in srgb, #d97706 82%, var(--notae-text-strong));
+  background: color-mix(in srgb, #fbbf24 10%, var(--notae-panel-elevated));
+}
+
+.notae-general-backup-status.is-failed {
+  border-color: color-mix(in srgb, #c84a5a 28%, var(--notae-border-muted));
+  color: color-mix(in srgb, #c84a5a 82%, var(--notae-text-strong));
+  background: color-mix(in srgb, #fecaca 18%, var(--notae-panel-elevated));
 }
 
 .notae-workspace-color-grid {

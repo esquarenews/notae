@@ -1103,6 +1103,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_100112) do
     t.index ["workspace_id"], name: "index_workspace_emojis_on_workspace_id"
   end
 
+  create_table "workspace_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.text "error_message", default: "", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "failed_at"
+    t.uuid "requested_by_id", null: false
+    t.integer "status", default: 0, null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["requested_by_id"], name: "index_workspace_exports_on_requested_by_id"
+    t.index ["token"], name: "index_workspace_exports_on_token", unique: true
+    t.index ["workspace_id", "created_at"], name: "index_workspace_exports_on_workspace_created_at"
+    t.index ["workspace_id", "expires_at"], name: "index_workspace_exports_on_workspace_id_and_expires_at"
+    t.index ["workspace_id"], name: "index_workspace_exports_on_workspace_id"
+  end
+
   create_table "workspaces", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "analytics_enabled", default: true, null: false
     t.datetime "archived_at"
@@ -1254,4 +1272,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_100112) do
   add_foreign_key "workspace_cover_assets", "users", column: "created_by_id"
   add_foreign_key "workspace_cover_assets", "workspaces"
   add_foreign_key "workspace_emojis", "workspaces"
+  add_foreign_key "workspace_exports", "users", column: "requested_by_id"
+  add_foreign_key "workspace_exports", "workspaces"
 end

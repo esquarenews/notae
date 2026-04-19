@@ -78,6 +78,7 @@ class Workspace < ApplicationRecord
   has_many :share_link_views, dependent: :destroy
   has_many :database_share_links, dependent: :destroy
   has_many :page_exports, dependent: :destroy
+  has_many :workspace_exports, dependent: :destroy
   has_many :page_templates, dependent: :destroy
   has_many :database_templates, dependent: :destroy
   has_many :page_presences, dependent: :destroy

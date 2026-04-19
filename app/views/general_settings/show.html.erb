@@ -13,6 +13,7 @@
   <div class="notae-settings-content">
     <% can_update = policy(@workspace).update? %>
     <% can_destroy = policy(@workspace).destroy? %>
+    <% can_export = policy(WorkspaceExport.new(workspace: @workspace, requested_by: current_user)).create? %>
 
     <section class="notae-settings-section">
       <h2>Workspace settings</h2>
@@ -89,6 +90,17 @@
                           disabled: !can_update,
                           data: { action: "change->auto-submit#submit" } %>
         <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Backups</h2>
+
+      <div id="workspace_backup_exports_panel">
+        <%= render "workspace_exports",
+                   workspace: @workspace,
+                   workspace_exports: @workspace_exports,
+                   can_export: can_export %>
       </div>
     </section>
 
