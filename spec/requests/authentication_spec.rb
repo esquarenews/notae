@@ -91,4 +91,5 @@ RSpec.describe "Authentication", type: :request do
 
     expect(reasons).to include("signed_in", "signed_out")
   end
+
 end

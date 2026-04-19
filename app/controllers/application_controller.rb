@@ -50,6 +50,17 @@ class ApplicationController < ActionController::Base
     redirect_back fallback_location: root_path, alert: "You are not authorized to perform this action."
   end
 
+  def after_sign_in_path_for(resource_or_scope)
+    stored_location = stored_location_for(resource_or_scope)
+    return stored_location if stored_location.present?
+
+    resource = resource_or_scope if resource_or_scope.is_a?(User)
+    workspace = resource && preferred_workspace_for(resource)
+    return workspace_path(workspace.slug) if workspace.present?
+
+    super
+  end
+
   def store_last_workspace_slug!
     return unless response.successful?
     return if session["notae_last_workspace_slug"].to_s == params[:workspace_slug].to_s
@@ -113,6 +124,18 @@ class ApplicationController < ActionController::Base
   def prune_legacy_workspace_session_state!
     session.delete(:notae_proactive_knowledge_suggestion_checks)
     session.delete(:notae_pending_knowledge_suggestion_generations)
+  end
+
+  def preferred_workspace_for(user)
+    last_workspace_slug = session["notae_last_workspace_slug"].to_s.strip
+    workspace_scope = user.workspaces.where.not(slug: [ nil, "" ])
+
+    if last_workspace_slug.present?
+      matched_workspace = workspace_scope.find_by(slug: last_workspace_slug)
+      return matched_workspace if matched_workspace.present?
+    end
+
+    workspace_scope.order(:created_at).first
   end
 
   def set_ai_rail_usage_panel
