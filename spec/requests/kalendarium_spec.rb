@@ -212,6 +212,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(create_dialog).to be_present
     expect(create_form).to be_present
     expect(create_form["action"]).to include("widget=1")
+    expect(create_form.at_css(".notae-kalendarium-form-actions")).to be_present
     expect(month_cell).to be_present
     expect(document.text).to include("Monthly planning")
   end
@@ -555,6 +556,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("data-kalendarium-event-modal-event-title-value=\"Timeline event\"")
     expect(response.body).to include("notae-kalendarium-event-delete-button")
     expect(response.body).to include("notae-kalendarium-event-delete-form")
+    expect(response.body).to include("notae-kalendarium-event-link-actions")
+    expect(response.body).to include("notae-kalendarium-event-edit-actions")
     document = Nokogiri::HTML.parse(response.body)
     day_track = document.at_css(".notae-kalendarium-day-track")
     expect(day_track).to be_present
@@ -568,6 +571,9 @@ RSpec.describe "Kalendarium", type: :request do
     expect(timeline_event["data-end-minutes"]).to eq("630")
     modal_heading = document.at_css(".notae-kalendarium-event-modal [data-kalendarium-event-modal-target='heading']")
     expect(modal_heading&.text.to_s.strip).to eq("Timeline event")
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-kalendarium-event-modal")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-kalendarium-event-edit-actions")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)

@@ -216,7 +216,7 @@
           <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
           <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
           <% if event.linked_page.present? %>
-            <div class="notae-kalendarium-event-links">
+            <div class="notae-kalendarium-event-links notae-kalendarium-event-link-actions">
               <%= link_to "Open linked Nota", page_path(workspace_slug: event_workspace_slug, id: event.linked_page_id), class: "notae-utility-link" %>
               <button type="submit"
                       name="kalendarium_event[linked_page_action]"
@@ -224,12 +224,14 @@
                       class="notae-chip-button">Unlink Nota</button>
             </div>
           <% else %>
-            <button type="submit"
-                    name="kalendarium_event[linked_page_action]"
-                    value="create_page"
-                    class="notae-chip-button">Create linked Nota</button>
+            <div class="notae-kalendarium-event-link-actions">
+              <button type="submit"
+                      name="kalendarium_event[linked_page_action]"
+                      value="create_page"
+                      class="notae-chip-button">Create linked Nota</button>
+            </div>
           <% end %>
-          <div class="notae-danger-modal-actions">
+          <div class="notae-danger-modal-actions notae-kalendarium-event-edit-actions">
             <button type="button" class="notae-chip-button" data-action="kalendarium-event-modal#openView">Back</button>
             <button type="button" class="notae-chip-button" data-action="kalendarium-event-modal#close">Cancel</button>
             <%= form.submit "Save changes", class: "notae-chip-button" %>

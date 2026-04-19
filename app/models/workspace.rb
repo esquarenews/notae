@@ -99,6 +99,7 @@ class Workspace < ApplicationRecord
   has_many :meeting_sessions, dependent: :destroy
   has_many :meeting_speaker_aliases, dependent: :destroy
   has_many :workflow_runs, dependent: :destroy
+  has_many :web_push_delivery_attempts, dependent: :nullify
   has_one :agent_policy, dependent: :destroy
 
   scope :active, lambda {

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_19_100112) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_19_103500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1029,6 +1029,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_100112) do
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
+  create_table "web_push_delivery_attempts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.datetime "delivered_at"
+    t.string "endpoint_host", null: false
+    t.text "error_message", default: "", null: false
+    t.uuid "notification_id"
+    t.string "notification_type"
+    t.integer "status", default: 0, null: false
+    t.uuid "subscription_id"
+    t.string "title", default: "", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id"
+    t.index ["notification_id"], name: "index_web_push_delivery_attempts_on_notification_id"
+    t.index ["subscription_id"], name: "index_web_push_delivery_attempts_on_subscription_id"
+    t.index ["user_id", "created_at"], name: "index_web_push_delivery_attempts_on_user_created_at"
+    t.index ["user_id"], name: "index_web_push_delivery_attempts_on_user_id"
+    t.index ["workspace_id", "created_at"], name: "index_web_push_delivery_attempts_on_workspace_created_at"
+    t.index ["workspace_id"], name: "index_web_push_delivery_attempts_on_workspace_id"
+  end
+
   create_table "web_push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.text "auth", null: false
     t.datetime "created_at", null: false
@@ -1266,6 +1288,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_100112) do
   add_foreign_key "share_links", "pages"
   add_foreign_key "share_links", "users", column: "created_by_id"
   add_foreign_key "share_links", "workspaces"
+  add_foreign_key "web_push_delivery_attempts", "notifications", on_delete: :nullify
+  add_foreign_key "web_push_delivery_attempts", "users"
+  add_foreign_key "web_push_delivery_attempts", "web_push_subscriptions", column: "subscription_id", on_delete: :nullify
+  add_foreign_key "web_push_delivery_attempts", "workspaces"
   add_foreign_key "web_push_subscriptions", "users"
   add_foreign_key "workflow_runs", "users"
   add_foreign_key "workflow_runs", "workspaces"

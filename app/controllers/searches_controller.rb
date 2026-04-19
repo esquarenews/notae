@@ -1,6 +1,9 @@
 class SearchesController < ApplicationController
+  include RequestPerformanceInstrumentation
+
   before_action :authenticate_user!
   before_action :set_workspace
+  track_request_performance_for :index
 
   def index
     authorize @workspace, :show?

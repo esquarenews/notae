@@ -53,6 +53,9 @@ RSpec.describe "Epistularium", type: :request do
     )
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("EpistulariumController#show")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "EpistulariumController#show").fetch(:sql_queries)
     expect(response.body).to include("Epistularium")
     expect(response.body).to include("Launch note show")
     expect(response.body).to include("AI draft suggestions")
@@ -111,6 +114,7 @@ RSpec.describe "Epistularium", type: :request do
     ), headers: { "ACCEPT" => "application/json" }
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "EpistulariumController#show").fetch(:sql_queries)
 
     payload = JSON.parse(response.body)
     expect(payload["cursor"]).to be_present

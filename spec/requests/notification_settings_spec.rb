@@ -11,6 +11,15 @@ RSpec.describe "Notification settings", type: :request do
       auth: "auth-render",
       last_error_at: 5.minutes.ago
     )
+    user.web_push_delivery_attempts.create!(
+      workspace: workspace,
+      endpoint_host: "web.push.apple.com",
+      notification_type: Notification::TYPE_TEST_PUSH,
+      title: "Notae test notification",
+      body: "Banner confirmed on device",
+      status: :delivered,
+      delivered_at: 1.minute.ago
+    )
     sign_in user
 
     get workspace_notification_settings_path(workspace_slug: workspace.slug)
@@ -59,7 +68,10 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("Workspace push overrides")
     expect(response.body).to include("Workspace push switch")
     expect(response.body).to include("Push delivery state")
+    expect(response.body).to include("Recent push history")
     expect(response.body).to include("web.push.apple.com")
+    expect(response.body).to include("Notae test notification")
+    expect(response.body).to include("Banner confirmed on device")
     expect(response.body).to include("data-action=\"pwa#sendTestPush\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsTestButton\"")
     expect(response.body).to include(%(data-push-test-path="/w/#{workspace.slug}/settings/notifications/test-push"))
@@ -186,6 +198,7 @@ RSpec.describe "Notification settings", type: :request do
     )
     expect(WebPush::DeliveryService).to have_received(:new).with(
       subscription: subscription,
+      notification: notification,
       payload: hash_including(
         title: "Notae test notification",
         url: "/app/notifications/#{notification.id}"

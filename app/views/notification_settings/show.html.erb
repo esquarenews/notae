@@ -334,6 +334,37 @@
       <% end %>
     </section>
 
+    <section class="notae-settings-section">
+      <h2>Recent push history</h2>
+
+      <% if @web_push_delivery_attempts.any? %>
+        <div class="notae-operations-list">
+          <% @web_push_delivery_attempts.each do |attempt| %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= attempt.display_title %></p>
+                <p class="notae-operations-item-subtitle">
+                  <%= attempt.created_at.in_time_zone(current_user.time_zone).strftime("%a %-d %b %Y · %-I:%M %p") %>
+                  · <%= attempt.endpoint_host %>
+                  <% if attempt.workspace.present? %>
+                    · <%= attempt.workspace.name %>
+                  <% end %>
+                </p>
+                <% if attempt.display_body.present? %>
+                  <p class="notae-operations-item-meta"><%= attempt.display_body %></p>
+                <% end %>
+              </div>
+              <div class="notae-operations-pills">
+                <span class="notae-operations-pill <%= attempt.status_pill_class %>"><%= attempt.status_label %></span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No push delivery attempts have been recorded yet.</p>
+      <% end %>
+    </section>
+
 
     <section class="notae-settings-section">
       <h2>Email notifications</h2>

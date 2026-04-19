@@ -2,9 +2,10 @@ require "webpush"
 
 module WebPush
   class DeliveryService
-    def initialize(subscription:, payload:)
+    def initialize(subscription:, payload:, notification: nil)
       @subscription = subscription
       @payload = payload
+      @notification = notification
     end
 
     def call
@@ -19,6 +20,7 @@ module WebPush
         ttl: 300
       )
 
+      record_attempt!(:delivered, delivered_at: Time.current)
       subscription.update_columns(
         last_delivered_at: Time.current,
         last_error_at: nil,
@@ -33,17 +35,21 @@ module WebPush
 
     private
 
-    attr_reader :subscription, :payload
+    attr_reader :subscription, :payload, :notification
 
     def handle_delivery_error(error)
+      formatted_error = "#{error.class}: #{error.message}".truncate(500)
+
       if stale_subscription_error?(error)
+        record_attempt!(:stale_subscription, error_message: formatted_error)
         subscription.destroy!
         return
       end
 
+      record_attempt!(:failed, error_message: formatted_error)
       subscription.update_columns(
         last_error_at: Time.current,
-        last_error_message: "#{error.class}: #{error.message}".truncate(500),
+        last_error_message: formatted_error,
         updated_at: Time.current
       )
       Rails.logger.warn("Web push delivery failed for subscription=#{subscription.id}: #{error.class}: #{error.message}")
@@ -58,6 +64,24 @@ module WebPush
         message.include?("410") ||
         message.include?("404") ||
         message.downcase.include?("invalid subscription")
+    end
+
+    def record_attempt!(status, delivered_at: nil, error_message: nil)
+      WebPushDeliveryAttempt.create!(
+        user: subscription.user,
+        workspace: notification&.workspace,
+        subscription: subscription,
+        notification: notification,
+        endpoint_host: subscription.endpoint_host,
+        notification_type: notification&.notification_type.to_s.presence || payload[:type].to_s.presence,
+        title: payload[:title].to_s,
+        body: payload[:body].to_s,
+        status: status,
+        delivered_at: delivered_at,
+        error_message: error_message.to_s
+      )
+    rescue StandardError => error
+      Rails.logger.warn("Web push attempt logging failed for subscription=#{subscription.id}: #{error.class}: #{error.message}")
     end
   end
 end

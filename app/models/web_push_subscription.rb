@@ -2,6 +2,7 @@ require "uri"
 
 class WebPushSubscription < ApplicationRecord
   belongs_to :user
+  has_many :delivery_attempts, class_name: "WebPushDeliveryAttempt", foreign_key: :subscription_id, dependent: :nullify
 
   validates :endpoint, presence: true, uniqueness: true
   validates :p256dh, presence: true

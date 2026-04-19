@@ -29,6 +29,9 @@ RSpec.describe "Search", type: :request do
     get workspace_search_path(workspace_slug: workspace.slug), params: { q: "alpha" }
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("SearchesController#index")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "SearchesController#index").fetch(:sql_queries)
     expect(response.body).to include("notae-utility-page")
     expect(response.body).to include("notae-utility-search-form")
     expect(response.body).to include("notae-utility-result-item")
@@ -69,6 +72,7 @@ RSpec.describe "Search", type: :request do
     get workspace_search_path(workspace_slug: workspace.slug), params: { q: "launch" }
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "SearchesController#index").fetch(:sql_queries)
     expect(response.body).to include("AI summary")
     expect(response.body).to include("Launch brief summary")
     expect(response.body).to include("Sources")

@@ -22,6 +22,21 @@ module Notae
         total_ms: 900.0,
         sql_ms: 300.0,
         sql_queries: 80
+      },
+      "SearchesController#index" => {
+        total_ms: 650.0,
+        sql_ms: 180.0,
+        sql_queries: 40
+      },
+      "EpistulariumController#show" => {
+        total_ms: 850.0,
+        sql_ms: 240.0,
+        sql_queries: 55
+      },
+      "NotificationsController#index" => {
+        total_ms: 500.0,
+        sql_ms: 140.0,
+        sql_queries: 35
       }
     }.freeze
     MEMORY_STORE_MUTEX = Mutex.new

@@ -9,6 +9,7 @@ class NotificationSettingsController < ApplicationController
 
     @workspace_membership = current_user.memberships.find_by(workspace_id: @workspace.id)
     @push_subscriptions = current_user.web_push_subscriptions.order(created_at: :desc).limit(10)
+    @web_push_delivery_attempts = current_user.web_push_delivery_attempts.recent_first.includes(:workspace).limit(12)
   end
 
   def update
@@ -60,7 +61,8 @@ class NotificationSettingsController < ApplicationController
 
     delivered = WebPush::DeliveryService.new(
       subscription: subscription,
-      payload: WebPush::NotificationPayloadBuilder.new(notification: notification).call
+      payload: WebPush::NotificationPayloadBuilder.new(notification: notification).call,
+      notification: notification
     ).call
 
     if delivered

@@ -28,6 +28,7 @@ class Notification < ApplicationRecord
   belongs_to :recipient, class_name: "User"
   belongs_to :actor, class_name: "User"
   belongs_to :notifiable, polymorphic: true, optional: true
+  has_many :web_push_delivery_attempts, dependent: :nullify
 
   validates :notification_type, presence: true, inclusion: { in: TYPES }
 

@@ -163,6 +163,7 @@ class User < ApplicationRecord
   has_many :resolved_comments, class_name: "Comment", foreign_key: :resolved_by_id, inverse_of: :resolved_by
   has_many :notifications, foreign_key: :recipient_id, inverse_of: :recipient, dependent: :destroy
   has_many :web_push_subscriptions, dependent: :destroy
+  has_many :web_push_delivery_attempts, dependent: :destroy
   has_many :triggered_notifications, class_name: "Notification", foreign_key: :actor_id, inverse_of: :actor
   has_many :sent_invitations, class_name: "Invitation", foreign_key: :invited_by_id, inverse_of: :invited_by
   has_many :accepted_invitations, class_name: "Invitation", foreign_key: :accepted_by_id, inverse_of: :accepted_by

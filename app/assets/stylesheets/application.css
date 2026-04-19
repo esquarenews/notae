@@ -15555,9 +15555,17 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   margin-top: -0.1rem;
 }
 
+.notae-kalendarium-event-link-actions {
+  min-width: 0;
+}
+
 .notae-kalendarium-event-modal-form {
   display: grid;
   gap: 0.5rem;
+}
+
+.notae-kalendarium-event-edit-actions {
+  min-width: 0;
 }
 
 .notae-kalendarium-event-modal-delete {
@@ -15586,6 +15594,70 @@ button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button:ho
   border-color: #b91c1c;
   color: #fff;
   box-shadow: 0 16px 34px rgba(185, 28, 28, 0.24);
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal {
+  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-panel {
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1.44rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.9rem);
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal .notae-danger-modal-header {
+  align-items: flex-start;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-title h3 {
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-edit-button {
+  width: 1.9rem;
+  height: 1.9rem;
+  min-width: 1.9rem;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-view-list > div {
+  padding: 0.58rem 0.7rem;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-form .notae-auth-input {
+  min-height: 2.85rem;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-form textarea.notae-auth-input {
+  min-height: 7rem;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-links,
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-link-actions,
+.notae-shell.is-mobile-viewport .notae-kalendarium-form-actions,
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-edit-actions,
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-delete {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0.55rem;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-links > *,
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-link-actions > *,
+.notae-shell.is-mobile-viewport .notae-kalendarium-form-actions > *,
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-edit-actions > *,
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-delete > * {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.notae-shell.is-mobile-viewport .notae-kalendarium-event-links .notae-utility-link {
+  display: block;
 }
 
 .notae-kalendarium-timezone-grid {

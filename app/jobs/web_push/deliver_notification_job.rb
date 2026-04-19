@@ -11,7 +11,7 @@ module WebPush
 
       payload = WebPush::NotificationPayloadBuilder.new(notification: notification).call
       notification.recipient.web_push_subscriptions.find_each do |subscription|
-        WebPush::DeliveryService.new(subscription: subscription, payload: payload).call
+        WebPush::DeliveryService.new(subscription: subscription, payload: payload, notification: notification).call
       end
     end
   end

@@ -1,7 +1,10 @@
 class NotificationsController < ApplicationController
+  include RequestPerformanceInstrumentation
+
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_notification, only: :mark_read
+  track_request_performance_for :index
 
   def index
     authorize Notification

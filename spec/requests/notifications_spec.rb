@@ -42,6 +42,9 @@ RSpec.describe "Notifications", type: :request do
     get workspace_notifications_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("NotificationsController#index")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "NotificationsController#index").fetch(:sql_queries)
     expect(response.body).to include("notae-utility-page")
     expect(response.body).to include("notae-utility-notification-item")
     expect(response.body).to include("mentioned you")
