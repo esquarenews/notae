@@ -1,0 +1,18 @@
+[Unit]
+Description=Notae Kalendarium Sync Runner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User={{APP_USER}}
+Group={{APP_GROUP}}
+WorkingDirectory={{APP_ROOT}}
+Environment=RAILS_ENV=production
+Environment=ACTIVE_JOB_QUEUE_ADAPTER=sidekiq
+EnvironmentFile={{APP_ROOT}}/.env.production
+ExecStart=/usr/bin/env bash -lc 'bundle exec rake kalendarium:sync_due'
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths={{APP_ROOT}}/tmp {{APP_ROOT}}/log

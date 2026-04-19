@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Notae Kalendarium sync every 10 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Persistent=true
+Unit=notae-kalendarium-sync.service
+
+[Install]
+WantedBy=timers.target

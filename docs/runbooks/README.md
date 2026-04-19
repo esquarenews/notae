@@ -10,6 +10,8 @@ These runbooks are written for the current production layout used in Notae:
 - meeting bot worker: `notae-meeting-bot-worker`
 - Epistularium timer: `notae-epistularium-sync.timer`
 - Epistularium oneshot service: `notae-epistularium-sync.service`
+- Kalendarium timer: `notae-kalendarium-sync.timer`
+- Kalendarium oneshot service: `notae-kalendarium-sync.service`
 
 If production differs, adjust the paths and service names before running commands.
 
@@ -27,8 +29,8 @@ If production differs, adjust the paths and service names before running command
 
 ```bash
 sudo systemctl status notae notae-sidekiq notae-meeting-bot-worker --no-pager
-sudo systemctl status notae-epistularium-sync.timer --no-pager
-systemctl list-timers --all | rg epistularium
+sudo systemctl status notae-epistularium-sync.timer notae-kalendarium-sync.timer --no-pager
+systemctl list-timers --all | rg 'epistularium|kalendarium'
 redis-cli ping
 ```
 

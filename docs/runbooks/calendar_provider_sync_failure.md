@@ -11,7 +11,29 @@ Most calendar issues fall into one of these:
 - the calendar exists but is not marked writable
 - the app can edit a calendar in the UI, but external tooling cannot see it as writable yet
 
-## 2. Check Sidekiq for calendar jobs
+## 2. Check the scheduler
+
+```bash
+sudo systemctl status notae-kalendarium-sync.timer --no-pager
+systemctl list-timers --all | rg kalendarium
+```
+
+The timer should be active and should show the next run.
+
+## 3. Run a calendar sync cycle manually
+
+```bash
+sudo systemctl start notae-kalendarium-sync.service
+sudo systemctl status notae-kalendarium-sync.service --no-pager
+journalctl -u notae-kalendarium-sync.service -n 120 -l --no-pager -o cat
+```
+
+Expected:
+
+- the oneshot service finishes successfully
+- it enqueues `Kalendarium::SyncConnectionJob`
+
+## 4. Check Sidekiq for calendar jobs
 
 ```bash
 sudo systemctl status notae-sidekiq --no-pager
@@ -23,7 +45,7 @@ Relevant jobs:
 - `Kalendarium::SyncConnectionJob`
 - `Kalendarium::SyncCalendarJob`
 
-## 3. Inspect provider connection state from Rails
+## 5. Inspect provider connection state from Rails
 
 ```bash
 sudo systemd-run --wait --collect --pty \
@@ -48,7 +70,7 @@ end
 RUBY'
 ```
 
-## 4. Force a connection sync
+## 6. Force a connection sync
 
 If the provider calendar list is stale:
 
@@ -65,7 +87,7 @@ sudo systemd-run --wait --collect --pty \
 
 Replace `CONNECTION_ID` before running it.
 
-## 5. Force a single calendar sync
+## 7. Force a single calendar sync
 
 If one known provider-backed calendar is stale:
 
@@ -82,7 +104,7 @@ sudo systemd-run --wait --collect --pty \
 
 Replace `CALENDAR_ID` before running it.
 
-## 6. Confirm writable calendar visibility
+## 8. Confirm writable calendar visibility
 
 If the UI can write to a calendar but external tooling cannot see it:
 
@@ -92,7 +114,15 @@ If the UI can write to a calendar but external tooling cannot see it:
 
 The production fix for this class of issue is code-level. External tools only see what the app exposes after provider sync and policy filtering.
 
-## 7. Common failures
+## 9. Common failures
+
+### Timer is healthy, but calendars still look stale
+
+Check whether:
+
+- `notae-kalendarium-sync.service` is enqueueing jobs
+- `notae-sidekiq` is actually consuming them
+- the affected connection is still enabled and not stuck in `sync_error`
 
 ### Provider auth expired
 

@@ -78,7 +78,7 @@ After a restore:
 
 ```bash
 sudo systemctl status notae notae-sidekiq notae-meeting-bot-worker --no-pager
-sudo systemctl status notae-epistularium-sync.timer --no-pager
+sudo systemctl status notae-epistularium-sync.timer notae-kalendarium-sync.timer --no-pager
 curl -I https://notae.esquarenews.tech/service-worker.js
 curl -s https://notae.esquarenews.tech/users/sign_in | rg '/assets/application.*\\.(css|js)'
 redis-cli ping

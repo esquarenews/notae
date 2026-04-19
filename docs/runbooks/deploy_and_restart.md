@@ -34,13 +34,15 @@ sudo systemctl restart notae
 sudo systemctl restart notae-sidekiq
 sudo systemctl restart notae-meeting-bot-worker
 sudo systemctl start notae-epistularium-sync.service
+sudo systemctl start notae-kalendarium-sync.service
 ```
 
 If the timer should also be verified:
 
 ```bash
 sudo systemctl restart notae-epistularium-sync.timer
-sudo systemctl status notae-epistularium-sync.timer --no-pager
+sudo systemctl restart notae-kalendarium-sync.timer
+sudo systemctl status notae-epistularium-sync.timer notae-kalendarium-sync.timer --no-pager
 ```
 
 ## 5. Verify the deployment
@@ -48,6 +50,7 @@ sudo systemctl status notae-epistularium-sync.timer --no-pager
 ```bash
 sudo systemctl status notae notae-sidekiq notae-meeting-bot-worker --no-pager
 sudo systemctl status notae-epistularium-sync.service notae-epistularium-sync.timer --no-pager
+sudo systemctl status notae-kalendarium-sync.service notae-kalendarium-sync.timer --no-pager
 journalctl -u notae -n 100 --no-pager -o cat
 journalctl -u notae-sidekiq -n 100 --no-pager -o cat
 ```

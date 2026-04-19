@@ -10,7 +10,9 @@ module Notae
       },
       "kalendarium:sync_due" => {
         label: "Kalendarium sync dispatcher",
-        cadence_label: "Manual or external trigger"
+        cadence_label: "Every 10 minutes",
+        expected_interval_seconds: 10.minutes.to_i,
+        stale_after_seconds: 15.minutes.to_i
       },
       "kalendarium:dispatch_reminders" => {
         label: "Kalendarium reminder dispatch",
