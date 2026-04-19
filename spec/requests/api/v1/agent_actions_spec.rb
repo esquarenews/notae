@@ -81,6 +81,10 @@ RSpec.describe "API V1 Agent actions", type: :request do
 
     expect(payload.fetch("status")).to eq("approved")
     expect(payload.dig("result_json", "summary")).to eq("Created task in Task Inbox.")
+    expect(payload.dig("result_json", "execution_preview", "changes")).to include(
+      a_hash_including("label" => "Draft title", "after" => "Follow up"),
+      a_hash_including("label" => "Project / Queue", "after" => "Task Inbox")
+    )
     expect(created_row.database).to eq(database)
     expect(payload.fetch("review_history").map { |entry| entry.fetch("event_type") }).to include("approved")
   end

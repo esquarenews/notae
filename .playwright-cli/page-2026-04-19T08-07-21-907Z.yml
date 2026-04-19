@@ -1,0 +1,52 @@
+- generic [ref=e457]:
+  - complementary [ref=e458]:
+    - generic [ref=e459]:
+      - button [ref=e460] [cursor=pointer]: ☰
+      - navigation [ref=e461]:
+        - link [ref=e462] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843
+          - img [ref=e464]
+        - link [ref=e467] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/search
+          - img [ref=e469]
+        - link [ref=e472] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/notifications
+          - img [ref=e474]
+        - link [ref=e477] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/library
+          - img [ref=e479]
+        - link [ref=e483] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/kalendarium
+          - img [ref=e485]
+        - link [ref=e488] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/epistularium
+          - img [ref=e490]
+        - link [ref=e493] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/meetings
+          - img [ref=e495]
+        - link [ref=e498] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/ai-conversation-history
+          - img [ref=e500]
+        - link [ref=e503] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/settings/preferences
+          - img [ref=e505]
+  - generic [ref=e508]:
+    - banner [ref=e509]:
+      - generic [ref=e511]:
+        - generic [ref=e512]: 📄
+        - generic [ref=e513]: Notifications Nav Pass
+        - generic [ref=e514]: Private
+    - main [ref=e515]:
+      - generic [ref=e516]:
+        - generic [ref=e517]:
+          - paragraph [ref=e518]:
+            - link "Nav Pass" [ref=e519] [cursor=pointer]:
+              - /url: /w/nav-pass-1776585843
+          - heading "Notifications" [level=1] [ref=e520]
+          - paragraph [ref=e521]: "Unread: 0"
+        - paragraph [ref=e522]: No notifications yet.
+  - complementary "Workspace notification bar" [ref=e523]:
+    - button "Open compact Kalendārium" [ref=e524]:
+      - generic [ref=e525]: Sun 19 Apr · 8:07
+  - complementary [ref=e228]:
+    - button "Reopen AI assistant rail" [ref=e455] [cursor=pointer]

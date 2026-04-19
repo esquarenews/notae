@@ -14,8 +14,12 @@ RSpec.describe "Notification settings", type: :request do
     sign_in user
 
     get workspace_notification_settings_path(workspace_slug: workspace.slug)
+    document = Nokogiri::HTML.parse(response.body)
+    mobile_settings_nav = document.at_css(".notae-settings-mobile-accordion")
 
     expect(response).to have_http_status(:ok)
+    expect(mobile_settings_nav).to be_present
+    expect(mobile_settings_nav["open"]).to be_nil
     expect(response.body).to include("In-app notifications")
     expect(response.body).to include("Push notifications on this device")
     expect(response.body).to include("AI suggestions")
@@ -50,8 +54,11 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("notae-quiet-hours-field-label")
     expect(response.body).to include("Start")
     expect(response.body).to include("End")
+    expect(response.body).to include("Current workspace overrides")
+    expect(response.body).to include("Workspace activity emails")
+    expect(response.body).to include("Workspace push overrides")
+    expect(response.body).to include("Workspace push switch")
     expect(response.body).to include("Push delivery state")
-    expect(response.body).to include("Current workspace override")
     expect(response.body).to include("web.push.apple.com")
     expect(response.body).to include("data-action=\"pwa#sendTestPush\"")
     expect(response.body).to include("data-pwa-target=\"pushSettingsTestButton\"")
@@ -88,7 +95,9 @@ RSpec.describe "Notification settings", type: :request do
               email_notify_workspace_digest: "0"
             },
             membership: {
-              email_notify_activity: "1"
+              email_notify_activity: "1",
+              push_notify_mentions: "0",
+              push_notify_workflow_failures: "1"
             }
           }
 
@@ -106,6 +115,9 @@ RSpec.describe "Notification settings", type: :request do
     expect(user.email_notify_workspace_digest).to be(false)
 
     expect(membership.reload.workspace_email_notify_activity_override).to be(true)
+    expect(membership.workspace_push_notification_override(Notification::TYPE_MENTION)).to be_nil
+    expect(membership.workspace_push_notification_override(Notification::TYPE_WORKFLOW_FAILED)).to be_nil
+    expect(user.push_notification_enabled_for?(Notification::TYPE_MENTION, workspace: workspace, membership: membership)).to be(false)
   end
 
   it "persists individual push notification choices without the master toggle overwriting them" do

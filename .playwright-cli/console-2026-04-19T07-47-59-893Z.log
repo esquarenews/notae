@@ -1,0 +1,4 @@
+[     181ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[   99272ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[  161831ms] [WARNING] The resource http://127.0.0.1:4000/assets/application-2eba177c.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://127.0.0.1:4000/w/mobile-polish/pages/f22d9aba-430c-4a31-b50d-d90cb6691da3:0
+[  176732ms] [WARNING] The resource http://127.0.0.1:4000/assets/application-2eba177c.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://127.0.0.1:4000/w/mobile-polish/pages/f22d9aba-430c-4a31-b50d-d90cb6691da3:0

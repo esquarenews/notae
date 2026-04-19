@@ -57,4 +57,15 @@ RSpec.describe ApiToken, type: :model do
     expect(api_token).not_to be_valid
     expect(api_token.errors[:scopes_json]).to include("contains unsupported scopes")
   end
+
+  it "normalizes full access to a single wildcard scope" do
+    user = User.create!(email: "api-token-full-access@example.com", password: "password123")
+    api_token = described_class.create!(
+      user: user,
+      name: "Full access",
+      scopes_json: [ ApiToken::SCOPE_ALL, ApiToken::SCOPE_PAGES_READ, ApiToken::SCOPE_DATABASES_WRITE ]
+    )
+
+    expect(api_token.scopes).to eq([ ApiToken::SCOPE_ALL ])
+  end
 end

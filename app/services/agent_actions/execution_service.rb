@@ -73,7 +73,8 @@ module AgentActions
           "type" => "task_list",
           "id" => database.id,
           "name" => database.name
-        }
+        },
+        "execution_preview" => execution_preview_for_task(row:, database:)
       }
     end
 
@@ -120,7 +121,8 @@ module AgentActions
           "type" => "workspace",
           "id" => workspace.id,
           "name" => workspace.name
-        }
+        },
+        "execution_preview" => execution_preview_for_nota(page:, body:)
       }
     end
 
@@ -166,7 +168,11 @@ module AgentActions
           "type" => "calendar",
           "id" => calendar.id,
           "name" => calendar.name
-        }
+        },
+        "execution_preview" => execution_preview_for_calendar_event(
+          event: event,
+          calendar: calendar
+        )
       }
     end
 
@@ -258,6 +264,52 @@ module AgentActions
       parsed
     rescue ArgumentError, TypeError
       raise Error, "#{label} time must be valid."
+    end
+
+    def execution_preview_for_task(row:, database:)
+      AgentActions::PreviewBuilder.build_preview(
+        draft_type: agent_action.draft_type,
+        title: row.title,
+        payload: {
+          "project" => database.name,
+          "assignee" => task_preview_value(row:, keywords: TASK_ASSIGNEE_KEYWORDS),
+          "due_at" => task_preview_value(row:, keywords: TASK_DUE_KEYWORDS),
+          "body" => task_preview_value(row:, keywords: TASK_NOTES_KEYWORDS)
+        }
+      )
+    end
+
+    def execution_preview_for_nota(page:, body:)
+      AgentActions::PreviewBuilder.build_preview(
+        draft_type: agent_action.draft_type,
+        title: page.title,
+        payload: {
+          "body" => body
+        }
+      )
+    end
+
+    def execution_preview_for_calendar_event(event:, calendar:)
+      AgentActions::PreviewBuilder.build_preview(
+        draft_type: agent_action.draft_type,
+        title: event.title,
+        payload: {
+          "starts_at" => payload["starts_at"].to_s.strip,
+          "ends_at" => payload["ends_at"].to_s.strip,
+          "attendees" => Array(payload["attendees"]),
+          "body" => event.description
+        }
+      )
+    end
+
+    def task_preview_value(row:, keywords:)
+      row.data_json.to_h.each do |key, value|
+        next if value.blank?
+
+        return value.to_s if keywords.any? { |keyword| key.to_s.downcase.include?(keyword) }
+      end
+
+      nil
     end
 
     def calendar_metadata

@@ -25,6 +25,7 @@
               <li class="notae-workspace-home-list-item">
                 <strong><%= agent_action.title %></strong>
                 <div class="notae-page-subtle"><%= agent_action.user.email %> · <%= agent_action.target_system.titleize %> · <%= agent_action.draft_type.humanize %></div>
+                <div class="notae-page-subtle">Last event: <%= agent_action_last_activity_summary(agent_action) %></div>
                 <div><%= agent_action_preview_summary(agent_action) %></div>
                 <%= link_to "Review", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
               </li>
@@ -43,6 +44,7 @@
               <li class="notae-workspace-home-list-item">
                 <strong><%= agent_action.title %></strong>
                 <div class="notae-page-subtle"><%= agent_action.target_system.titleize %> · <%= agent_action.draft_type.humanize %></div>
+                <div class="notae-page-subtle">Last event: <%= agent_action_last_activity_summary(agent_action) %></div>
                 <div><%= agent_action_preview_summary(agent_action) %></div>
                 <%= link_to "Revise", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
               </li>
@@ -64,6 +66,12 @@
           </div>
           <p class="notae-ai-history-prompt"><strong><%= agent_action.draft_type.humanize %>:</strong> <%= agent_action.title %></p>
           <div class="notae-ai-history-answer"><%= simple_format(h(agent_action_preview_summary(agent_action))) %></div>
+          <div class="notae-page-subtle">
+            Created by <%= agent_action.user.email %> ·
+            Audit events: <%= agent_action_event_count(agent_action) %> ·
+            Chain: <%= agent_action_review_chain_verified?(agent_action) ? "Verified" : "Check failed" %>
+          </div>
+          <div class="notae-page-subtle">Last event: <%= agent_action_last_activity_summary(agent_action) %></div>
           <div class="notae-ai-history-actions">
             <%= link_to "Review", agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id), class: "notae-chip-button" %>
           </div>

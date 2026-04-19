@@ -1,0 +1,215 @@
+- generic [ref=e751]:
+  - button "Close sidebar"
+  - complementary [ref=e752]:
+    - generic [ref=e753]:
+      - generic [ref=e754]:
+        - generic [ref=e757]: Nav Pass
+        - generic [ref=e758]:
+          - button "＋" [ref=e760] [cursor=pointer]
+          - button "Close sidebar" [ref=e761] [cursor=pointer]: ✕
+      - generic [ref=e762]:
+        - navigation [ref=e763]:
+          - link "Home" [ref=e764] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843
+            - generic [ref=e765]:
+              - img [ref=e767]
+              - generic [ref=e770]: Home
+          - link "Search" [ref=e771] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/search
+            - generic [ref=e772]:
+              - img [ref=e774]
+              - generic [ref=e777]: Search
+          - link "Notifications" [ref=e778] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/notifications
+            - generic [ref=e779]:
+              - img [ref=e781]
+              - generic [ref=e784]: Notifications
+          - link "Library" [ref=e785] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/library
+            - generic [ref=e786]:
+              - img [ref=e788]
+              - generic [ref=e792]: Library
+          - link "Kalendārium" [ref=e793] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/kalendarium
+            - generic [ref=e794]:
+              - img [ref=e796]
+              - generic [ref=e799]: Kalendārium
+          - link "Epistularium" [ref=e800] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/epistularium
+            - generic [ref=e801]:
+              - img [ref=e803]
+              - generic [ref=e806]: Epistularium
+          - link "Meetings" [ref=e807] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/meetings
+            - generic [ref=e808]:
+              - img [ref=e810]
+              - generic [ref=e813]: Meetings
+          - link "AI Conversation History" [ref=e814] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/ai-conversation-history
+            - generic [ref=e815]:
+              - img [ref=e817]
+              - generic [ref=e820]: AI Conversation History
+        - generic [ref=e821]:
+          - generic [ref=e822]:
+            - generic [ref=e823]:
+              - button "Workspaces" [expanded] [ref=e824] [cursor=pointer]:
+                - generic [ref=e825]: ▾
+                - generic [ref=e826]: Workspaces
+              - button "Create new Workspace" [ref=e827] [cursor=pointer]: "[+]"
+            - list [ref=e829]:
+              - listitem [ref=e830]:
+                - paragraph [ref=e831]: Loading workspaces…
+          - generic [ref=e832]:
+            - generic [ref=e833]:
+              - button "Notarum" [expanded] [ref=e834] [cursor=pointer]:
+                - generic [ref=e835]: ▾
+                - generic [ref=e836]: Notarum
+              - button "Create new Nota" [ref=e838] [cursor=pointer]: "[+]"
+            - list [ref=e840]:
+              - listitem [ref=e841]:
+                - paragraph [ref=e842]: Loading Notarum…
+          - generic [ref=e843]:
+            - generic [ref=e844]:
+              - button "Grids" [expanded] [ref=e845] [cursor=pointer]:
+                - generic [ref=e846]: ▾
+                - generic [ref=e847]: Grids
+              - button "Create new Grid" [ref=e849] [cursor=pointer]: "[+]"
+            - list [ref=e851]:
+              - listitem [ref=e852]:
+                - paragraph [ref=e853]: Loading grids…
+          - generic [ref=e854]:
+            - generic [ref=e855]:
+              - button "Meetings" [expanded] [ref=e856] [cursor=pointer]:
+                - generic [ref=e857]: ▾
+                - generic [ref=e858]: Meetings
+              - button "Create new Meeting" [ref=e860] [cursor=pointer]: "[+]"
+            - list [ref=e862]:
+              - listitem [ref=e863]:
+                - paragraph [ref=e864]: Loading meetings…
+          - generic [ref=e865]:
+            - button "Favorites" [expanded] [ref=e867] [cursor=pointer]:
+              - generic [ref=e868]: ▾
+              - generic [ref=e869]: Favorites
+            - list [ref=e871]:
+              - listitem [ref=e872]:
+                - paragraph [ref=e873]: Loading favorites…
+      - generic [ref=e874]:
+        - link "Settings" [ref=e875] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/settings/preferences
+          - generic [ref=e876]:
+            - img [ref=e878]
+            - generic [ref=e881]: Settings
+        - link "Trash" [ref=e882] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/trash
+          - generic [ref=e883]:
+            - img [ref=e885]
+            - generic [ref=e888]: Trash
+        - button "Sign out" [ref=e890] [cursor=pointer]:
+          - generic [ref=e891]:
+            - img [ref=e893]
+            - generic [ref=e896]: Sign out
+  - generic [ref=e897]:
+    - banner [ref=e898]:
+      - generic [ref=e899]:
+        - button "Toggle sidebar" [ref=e900] [cursor=pointer]: ☰
+        - generic [ref=e901]:
+          - img [ref=e904]
+          - generic [ref=e908]: Library
+    - main [ref=e909]:
+      - generic [ref=e910]:
+        - generic [ref=e911]:
+          - heading "Library" [level=1] [ref=e912]
+          - button "New Nota" [ref=e914] [cursor=pointer]
+        - navigation [ref=e915]:
+          - link "All documents" [ref=e916] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/library?tab=all_documents
+          - link "Recents" [ref=e917] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/library?tab=recents
+          - link "Favorites" [ref=e918] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/library?tab=favorites
+          - link "Shared" [ref=e919] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/library?tab=shared
+          - link "Private" [ref=e920] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/library?tab=private
+        - generic [ref=e921]:
+          - generic [ref=e922]:
+            - generic [ref=e923]: ⌕
+            - textbox "Type to search..." [ref=e924]
+          - generic [ref=e925]:
+            - generic [ref=e926]: Workspace
+            - combobox "Workspace" [ref=e927]:
+              - option "All workspaces" [selected]
+              - option "Nav Pass"
+          - generic [ref=e928]:
+            - navigation "Library view" [ref=e929]:
+              - link "List" [ref=e930] [cursor=pointer]:
+                - /url: /w/nav-pass-1776585843/library?view_mode=list
+              - link "Thumbnails" [ref=e931] [cursor=pointer]:
+                - /url: /w/nav-pass-1776585843/library?view_mode=thumbnails
+            - group [ref=e932]:
+              - generic "Filters" [ref=e933] [cursor=pointer]
+              - option "All sources" [selected]
+              - option "Notarum"
+              - option "Meetings"
+              - option "Grids"
+              - option "All visibility" [selected]
+              - option "Shared"
+              - option "Private"
+              - option "Last edited (newest first)" [selected]
+              - option "Last edited (oldest first)"
+              - option "Created (newest first)"
+              - option "Created (oldest first)"
+              - option "Nota name (A-Z)"
+              - option "Nota name (Z-A)"
+              - option "Property filter" [selected]
+              - option "Nota name"
+              - option "Workspace"
+              - option "Created by"
+              - option "Source"
+              - option "Created time"
+              - option "Last edited by"
+              - option "Last edited time"
+              - option "Last visited time"
+            - group [ref=e934]:
+              - generic "Columns" [ref=e935] [cursor=pointer]
+            - button "Apply" [ref=e936] [cursor=pointer]
+        - table [ref=e938]:
+          - rowgroup [ref=e939]:
+            - row "Nota name Workspace Created by Source Last edited time Last visited time" [ref=e940]:
+              - columnheader "Nota name" [ref=e941]
+              - columnheader "Workspace" [ref=e942]
+              - columnheader "Created by" [ref=e943]
+              - columnheader "Source" [ref=e944]
+              - columnheader "Last edited time" [ref=e945]
+              - columnheader "Last visited time" [ref=e946]
+          - rowgroup [ref=e947]:
+            - row "No results." [ref=e948]:
+              - cell "No results." [ref=e949]
+        - region "Library pagination" [ref=e950]:
+          - paragraph [ref=e951]: Showing 0-0 of 0
+          - generic [ref=e952]:
+            - generic: Previous
+            - generic [ref=e953]: Page 1 of 1
+            - generic: Next
+  - navigation "Primary mobile navigation" [ref=e954]:
+    - link "Home" [ref=e955] [cursor=pointer]:
+      - /url: /w/nav-pass-1776585843
+      - img [ref=e957]
+      - generic [ref=e960]: Home
+    - link "Search" [ref=e961] [cursor=pointer]:
+      - /url: /w/nav-pass-1776585843/search
+      - img [ref=e963]
+      - generic [ref=e966]: Search
+    - link "Calendar" [ref=e967] [cursor=pointer]:
+      - /url: /w/nav-pass-1776585843/kalendarium
+      - img [ref=e969]
+      - generic [ref=e972]: Calendar
+    - link "Mail" [ref=e973] [cursor=pointer]:
+      - /url: /w/nav-pass-1776585843/epistularium
+      - img [ref=e975]
+      - generic [ref=e978]: Mail
+    - link "Library" [ref=e979] [cursor=pointer]:
+      - /url: /w/nav-pass-1776585843/library
+      - img [ref=e981]
+      - generic [ref=e985]: Library
+  - button "Open AI assistant" [ref=e703] [cursor=pointer]

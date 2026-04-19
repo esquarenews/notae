@@ -6,7 +6,7 @@ class AgentActionsController < ApplicationController
 
   def index
     authorize AgentAction.new(workspace: @workspace)
-    @agent_actions = policy_scope(AgentAction).for_workspace(@workspace).recent_first
+    @agent_actions = policy_scope(AgentAction).for_workspace(@workspace).includes(:user, agent_action_events: :actor).recent_first
     @pending_approval_actions = approver_membership? ? @agent_actions.pending.where.not(user_id: current_user.id) : AgentAction.none
     @needs_revision_actions = @agent_actions.changes_requested.where(user_id: current_user.id)
   end
@@ -144,7 +144,7 @@ class AgentActionsController < ApplicationController
   end
 
   def set_agent_action
-    @agent_action = policy_scope(AgentAction).for_workspace(@workspace).find(params[:id])
+    @agent_action = policy_scope(AgentAction).for_workspace(@workspace).includes(:user, agent_action_events: :actor).find(params[:id])
   end
 
   def agent_action_params

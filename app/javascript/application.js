@@ -8,6 +8,12 @@ const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"
 const PRESERVED_SAVE_SCROLL_KEY = "notae-preserved-save-scroll"
 const PRESERVED_SAVE_SCROLL_MAX_AGE_MS = 30_000
 const PRESERVED_SAVE_SCROLL_RESTORE_DELAYS_MS = [ 60, 180, 360, 720, 1200, 1800 ]
+const PERSISTED_SHELL_STATE_CLASSES = [
+  "is-sidebar-collapsed",
+  "is-mobile-viewport",
+  "is-ai-compact-viewport",
+  "is-ai-rail-collapsed"
+]
 
 function primaryScrollContainer() {
   return document.querySelector(".notae-content-scroll") || document.scrollingElement || document.documentElement
@@ -273,8 +279,28 @@ function syncPreservedAiRailContext(root = document) {
   }
 }
 
+function syncPersistedShellState(root = document) {
+  const sourceShell = document.querySelector(".notae-shell")
+  if (!(sourceShell instanceof HTMLElement)) return
+
+  const scope = root instanceof Document || root instanceof HTMLElement ? root : document
+
+  scope.querySelectorAll?.(".notae-shell").forEach((shell) => {
+    if (!(shell instanceof HTMLElement)) return
+
+    PERSISTED_SHELL_STATE_CLASSES.forEach((className) => {
+      shell.classList.toggle(className, sourceShell.classList.contains(className))
+    })
+
+    if (scope !== document) {
+      shell.classList.remove("is-layout-hydrating")
+    }
+  })
+}
+
 syncAiRailCollapsedState(document)
 syncPreservedAiRailContext(document)
+syncPersistedShellState(document)
 restoreStoredSaveScroll()
 
 document.addEventListener("submit", (event) => {
@@ -304,6 +330,7 @@ document.addEventListener("turbo:load", () => {
   restoreStoredSaveScroll()
   syncAiRailCollapsedState(document)
   syncPreservedAiRailContext(document)
+  syncPersistedShellState(document)
   registerPwaServiceWorker()
 })
 
@@ -313,6 +340,7 @@ document.addEventListener("turbo:before-render", (event) => {
 
   syncAiRailCollapsedState(newBody)
   syncPreservedAiRailContext(newBody)
+  syncPersistedShellState(newBody)
 })
 
 document.addEventListener("turbo:render", () => {

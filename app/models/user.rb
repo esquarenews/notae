@@ -348,11 +348,13 @@ class User < ApplicationRecord
     raw_preferences.is_a?(Hash) ? raw_preferences : {}
   end
 
-  def push_notification_enabled_for?(notification_type)
+  def push_notification_enabled_for?(notification_type, workspace: nil, membership: nil)
     stored_value = push_notification_preferences[notification_type.to_s]
-    return true if stored_value.nil?
+    global_default = stored_value.nil? ? true : ActiveModel::Type::Boolean.new.cast(stored_value)
+    scoped_membership = membership || membership_for_notification_workspace(workspace)
+    return global_default if scoped_membership.blank?
 
-    ActiveModel::Type::Boolean.new.cast(stored_value)
+    scoped_membership.workspace_push_notification_enabled?(notification_type, default: global_default)
   end
 
   def push_quiet_hours_active_for?(notification_type = nil, at: Time.current)
@@ -373,8 +375,9 @@ class User < ApplicationRecord
     end
   end
 
-  def push_delivery_allowed_for?(notification_type, at: Time.current)
-    push_notification_enabled_for?(notification_type) && !push_quiet_hours_active_for?(notification_type, at: at)
+  def push_delivery_allowed_for?(notification_type, workspace: nil, membership: nil, at: Time.current)
+    push_notification_enabled_for?(notification_type, workspace: workspace, membership: membership) &&
+      !push_quiet_hours_active_for?(notification_type, at: at)
   end
 
   def email_notify_activity_for?(workspace, membership: nil)

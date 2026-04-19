@@ -3,24 +3,7 @@
 
 <div class="notae-workspace-home-stack">
   <% if preview_data["changes"].present? %>
-    <section class="notae-agent-action-preview-card">
-      <div class="notae-home-card-head">
-        <h3><%= preview_data["mode"] == "update" ? "Changed fields" : "Planned fields" %></h3>
-      </div>
-      <ul class="notae-workspace-home-list">
-        <% preview_data["changes"].each do |change| %>
-          <li class="notae-workspace-home-list-item">
-            <strong><%= change["label"] %></strong>
-            <% if preview_data["mode"] == "update" %>
-              <div class="notae-page-subtle">Before</div>
-              <div class="notae-workspace-home-json"><%= change["before"].presence || "Empty" %></div>
-            <% end %>
-            <div class="notae-page-subtle"><%= preview_data["mode"] == "update" ? "After" : "Value" %></div>
-            <div class="notae-workspace-home-json"><%= change["after"].presence || "Empty" %></div>
-          </li>
-        <% end %>
-      </ul>
-    </section>
+    <%= render "preview_changes", preview_data: preview_data %>
   <% end %>
 
   <section class="notae-agent-action-preview-card">

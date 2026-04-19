@@ -42,6 +42,9 @@ Rails.application.routes.draw do
     get "settings/account", to: "account_settings#show", as: :workspace_account_settings
     patch "settings/account", to: "account_settings#update"
     post "settings/account/delete-request", to: "account_settings#request_deletion", as: :workspace_account_delete_request
+    post "settings/account/api-tokens", to: "account_settings#create_api_token", as: :workspace_account_api_tokens
+    post "settings/account/api-tokens/:id/revoke", to: "account_settings#revoke_api_token", as: :workspace_account_api_token_revoke
+    post "settings/account/api-tokens/:id/rotate", to: "account_settings#rotate_api_token", as: :workspace_account_api_token_rotate
     get "settings/notae-ai", to: "notae_ai_settings#show", as: :workspace_notae_ai_settings
     patch "settings/notae-ai", to: "notae_ai_settings#update"
     get "settings/ai-analytics", to: "ai_analytics_settings#show", as: :workspace_ai_analytics_settings

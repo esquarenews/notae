@@ -91,30 +91,79 @@
       <div class="notae-home-card-head">
         <h2>Policy & execution</h2>
       </div>
-      <p class="notae-page-subtle">Policy evaluation</p>
-      <div class="notae-workspace-home-json"><%= @agent_action.policy_evaluation_json.to_json %></div>
+      <div class="notae-agent-action-audit-stack">
+        <section class="notae-agent-action-preview-card">
+          <div class="notae-home-card-head">
+            <h3>Policy decision</h3>
+          </div>
+          <% if (policy_facts = agent_action_policy_facts(@agent_action)).any? %>
+            <dl class="notae-agent-action-fact-grid">
+              <% policy_facts.each do |fact| %>
+                <div class="notae-agent-action-fact">
+                  <dt><%= fact[:label] %></dt>
+                  <dd><%= fact[:value] %></dd>
+                </div>
+              <% end %>
+            </dl>
+          <% else %>
+            <p class="notae-page-subtle">No policy decision recorded yet.</p>
+          <% end %>
+          <details class="notae-agent-action-raw-details">
+            <summary>Raw policy payload</summary>
+            <pre class="notae-workspace-home-json"><%= agent_action_pretty_json(@agent_action.policy_evaluation_json) %></pre>
+          </details>
+        </section>
 
-      <% if @agent_action.metadata_json.present? %>
-        <p class="notae-page-subtle">Draft metadata</p>
-        <div class="notae-workspace-home-json"><%= @agent_action.metadata_json.to_json %></div>
-      <% end %>
+        <% if @agent_action.metadata_json.present? %>
+          <section class="notae-agent-action-preview-card">
+            <div class="notae-home-card-head">
+              <h3>Draft metadata</h3>
+            </div>
+            <details class="notae-agent-action-raw-details" open>
+              <summary>Metadata payload</summary>
+              <pre class="notae-workspace-home-json"><%= agent_action_pretty_json(@agent_action.metadata_json) %></pre>
+            </details>
+          </section>
+        <% end %>
 
-      <% if @agent_action.result_json.present? %>
-        <p class="notae-page-subtle"><%= @agent_action.result_json["dry_run"] ? "Dry-run result" : "Execution result" %></p>
-        <% if @agent_action.result_json["summary"].present? %>
-          <p><%= @agent_action.result_json["summary"] %></p>
-        <% end %>
-        <% if @agent_action.result_json.dig("reversal", "summary").present? %>
-          <p class="notae-page-subtle">Reversal</p>
-          <p><%= @agent_action.result_json.dig("reversal", "summary") %></p>
-        <% end %>
-        <% if @agent_action.result_json["url"].present? %>
-          <p><%= link_to "Open created item", @agent_action.result_json["url"], class: "notae-chip-button notae-chip-button-subtle" %></p>
-        <% end %>
-        <div class="notae-workspace-home-json"><%= @agent_action.result_json.to_json %></div>
-      <% else %>
-        <p class="notae-page-subtle">No execution result yet.</p>
-      <% end %>
+        <section class="notae-agent-action-preview-card">
+          <div class="notae-home-card-head">
+            <h3><%= @agent_action.result_json["dry_run"] ? "Dry-run result" : "Execution summary" %></h3>
+          </div>
+          <% if @agent_action.result_json.present? %>
+            <% if @agent_action.result_json["summary"].present? %>
+              <p><%= @agent_action.result_json["summary"] %></p>
+            <% end %>
+            <% if (result_facts = agent_action_result_facts(@agent_action)).any? %>
+              <dl class="notae-agent-action-fact-grid">
+                <% result_facts.each do |fact| %>
+                  <div class="notae-agent-action-fact">
+                    <dt><%= fact[:label] %></dt>
+                    <dd>
+                      <% if fact[:href].present? %>
+                        <%= link_to fact[:value], fact[:href], class: "notae-chip-button notae-chip-button-subtle" %>
+                      <% else %>
+                        <%= fact[:value] %>
+                      <% end %>
+                    </dd>
+                  </div>
+                <% end %>
+              </dl>
+            <% end %>
+            <% if (execution_preview = agent_action_execution_preview(@agent_action)).present? && execution_preview["changes"].present? %>
+              <%= render "preview_changes",
+                         preview_data: execution_preview,
+                         heading: execution_preview["mode"] == "update" ? "Applied changes" : "Created record fields" %>
+            <% end %>
+            <details class="notae-agent-action-raw-details">
+              <summary>Raw execution payload</summary>
+              <pre class="notae-workspace-home-json"><%= agent_action_pretty_json(@agent_action.result_json) %></pre>
+            </details>
+          <% else %>
+            <p class="notae-page-subtle">No execution result yet.</p>
+          <% end %>
+        </section>
+      </div>
 
       <% if policy(@agent_action).reverse? %>
         <%= form_with url: reverse_agent_action_path(workspace_slug: @workspace.slug, id: @agent_action.id), method: :post, class: "notae-workspace-home-stack" do |form| %>
@@ -129,21 +178,53 @@
 
   <section class="notae-auth-card notae-home-card">
     <div class="notae-home-card-head">
-      <h2>Decision history</h2>
+      <div>
+        <h2>Audit trail</h2>
+        <p class="notae-page-subtle">
+          <%= agent_action_event_count(@agent_action) %> events ·
+          Chain integrity: <%= agent_action_review_chain_verified?(@agent_action) ? "Verified" : "Check failed" %>
+        </p>
+      </div>
     </div>
     <% if @review_history.any? %>
-      <ul class="notae-workspace-home-list">
+      <ul class="notae-ai-history-list notae-agent-action-timeline">
         <% @review_history.each do |event| %>
-          <li class="notae-workspace-home-list-item">
-            <div class="font-medium"><%= agent_action_event_title(event) %> · #<%= event.sequence_number %></div>
-            <div class="notae-page-subtle">
-              <%= event.actor&.email || "system" %> · <%= time_ago_in_words(event.occurred_at) %> ago
+          <li class="notae-ai-history-item notae-agent-action-timeline-item">
+            <div class="notae-agent-action-timeline-head">
+              <div>
+                <div class="font-medium"><%= agent_action_event_title(event) %> · #<%= event.sequence_number %></div>
+                <div class="notae-page-subtle"><%= agent_action_event_actor_label(event) %> · <%= agent_action_event_timestamp(event) %></div>
+              </div>
+              <span class="notae-workspace-home-role-badge"><%= agent_action_event_badge_label(event) %></span>
             </div>
+            <p class="notae-ai-history-answer"><%= agent_action_event_summary(event) %></p>
             <% if event.comment.present? %>
-              <div><%= event.comment %></div>
+              <div class="notae-agent-action-comment">
+                <strong>Comment</strong>
+                <p><%= event.comment %></p>
+              </div>
             <% end %>
-            <div class="notae-workspace-home-json"><%= event.details_json.to_json %></div>
+            <% if (facts = agent_action_event_facts(event)).any? %>
+              <dl class="notae-agent-action-fact-grid">
+                <% facts.each do |fact| %>
+                  <div class="notae-agent-action-fact">
+                    <dt><%= fact[:label] %></dt>
+                    <dd>
+                      <% if fact[:href].present? %>
+                        <%= link_to fact[:value], fact[:href], class: "notae-chip-button notae-chip-button-subtle" %>
+                      <% else %>
+                        <%= fact[:value] %>
+                      <% end %>
+                    </dd>
+                  </div>
+                <% end %>
+              </dl>
+            <% end %>
             <div class="notae-page-subtle">Hash verified: <%= event.hash_verification_succeeds? ? "Yes" : "No" %></div>
+            <details class="notae-agent-action-raw-details">
+              <summary>Raw audit payload</summary>
+              <pre class="notae-workspace-home-json"><%= agent_action_pretty_json(event.details_json) %></pre>
+            </details>
           </li>
         <% end %>
       </ul>

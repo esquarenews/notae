@@ -51,4 +51,21 @@ class Membership < ApplicationRecord
     override = workspace_email_notify_activity_override
     override.nil? ? default : override
   end
+
+  def workspace_push_notification_preferences
+    raw_preferences = notification_preferences["push_notification_preferences"]
+    raw_preferences.is_a?(Hash) ? raw_preferences : {}
+  end
+
+  def workspace_push_notification_override(notification_type)
+    raw_value = workspace_push_notification_preferences[notification_type.to_s]
+    return nil if raw_value.nil?
+
+    ActiveModel::Type::Boolean.new.cast(raw_value)
+  end
+
+  def workspace_push_notification_enabled?(notification_type, default:)
+    override = workspace_push_notification_override(notification_type)
+    override.nil? ? default : override
+  end
 end

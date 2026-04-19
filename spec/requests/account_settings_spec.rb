@@ -32,6 +32,9 @@ RSpec.describe "Account settings", type: :request do
     expect(response.body).to include('data-avatar-crop-target="previewPanel"')
     expect(response.body).to include('data-action="change-&gt;avatar-crop#open"')
     expect(response.body).to include('data-avatar-crop-target="saveButton"')
+    expect(response.body).to include("API access tokens")
+    expect(response.body).to include("Create token")
+    expect(response.body).to include("Recent token audit activity")
   end
 
   it "updates account profile fields" do
@@ -159,5 +162,77 @@ RSpec.describe "Account settings", type: :request do
     expect(response.body).to include("Account deletion confirmation sent to")
     expect(response.body).to include("account-settings-delete-turbo@example.com")
     expect(response.body).to include("backup-delete-turbo@example.com")
+  end
+
+  it "creates a scoped API token from account settings and reveals it once" do
+    user = User.create!(email: "account-settings-api-token@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Account settings API token", slug: "account-settings-api-token")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    expect {
+      post workspace_account_api_tokens_path(workspace_slug: workspace.slug),
+           params: {
+             api_token: {
+               name: "Codex MCP",
+               expires_at: 30.days.from_now.strftime("%Y-%m-%dT%H:%M"),
+               scopes_json: [ ApiToken::SCOPE_PAGES_READ, ApiToken::SCOPE_NOTIFICATIONS_WRITE ]
+             }
+           },
+           as: :turbo_stream
+    }.to change(ApiToken, :count).by(1)
+      .and change(ApiTokenAuditEvent, :count).by(1)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include("API token created. Copy it now because it will not be shown again.")
+    expect(response.body).to include("Copy this token now")
+    expect(response.body).to include("Codex MCP")
+
+    token = user.api_tokens.order(:created_at).last
+    expect(token.scopes).to contain_exactly(ApiToken::SCOPE_PAGES_READ, ApiToken::SCOPE_NOTIFICATIONS_WRITE)
+    expect(token.expires_at).to be_present
+  end
+
+  it "revokes an API token from account settings" do
+    user = User.create!(email: "account-settings-api-token-revoke@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Account settings API revoke", slug: "account-settings-api-revoke")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    token = user.api_tokens.create!(name: "Codex MCP", scopes_json: [ ApiToken::SCOPE_PAGES_READ ])
+    sign_in user
+
+    expect {
+      post workspace_account_api_token_revoke_path(workspace_slug: workspace.slug, id: token.id), as: :turbo_stream
+    }.to change(ApiTokenAuditEvent, :count).by(1)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("API token revoked.")
+    expect(token.reload.revoked_at).to be_present
+  end
+
+  it "rotates an API token from account settings and returns the replacement" do
+    user = User.create!(email: "account-settings-api-token-rotate@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Account settings API rotate", slug: "account-settings-api-rotate")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    token = user.api_tokens.create!(
+      name: "Codex MCP",
+      scopes_json: [ ApiToken::SCOPE_PAGES_READ, ApiToken::SCOPE_NOTIFICATIONS_WRITE ],
+      expires_at: 14.days.from_now
+    )
+    sign_in user
+
+    expect {
+      post workspace_account_api_token_rotate_path(workspace_slug: workspace.slug, id: token.id), as: :turbo_stream
+    }.to change(ApiToken, :count).by(1)
+      .and change(ApiTokenAuditEvent, :count).by(2)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("API token rotated. Copy the replacement now because it will not be shown again.")
+    expect(response.body).to include("Copy this token now")
+
+    replacement = user.api_tokens.order(:created_at).last
+    expect(replacement.id).not_to eq(token.id)
+    expect(replacement.scopes).to eq(token.scopes)
+    expect(token.reload.revoked_at).to be_present
   end
 end

@@ -1,0 +1,182 @@
+- generic [ref=e2]:
+  - button "Close sidebar"
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Mobile Polish
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Close sidebar" [ref=e12] [cursor=pointer]: ✕
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/mobile-polish
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/mobile-polish/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/mobile-polish/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/mobile-polish/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/mobile-polish/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/mobile-polish/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/mobile-polish/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/mobile-polish/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - paragraph [ref=e82]: Loading workspaces…
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - button "Notarum" [expanded] [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]: ▾
+                - generic [ref=e87]: Notarum
+              - button "Create new Nota" [ref=e89] [cursor=pointer]: "[+]"
+            - list [ref=e91]:
+              - listitem [ref=e92]:
+                - paragraph [ref=e93]: Loading Notarum…
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - paragraph [ref=e104]: Loading grids…
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - button "Meetings" [expanded] [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]: ▾
+                - generic [ref=e109]: Meetings
+              - button "Create new Meeting" [ref=e111] [cursor=pointer]: "[+]"
+            - list [ref=e113]:
+              - listitem [ref=e114]:
+                - paragraph [ref=e115]: Loading meetings…
+          - generic [ref=e116]:
+            - button "Favorites" [expanded] [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: ▾
+              - generic [ref=e120]: Favorites
+            - list [ref=e122]:
+              - listitem [ref=e123]:
+                - paragraph [ref=e124]: Loading favorites…
+      - generic [ref=e125]:
+        - link "Settings" [ref=e126] [cursor=pointer]:
+          - /url: /w/mobile-polish/settings/preferences
+          - generic [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e132]: Settings
+        - link "Trash" [ref=e133] [cursor=pointer]:
+          - /url: /w/mobile-polish/trash
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e139]: Trash
+        - button "Sign out" [ref=e141] [cursor=pointer]:
+          - generic [ref=e142]:
+            - img [ref=e144]
+            - generic [ref=e147]: Sign out
+  - generic [ref=e148]:
+    - banner [ref=e149]:
+      - generic [ref=e150]:
+        - button "Toggle sidebar" [ref=e151] [cursor=pointer]: ☰
+        - generic [ref=e152]:
+          - generic "Page icon" [ref=e154]:
+            - generic [ref=e155]: 📄
+          - generic [ref=e156]: Mobile polish note
+      - generic [ref=e157]:
+        - group [ref=e158]:
+          - generic "Page comments" [ref=e159] [cursor=pointer]: 💬
+        - group [ref=e160]:
+          - generic "Actions" [ref=e161] [cursor=pointer]:
+            - generic [ref=e162]: ⚡
+        - group [ref=e163]:
+          - generic "Options" [ref=e164] [cursor=pointer]:
+            - generic [ref=e165]: ⚙
+    - main [ref=e166]:
+      - generic [ref=e168]:
+        - generic [ref=e170]:
+          - generic [ref=e171]:
+            - group [ref=e172]:
+              - generic "Add icon" [ref=e173] [cursor=pointer]:
+                - generic [ref=e174]: ◌
+            - group [ref=e175]:
+              - generic "Add cover" [ref=e176] [cursor=pointer]:
+                - generic [ref=e177]: ▭
+          - textbox "Page title" [ref=e179]:
+            - /placeholder: New page
+            - text: Mobile polish note
+          - region "Linked tabs" [ref=e180]:
+            - navigation [ref=e181]:
+              - generic [ref=e182]:
+                - link "Tab 1" [ref=e183] [cursor=pointer]:
+                  - /url: /w/mobile-polish/pages/f22d9aba-430c-4a31-b50d-d90cb6691da3
+                  - generic [ref=e184]: Tab 1
+                - group [ref=e185]:
+                  - generic "Tab options" [ref=e186] [cursor=pointer]: ⋯
+            - button "+ New tab" [ref=e188] [cursor=pointer]
+        - generic [ref=e189]:
+          - article [ref=e191]:
+            - generic:
+              - generic "Drag block" [ref=e192]: ⋮⋮
+              - paragraph
+              - group [ref=e193]:
+                - generic "Block options" [ref=e194] [cursor=pointer]: ⋯
+          - button "+ Add block" [ref=e196] [cursor=pointer]
+        - generic [ref=e197]:
+          - heading "Backlinks" [level=2] [ref=e198]
+          - paragraph [ref=e199]: No backlinks yet.
+  - navigation "Primary mobile navigation" [ref=e200]:
+    - link "Home" [ref=e201] [cursor=pointer]:
+      - /url: /w/mobile-polish
+      - img [ref=e203]
+      - generic [ref=e206]: Home
+    - link "Search" [ref=e207] [cursor=pointer]:
+      - /url: /w/mobile-polish/search
+      - img [ref=e209]
+      - generic [ref=e212]: Search
+    - link "Calendar" [ref=e213] [cursor=pointer]:
+      - /url: /w/mobile-polish/kalendarium
+      - img [ref=e215]
+      - generic [ref=e218]: Calendar
+    - link "Mail" [ref=e219] [cursor=pointer]:
+      - /url: /w/mobile-polish/epistularium
+      - img [ref=e221]
+      - generic [ref=e224]: Mail
+    - link "Library" [ref=e225] [cursor=pointer]:
+      - /url: /w/mobile-polish/library
+      - img [ref=e227]
+      - generic [ref=e231]: Library
+  - button "Open AI assistant" [ref=e234] [cursor=pointer]

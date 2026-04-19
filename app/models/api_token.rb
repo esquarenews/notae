@@ -37,6 +37,52 @@ class ApiToken < ApplicationRecord
     SCOPE_MEETINGS_READ,
     SCOPE_MEETINGS_WRITE
   ].freeze
+  SCOPE_GROUPS = {
+    "General" => [
+      SCOPE_ALL,
+      SCOPE_WORKSPACES_READ
+    ],
+    "Documents" => [
+      SCOPE_PAGES_READ,
+      SCOPE_PAGES_WRITE,
+      SCOPE_PAGE_DOCUMENTS_READ,
+      SCOPE_PAGE_DOCUMENTS_WRITE,
+      SCOPE_DATABASES_READ,
+      SCOPE_DATABASES_WRITE
+    ],
+    "Calendar & meetings" => [
+      SCOPE_CALENDAR_READ,
+      SCOPE_CALENDAR_WRITE,
+      SCOPE_MEETINGS_READ,
+      SCOPE_MEETINGS_WRITE
+    ],
+    "Notifications & AI" => [
+      SCOPE_NOTIFICATIONS_WRITE,
+      SCOPE_KNOWLEDGE_READ,
+      SCOPE_KNOWLEDGE_WRITE,
+      SCOPE_AGENT_ACTIONS_READ,
+      SCOPE_AGENT_ACTIONS_WRITE
+    ]
+  }.freeze
+  SCOPE_LABELS = {
+    SCOPE_ALL => "Full access",
+    SCOPE_WORKSPACES_READ => "Workspaces read",
+    SCOPE_PAGES_READ => "Pages read",
+    SCOPE_PAGES_WRITE => "Pages write",
+    SCOPE_PAGE_DOCUMENTS_READ => "Page documents read",
+    SCOPE_PAGE_DOCUMENTS_WRITE => "Page documents write",
+    SCOPE_DATABASES_READ => "Databases read",
+    SCOPE_DATABASES_WRITE => "Databases write",
+    SCOPE_CALENDAR_READ => "Calendar read",
+    SCOPE_CALENDAR_WRITE => "Calendar write",
+    SCOPE_NOTIFICATIONS_WRITE => "Notifications write",
+    SCOPE_KNOWLEDGE_READ => "Knowledge read",
+    SCOPE_KNOWLEDGE_WRITE => "Knowledge write",
+    SCOPE_AGENT_ACTIONS_READ => "Agent actions read",
+    SCOPE_AGENT_ACTIONS_WRITE => "Agent actions write",
+    SCOPE_MEETINGS_READ => "Meetings read",
+    SCOPE_MEETINGS_WRITE => "Meetings write"
+  }.freeze
 
   encrypts :token, deterministic: true
 
@@ -62,8 +108,16 @@ class ApiToken < ApplicationRecord
     update!(revoked_at: Time.current)
   end
 
+  def revoked?
+    revoked_at.present?
+  end
+
+  def expired?
+    expires_at.present? && expires_at <= Time.current
+  end
+
   def active?
-    revoked_at.nil? && (expires_at.nil? || expires_at > Time.current)
+    !revoked? && !expired?
   end
 
   def scopes
@@ -92,6 +146,40 @@ class ApiToken < ApplicationRecord
     update_column(:last_used_at, Time.current)
   end
 
+  def masked_token
+    return if token.blank?
+
+    "#{token.first(6)}…#{token.last(4)}"
+  end
+
+  def scope_labels
+    scopes.map { |scope| self.class.scope_label(scope) }
+  end
+
+  def status_label
+    return "Revoked" if revoked?
+    return "Expired" if expired?
+
+    "Active"
+  end
+
+  def status_key
+    return :revoked if revoked?
+    return :expired if expired?
+
+    :active
+  end
+
+  class << self
+    def scope_groups
+      SCOPE_GROUPS
+    end
+
+    def scope_label(scope)
+      SCOPE_LABELS.fetch(scope.to_s, scope.to_s.humanize)
+    end
+  end
+
   private
 
   def set_default_name
@@ -99,7 +187,9 @@ class ApiToken < ApplicationRecord
   end
 
   def normalize_scopes_json
-    self.scopes_json = scopes
+    normalized_scopes = scopes
+    normalized_scopes = [ SCOPE_ALL ] if normalized_scopes.include?(SCOPE_ALL)
+    self.scopes_json = normalized_scopes
   end
 
   def ensure_token

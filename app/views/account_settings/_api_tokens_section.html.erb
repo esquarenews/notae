@@ -1,0 +1,170 @@
+<section class="notae-settings-section" data-controller="copy-text">
+  <h2>API access tokens</h2>
+
+  <div class="notae-pref-row notae-pref-row--stacked">
+    <div class="notae-pref-copy">
+      <p class="notae-pref-label">Token lifecycle management</p>
+      <p class="notae-pref-description">
+        Create scoped API tokens for Codex, integrations, or automations. Tokens can be given an expiry, rotated without changing their permissions, and revoked immediately.
+      </p>
+    </div>
+
+    <div class="notae-account-api-summary">
+      <span class="notae-operations-pill is-ok"><%= @api_tokens.count { |token| token.active? } %> active</span>
+      <span class="notae-operations-pill"><%= @api_tokens.count { |token| token.revoked? } %> revoked</span>
+      <span class="notae-operations-pill"><%= @api_token_audit_events.count %> recent events</span>
+    </div>
+  </div>
+
+  <% if @issued_api_token_value.present? %>
+    <div class="notae-account-api-reveal">
+      <div>
+        <p class="notae-pref-label">Copy this token now</p>
+        <p class="notae-pref-description">This is the only time Notae will show the full token value.</p>
+      </div>
+      <code class="notae-account-api-secret"><%= @issued_api_token_value %></code>
+      <button type="button"
+              class="notae-chip-button is-primary"
+              data-action="click->copy-text#copy"
+              data-copy-text-value="<%= @issued_api_token_value %>">
+        <span data-copy-text-feedback>Copy token</span>
+      </button>
+    </div>
+  <% end %>
+
+  <div class="notae-account-api-grid">
+    <section class="notae-account-api-card">
+      <h3>Create token</h3>
+
+      <%= form_with url: workspace_account_api_tokens_path(workspace_slug: @workspace.slug),
+                    method: :post,
+                    class: "notae-account-api-form" do %>
+        <label>
+          <span>Name</span>
+          <%= text_field_tag "api_token[name]",
+                             @new_api_token.name.presence == "default" ? "" : @new_api_token.name,
+                             class: "notae-pref-select",
+                             placeholder: "Codex MCP, automation, or integration name" %>
+        </label>
+
+        <label>
+          <span>Expires at</span>
+          <%= datetime_local_field_tag "api_token[expires_at]",
+                                       @new_api_token.expires_at&.in_time_zone(current_user.time_zone)&.strftime("%Y-%m-%dT%H:%M"),
+                                       class: "notae-pref-select" %>
+        </label>
+
+        <div class="notae-account-api-scope-groups">
+          <% ApiToken.scope_groups.each do |group_name, scopes| %>
+            <fieldset class="notae-account-api-scope-group">
+              <legend><%= group_name %></legend>
+
+              <% scopes.each do |scope| %>
+                <label class="notae-account-api-scope-option">
+                  <%= check_box_tag "api_token[scopes_json][]",
+                                    scope,
+                                    @new_api_token.scopes.include?(scope) %>
+                  <span><%= ApiToken.scope_label(scope) %></span>
+                </label>
+              <% end %>
+            </fieldset>
+          <% end %>
+        </div>
+
+        <p class="notae-pref-description">Leave only <strong>Full access</strong> selected unless you need a narrower token.</p>
+
+        <%= submit_tag "Create token", class: "notae-chip-button is-primary" %>
+      <% end %>
+    </section>
+
+    <section class="notae-account-api-card">
+      <h3>Issued tokens</h3>
+
+      <% if @api_tokens.any? %>
+        <div class="notae-account-api-list">
+          <% @api_tokens.each do |token| %>
+            <% status_class = case token.status_key
+                              when :active then "is-ok"
+                              when :expired then "is-warn"
+                              else "is-error"
+                              end %>
+            <article class="notae-account-api-list-item">
+              <div class="notae-account-api-list-copy">
+                <div class="notae-account-api-list-head">
+                  <p class="notae-account-api-token-name"><%= token.name %></p>
+                  <span class="notae-operations-pill <%= status_class %>"><%= token.status_label %></span>
+                </div>
+                <p class="notae-account-api-token-meta"><code><%= token.masked_token %></code></p>
+                <p class="notae-account-api-token-meta">
+                  <span>Created <%= token.created_at.in_time_zone(current_user.time_zone).strftime("%d %b %Y %H:%M") %></span>
+                  <span>Last used <%= token.last_used_at.present? ? time_ago_in_words(token.last_used_at) + " ago" : "Never" %></span>
+                  <span>Expires <%= token.expires_at.present? ? token.expires_at.in_time_zone(current_user.time_zone).strftime("%d %b %Y %H:%M") : "Never" %></span>
+                </p>
+                <div class="notae-account-api-scope-pills">
+                  <% token.scope_labels.each do |scope_label| %>
+                    <span class="notae-operations-pill"><%= scope_label %></span>
+                  <% end %>
+                </div>
+              </div>
+
+              <% if token.active? %>
+                <div class="notae-account-api-actions">
+                  <%= button_to "Rotate",
+                                workspace_account_api_token_rotate_path(workspace_slug: @workspace.slug, id: token.id),
+                                method: :post,
+                                class: "notae-chip-button",
+                                data: { turbo_confirm: "Rotate this token now? The current token will stop working immediately." } %>
+                  <%= button_to "Revoke",
+                                workspace_account_api_token_revoke_path(workspace_slug: @workspace.slug, id: token.id),
+                                method: :post,
+                                class: "notae-chip-button notae-chip-danger",
+                                data: { turbo_confirm: "Revoke this token immediately?" } %>
+                </div>
+              <% end %>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No API tokens have been created for this account yet.</p>
+      <% end %>
+    </section>
+  </div>
+
+  <section class="notae-account-api-card">
+    <h3>Recent token audit activity</h3>
+
+    <% if @api_token_audit_events.any? %>
+      <div class="notae-account-api-list">
+        <% @api_token_audit_events.each do |event| %>
+          <% event_status_class = event.event_type == "scope_denied" ? "is-error" : "is-ok" %>
+          <article class="notae-account-api-list-item">
+            <div class="notae-account-api-list-copy">
+              <div class="notae-account-api-list-head">
+                <p class="notae-account-api-token-name"><%= event.api_token.name %></p>
+                <span class="notae-operations-pill <%= event_status_class %>"><%= event.event_type.humanize %></span>
+              </div>
+              <p class="notae-account-api-token-meta">
+                <% details = [] %>
+                <% details << event.workspace.name if event.workspace.present? %>
+                <% details << "#{event.request_method} #{event.path}" if event.request_method.present? && event.path.present? %>
+                <% details << "Status #{event.http_status}" if event.http_status.present? %>
+                <% details << event.created_at.in_time_zone(current_user.time_zone).strftime("%d %b %Y %H:%M") %>
+                <%= details.join(" · ") %>
+              </p>
+              <% required_scopes = Array(event.required_scopes_json).reject(&:blank?) %>
+              <% if required_scopes.any? %>
+                <div class="notae-account-api-scope-pills">
+                  <% required_scopes.each do |scope| %>
+                    <span class="notae-operations-pill"><%= ApiToken.scope_label(scope) %></span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="notae-page-subtle">No API token audit events have been captured yet.</p>
+    <% end %>
+  </section>
+</section>

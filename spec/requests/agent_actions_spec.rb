@@ -78,6 +78,10 @@ RSpec.describe "Agent actions", type: :request do
     expect(response.body).to include("Before")
     expect(response.body).to include("Initial comment.")
     expect(response.body).to include("Updated comment.")
+    expect(response.body).to include("Audit trail")
+    expect(response.body).to include("Chain integrity: Verified")
+    expect(response.body).to include("Comment")
+    expect(response.body).to include("Raw audit payload")
   end
 
   it "approves a calendar draft into a selected calendar and shows the execution result afterwards" do
@@ -120,6 +124,11 @@ RSpec.describe "Agent actions", type: :request do
     expect(agent_action.dry_run).to be(false)
     expect(agent_action.result_json.fetch("dry_run")).to eq(false)
     expect(agent_action.result_json.fetch("summary")).to eq("Created event in Team Calendar.")
+    expect(agent_action.result_json.dig("execution_preview", "changes")).to include(
+      a_hash_including("label" => "Starts", "after" => "2026-03-20T09:00"),
+      a_hash_including("label" => "Ends", "after" => "2026-03-20T09:30"),
+      a_hash_including("label" => "Attendees", "after" => "team@example.com")
+    )
     created_event = KalendariumEvent.find(agent_action.result_json.fetch("target_id"))
     expect(created_event.kalendarium_calendar).to eq(calendar)
     expect(agent_action.review_history.find_by!(event_type: "approved").comment).to eq("Approved and scheduled.")
@@ -128,9 +137,14 @@ RSpec.describe "Agent actions", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("This draft is now read-only.")
-    expect(response.body).to include("Execution result")
+    expect(response.body).to include("Execution summary")
     expect(response.body).to include("Created event in Team Calendar.")
     expect(response.body).to include("Open created item")
+    expect(response.body).to include("Target record")
+    expect(response.body).to include("Created record fields")
+    expect(response.body).to include("2026-03-20T09:00")
+    expect(response.body).to include("team@example.com")
+    expect(response.body).to include("Raw execution payload")
   end
 
   it "asks approvers to choose a destination task list or calendar before approval" do
@@ -439,11 +453,14 @@ RSpec.describe "Agent actions", type: :request do
     get agent_actions_path(workspace_slug: workspace.slug)
     expect(response.body).to include("Pending approvals")
     expect(response.body).to include(pending.title)
+    expect(response.body).to include("Last event: Draft created by")
 
     sign_out owner
     sign_in member
     get agent_actions_path(workspace_slug: workspace.slug)
     expect(response.body).to include("Needs your revision")
     expect(response.body).to include(needs_revision.title)
+    expect(response.body).to include("Audit events:")
+    expect(response.body).to include("Chain: Verified")
   end
 end

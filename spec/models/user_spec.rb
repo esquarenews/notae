@@ -132,4 +132,27 @@ RSpec.describe User, type: :model do
     expect(user.email_notify_activity_for?(workspace, membership: membership)).to be(true)
     expect(user.email_notify_activity_for?(workspace)).to be(true)
   end
+
+  it "respects workspace-scoped push notification overrides" do
+    user = described_class.create!(
+      email: "workspace-push-override@example.com",
+      password: "password123",
+      push_notification_preferences: { Notification::TYPE_MENTION => true }
+    )
+    workspace = Workspace.create!(name: "Workspace Push Override", slug: "workspace-push-override")
+    membership = Membership.create!(
+      workspace: workspace,
+      user: user,
+      role: :owner,
+      notification_preferences_json: {
+        "push_notification_preferences" => {
+          Notification::TYPE_MENTION => false
+        }
+      }
+    )
+
+    expect(user.push_notification_enabled_for?(Notification::TYPE_MENTION)).to be(true)
+    expect(user.push_notification_enabled_for?(Notification::TYPE_MENTION, workspace: workspace, membership: membership)).to be(false)
+    expect(user.push_delivery_allowed_for?(Notification::TYPE_MENTION, workspace: workspace, membership: membership)).to be(false)
+  end
 end

@@ -1,0 +1,26 @@
+- main [ref=e2]:
+  - paragraph [ref=e3]: Invalid email or password.
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img "Notae icon" [ref=e6]
+      - generic [ref=e7]:
+        - heading "Notae" [level=1] [ref=e8]
+        - paragraph [ref=e9]: Sign in to continue to your workspace.
+    - generic [ref=e10]:
+      - heading "Sign in" [level=2] [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Email
+          - textbox "Email" [active] [ref=e15]
+        - generic [ref=e16]:
+          - generic [ref=e17]: Password
+          - textbox "Password" [ref=e18]
+        - generic [ref=e19]:
+          - checkbox "Remember me" [checked] [ref=e20]
+          - generic [ref=e21]: Remember me
+        - button "Sign in" [ref=e22] [cursor=pointer]
+      - generic [ref=e23]:
+        - link "Forgot your password?" [ref=e24] [cursor=pointer]:
+          - /url: /users/password/new
+        - link "Create account" [ref=e25] [cursor=pointer]:
+          - /url: /users/sign_up

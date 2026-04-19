@@ -227,25 +227,86 @@
     </section>
 
     <section class="notae-settings-section">
-      <h2>Push delivery state</h2>
+      <h2>Current workspace overrides</h2>
 
-      <div class="notae-pref-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Current workspace override</p>
-          <p class="notae-pref-description">Override the global activity-email default for <strong><%= @workspace.name %></strong> when it makes sense to treat this workspace differently.</p>
+      <%= form_with url: workspace_notification_settings_path(workspace_slug: @workspace.slug),
+                    method: :patch,
+                    class: "notae-workspace-home-stack",
+                    data: { controller: "notification-preferences" } do %>
+        <div class="notae-pref-row">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Workspace activity emails</p>
+            <p class="notae-pref-description">This override only affects <strong><%= @workspace.name %></strong>. Matching the account default clears the override automatically.</p>
+          </div>
+          <div class="notae-pref-control-form">
+            <label class="notae-pref-toggle">
+              <%= hidden_field_tag "membership[email_notify_activity]", "0" %>
+              <%= check_box_tag "membership[email_notify_activity]",
+                                "1",
+                                @workspace_membership&.workspace_email_notify_activity_enabled?(default: @user.email_notify_activity?),
+                                class: "notae-pref-toggle-input",
+                                data: { action: "change->auto-submit#submit" } %>
+              <span class="notae-pref-toggle-track"></span>
+            </label>
+          </div>
         </div>
-        <%= form_with url: workspace_notification_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do %>
-          <label class="notae-pref-toggle">
-            <%= hidden_field_tag "membership[email_notify_activity]", "0" %>
-            <%= check_box_tag "membership[email_notify_activity]",
-                              "1",
-                              @workspace_membership&.workspace_email_notify_activity_enabled?(default: @user.email_notify_activity?),
-                              class: "notae-pref-toggle-input",
-                              data: { action: "change->auto-submit#submit" } %>
-            <span class="notae-pref-toggle-track"></span>
-          </label>
-        <% end %>
-      </div>
+
+        <div class="notae-pref-row notae-pref-row--stacked">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Workspace push overrides</p>
+            <p class="notae-pref-description">Tune push notifications for <strong><%= @workspace.name %></strong> without changing the account-wide defaults. Matching the account setting removes the override.</p>
+          </div>
+
+          <div class="notae-workspace-home-stack">
+            <div class="notae-pref-row">
+              <div class="notae-pref-copy">
+                <p class="notae-pref-label">Workspace push switch</p>
+                <p class="notae-pref-description">Enable or disable all push categories for this workspace.</p>
+              </div>
+              <div class="notae-pref-control-form">
+                <label class="notae-pref-toggle">
+                  <%= check_box_tag "workspace_push_notifications_master",
+                                    "1",
+                                    User.push_notification_types.all? { |type| @workspace_membership&.workspace_push_notification_enabled?(type, default: @user.push_notification_enabled_for?(type)) },
+                                    class: "notae-pref-toggle-input",
+                                    data: {
+                                      action: "change->notification-preferences#toggleAll change->auto-submit#submit",
+                                      notification_preferences_target: "masterToggle"
+                                    } %>
+                  <span class="notae-pref-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <% User::PUSH_NOTIFICATION_OPTIONS.each do |option| %>
+              <div class="notae-pref-row">
+                <div class="notae-pref-copy">
+                  <p class="notae-pref-label"><%= option[:label] %></p>
+                  <p class="notae-pref-description"><%= option[:description] %></p>
+                </div>
+                <div class="notae-pref-control-form">
+                  <label class="notae-pref-toggle">
+                    <%= hidden_field_tag "membership[#{option[:param_key]}]", "0" %>
+                    <%= check_box_tag "membership[#{option[:param_key]}]",
+                                      "1",
+                                      @workspace_membership&.workspace_push_notification_enabled?(option[:type], default: @user.push_notification_enabled_for?(option[:type])),
+                                      class: "notae-pref-toggle-input",
+                                      data: {
+                                        action: "change->notification-preferences#syncMaster change->auto-submit#submit",
+                                        notification_preferences_target: "itemToggle"
+                                      } %>
+                    <span class="notae-pref-toggle-track"></span>
+                  </label>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Push delivery state</h2>
 
       <% if @push_subscriptions.any? %>
         <div class="notae-operations-list">

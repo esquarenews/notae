@@ -115,4 +115,46 @@ RSpec.describe WebPush::DeliverNotificationJob do
     expect(WebPush::NotificationPayloadBuilder).to have_received(:new).once
     expect(WebPush::DeliveryService).to have_received(:new).once
   end
+
+  it "skips delivery when the workspace overrides disable that notification type" do
+    actor = User.create!(email: "web-push-workspace-override-actor@example.com", password: "password123")
+    recipient = User.create!(
+      email: "web-push-workspace-override-recipient@example.com",
+      password: "password123",
+      push_notification_preferences: { Notification::TYPE_MENTION => true }
+    )
+    workspace = Workspace.create!(name: "Web Push Workspace Override", slug: "web-push-workspace-override")
+    Membership.create!(
+      workspace: workspace,
+      user: recipient,
+      role: :owner,
+      notification_preferences_json: {
+        "push_notification_preferences" => {
+          Notification::TYPE_MENTION => false
+        }
+      }
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: actor,
+      recipient: recipient,
+      notification_type: Notification::TYPE_MENTION,
+      metadata: {}
+    )
+    WebPushSubscription.create!(
+      user: recipient,
+      endpoint: "https://push.example.test/subscriptions/workspace-override",
+      p256dh: "p256dh-workspace-override",
+      auth: "auth-workspace-override"
+    )
+
+    allow(WebPush::Configuration).to receive(:configured?).and_return(true)
+    allow(WebPush::NotificationPayloadBuilder).to receive(:new)
+    allow(WebPush::DeliveryService).to receive(:new)
+
+    described_class.perform_now(notification.id)
+
+    expect(WebPush::NotificationPayloadBuilder).not_to have_received(:new)
+    expect(WebPush::DeliveryService).not_to have_received(:new)
+  end
 end

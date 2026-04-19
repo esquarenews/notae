@@ -84,7 +84,7 @@ class NotificationSettingsController < ApplicationController
   end
 
   def notification_setting_params
-    params.fetch(:user, {}).permit(
+    params.fetch(:user, ActionController::Parameters.new).permit(
       :meeting_notify_join_transcribing,
       :meeting_notify_transcribed,
       :meeting_notify_summarized,
@@ -112,7 +112,7 @@ class NotificationSettingsController < ApplicationController
   end
 
   def push_notification_preferences_params
-    permitted = params.fetch(:user, {}).permit(*User.push_notification_param_keys)
+    permitted = params.fetch(:user, ActionController::Parameters.new).permit(*User.push_notification_param_keys)
     permitted.to_h.each_with_object({}) do |(param_key, raw_value), preferences|
       notification_type = User.push_notification_type_for_param(param_key)
       next unless notification_type
@@ -122,13 +122,48 @@ class NotificationSettingsController < ApplicationController
   end
 
   def update_workspace_notification_preferences!
-    membership_params = params[:membership]
-    return unless membership_params.respond_to?(:[])
-    return unless membership_params.key?(:email_notify_activity)
+    membership_params = workspace_notification_setting_params
+    return if membership_params.empty?
 
     membership = current_user.memberships.find_by!(workspace_id: @workspace.id)
     preferences = membership.notification_preferences.deep_dup
-    preferences["email_notify_activity"] = ActiveModel::Type::Boolean.new.cast(membership_params[:email_notify_activity])
+    if membership_params.key?(:email_notify_activity)
+      email_enabled = ActiveModel::Type::Boolean.new.cast(membership_params[:email_notify_activity])
+      if email_enabled == @user.email_notify_activity?
+        preferences.delete("email_notify_activity")
+      else
+        preferences["email_notify_activity"] = email_enabled
+      end
+    end
+
+    push_overrides = preferences["push_notification_preferences"].is_a?(Hash) ? preferences["push_notification_preferences"].deep_dup : {}
+    workspace_push_notification_preferences_params(membership_params).each do |notification_type, enabled|
+      if enabled == @user.push_notification_enabled_for?(notification_type)
+        push_overrides.delete(notification_type)
+      else
+        push_overrides[notification_type] = enabled
+      end
+    end
+
+    if push_overrides.empty?
+      preferences.delete("push_notification_preferences")
+    else
+      preferences["push_notification_preferences"] = push_overrides
+    end
+
     membership.update!(notification_preferences_json: preferences)
+  end
+
+  def workspace_notification_setting_params
+    params.fetch(:membership, ActionController::Parameters.new).permit(:email_notify_activity, *User.push_notification_param_keys)
+  end
+
+  def workspace_push_notification_preferences_params(membership_params)
+    membership_params.to_h.each_with_object({}) do |(param_key, raw_value), preferences|
+      notification_type = User.push_notification_type_for_param(param_key)
+      next unless notification_type
+
+      preferences[notification_type] = ActiveModel::Type::Boolean.new.cast(raw_value)
+    end
   end
 end

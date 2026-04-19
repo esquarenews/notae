@@ -41,8 +41,7 @@
        .map { |candidate_workspace| [candidate_workspace.name, workspace_route_for.call(candidate_workspace)] } %>
 
   <details class="notae-settings-mobile-accordion"
-           data-controller="settings-nav"
-           open>
+           data-controller="settings-nav">
     <summary class="notae-settings-mobile-trigger">
       <span class="notae-settings-mobile-trigger-label"><%= active_nav_label %></span>
       <span class="notae-settings-mobile-trigger-caret">▾</span>

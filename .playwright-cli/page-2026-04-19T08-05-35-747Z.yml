@@ -1,0 +1,141 @@
+- generic [ref=e247]:
+  - complementary [ref=e248]:
+    - generic [ref=e249]:
+      - generic [ref=e250]:
+        - generic [ref=e253]: Nav Pass
+        - generic [ref=e254]:
+          - button "＋" [ref=e256] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e257] [cursor=pointer]: ◂
+      - generic [ref=e258]:
+        - navigation [ref=e259]:
+          - link "Home" [ref=e260] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843
+            - generic [ref=e261]:
+              - img [ref=e263]
+              - generic [ref=e266]: Home
+          - link "Search" [ref=e267] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/search
+            - generic [ref=e268]:
+              - img [ref=e270]
+              - generic [ref=e273]: Search
+          - link "Notifications" [ref=e274] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/notifications
+            - generic [ref=e275]:
+              - img [ref=e277]
+              - generic [ref=e280]: Notifications
+          - link "Library" [ref=e281] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/library
+            - generic [ref=e282]:
+              - img [ref=e284]
+              - generic [ref=e288]: Library
+          - link "Kalendārium" [ref=e289] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/kalendarium
+            - generic [ref=e290]:
+              - img [ref=e292]
+              - generic [ref=e295]: Kalendārium
+          - link "Epistularium" [ref=e296] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/epistularium
+            - generic [ref=e297]:
+              - img [ref=e299]
+              - generic [ref=e302]: Epistularium
+          - link "Meetings" [ref=e303] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/meetings
+            - generic [ref=e304]:
+              - img [ref=e306]
+              - generic [ref=e309]: Meetings
+          - link "AI Conversation History" [ref=e310] [cursor=pointer]:
+            - /url: /w/nav-pass-1776585843/ai-conversation-history
+            - generic [ref=e311]:
+              - img [ref=e313]
+              - generic [ref=e316]: AI Conversation History
+        - generic [ref=e317]:
+          - generic [ref=e318]:
+            - generic [ref=e319]:
+              - button "Workspaces" [expanded] [ref=e320] [cursor=pointer]:
+                - generic [ref=e321]: ▾
+                - generic [ref=e322]: Workspaces
+              - button "Create new Workspace" [ref=e323] [cursor=pointer]: "[+]"
+            - list [ref=e325]:
+              - listitem [ref=e326]:
+                - link "Nav Pass" [ref=e327] [cursor=pointer]:
+                  - /url: /w/nav-pass-1776585843
+                  - generic [ref=e328]: Nav Pass
+          - generic [ref=e330]:
+            - generic [ref=e331]:
+              - button "Notarum" [expanded] [ref=e332] [cursor=pointer]:
+                - generic [ref=e333]: ▾
+                - generic [ref=e334]: Notarum
+              - button "Create new Nota" [ref=e336] [cursor=pointer]: "[+]"
+            - paragraph [ref=e338]: No Notarum yet.
+          - generic [ref=e339]:
+            - generic [ref=e340]:
+              - button "Grids" [expanded] [ref=e341] [cursor=pointer]:
+                - generic [ref=e342]: ▾
+                - generic [ref=e343]: Grids
+              - button "Create new Grid" [ref=e345] [cursor=pointer]: "[+]"
+            - paragraph [ref=e347]: No grids yet.
+          - generic [ref=e348]:
+            - generic [ref=e349]:
+              - button "Meetings" [expanded] [ref=e350] [cursor=pointer]:
+                - generic [ref=e351]: ▾
+                - generic [ref=e352]: Meetings
+              - button "Create new Meeting" [ref=e354] [cursor=pointer]: "[+]"
+            - paragraph [ref=e356]: No meetings yet.
+          - generic [ref=e357]:
+            - button "Favorites" [expanded] [ref=e359] [cursor=pointer]:
+              - generic [ref=e360]: ▾
+              - generic [ref=e361]: Favorites
+            - paragraph [ref=e363]: No favorites yet.
+      - generic [ref=e364]:
+        - link "Settings" [ref=e365] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/settings/preferences
+          - generic [ref=e366]:
+            - img [ref=e368]
+            - generic [ref=e371]: Settings
+        - link "Trash" [ref=e372] [cursor=pointer]:
+          - /url: /w/nav-pass-1776585843/trash
+          - generic [ref=e373]:
+            - img [ref=e375]
+            - generic [ref=e378]: Trash
+        - button "Sign out" [ref=e380] [cursor=pointer]:
+          - generic [ref=e381]:
+            - img [ref=e383]
+            - generic [ref=e386]: Sign out
+  - generic [ref=e387]:
+    - banner [ref=e388]:
+      - generic [ref=e390]:
+        - generic [ref=e391]: 📄
+        - generic [ref=e392]: Search Nav Pass
+        - generic [ref=e393]: Private
+    - main [ref=e394]:
+      - generic [ref=e395]:
+        - generic [ref=e396]:
+          - paragraph [ref=e397]:
+            - link "Nav Pass" [ref=e398] [cursor=pointer]:
+              - /url: /w/nav-pass-1776585843
+          - heading "Search" [level=1] [ref=e399]
+        - generic [ref=e400]:
+          - textbox "Find Notarum, blocks, rows" [ref=e401]
+          - button "Search" [ref=e402]
+  - complementary "Workspace notification bar" [ref=e403]:
+    - button "Open compact Kalendārium" [ref=e404]:
+      - generic [ref=e405]: Sun 19 Apr · 8:05
+  - complementary [ref=e228]:
+    - generic [ref=e229]:
+      - generic [ref=e230]: New AI chat
+      - generic [ref=e231]:
+        - combobox [ref=e232]:
+          - option "Auto" [selected]
+          - option "This document only"
+          - option "This workspace only"
+          - option "Whole account"
+        - button "Minimize AI assistant rail" [ref=e233] [cursor=pointer]: ▸
+    - generic [ref=e234]:
+      - paragraph [ref=e235]: Notae AI assistant
+      - paragraph [ref=e236]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - generic [ref=e238]:
+      - generic [ref=e239]: Prompt
+      - textbox "Prompt" [ref=e241]:
+        - /placeholder: Ask a question or request a draft action for review.
+      - button "Send" [ref=e243] [cursor=pointer]
+    - button "Usage" [ref=e245] [cursor=pointer]

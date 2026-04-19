@@ -16,13 +16,17 @@ export default class extends Controller {
     this.saveTimeout = null
     this.lastSavedTitle = this.inputTarget.value
     this.resizeInput()
+    requestAnimationFrame(() => this.resizeInput())
     this.pageHideHandler = () => this.flushSave({ keepalive: true })
+    this.windowResizeHandler = () => this.resizeInput()
     window.addEventListener("pagehide", this.pageHideHandler)
+    window.addEventListener("resize", this.windowResizeHandler)
   }
 
   disconnect() {
     clearTimeout(this.saveTimeout)
     window.removeEventListener("pagehide", this.pageHideHandler)
+    window.removeEventListener("resize", this.windowResizeHandler)
   }
 
   queueSave() {

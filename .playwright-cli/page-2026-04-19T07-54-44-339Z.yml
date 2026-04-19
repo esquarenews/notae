@@ -1,0 +1,380 @@
+- generic [ref=e2]:
+  - button "Close sidebar"
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Mobile Polish
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Close sidebar" [ref=e12] [cursor=pointer]: ✕
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/mobile-polish
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/mobile-polish/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/mobile-polish/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/mobile-polish/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/mobile-polish/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/mobile-polish/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/mobile-polish/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/mobile-polish/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - paragraph [ref=e82]: Loading workspaces…
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - button "Notarum" [expanded] [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]: ▾
+                - generic [ref=e87]: Notarum
+              - button "Create new Nota" [ref=e89] [cursor=pointer]: "[+]"
+            - list [ref=e91]:
+              - listitem [ref=e92]:
+                - paragraph [ref=e93]: Loading Notarum…
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - paragraph [ref=e104]: Loading grids…
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - button "Meetings" [expanded] [ref=e107] [cursor=pointer]:
+                - generic [ref=e108]: ▾
+                - generic [ref=e109]: Meetings
+              - button "Create new Meeting" [ref=e111] [cursor=pointer]: "[+]"
+            - list [ref=e113]:
+              - listitem [ref=e114]:
+                - paragraph [ref=e115]: Loading meetings…
+          - generic [ref=e116]:
+            - button "Favorites" [expanded] [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: ▾
+              - generic [ref=e120]: Favorites
+            - list [ref=e122]:
+              - listitem [ref=e123]:
+                - paragraph [ref=e124]: Loading favorites…
+      - generic [ref=e125]:
+        - link "Settings" [ref=e126] [cursor=pointer]:
+          - /url: /w/mobile-polish/settings/preferences
+          - generic [ref=e127]:
+            - img [ref=e129]
+            - generic [ref=e132]: Settings
+        - link "Trash" [ref=e133] [cursor=pointer]:
+          - /url: /w/mobile-polish/trash
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e139]: Trash
+        - button "Sign out" [ref=e141] [cursor=pointer]:
+          - generic [ref=e142]:
+            - img [ref=e144]
+            - generic [ref=e147]: Sign out
+  - generic [ref=e148]:
+    - banner [ref=e149]:
+      - generic [ref=e150]:
+        - button "Toggle sidebar" [ref=e151] [cursor=pointer]: ☰
+        - generic [ref=e152]:
+          - generic [ref=e153]: 🔔
+          - generic [ref=e154]: Notifications settings
+      - link "Close" [ref=e156] [cursor=pointer]:
+        - /url: /w/mobile-polish
+    - main [ref=e157]:
+      - generic [ref=e158]:
+        - complementary [ref=e159]:
+          - group [ref=e160]:
+            - generic "Notifications ▾" [ref=e161] [cursor=pointer]:
+              - generic [ref=e162]: Notifications
+              - generic [ref=e163]: ▾
+            - option "Mobile Polish" [selected]
+        - generic [ref=e164]:
+          - generic [ref=e165]:
+            - heading "In-app notifications" [level=2] [ref=e166]
+            - generic [ref=e167]:
+              - generic [ref=e168]:
+                - paragraph [ref=e169]: Push notifications on this device
+                - paragraph [ref=e170]: Push notifications are not configured on this server yet.
+              - generic [ref=e171]:
+                - switch "Push notifications" [disabled] [ref=e172]
+                - generic [ref=e174]: Unavailable
+                - generic [ref=e175]: Needs review
+                - button "Send test push" [disabled] [ref=e176] [cursor=pointer]
+              - paragraph
+              - group [ref=e177]:
+                - generic "▾ Notification readiness Collapse this once the device is fully configured. Needs review" [ref=e178] [cursor=pointer]:
+                  - generic [ref=e179]:
+                    - generic [ref=e180]: ▾
+                    - generic [ref=e181]:
+                      - generic [ref=e182]: Notification readiness
+                      - generic [ref=e183]: Collapse this once the device is fully configured.
+                  - generic [ref=e185]: Needs review
+                - generic [ref=e186]:
+                  - generic [ref=e187]:
+                    - generic [ref=e188]:
+                      - strong [ref=e189]: Browser permission
+                      - generic [ref=e190]: The browser has not granted notification permission yet.
+                    - generic [ref=e191]: Pending
+                  - generic [ref=e192]:
+                    - generic [ref=e193]:
+                      - strong [ref=e194]: Device subscription
+                      - generic [ref=e195]: Subscription cannot be created until permission is granted.
+                    - generic [ref=e196]: Missing
+                  - generic [ref=e197]:
+                    - generic [ref=e198]:
+                      - strong [ref=e199]: Test push delivery
+                      - generic [ref=e200]: Run a test push to verify server-to-device delivery for this browser.
+                    - generic [ref=e201]: Unverified
+                  - generic [ref=e202]:
+                    - generic [ref=e203]:
+                      - strong [ref=e204]: Banner seen on device
+                      - generic [ref=e205]: Banner confirmation starts after a successful test push.
+                    - generic [ref=e206]: Pending
+                - generic [ref=e207]:
+                  - generic [ref=e208]: After sending a test push, confirm whether you saw the on-device banner.
+                  - generic [ref=e209]:
+                    - button "I saw the banner" [disabled] [ref=e210] [cursor=pointer]
+                    - button "No banner appeared" [disabled] [ref=e211] [cursor=pointer]
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - paragraph [ref=e215]: Push notification types
+                  - paragraph [ref=e216]: Choose which Notae events are allowed to interrupt this device. Workflow failures bypass quiet hours.
+                - generic [ref=e217]:
+                  - generic [ref=e218]:
+                    - generic [ref=e219]:
+                      - paragraph [ref=e220]: Master push switch
+                      - paragraph [ref=e221]: Enable or disable all Notae push notification categories at once.
+                    - checkbox [checked] [ref=e224] [cursor=pointer]
+                  - generic [ref=e226]:
+                    - generic [ref=e227]:
+                      - paragraph [ref=e228]: Mentions and comments
+                      - paragraph [ref=e229]: New mentions and comment activity that needs attention.
+                    - checkbox [checked] [ref=e232] [cursor=pointer]
+                  - generic [ref=e234]:
+                    - generic [ref=e235]:
+                      - paragraph [ref=e236]: Calendar reminders
+                      - paragraph [ref=e237]: Upcoming Kalendārium reminders for events and meetings.
+                    - checkbox [checked] [ref=e240] [cursor=pointer]
+                  - generic [ref=e242]:
+                    - generic [ref=e243]:
+                      - paragraph [ref=e244]: Approval requests
+                      - paragraph [ref=e245]: Agent drafts waiting on your approval.
+                    - checkbox [checked] [ref=e248] [cursor=pointer]
+                  - generic [ref=e250]:
+                    - generic [ref=e251]:
+                      - paragraph [ref=e252]: Changes requested
+                      - paragraph [ref=e253]: Drafts that were sent back for changes.
+                    - checkbox [checked] [ref=e256] [cursor=pointer]
+                  - generic [ref=e258]:
+                    - generic [ref=e259]:
+                      - paragraph [ref=e260]: Resubmitted drafts
+                      - paragraph [ref=e261]: Drafts that were updated and re-submitted for review.
+                    - checkbox [checked] [ref=e264] [cursor=pointer]
+                  - generic [ref=e266]:
+                    - generic [ref=e267]:
+                      - paragraph [ref=e268]: Approved drafts
+                      - paragraph [ref=e269]: Confirmation that an agent draft was approved.
+                    - checkbox [checked] [ref=e272] [cursor=pointer]
+                  - generic [ref=e274]:
+                    - generic [ref=e275]:
+                      - paragraph [ref=e276]: Rejected drafts
+                      - paragraph [ref=e277]: Confirmation that an agent draft was rejected.
+                    - checkbox [checked] [ref=e280] [cursor=pointer]
+                  - generic [ref=e282]:
+                    - generic [ref=e283]:
+                      - paragraph [ref=e284]: Workflow failures
+                      - paragraph [ref=e285]: Critical workflow failures. These bypass quiet hours.
+                    - checkbox [checked] [ref=e288] [cursor=pointer]
+                  - generic [ref=e290]:
+                    - generic [ref=e291]:
+                      - paragraph [ref=e292]: AI suggestions
+                      - paragraph [ref=e293]: Knowledge suggestions and daily AI briefs that are ready.
+                    - checkbox [checked] [ref=e296] [cursor=pointer]
+                  - generic [ref=e298]:
+                    - generic [ref=e299]:
+                      - paragraph [ref=e300]: Codex completions
+                      - paragraph [ref=e301]: Completion pushes sent from Codex into Notae.
+                    - checkbox [checked] [ref=e304] [cursor=pointer]
+              - generic [ref=e306]:
+                - generic [ref=e307]:
+                  - paragraph [ref=e308]: Quiet hours
+                  - paragraph [ref=e309]: Suppress routine push notifications during your local quiet hours. Workflow failures still break through.
+                - generic [ref=e310]:
+                  - generic [ref=e311]:
+                    - generic [ref=e312]:
+                      - paragraph [ref=e313]: Enable quiet hours
+                      - paragraph [ref=e314]:
+                        - text: "Current Notae time zone:"
+                        - strong [ref=e315]: Australia/Melbourne
+                        - text: .
+                    - checkbox [ref=e318] [cursor=pointer]
+                  - generic [ref=e320]:
+                    - generic [ref=e321]:
+                      - paragraph [ref=e322]: Quiet hours window
+                      - paragraph [ref=e323]: Cross-midnight windows are supported, for example 22:00 to 07:00.
+                    - generic [ref=e324]:
+                      - generic [ref=e325]:
+                        - generic [ref=e326]: Start
+                        - textbox "Start" [ref=e327]: 22:00
+                      - generic [ref=e328]:
+                        - generic [ref=e329]: End
+                        - textbox "End" [ref=e330]: 07:00
+          - generic [ref=e331]:
+            - heading "Current workspace overrides" [level=2] [ref=e332]
+            - generic [ref=e333]:
+              - generic [ref=e334]:
+                - generic [ref=e335]:
+                  - paragraph [ref=e336]: Workspace activity emails
+                  - paragraph [ref=e337]:
+                    - text: This override only affects
+                    - strong [ref=e338]: Mobile Polish
+                    - text: . Matching the account default clears the override automatically.
+                - checkbox [checked] [ref=e341] [cursor=pointer]
+              - generic [ref=e343]:
+                - generic [ref=e344]:
+                  - paragraph [ref=e345]: Workspace push overrides
+                  - paragraph [ref=e346]:
+                    - text: Tune push notifications for
+                    - strong [ref=e347]: Mobile Polish
+                    - text: without changing the account-wide defaults. Matching the account setting removes the override.
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - generic [ref=e350]:
+                      - paragraph [ref=e351]: Workspace push switch
+                      - paragraph [ref=e352]: Enable or disable all push categories for this workspace.
+                    - checkbox [checked] [ref=e355] [cursor=pointer]
+                  - generic [ref=e357]:
+                    - generic [ref=e358]:
+                      - paragraph [ref=e359]: Mentions and comments
+                      - paragraph [ref=e360]: New mentions and comment activity that needs attention.
+                    - checkbox [checked] [ref=e363] [cursor=pointer]
+                  - generic [ref=e365]:
+                    - generic [ref=e366]:
+                      - paragraph [ref=e367]: Calendar reminders
+                      - paragraph [ref=e368]: Upcoming Kalendārium reminders for events and meetings.
+                    - checkbox [checked] [ref=e371] [cursor=pointer]
+                  - generic [ref=e373]:
+                    - generic [ref=e374]:
+                      - paragraph [ref=e375]: Approval requests
+                      - paragraph [ref=e376]: Agent drafts waiting on your approval.
+                    - checkbox [checked] [ref=e379] [cursor=pointer]
+                  - generic [ref=e381]:
+                    - generic [ref=e382]:
+                      - paragraph [ref=e383]: Changes requested
+                      - paragraph [ref=e384]: Drafts that were sent back for changes.
+                    - checkbox [checked] [ref=e387] [cursor=pointer]
+                  - generic [ref=e389]:
+                    - generic [ref=e390]:
+                      - paragraph [ref=e391]: Resubmitted drafts
+                      - paragraph [ref=e392]: Drafts that were updated and re-submitted for review.
+                    - checkbox [checked] [ref=e395] [cursor=pointer]
+                  - generic [ref=e397]:
+                    - generic [ref=e398]:
+                      - paragraph [ref=e399]: Approved drafts
+                      - paragraph [ref=e400]: Confirmation that an agent draft was approved.
+                    - checkbox [checked] [ref=e403] [cursor=pointer]
+                  - generic [ref=e405]:
+                    - generic [ref=e406]:
+                      - paragraph [ref=e407]: Rejected drafts
+                      - paragraph [ref=e408]: Confirmation that an agent draft was rejected.
+                    - checkbox [checked] [ref=e411] [cursor=pointer]
+                  - generic [ref=e413]:
+                    - generic [ref=e414]:
+                      - paragraph [ref=e415]: Workflow failures
+                      - paragraph [ref=e416]: Critical workflow failures. These bypass quiet hours.
+                    - checkbox [checked] [ref=e419] [cursor=pointer]
+                  - generic [ref=e421]:
+                    - generic [ref=e422]:
+                      - paragraph [ref=e423]: AI suggestions
+                      - paragraph [ref=e424]: Knowledge suggestions and daily AI briefs that are ready.
+                    - checkbox [checked] [ref=e427] [cursor=pointer]
+                  - generic [ref=e429]:
+                    - generic [ref=e430]:
+                      - paragraph [ref=e431]: Codex completions
+                      - paragraph [ref=e432]: Completion pushes sent from Codex into Notae.
+                    - checkbox [checked] [ref=e435] [cursor=pointer]
+          - generic [ref=e437]:
+            - heading "Push delivery state" [level=2] [ref=e438]
+            - paragraph [ref=e439]: No push subscriptions are registered for this account yet.
+          - generic [ref=e440]:
+            - heading "Email notifications" [level=2] [ref=e441]
+            - generic [ref=e442]:
+              - generic [ref=e443]:
+                - paragraph [ref=e444]: Activity email default
+                - paragraph [ref=e445]: Default email behaviour for comments, mentions, invites, reminders, and access requests across workspaces.
+              - checkbox [checked] [ref=e448] [cursor=pointer]
+            - generic [ref=e450]:
+              - generic [ref=e451]:
+                - paragraph [ref=e452]: Always send email notifications
+                - paragraph [ref=e453]: Send workspace emails even while active in Notae.
+              - checkbox [ref=e456] [cursor=pointer]
+            - generic [ref=e458]:
+              - generic [ref=e459]:
+                - paragraph [ref=e460]: Nota updates
+                - paragraph [ref=e461]: Digest emails for followed and owned Notarum.
+              - checkbox [checked] [ref=e464] [cursor=pointer]
+            - generic [ref=e466]:
+              - generic [ref=e467]:
+                - paragraph [ref=e468]: Workspace digest
+                - paragraph [ref=e469]: Digest emails about workspace activity summaries.
+              - checkbox [checked] [ref=e472] [cursor=pointer]
+  - navigation "Primary mobile navigation" [ref=e474]:
+    - link "Home" [ref=e475] [cursor=pointer]:
+      - /url: /w/mobile-polish
+      - img [ref=e477]
+      - generic [ref=e480]: Home
+    - link "Search" [ref=e481] [cursor=pointer]:
+      - /url: /w/mobile-polish/search
+      - img [ref=e483]
+      - generic [ref=e486]: Search
+    - link "Calendar" [ref=e487] [cursor=pointer]:
+      - /url: /w/mobile-polish/kalendarium
+      - img [ref=e489]
+      - generic [ref=e492]: Calendar
+    - link "Mail" [ref=e493] [cursor=pointer]:
+      - /url: /w/mobile-polish/epistularium
+      - img [ref=e495]
+      - generic [ref=e498]: Mail
+    - link "Library" [ref=e499] [cursor=pointer]:
+      - /url: /w/mobile-polish/library
+      - img [ref=e501]
+      - generic [ref=e505]: Library
+  - button "Open AI assistant" [ref=e507] [cursor=pointer]
