@@ -4,7 +4,8 @@ RSpec.describe "ops scripts" do
   it "keeps the backup and restore helpers shell-valid" do
     scripts = [
       Rails.root.join("script/ops/backup_notae_production.sh"),
-      Rails.root.join("script/ops/restore_notae_production.sh")
+      Rails.root.join("script/ops/restore_notae_production.sh"),
+      Rails.root.join("script/ops/verify_notae_storage_recovery.sh")
     ]
 
     scripts.each do |script|

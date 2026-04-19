@@ -98,10 +98,27 @@ To verify storage recovery without a full rollback:
 
 1. restore a backup into a non-production environment
 2. identify one known uploaded file or cover image
-3. confirm the file renders in-app
-4. compare the restored file count against the backup archive contents
+3. run the verifier against the restored `storage/` tree
+4. confirm the file renders in-app
 
-The storage archive contents can be listed without extracting:
+Use the helper:
+
+```bash
+cd /home/esquarenews/apps/notae
+script/ops/verify_notae_storage_recovery.sh \
+  /var/backups/notae/20260419_190000 \
+  /home/esquarenews/apps/notae-staging/storage \
+  uploads/2026/04/sample-file.png
+```
+
+The verifier:
+
+- compares the archived file manifest against the restored `storage/` tree
+- fails if any archived files are missing from the restored copy
+- optionally verifies one specific expected file path
+- reports extra restored files separately so generated derivatives are visible during the drill
+
+The storage archive contents can still be listed directly when needed:
 
 ```bash
 tar -tzf /var/backups/notae/20260419_190000/storage.tar.gz | head
