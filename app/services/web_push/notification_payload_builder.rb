@@ -14,7 +14,8 @@ module WebPush
         url: pwa_notification_launch_path(id: notification.id),
         tag: "notae-#{notification.notification_type}-#{notification.id}",
         icon: "/icon-192-v5.png",
-        badge: "/icon-192-v5.png"
+        badge: "/icon-192-v5.png",
+        require_interaction: require_interaction?
       }
     end
 
@@ -111,11 +112,15 @@ module WebPush
     end
 
     def codex_completion_title
-      notification.metadata["title"].to_s.presence || "Codex request completed"
+      notification.codex_completion_title
     end
 
     def codex_completion_body
       comment_excerpt(notification.metadata["body"].to_s)
+    end
+
+    def require_interaction?
+      notification.codex_completion_notification?
     end
 
     def knowledge_suggestion_body(suggestion)

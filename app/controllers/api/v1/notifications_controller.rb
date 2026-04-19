@@ -45,7 +45,7 @@ module Api
         path = codex_completion_params[:path].to_s.strip
 
         {
-          "title" => title.presence || "Codex request completed",
+          "title" => Notification.normalize_codex_completion_title(title),
           "body" => body.presence,
           "path" => normalize_internal_path(path)
         }.compact

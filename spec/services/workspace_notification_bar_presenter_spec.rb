@@ -140,6 +140,34 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.recent_update_headline).to eq("1 new workspace update")
   end
 
+  it "surfaces codex completions as a dedicated AI alert with the codex title" do
+    user = User.create!(email: "notification-bar-codex@example.com", password: "password123", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "Codex status workspace", slug: "codex-status-workspace", shell_status_bar_mode: "all")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    Notification.create!(
+      workspace: workspace,
+      recipient: user,
+      actor: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "Grid cleanup ready",
+        "body" => "The layout pass is ready for review.",
+        "path" => "/w/#{workspace.slug}/library"
+      }
+    )
+
+    presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
+
+    expect(presenter.recent_ai_update_count).to eq(1)
+    expect(presenter.recent_ai_update_present?).to be(true)
+    expect(presenter.recent_ai_update_kind_label).to eq("Codex")
+    expect(presenter.recent_ai_update_headline).to eq("codex: Grid cleanup ready")
+    expect(presenter.recent_ai_update_detail).to eq("The layout pass is ready for review.")
+    expect(presenter.recent_ai_update_path).to eq("/w/#{workspace.slug}/library")
+    expect(presenter.recent_update_count).to eq(0)
+  end
+
   it "surfaces the daily summary agenda in the shell widget detail" do
     user = User.create!(email: "notification-bar-daily@example.com", password: "password123", time_zone: "Australia/Melbourne")
     workspace = Workspace.create!(name: "Daily AI status workspace", slug: "daily-ai-status-workspace", shell_status_bar_mode: "all")

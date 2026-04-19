@@ -34,7 +34,7 @@ RSpec.describe "API V1 notifications", type: :request do
     expect(notification.recipient_id).to eq(user.id)
     expect(notification.actor_id).to eq(user.id)
     expect(notification.metadata).to include(
-      "title" => "Codex request completed",
+      "title" => "codex: request completed",
       "body" => "UI pass is ready for review.",
       "path" => "/w/#{workspace.slug}/library"
     )
@@ -50,6 +50,37 @@ RSpec.describe "API V1 notifications", type: :request do
       http_status: 201
     )
     expect(audit_event.required_scopes_json).to eq([ ApiToken::SCOPE_NOTIFICATIONS_WRITE ])
+  end
+
+  it "prefixes custom codex titles once" do
+    user = User.create!(email: "api-notifications-custom-title@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Notifications custom title", slug: "api-notifications-custom-title")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    token = ApiToken.create!(user: user, name: "Notifications custom title API", scopes_json: [ ApiToken::SCOPE_NOTIFICATIONS_WRITE ])
+
+    post "/api/v1/workspaces/#{workspace.slug}/notifications/codex_completion",
+         params: {
+           notification: {
+             title: "Grid cleanup ready"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    notification = Notification.find(json_body.dig("data", "notification", "id"))
+    expect(notification.metadata["title"]).to eq("codex: Grid cleanup ready")
+
+    post "/api/v1/workspaces/#{workspace.slug}/notifications/codex_completion",
+         params: {
+           notification: {
+             title: "codex: Grid cleanup ready"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    second_notification = Notification.find(json_body.dig("data", "notification", "id"))
+    expect(second_notification.metadata["title"]).to eq("codex: Grid cleanup ready")
   end
 
   it "falls back to the workspace home when given a non-internal destination" do

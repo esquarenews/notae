@@ -41,4 +41,34 @@ RSpec.describe "Workspace notification bar", type: :request do
     expect(payload.dig("data", "html")).to include("Follow up with the design team")
     expect(payload.dig("data", "html")).to include(workspace_path(workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"))
   end
+
+  it "renders codex completion cards in the AI alert stream" do
+    user = User.create!(email: "workspace-bar-codex@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Workspace Bar Codex", slug: "workspace-bar-codex", shell_status_bar_mode: "all")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    Notification.create!(
+      workspace: workspace,
+      recipient: user,
+      actor: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "Layout pass ready",
+        "body" => "The shell polish is ready for review.",
+        "path" => "/w/#{workspace.slug}/library"
+      }
+    )
+
+    sign_in user
+    get workspace_notification_bar_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+
+    payload = JSON.parse(response.body)
+    expect(payload.dig("data", "has_alerts")).to eq(true)
+    expect(payload.dig("data", "html")).to include("Codex")
+    expect(payload.dig("data", "html")).to include("codex: Layout pass ready")
+    expect(payload.dig("data", "html")).to include("The shell polish is ready for review.")
+    expect(payload.dig("data", "html")).to include("/w/#{workspace.slug}/library")
+  end
 end

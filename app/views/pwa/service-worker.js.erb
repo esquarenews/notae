@@ -216,6 +216,7 @@ async function showPushNotification(event) {
     icon: payload.icon || "/icon-192-v5.png",
     badge: payload.badge || "/icon-192-v5.png",
     tag: payload.tag || "notae-notification",
+    requireInteraction: Boolean(payload.require_interaction),
     renotify: false,
     data: {
       url: payload.url || "/app",

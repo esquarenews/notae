@@ -73,6 +73,7 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("async function networkFirstDocument(request)")
     expect(response.body).to include("self.addEventListener(\"push\"")
     expect(response.body).to include("self.addEventListener(\"notificationclick\"")
+    expect(response.body).to include("requireInteraction: Boolean(payload.require_interaction)")
 
     Tempfile.create([ "notae-pwa-service-worker", ".js" ]) do |file|
       file.write(response.body)

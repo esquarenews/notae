@@ -50,6 +50,30 @@ class Notification < ApplicationRecord
     notification_type == TYPE_KNOWLEDGE_SUGGESTION_READY
   end
 
+  def codex_completion_notification?
+    notification_type == TYPE_CODEX_REQUEST_COMPLETED
+  end
+
+  def codex_completion_title
+    self.class.normalize_codex_completion_title(metadata["title"])
+  end
+
+  def self.normalize_codex_completion_title(raw_title)
+    title = raw_title.to_s.strip
+    return "codex: request completed" if title.blank?
+
+    if title.match?(/\Acodex:/i)
+      suffix = title.sub(/\Acodex:\s*/i, "").strip
+      return "codex: request completed" if suffix.blank?
+
+      return "codex: #{suffix}"
+    end
+
+    suffix = title.sub(/\Acodex\b[:\-\s]*/i, "").strip
+    suffix = "request completed" if suffix.blank?
+    "codex: #{suffix}"
+  end
+
   private
 
   def enqueue_web_push_delivery

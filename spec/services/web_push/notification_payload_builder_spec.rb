@@ -133,9 +133,10 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
 
     payload = described_class.new(notification: notification).call
 
-    expect(payload[:title]).to eq("Codex request completed")
+    expect(payload[:title]).to eq("codex: request completed")
     expect(payload[:body]).to eq("The grid cleanup is ready for review.")
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
+    expect(payload[:require_interaction]).to eq(true)
   end
 
   it "builds a test push payload from notification metadata" do

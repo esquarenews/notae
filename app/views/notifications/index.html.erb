@@ -31,7 +31,7 @@
               <% elsif notification.notification_type == Notification::TYPE_WORKFLOW_FAILED %>
                 Workflow failed
               <% elsif notification.notification_type == Notification::TYPE_CODEX_REQUEST_COMPLETED %>
-                <%= notification.metadata["title"].presence || "Codex request completed" %>
+                <%= notification.codex_completion_title %>
               <% elsif notification.notification_type == Notification::TYPE_TEST_PUSH %>
                 <%= notification.metadata["title"].presence || "Notae test notification" %>
               <% elsif notification.knowledge_suggestion_notification? %>

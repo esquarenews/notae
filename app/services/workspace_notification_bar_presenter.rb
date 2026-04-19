@@ -9,7 +9,8 @@ class WorkspaceNotificationBarPresenter
     Notification::TYPE_AGENT_ACTION_APPROVED,
     Notification::TYPE_AGENT_ACTION_REJECTED,
     Notification::TYPE_WORKFLOW_FAILED,
-    Notification::TYPE_KNOWLEDGE_SUGGESTION_READY
+    Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+    Notification::TYPE_CODEX_REQUEST_COMPLETED
   ].freeze
 
   attr_reader :workspace, :user, :reference_time
@@ -147,6 +148,14 @@ class WorkspaceNotificationBarPresenter
     else
       [ payload[:title].to_s.presence, payload[:body].to_s.presence ].compact.join(" · ").presence || "Recent AI activity needs review."
     end
+  end
+
+  def recent_ai_update_kind_label
+    latest_notification = recent_ai_update_latest_notification
+    return "Notae AI" if latest_notification.blank?
+    return "Notae AI" unless recent_ai_update_count == 1
+
+    latest_notification.codex_completion_notification? ? "Codex" : "Notae AI"
   end
 
   def recent_ai_update_path
