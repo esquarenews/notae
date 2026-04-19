@@ -12,8 +12,9 @@
       pwa_offline_path
     ]
   ).uniq
+  cache_version = "pwa-#{Digest::SHA256.hexdigest(precache_urls.join("|")).first(12)}"
 %>
-const CACHE_VERSION = "pwa-v6"
+const CACHE_VERSION = "<%= cache_version %>"
 const SHELL_CACHE = `notae-shell-${CACHE_VERSION}`
 const DOCUMENT_CACHE = `notae-documents-${CACHE_VERSION}`
 const ASSET_CACHE = `notae-assets-${CACHE_VERSION}`
