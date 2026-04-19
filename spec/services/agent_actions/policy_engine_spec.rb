@@ -195,4 +195,58 @@ RSpec.describe AgentActions::PolicyEngine do
     expect(email_decision.approval_required).to eq(false)
     expect(calendar_decision.approval_required).to eq(true)
   end
+
+  it "forces approval for agent-authored internal drafts in shared workspaces" do
+    workspace = Workspace.create!(name: "Policy Engine Shared Internal", slug: "policy-engine-shared-internal")
+    owner = User.create!(email: "policy-engine-shared-internal-owner@example.com", password: "password123")
+    collaborator = User.create!(email: "policy-engine-shared-internal-collab@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: collaborator, role: :member)
+    AgentPolicy.create!(
+      workspace: workspace,
+      approval_required: false,
+      dry_run_required: false
+    )
+
+    decision = described_class.new(
+      workspace: workspace,
+      actor: owner,
+      target_system: "notae",
+      draft_type: "nota_draft",
+      lifecycle_operation: described_class::LIFECYCLE_DRAFT,
+      proposed_by: "api"
+    ).evaluate
+
+    expect(decision.allowed).to eq(true)
+    expect(decision.approval_required).to eq(true)
+    expect(decision.safety_overrides).to include(described_class::SHARED_WORKSPACE_APPROVAL_OVERRIDE)
+    expect(decision.policy_snapshot.fetch("effective_approval_required")).to eq(true)
+  end
+
+  it "preserves workspace approval settings for manual drafts in shared workspaces" do
+    workspace = Workspace.create!(name: "Policy Engine Shared Manual", slug: "policy-engine-shared-manual")
+    owner = User.create!(email: "policy-engine-shared-manual-owner@example.com", password: "password123")
+    collaborator = User.create!(email: "policy-engine-shared-manual-collab@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: collaborator, role: :member)
+    AgentPolicy.create!(
+      workspace: workspace,
+      approval_required: false,
+      dry_run_required: false
+    )
+
+    decision = described_class.new(
+      workspace: workspace,
+      actor: owner,
+      target_system: "notae",
+      draft_type: "nota_draft",
+      lifecycle_operation: described_class::LIFECYCLE_DRAFT,
+      proposed_by: "manual"
+    ).evaluate
+
+    expect(decision.allowed).to eq(true)
+    expect(decision.approval_required).to eq(false)
+    expect(decision.safety_overrides).to eq([])
+    expect(decision.policy_snapshot.fetch("effective_approval_required")).to eq(false)
+  end
 end

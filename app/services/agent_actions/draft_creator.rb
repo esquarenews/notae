@@ -56,7 +56,8 @@ module AgentActions
         target_system: attributes.fetch(:target_system),
         draft_type: attributes.fetch(:draft_type),
         lifecycle_operation: lifecycle_operation,
-        estimated_cost_usd: attributes.fetch(:estimated_cost_usd, 0.0)
+        estimated_cost_usd: attributes.fetch(:estimated_cost_usd, 0.0),
+        proposed_by: attributes.fetch(:proposed_by, "manual")
       ).evaluate
     end
   end

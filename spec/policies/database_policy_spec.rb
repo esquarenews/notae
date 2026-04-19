@@ -57,6 +57,31 @@ RSpec.describe DatabasePolicy do
     expect(described_class.new(other, specific_database).show?).to be(false)
   end
 
+  it "blocks updates for databases the user cannot see" do
+    workspace = Workspace.create!(name: "Database update visibility policy", slug: "database-update-visibility-policy")
+    owner = User.create!(email: "database-update-owner@example.com", password: "password123")
+    member = User.create!(email: "database-update-member@example.com", password: "password123")
+
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+
+    hidden_private_database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Hidden private grid",
+      permission_mode: :private_database
+    )
+    shared_database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Shared grid",
+      permission_mode: :shared_to_workspace
+    )
+
+    expect(described_class.new(member, hidden_private_database).update?).to be(false)
+    expect(described_class.new(member, shared_database).update?).to be(true)
+  end
+
   it "scope returns only visible databases in accessible workspaces" do
     workspace = Workspace.create!(name: "Database scope policy", slug: "database-scope-policy")
     other_workspace = Workspace.create!(name: "Other database scope", slug: "other-database-scope")

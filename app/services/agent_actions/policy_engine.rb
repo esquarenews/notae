@@ -41,6 +41,7 @@ module AgentActions
       :allowed_draft_types,
       :allowed_lifecycle_operations,
       :lifecycle_operation,
+      :safety_overrides,
       :policy_snapshot,
       keyword_init: true
     ) do
@@ -58,12 +59,25 @@ module AgentActions
           "allowed_draft_types" => Array(allowed_draft_types),
           "allowed_lifecycle_operations" => Array(allowed_lifecycle_operations),
           "lifecycle_operation" => lifecycle_operation,
+          "safety_overrides" => Array(safety_overrides),
           "policy_snapshot" => policy_snapshot
         }
       end
     end
 
-    def initialize(workspace:, actor:, target_system:, draft_type:, lifecycle_operation:, actor_role_override: nil, estimated_cost_usd: 0.0)
+    SHARED_WORKSPACE_APPROVAL_OVERRIDE = "Shared workspaces always require approval for agent-authored internal writes".freeze
+    INTERNAL_WRITE_DRAFT_TYPES = %w[nota_draft task_ticket calendar_hold].freeze
+
+    def initialize(
+      workspace:,
+      actor:,
+      target_system:,
+      draft_type:,
+      lifecycle_operation:,
+      actor_role_override: nil,
+      estimated_cost_usd: 0.0,
+      proposed_by: "manual"
+    )
       @workspace = workspace
       @actor = actor
       @target_system = target_system.to_s
@@ -71,12 +85,15 @@ module AgentActions
       @lifecycle_operation = lifecycle_operation.to_s
       @actor_role_override = actor_role_override
       @estimated_cost_usd = estimated_cost_usd.to_f
+      @proposed_by = proposed_by.to_s.presence || "manual"
     end
 
     def evaluate
       active_policy = policy
       reasons = []
       role = resolved_role
+      approval_required = active_policy.approval_required_for_draft_type?(draft_type)
+      safety_overrides = []
 
       reasons << "Unsupported target system" unless Search::AssistantQueryService::SUPPORTED_DRAFT_TARGETS.include?(target_system)
       reasons << "Unsupported draft type" unless AgentAction::DRAFT_TYPE_OPTIONS.include?(draft_type)
@@ -94,12 +111,16 @@ module AgentActions
       if active_policy.max_estimated_cost_usd.to_f.positive? && estimated_cost_usd > active_policy.max_estimated_cost_usd.to_f
         reasons << "Estimated cost exceeds workspace policy"
       end
+      if shared_workspace_requires_approval_override?(approval_required:)
+        approval_required = true
+        safety_overrides << SHARED_WORKSPACE_APPROVAL_OVERRIDE
+      end
 
       Decision.new(
         allowed: reasons.empty?,
         role: role,
         policy_id: active_policy.id,
-        approval_required: active_policy.approval_required_for_draft_type?(draft_type),
+        approval_required: approval_required,
         dry_run_only: active_policy.dry_run_required?,
         estimated_cost_usd: estimated_cost_usd,
         max_estimated_cost_usd: active_policy.max_estimated_cost_usd,
@@ -108,13 +129,17 @@ module AgentActions
         allowed_draft_types: active_policy.allowed_draft_types,
         allowed_lifecycle_operations: active_policy.allowed_lifecycle_operations,
         lifecycle_operation: lifecycle_operation,
-        policy_snapshot: active_policy.policy_snapshot
+        safety_overrides: safety_overrides,
+        policy_snapshot: active_policy.policy_snapshot.merge(
+          "effective_approval_required" => approval_required,
+          "safety_overrides" => safety_overrides
+        )
       )
     end
 
     private
 
-    attr_reader :workspace, :actor, :target_system, :draft_type, :lifecycle_operation, :actor_role_override, :estimated_cost_usd
+    attr_reader :workspace, :actor, :target_system, :draft_type, :lifecycle_operation, :actor_role_override, :estimated_cost_usd, :proposed_by
 
     def resolved_role
       return actor_role_override if actor_role_override.present?
@@ -148,6 +173,24 @@ module AgentActions
       adapter.supports_draft_type?(draft_type)
     rescue AgentActions::AdapterRegistry::Error
       false
+    end
+
+    def shared_workspace_requires_approval_override?(approval_required:)
+      return false if approval_required
+      return false unless lifecycle_operation == LIFECYCLE_DRAFT
+      return false unless INTERNAL_WRITE_DRAFT_TYPES.include?(draft_type)
+      return false unless proposed_by != "manual"
+      return false unless shared_workspace?
+
+      true
+    end
+
+    def shared_workspace?
+      human_memberships_count > 1
+    end
+
+    def human_memberships_count
+      @human_memberships_count ||= workspace.memberships.where.not(role: Membership.roles[:automation_agent]).count
     end
   end
 end

@@ -20,6 +20,7 @@ class DatabasePolicy < ApplicationPolicy
   end
 
   def update?
+    return false unless show?
     return false unless create?
     return true unless record.respond_to?(:locked?) && record.locked?
 

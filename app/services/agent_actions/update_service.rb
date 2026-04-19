@@ -68,7 +68,8 @@ module AgentActions
         actor: actor,
         target_system: agent_action.target_system,
         draft_type: agent_action.draft_type,
-        lifecycle_operation: AgentActions::PolicyEngine::LIFECYCLE_UPDATE
+        lifecycle_operation: AgentActions::PolicyEngine::LIFECYCLE_UPDATE,
+        proposed_by: agent_action.proposed_by
       ).evaluate
     end
   end

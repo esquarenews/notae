@@ -190,4 +190,42 @@ RSpec.describe "API V1 Agent actions", type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(json_body.fetch("error").fetch("message")).to eq("Selected calendar could not be found.")
   end
+
+  it "forces approval for api-authored internal drafts in shared workspaces even when policy approval is off" do
+    owner = User.create!(email: "api-agent-actions-shared-owner@example.com", password: "password123")
+    collaborator = User.create!(email: "api-agent-actions-shared-collab@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Agent Actions Shared", slug: "api-agent-actions-shared")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: collaborator, role: :member)
+    AgentPolicy.create!(
+      workspace: workspace,
+      approval_required: false,
+      dry_run_required: false
+    )
+    token = ApiToken.create!(user: owner, name: "Agent shared draft token")
+
+    post "/api/v1/workspaces/#{workspace.slug}/agent_actions",
+         params: {
+           agent_action: {
+             title: "Draft roadmap note",
+             target_system: "notae",
+             draft_type: "nota_draft",
+             payload_json: {
+               title: "Roadmap note",
+               body: "Capture the rollout sequence."
+             }
+           }
+         },
+         headers: auth_headers(token),
+         as: :json
+
+    expect(response).to have_http_status(:created)
+    payload = json_body.fetch("data")
+    expect(payload.fetch("approval_required")).to eq(true)
+    expect(payload.dig("policy_evaluation_json", "safety_overrides")).to include(
+      AgentActions::PolicyEngine::SHARED_WORKSPACE_APPROVAL_OVERRIDE
+    )
+    expect(payload.dig("policy_evaluation_json", "policy_snapshot", "effective_approval_required")).to eq(true)
+  end
+
 end

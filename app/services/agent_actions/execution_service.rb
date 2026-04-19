@@ -250,7 +250,7 @@ module AgentActions
     end
 
     def scoped_databases
-      workspace.databases.active.select { |database| Pundit.policy!(actor, database).update? }
+      Pundit.policy_scope!(actor, workspace.databases.active).select { |database| Pundit.policy!(actor, database).update? }
     end
 
     def scoped_calendars
