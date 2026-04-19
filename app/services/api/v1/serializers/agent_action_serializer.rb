@@ -25,6 +25,7 @@ module Api
             payload_json: agent_action.payload_json,
             preview_json: AgentActions::PreviewBuilder.new(agent_action).to_h,
             metadata_json: agent_action.metadata_json,
+            audit_context_json: agent_action.audit_context,
             result_json: agent_action.result_json,
             policy_evaluation_json: agent_action.policy_evaluation_json,
             created_at: agent_action.created_at&.iso8601(6),

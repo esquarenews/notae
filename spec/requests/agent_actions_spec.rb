@@ -36,6 +36,31 @@ RSpec.describe "Agent actions", type: :request do
     expect(agent_action.review_history.pluck(:event_type)).to eq(%w[policy_evaluated draft_created])
   end
 
+  it "limits new draft options to the workspace policy" do
+    AgentPolicy.create!(
+      workspace: workspace,
+      allowed_target_systems_json: %w[gmail],
+      allowed_draft_types_json: %w[email_draft],
+      allowed_lifecycle_operations_json: AgentActions::PolicyEngine::LIFECYCLE_OPTIONS,
+      author_roles_json: %w[member owner],
+      approver_roles_json: %w[owner]
+    )
+    sign_in member
+
+    get new_agent_action_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Available options reflect the current workspace policy.")
+
+    document = Nokogiri::HTML(response.body)
+    draft_options = document.css("select[name='agent_action[draft_type]'] option").map { |node| node["value"] }
+    target_options = document.css("select[name='agent_action[target_system]'] option").map { |node| node["value"] }
+
+    expect(draft_options).to eq(["email_draft"])
+    expect(target_options).to eq(["gmail"])
+    expect(response.body).not_to include("GitHub Comment Draft")
+  end
+
   it "updates a pending draft and keeps the revision comment in history" do
     agent_action = AgentActions::DraftCreator.new(
       workspace: workspace,
@@ -136,6 +161,10 @@ RSpec.describe "Agent actions", type: :request do
     get agent_action_path(workspace_slug: workspace.slug, id: agent_action.id)
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Attribution & execution identity")
+    expect(response.body).to include("Manual")
+    expect(response.body).to include(owner.email)
+    expect(response.body).to include("Live internal changes execute as the approving user.")
     expect(response.body).to include("This draft is now read-only.")
     expect(response.body).to include("Execution summary")
     expect(response.body).to include("Created event in Team Calendar.")

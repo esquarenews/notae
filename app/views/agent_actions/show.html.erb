@@ -94,6 +94,28 @@
       <div class="notae-agent-action-audit-stack">
         <section class="notae-agent-action-preview-card">
           <div class="notae-home-card-head">
+            <h3>Attribution & execution identity</h3>
+          </div>
+          <% if (attribution_facts = agent_action_attribution_facts(@agent_action)).any? %>
+            <dl class="notae-agent-action-fact-grid">
+              <% attribution_facts.each do |fact| %>
+                <div class="notae-agent-action-fact">
+                  <dt><%= fact[:label] %></dt>
+                  <dd><%= fact[:value] %></dd>
+                </div>
+              <% end %>
+            </dl>
+          <% else %>
+            <p class="notae-page-subtle">No attribution data recorded yet.</p>
+          <% end %>
+          <details class="notae-agent-action-raw-details">
+            <summary>Raw attribution payload</summary>
+            <pre class="notae-workspace-home-json"><%= agent_action_pretty_json(@agent_action.audit_context) %></pre>
+          </details>
+        </section>
+
+        <section class="notae-agent-action-preview-card">
+          <div class="notae-home-card-head">
             <h3>Policy decision</h3>
           </div>
           <% if (policy_facts = agent_action_policy_facts(@agent_action)).any? %>

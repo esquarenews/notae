@@ -93,6 +93,11 @@ class AgentAction < ApplicationRecord
     agent_action_events.order(:sequence_number)
   end
 
+  def audit_context
+    context = metadata_json.to_h["audit_context"]
+    context.is_a?(Hash) ? context : {}
+  end
+
   private
 
   def reversible_target_type?

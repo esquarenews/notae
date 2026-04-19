@@ -13,6 +13,8 @@ module AgentActions
       raise Error, decision.reasons.join(", ") unless decision.allowed
 
       AgentAction.transaction do
+        metadata = attributes.fetch(:metadata_json, {}).to_h.deep_dup
+        metadata["audit_context"] = draft_audit_context
         agent_action = AgentAction.create!(
           workspace: workspace,
           user: actor,
@@ -24,7 +26,7 @@ module AgentActions
           policy_evaluation_json: decision.to_h,
           approval_required: decision.approval_required,
           dry_run: decision.dry_run_only,
-          metadata_json: attributes.fetch(:metadata_json, {})
+          metadata_json: metadata
         )
         preview_after = AgentActions::PreviewBuilder.new(agent_action).to_h["after"]
         agent_action.log_event!(event_type: "policy_evaluated", actor: actor, details: decision.to_h)
@@ -59,6 +61,25 @@ module AgentActions
         estimated_cost_usd: attributes.fetch(:estimated_cost_usd, 0.0),
         proposed_by: attributes.fetch(:proposed_by, "manual")
       ).evaluate
+    end
+
+    def draft_audit_context
+      {
+        "proposal_source" => attributes.fetch(:proposed_by, "manual"),
+        "draft_author" => actor_context(actor),
+        "impersonation" => {
+          "mode" => "no_impersonation",
+          "summary" => "Notae records the authenticated actor and does not impersonate another user for agent drafts."
+        }
+      }
+    end
+
+    def actor_context(user)
+      {
+        "user_id" => user&.id,
+        "email" => user&.email,
+        "workspace_role" => Membership.find_by(user_id: user&.id, workspace_id: workspace.id)&.role
+      }.compact
     end
   end
 end

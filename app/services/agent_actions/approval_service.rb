@@ -23,6 +23,7 @@ module AgentActions
           destination_database_id: destination_database_id,
           destination_calendar_id: destination_calendar_id
         ).call
+        audit_context = merged_audit_context(result:)
 
         agent_action.update!(
           status: AgentAction::STATUS_APPROVED,
@@ -33,6 +34,7 @@ module AgentActions
           executed_at: Time.current,
           dry_run: ActiveModel::Type::Boolean.new.cast(result["dry_run"]),
           result_json: result,
+          metadata_json: agent_action.metadata_json.to_h.merge("audit_context" => audit_context),
           policy_evaluation_json: decision.to_h
         )
         agent_action.log_event!(event_type: "policy_evaluated", actor: actor, details: decision.to_h)
@@ -60,6 +62,25 @@ module AgentActions
         lifecycle_operation: AgentActions::PolicyEngine::LIFECYCLE_APPROVE,
         proposed_by: agent_action.proposed_by
       ).evaluate
+    end
+
+    def merged_audit_context(result:)
+      existing = agent_action.audit_context.deep_dup
+      existing["approval"] = actor_context(actor)
+      existing["execution"] = {
+        "mode" => result["dry_run"] ? "dry_run" : "approver_bound",
+        "summary" => result["dry_run"] ? "No live change was executed." : "Live internal changes execute as the approving user.",
+        "actor" => result["dry_run"] ? nil : actor_context(actor)
+      }.compact
+      existing
+    end
+
+    def actor_context(user)
+      {
+        "user_id" => user&.id,
+        "email" => user&.email,
+        "workspace_role" => Membership.find_by(user_id: user&.id, workspace_id: agent_action.workspace_id)&.role
+      }.compact
     end
   end
 end

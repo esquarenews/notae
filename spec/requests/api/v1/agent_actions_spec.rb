@@ -34,6 +34,8 @@ RSpec.describe "API V1 Agent actions", type: :request do
     payload = json_body.fetch("data")
     expect(payload.fetch("status")).to eq("pending")
     expect(payload.fetch("proposed_by")).to eq("api")
+    expect(payload.dig("audit_context_json", "proposal_source")).to eq("api")
+    expect(payload.dig("audit_context_json", "draft_author", "email")).to eq(member.email)
     expect(payload.dig("preview_json", "mode")).to eq("create")
     expect(payload.dig("preview_json", "changes")).to include(
       a_hash_including("key" => "title", "after" => "Draft roadmap note")
@@ -80,6 +82,8 @@ RSpec.describe "API V1 Agent actions", type: :request do
     created_row = DbRow.find(payload.dig("result_json", "target_id"))
 
     expect(payload.fetch("status")).to eq("approved")
+    expect(payload.dig("audit_context_json", "approval", "email")).to eq(owner.email)
+    expect(payload.dig("audit_context_json", "execution", "mode")).to eq("approver_bound")
     expect(payload.dig("result_json", "summary")).to eq("Created task in Task Inbox.")
     expect(payload.dig("result_json", "execution_preview", "changes")).to include(
       a_hash_including("label" => "Draft title", "after" => "Follow up"),

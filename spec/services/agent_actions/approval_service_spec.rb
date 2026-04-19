@@ -45,6 +45,9 @@ RSpec.describe AgentActions::ApprovalService do
     expect(agent_action.approved_at).to be_present
     expect(agent_action.executed_at).to be_present
     expect(agent_action.dry_run).to be(true)
+    expect(agent_action.audit_context.dig("draft_author", "email")).to eq(author.email)
+    expect(agent_action.audit_context.dig("approval", "email")).to eq(approver.email)
+    expect(agent_action.audit_context.dig("execution", "mode")).to eq("dry_run")
     expect(agent_action.result_json.fetch("dry_run")).to eq(true)
     expect(agent_action.result_json.fetch("target_system")).to eq("gmail")
     expect(agent_action.result_json.fetch("summary")).to include("No message was sent")
@@ -110,6 +113,8 @@ RSpec.describe AgentActions::ApprovalService do
 
     expect(agent_action.status).to eq(AgentAction::STATUS_APPROVED)
     expect(agent_action.dry_run).to be(false)
+    expect(agent_action.audit_context.dig("execution", "mode")).to eq("approver_bound")
+    expect(agent_action.audit_context.dig("execution", "actor", "email")).to eq(approver.email)
     expect(agent_action.result_json.fetch("dry_run")).to eq(false)
     expect(agent_action.result_json.fetch("target_type")).to eq("KalendariumEvent")
     expect(agent_action.result_json.fetch("summary")).to eq("Created event in Ops Calendar.")

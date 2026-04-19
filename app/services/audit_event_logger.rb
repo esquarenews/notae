@@ -27,6 +27,7 @@ class AuditEventLogger
           target_system: agent_action.target_system,
           draft_type: agent_action.draft_type,
           status: agent_action.status,
+          audit_context: agent_action.audit_context,
           comment: agent_action_event.comment,
           details: agent_action_event.details_json.to_h,
           entry_hash: agent_action_event.entry_hash,

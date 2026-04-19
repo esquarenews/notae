@@ -4,7 +4,7 @@
               class: "notae-workspace-home-stack",
               data: {
                 controller: "agent-action-form",
-                agent_action_form_target_matrix_value: agent_action_target_matrix_json
+                agent_action_form_target_matrix_value: agent_action_allowed_target_matrix_json(workspace)
               } do |form| %>
   <%= form.text_field :title, required: true, class: "notae-auth-input", placeholder: "Draft title" %>
 
@@ -13,13 +13,14 @@
     <%= form.hidden_field :draft_type %>
     <%= form.hidden_field :proposed_by %>
   <% else %>
+    <p class="notae-page-subtle">Available options reflect the current workspace policy.</p>
     <%= form.select :draft_type,
-                    AgentAction::DRAFT_TYPE_OPTIONS.map { |value| [ value.humanize, value ] },
+                    agent_action_allowed_draft_type_options(workspace),
                     {},
                     class: "notae-auth-input",
                     data: { agent_action_form_target: "draftTypeSelect", action: "change->agent-action-form#sync" } %>
     <%= form.select :target_system,
-                    AgentAction::TARGET_SYSTEM_OPTIONS.map { |value| [ value.titleize, value ] },
+                    agent_action_allowed_target_system_options(workspace),
                     {},
                     class: "notae-auth-input",
                     data: { agent_action_form_target: "targetSystemSelect" } %>

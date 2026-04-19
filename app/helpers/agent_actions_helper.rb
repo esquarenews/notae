@@ -68,6 +68,27 @@ module AgentActionsHelper
     AgentAction::TARGET_SYSTEMS_BY_DRAFT_TYPE.to_json
   end
 
+  def agent_action_allowed_draft_type_options(workspace)
+    policy = workspace.agent_policy || workspace.build_agent_policy
+    policy.allowed_draft_types.map { |value| [ value.humanize, value ] }
+  end
+
+  def agent_action_allowed_target_system_options(workspace)
+    policy = workspace.agent_policy || workspace.build_agent_policy
+    policy.allowed_target_systems.map { |value| [ value.titleize, value ] }
+  end
+
+  def agent_action_allowed_target_matrix_json(workspace)
+    policy = workspace.agent_policy || workspace.build_agent_policy
+    matrix = AgentAction::TARGET_SYSTEMS_BY_DRAFT_TYPE.each_with_object({}) do |(draft_type, target_systems), allowed|
+      next unless policy.allowed_draft_types.include?(draft_type)
+
+      allowed[draft_type] = target_systems & policy.allowed_target_systems
+    end
+
+    matrix.to_json
+  end
+
   def agent_action_preview_data(agent_action)
     AgentActions::PreviewBuilder.new(agent_action).to_h
   end
@@ -75,6 +96,25 @@ module AgentActionsHelper
   def agent_action_execution_preview(agent_action)
     preview = agent_action.result_json.to_h["execution_preview"]
     preview.is_a?(Hash) ? preview : nil
+  end
+
+  def agent_action_attribution_facts(agent_action)
+    context = agent_action.audit_context
+    draft_author = context["draft_author"].to_h
+    approval = context["approval"].to_h
+    execution = context["execution"].to_h
+
+    compact_agent_action_facts(
+      [
+        fact("Proposed via", humanized_agent_action_proposal_source(context["proposal_source"] || agent_action.proposed_by)),
+        fact("Draft authored by", draft_author["email"].presence),
+        fact("Draft author role", draft_author["workspace_role"].to_s.humanize.presence),
+        fact("Approved by", approval["email"].presence),
+        fact("Approver role", approval["workspace_role"].to_s.humanize.presence),
+        fact("Execution identity", execution["summary"].presence),
+        fact("Execution actor", execution.dig("actor", "email").presence)
+      ]
+    )
   end
 
   def agent_action_latest_event(agent_action)
@@ -213,6 +253,7 @@ module AgentActionsHelper
         fact("Actor role", details["role"].to_s.humanize.presence),
         fact("Approval required", yes_no_label(details["approval_required"])),
         fact("Execution mode", details["dry_run_only"] ? "Dry-run only" : "Live execution allowed"),
+        fact("Safety overrides", Array(details["safety_overrides"]).presence&.to_sentence),
         fact("Reasons", Array(details["reasons"]).presence&.to_sentence),
         fact("Policy id", details["policy_id"])
       ]
@@ -286,6 +327,15 @@ module AgentActionsHelper
     timestamp.in_time_zone.strftime("%d %b %Y · %H:%M")
   rescue ArgumentError, TypeError
     value.to_s.presence || "Unknown"
+  end
+
+  def humanized_agent_action_proposal_source(value)
+    case value.to_s
+    when "ai_assistant" then "AI assistant"
+    when "automation_agent" then "Automation agent"
+    when "api" then "API / MCP"
+    else "Manual"
+    end
   end
 
   def yes_no_label(value)
