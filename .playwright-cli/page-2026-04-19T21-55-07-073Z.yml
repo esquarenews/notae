@@ -1,0 +1,223 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Notification Bar Browser
+        - generic [ref=e9]:
+          - button "＋" [ref=e11] [cursor=pointer]
+          - button "Minimize sidebar" [ref=e12] [cursor=pointer]: ◂
+      - generic [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /w/notification-bar-browser
+            - generic [ref=e16]:
+              - img [ref=e18]
+              - generic [ref=e21]: Home
+          - link "Search" [ref=e22] [cursor=pointer]:
+            - /url: /w/notification-bar-browser/search
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - generic [ref=e28]: Search
+          - link "Notifications" [ref=e29] [cursor=pointer]:
+            - /url: /w/notification-bar-browser/notifications
+            - generic [ref=e30]:
+              - img [ref=e32]
+              - generic [ref=e35]: Notifications
+          - link "Library" [ref=e36] [cursor=pointer]:
+            - /url: /w/notification-bar-browser/library
+            - generic [ref=e37]:
+              - img [ref=e39]
+              - generic [ref=e43]: Library
+          - link "Kalendārium" [ref=e44] [cursor=pointer]:
+            - /url: /w/notification-bar-browser/kalendarium
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Kalendārium
+          - link "Epistularium" [ref=e51] [cursor=pointer]:
+            - /url: /w/notification-bar-browser/epistularium
+            - generic [ref=e52]:
+              - img [ref=e54]
+              - generic [ref=e57]: Epistularium
+          - link "Meetings" [ref=e58] [cursor=pointer]:
+            - /url: /w/notification-bar-browser/meetings
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e64]: Meetings
+          - link "AI Conversation History" [ref=e65] [cursor=pointer]:
+            - /url: /w/notification-bar-browser/ai-conversation-history
+            - generic [ref=e66]:
+              - img [ref=e68]
+              - generic [ref=e71]: AI Conversation History
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - button "Workspaces" [expanded] [ref=e75] [cursor=pointer]:
+                - generic [ref=e76]: ▾
+                - generic [ref=e77]: Workspaces
+              - button "Create new Workspace" [ref=e78] [cursor=pointer]: "[+]"
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "Notification Bar Browser" [ref=e82] [cursor=pointer]:
+                  - /url: /w/notification-bar-browser
+                  - generic [ref=e83]: Notification Bar Browser
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - button "Notarum" [expanded] [ref=e87] [cursor=pointer]:
+                - generic [ref=e88]: ▾
+                - generic [ref=e89]: Notarum
+              - button "Create new Nota" [ref=e91] [cursor=pointer]: "[+]"
+            - paragraph [ref=e93]: No Notarum yet.
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - button "Grids" [expanded] [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: ▾
+                - generic [ref=e98]: Grids
+              - button "Create new Grid" [ref=e100] [cursor=pointer]: "[+]"
+            - paragraph [ref=e102]: No grids yet.
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - button "Meetings" [expanded] [ref=e105] [cursor=pointer]:
+                - generic [ref=e106]: ▾
+                - generic [ref=e107]: Meetings
+              - button "Create new Meeting" [ref=e109] [cursor=pointer]: "[+]"
+            - paragraph [ref=e111]: No meetings yet.
+          - generic [ref=e112]:
+            - button "Favorites" [expanded] [ref=e114] [cursor=pointer]:
+              - generic [ref=e115]: ▾
+              - generic [ref=e116]: Favorites
+            - paragraph [ref=e118]: No favorites yet.
+      - generic [ref=e119]:
+        - link "Settings" [ref=e120] [cursor=pointer]:
+          - /url: /w/notification-bar-browser/settings/preferences
+          - generic [ref=e121]:
+            - img [ref=e123]
+            - generic [ref=e126]: Settings
+        - link "Trash" [ref=e127] [cursor=pointer]:
+          - /url: /w/notification-bar-browser/trash
+          - generic [ref=e128]:
+            - img [ref=e130]
+            - generic [ref=e133]: Trash
+        - button "Sign out" [ref=e135] [cursor=pointer]:
+          - generic [ref=e136]:
+            - img [ref=e138]
+            - generic [ref=e141]: Sign out
+  - generic [ref=e142]:
+    - banner [ref=e143]:
+      - generic [ref=e145]:
+        - generic [ref=e146]: 📄
+        - generic [ref=e147]: Notification Bar Browser
+        - generic [ref=e148]: Private
+    - main [ref=e149]:
+      - generic [ref=e151]:
+        - generic [ref=e153]:
+          - generic [ref=e154]:
+            - paragraph [ref=e155]: Workspace home
+            - heading "Good morning" [level=1] [ref=e156]
+          - generic [ref=e158]:
+            - textbox "Search Notarum, blocks, and rows" [ref=e159]
+            - button "Search" [ref=e160] [cursor=pointer]
+            - link "Notifications (1)" [ref=e161] [cursor=pointer]:
+              - /url: /w/notification-bar-browser/notifications
+        - generic [ref=e162]:
+          - generic [ref=e163]:
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - heading "Daily workspace brief" [level=2] [ref=e166]
+                - paragraph [ref=e167]: Your next daily brief window is Tue 7:00 AM.
+              - generic [ref=e169]:
+                - text: Next brief
+                - strong [ref=e170]: Tue 7:00 AM
+            - generic [ref=e171]:
+              - paragraph [ref=e172]: No daily brief yet.
+              - paragraph [ref=e173]: Your first workspace brief appears once Notae has enough indexed activity to summarise.
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - generic [ref=e176]:
+                - heading "Important updates" [level=2] [ref=e177]
+                - paragraph [ref=e178]: Review AI suggestions, draft actions, and jump back into planning from here.
+              - generic [ref=e179]:
+                - link "Create Nota" [ref=e180] [cursor=pointer]:
+                  - /url: /w/notification-bar-browser#workspace-home-create-nota
+                - link "Open Kalendārium" [ref=e181] [cursor=pointer]:
+                  - /url: /w/notification-bar-browser/kalendarium
+                - link "Review drafts" [ref=e182] [cursor=pointer]:
+                  - /url: /w/notification-bar-browser/agent-actions
+                - link "New draft" [ref=e183] [cursor=pointer]:
+                  - /url: /w/notification-bar-browser/agent-actions/new
+            - generic [ref=e185]:
+              - generic [ref=e186]:
+                - heading "Agent draft actions" [level=3] [ref=e187]
+                - generic [ref=e188]: 0 drafts pending
+              - generic [ref=e189]:
+                - paragraph [ref=e190]: No pending draft actions.
+                - paragraph [ref=e191]: Use draft actions for calendar holds, task tickets, and reviewable outbound work.
+          - generic [ref=e192]:
+            - generic [ref=e193]:
+              - heading "Create Nota" [level=2] [ref=e195]
+              - generic [ref=e196]:
+                - textbox "New Nota title" [ref=e197]
+                - button "Create Nota" [ref=e198] [cursor=pointer]
+            - generic [ref=e199]:
+              - heading "Create Grid" [level=2] [ref=e201]
+              - generic [ref=e202]:
+                - textbox "New grid name" [ref=e203]
+                - button "Create Grid" [ref=e204] [cursor=pointer]
+          - generic [ref=e205]:
+            - heading "Notarum" [level=2] [ref=e207]
+            - paragraph [ref=e208]: No Notarum yet.
+          - generic [ref=e209]:
+            - heading "Grids" [level=2] [ref=e211]
+            - paragraph [ref=e212]: No grids yet.
+          - generic [ref=e213]:
+            - heading "Members" [level=2] [ref=e215]
+            - list [ref=e216]:
+              - listitem [ref=e217]:
+                - generic [ref=e219]:
+                  - strong [ref=e220]: notification-bar-browser@example.com
+                  - text: owner
+          - generic [ref=e221]:
+            - heading "Invite people" [level=2] [ref=e223]
+            - generic [ref=e224]:
+              - textbox "teammate@example.com" [ref=e225]
+              - combobox [ref=e226]:
+                - option "Member"
+                - option "Admin"
+                - option "Owner"
+                - option "Guest" [selected]
+                - option "Auditor"
+                - option "Automation Agent"
+              - button "Send invite" [ref=e227] [cursor=pointer]
+  - complementary "Workspace notification bar" [ref=e228]:
+    - button "Open compact Kalendārium" [ref=e229]:
+      - generic [ref=e230]: Mon 20 Apr · 7:54
+    - article [ref=e232]:
+      - generic [ref=e233]:
+        - generic [ref=e234]: Codex
+        - generic [ref=e235]:
+          - button "Snooze this alert for one hour" [ref=e236] [cursor=pointer]:
+            - img [ref=e238]
+          - button "Dismiss this alert" [active] [ref=e241] [cursor=pointer]:
+            - img [ref=e243]
+      - 'link "codex: Browser test alert Dismiss and snooze should hide this card." [ref=e245] [cursor=pointer]':
+        - /url: /w/notification-bar-browser/library
+        - strong [ref=e246]: "codex: Browser test alert"
+        - generic [ref=e247]: Dismiss and snooze should hide this card.
+  - complementary [ref=e251]:
+    - generic [ref=e252]:
+      - generic [ref=e253]: New AI chat
+      - generic [ref=e254]:
+        - combobox [ref=e255]:
+          - option "Auto" [selected]
+          - option "This document only"
+          - option "This workspace only"
+          - option "Whole account"
+        - button "Minimize AI assistant rail" [ref=e256] [cursor=pointer]: ▸
+    - generic [ref=e257]:
+      - paragraph [ref=e258]: Notae AI assistant
+      - paragraph [ref=e259]: Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.
+    - generic [ref=e261]:
+      - generic [ref=e262]: Prompt
+      - textbox "Prompt" [ref=e264]:
+        - /placeholder: Ask a question or request a draft action for review.
+      - button "Send" [ref=e266] [cursor=pointer]
+    - button "Usage" [ref=e268] [cursor=pointer]

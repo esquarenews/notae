@@ -18189,6 +18189,10 @@ body.notae-theme-system .notae-account-delete-button {
   box-shadow: inset 0 1px 0 var(--notae-glass-highlight);
 }
 
+.notae-shell-status-bar-item[hidden] {
+  display: none;
+}
+
 .notae-shell-status-bar-item-top {
   display: flex;
   align-items: center;

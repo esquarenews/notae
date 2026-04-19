@@ -262,6 +262,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(stylesheet).to include("  background: var(--notae-glass-surface);")
     expect(stylesheet).to include("  -webkit-backdrop-filter: blur(28px) saturate(1.18);")
     expect(stylesheet).to include(".notae-shell-status-bar-item {\n  display: grid;")
+    expect(stylesheet).to include(".notae-shell-status-bar-item[hidden] {\n  display: none;\n}")
     expect(stylesheet).to include("  background: var(--notae-glass-surface-soft);")
     expect(stylesheet).to include(".notae-shell-status-bar-control {\n  width: 1.8rem;")
   end

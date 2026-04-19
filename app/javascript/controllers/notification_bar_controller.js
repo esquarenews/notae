@@ -158,8 +158,9 @@ export default class extends Controller {
   dismissAlert(event) {
     event.preventDefault()
     event.stopPropagation()
+    event.stopImmediatePropagation?.()
 
-    const alert = this.alertForEvent(event)
+    const alert = this.alertForControl(event.currentTarget) || this.alertForEvent(event)
     if (!alert) return
 
     this.writeSessionDismissal(this.alertKey(alert))
@@ -169,8 +170,9 @@ export default class extends Controller {
   snoozeAlert(event) {
     event.preventDefault()
     event.stopPropagation()
+    event.stopImmediatePropagation?.()
 
-    const alert = this.alertForEvent(event)
+    const alert = this.alertForControl(event.currentTarget) || this.alertForEvent(event)
     if (!alert) return
 
     this.writeLocalSnooze(this.alertKey(alert), Date.now() + (60 * 60 * 1000))
@@ -315,6 +317,10 @@ export default class extends Controller {
 
   alertForEvent(event) {
     return event.target?.closest("[data-notification-bar-alert-key]") || null
+  }
+
+  alertForControl(control) {
+    return control?.closest?.("[data-notification-bar-alert-key]") || null
   }
 
   alertElements() {
