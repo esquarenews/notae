@@ -27,6 +27,7 @@ RSpec.describe "Workspace sidebar sections", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceSidebarSectionsController#show")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "WorkspaceSidebarSectionsController#show").fetch(:sql_queries)
 
     sections_document = Nokogiri::HTML(response.body)
     notes_section = sections_document.css(".notae-sidebar-section").find { |node| node.at_css(".notae-sidebar-label")&.text.to_s.strip == "Notarum" }

@@ -26,11 +26,15 @@ class AccountSettingsController < ApplicationController
       ) if attachment_payload.present?
     end
 
-    redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), notice: "Account settings updated."
+    render_account_settings_response("notice", "Account settings updated.", replace_content: true)
   rescue ActiveRecord::RecordInvalid => error
-    redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+    render_account_settings_response(
+      "alert",
+      error.record.errors.full_messages.to_sentence,
+      status: :unprocessable_entity
+    )
   rescue Users::AvatarUploadProcessor::Error => error
-    redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), alert: error.message
+    render_account_settings_response("alert", error.message, status: :unprocessable_entity)
   ensure
     Users::AvatarUploadProcessor.close(attachment_payload)
   end
@@ -43,8 +47,10 @@ class AccountSettingsController < ApplicationController
       AccountSettingsMailer.with(user: @user, workspace: @workspace, recipient: recipient).account_deletion_requested.deliver_now
     end
 
-    redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug),
-                notice: "Account deletion confirmation sent to #{helpers.to_sentence(@user.account_deletion_recipients)}."
+    render_account_settings_response(
+      "notice",
+      "Account deletion confirmation sent to #{helpers.to_sentence(@user.account_deletion_recipients)}."
+    )
   end
 
   private
@@ -70,5 +76,21 @@ class AccountSettingsController < ApplicationController
 
   def remove_avatar_requested?
     ActiveModel::Type::Boolean.new.cast(params.dig(:user, :remove_avatar))
+  end
+
+  def render_account_settings_response(type, message, status: :ok, replace_content: false)
+    respond_to do |format|
+      format.turbo_stream do
+        streams = [ settings_flash_stream(type, message) ]
+        if replace_content
+          streams << turbo_stream.replace("account_settings_content", partial: "account_settings/content")
+        end
+
+        render turbo_stream: streams, status: status
+      end
+      format.html do
+        redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), type => message
+      end
+    end
   end
 end

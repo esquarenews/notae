@@ -10,6 +10,7 @@ RSpec.describe "epistularium:sync_due" do
 
   before do
     clear_enqueued_jobs
+    Notae::ScheduledTaskStore.clear_all!
     Rake::Task["epistularium:sync_due"].reenable
   end
 
@@ -119,5 +120,31 @@ RSpec.describe "epistularium:sync_due" do
         args: [ backfill_due_account.id, a_hash_including("mode" => "full_backfill") ]
       )
     )
+  end
+
+  it "records scheduled task telemetry for the sync runner" do
+    user = User.create!(email: "epistularium-rake-telemetry@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Epistularium Rake Telemetry", slug: "epistularium-rake-telemetry")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Tracked inbox",
+      provider_username: "tracked@example.com",
+      provider_password: "secret",
+      enabled: true,
+      settings_json: { "imap_host" => "imap.example.com" }
+    )
+
+    Rake::Task["epistularium:sync_due"].invoke
+
+    snapshot = Notae::ScheduledTaskStore.fetch(task_name: "epistularium:sync_due")
+
+    expect(snapshot).to include(status: :healthy, consecutive_failures: 0)
+    expect(snapshot[:last_succeeded_at]).to be_present
+    expect(snapshot[:last_duration_ms]).to be >= 0.0
   end
 end

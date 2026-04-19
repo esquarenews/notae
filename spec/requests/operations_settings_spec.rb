@@ -24,11 +24,108 @@ RSpec.describe "Operations settings", type: :request do
           { hostname: "worker-1", identity: "worker-1", busy: 1, concurrency: 5, beat_at: 2.minutes.ago }
         ]
       },
+      scheduled_tasks: {
+        counts: {
+          total: 6,
+          healthy: 1,
+          attention_needed: 1,
+          never_run: 4
+        },
+        latest_success_at: 4.minutes.ago,
+        items: [
+          {
+            task_name: "epistularium:sync_due",
+            label: "Epistularium sync timer",
+            cadence_label: "Every 10 minutes",
+            status: :healthy,
+            last_started_at: 4.minutes.ago,
+            last_succeeded_at: 4.minutes.ago,
+            last_failed_at: nil,
+            last_duration_ms: 312.5,
+            last_error: nil,
+            last_error_class: nil,
+            consecutive_failures: 0
+          },
+          {
+            task_name: "kalendarium:dispatch_reminders",
+            label: "Kalendarium reminder dispatch",
+            cadence_label: "Manual or external trigger",
+            status: :failed,
+            last_started_at: 2.minutes.ago,
+            last_succeeded_at: nil,
+            last_failed_at: 2.minutes.ago,
+            last_duration_ms: 210.0,
+            last_error: "redis unavailable",
+            last_error_class: "StandardError",
+            consecutive_failures: 1
+          }
+        ]
+      },
+      session_authentication: {
+        event_count: 0,
+        warning_count: 0,
+        latest_event_at: nil,
+        latest_warning_at: nil,
+        items: []
+      },
+      integration_health: {
+        counts: {
+          total: 3,
+          healthy: 1,
+          attention_needed: 1,
+          missing: 1
+        },
+        providers: [
+          {
+            key: :epistularium,
+            label: "Email sync",
+            status: :healthy,
+            connection_count: 1,
+            attention_count: 0,
+            capability_summary: "Read mailbox import only",
+            writable_target_count: 0,
+            latest_activity_at: 5.minutes.ago
+          },
+          {
+            key: :kalendarium,
+            label: "Calendar sync",
+            status: :attention,
+            connection_count: 1,
+            attention_count: 1,
+            capability_summary: "Read sync with selective write-back",
+            writable_target_count: 2,
+            latest_activity_at: 10.minutes.ago
+          },
+          {
+            key: :push_delivery,
+            label: "Push delivery",
+            status: :missing,
+            connection_count: 0,
+            attention_count: 0,
+            capability_summary: "Browser/device banner delivery",
+            writable_target_count: 0,
+            latest_activity_at: nil
+          }
+        ]
+      },
       request_performance: {
         sample_count: 2,
         slow_count: 1,
+        budget_breach_count: 1,
         slowest_total_ms: 642.4,
+        highest_sql_queries: 27,
         latest_recorded_at: 30.seconds.ago,
+        worst_actions: [
+          {
+            action: "WorkspaceHomeController#show",
+            sample_count: 1,
+            max_total_ms: 642.4,
+            max_sql_queries: 27,
+            latest_recorded_at: 30.seconds.ago,
+            budget_breach_count: 1,
+            budget_status: :over_budget
+          }
+        ],
         items: [
           {
             action: "WorkspaceHomeController#show",
@@ -37,7 +134,10 @@ RSpec.describe "Operations settings", type: :request do
             sql_queries: 27,
             sql_ms: 118.6,
             status: 200,
-            recorded_at: 30.seconds.ago
+            recorded_at: 30.seconds.ago,
+            budget: { total_ms: 600.0, sql_queries: 20, sql_ms: 90.0 },
+            budget_breaches: [ "total time", "sql queries", "sql time" ],
+            budget_status: :over_budget
           }
         ]
       },
@@ -79,7 +179,7 @@ RSpec.describe "Operations settings", type: :request do
         ]
       },
       kalendarium_connections: {
-        counts: { total: 1, connected: 1, attention_needed: 0 },
+        counts: { total: 1, connected: 1, attention_needed: 0, writable_calendars: 2 },
         items: [
           {
             label: "Calendar",
@@ -88,7 +188,8 @@ RSpec.describe "Operations settings", type: :request do
             status: "connected",
             last_synced_at: 10.minutes.ago,
             last_error: nil,
-            calendar_count: 2
+            calendar_count: 2,
+            writable_calendar_count: 2
           }
         ]
       },
@@ -134,7 +235,16 @@ RSpec.describe "Operations settings", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Operations")
     expect(response.body).to include("Background jobs")
+    expect(response.body).to include("Scheduled tasks")
+    expect(response.body).to include("Integration health")
+    expect(response.body).to include("Read sync with selective write-back")
+    expect(response.body).to include("Writable calendars")
+    expect(response.body).to include("Epistularium sync timer")
+    expect(response.body).to include("Kalendarium reminder dispatch")
     expect(response.body).to include("Recent request performance")
+    expect(response.body).to include("Budget breaches")
+    expect(response.body).to include("Highest query count")
+    expect(response.body).to include("Over budget")
     expect(response.body).to include("API token activity")
     expect(response.body).to include("Scoped MCP token")
     expect(response.body).to include("WorkspaceHomeController#show")

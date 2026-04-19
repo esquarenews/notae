@@ -5,7 +5,9 @@ RSpec.describe Operations::DashboardBuilder do
 
   around do |example|
     Rails.cache.clear
+    Notae::ScheduledTaskStore.clear_all!
     example.run
+    Notae::ScheduledTaskStore.clear_all!
     Rails.cache.clear
   end
 
@@ -136,9 +138,9 @@ RSpec.describe Operations::DashboardBuilder do
         sample: {
           action: "WorkspaceHomeController#show",
           path: "/w/#{workspace.slug}",
-          total_ms: 642.4,
-          sql_queries: 27,
-          sql_ms: 118.6,
+          total_ms: 842.4,
+          sql_queries: 52,
+          sql_ms: 218.6,
           status: 200,
           recorded_at: reference_time - 1.minute
         }
@@ -157,6 +159,18 @@ RSpec.describe Operations::DashboardBuilder do
         metadata_json: { token_name: scoped_token.name }
       )
 
+      Notae::ScheduledTaskStore.record_succeeded!(
+        task_name: "epistularium:sync_due",
+        started_at: 6.minutes.ago(reference_time),
+        finished_at: 6.minutes.ago(reference_time) + 0.3.seconds
+      )
+      Notae::ScheduledTaskStore.record_failed!(
+        task_name: "kalendarium:dispatch_reminders",
+        started_at: 2.minutes.ago(reference_time),
+        finished_at: 2.minutes.ago(reference_time) + 0.4.seconds,
+        error: StandardError.new("redis unavailable")
+      )
+
       snapshot = described_class.new(workspace: workspace, user: user, reference_time: reference_time).call
 
       expect(snapshot.dig(:background_jobs, :available)).to be(true)
@@ -164,14 +178,44 @@ RSpec.describe Operations::DashboardBuilder do
       expect(snapshot.dig(:background_jobs, :retry_count)).to eq(2)
       expect(snapshot.dig(:background_jobs, :busy_threads)).to eq(2)
 
+      expect(snapshot.dig(:scheduled_tasks, :counts, :total)).to eq(Notae::ScheduledTaskStore::TASK_DEFINITIONS.size)
+      expect(snapshot.dig(:scheduled_tasks, :counts, :attention_needed)).to eq(1)
+      expect(snapshot.dig(:scheduled_tasks, :items)).to include(
+        hash_including(task_name: "epistularium:sync_due", status: :healthy),
+        hash_including(task_name: "kalendarium:dispatch_reminders", status: :failed, last_error: "redis unavailable")
+      )
+
+      expect(snapshot.dig(:integration_health, :counts)).to include(
+        total: 3,
+        healthy: 1,
+        attention_needed: 2,
+        missing: 0
+      )
+      expect(snapshot.dig(:integration_health, :providers)).to include(
+        hash_including(label: "Calendar sync", status: :attention, writable_target_count: 2),
+        hash_including(label: "Push delivery", status: :attention, connection_count: 1)
+      )
+
       expect(snapshot.dig(:request_performance, :sample_count)).to eq(1)
       expect(snapshot.dig(:request_performance, :slow_count)).to eq(1)
+      expect(snapshot.dig(:request_performance, :budget_breach_count)).to eq(1)
+      expect(snapshot.dig(:request_performance, :highest_sql_queries)).to eq(52)
+      expect(snapshot.dig(:request_performance, :worst_actions)).to include(
+        hash_including(
+          action: "WorkspaceHomeController#show",
+          budget_status: :over_budget,
+          budget_breach_count: 1,
+          max_sql_queries: 52
+        )
+      )
       expect(snapshot.dig(:request_performance, :items).first).to include(
         action: "WorkspaceHomeController#show",
         path: "/w/#{workspace.slug}",
-        sql_queries: 27,
+        sql_queries: 52,
+        budget_status: :over_budget,
         status: 200
       )
+      expect(snapshot.dig(:request_performance, :items).first[:budget_breaches]).to include("total time", "sql time", "sql queries")
 
       Notae::SessionEventStore.record!(
         user_id: user.id,
@@ -215,9 +259,11 @@ RSpec.describe Operations::DashboardBuilder do
       )
 
       expect(snapshot.dig(:kalendarium_connections, :counts, :attention_needed)).to eq(1)
+      expect(snapshot.dig(:kalendarium_connections, :counts, :writable_calendars)).to eq(2)
       expect(snapshot.dig(:kalendarium_connections, :items).first).to include(
         label: "Ops calendar",
         calendar_count: 2,
+        writable_calendar_count: 2,
         last_error: "401 from upstream calendar feed"
       )
 

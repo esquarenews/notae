@@ -2,6 +2,28 @@ module Notae
   class RequestPerformanceStore
     MAX_SAMPLES = 20
     SLOW_REQUEST_THRESHOLD_MS = 500.0
+    DEFAULT_BUDGET = {
+      total_ms: 800.0,
+      sql_ms: 250.0,
+      sql_queries: 60
+    }.freeze
+    ACTION_BUDGETS = {
+      "WorkspaceHomeController#show" => {
+        total_ms: 700.0,
+        sql_ms: 180.0,
+        sql_queries: 45
+      },
+      "WorkspaceSidebarSectionsController#show" => {
+        total_ms: 500.0,
+        sql_ms: 140.0,
+        sql_queries: 35
+      },
+      "KalendariumController#show" => {
+        total_ms: 900.0,
+        sql_ms: 300.0,
+        sql_queries: 80
+      }
+    }.freeze
     MEMORY_STORE_MUTEX = Mutex.new
 
     class << self
@@ -21,6 +43,25 @@ module Notae
 
       def clear!(workspace_id:)
         delete(cache_key(workspace_id))
+      end
+
+      def budget_for(action:)
+        DEFAULT_BUDGET.merge(ACTION_BUDGETS.fetch(action.to_s, {}))
+      end
+
+      def budget_breaches(sample)
+        normalized = normalize_sample(sample)
+        budget = budget_for(action: normalized[:action])
+        breaches = []
+
+        breaches << "total time" if normalized[:total_ms] > budget[:total_ms].to_f
+        breaches << "sql time" if normalized[:sql_ms] > budget[:sql_ms].to_f
+        breaches << "sql queries" if normalized[:sql_queries] > budget[:sql_queries].to_i
+        breaches
+      end
+
+      def budget_status(sample)
+        budget_breaches(sample).any? ? :over_budget : :healthy
       end
 
       private

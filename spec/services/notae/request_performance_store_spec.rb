@@ -31,4 +31,28 @@ RSpec.describe Notae::RequestPerformanceStore do
     expect(samples.first[:path]).to eq("/w/#{workspace.slug}/pages/#{Notae::RequestPerformanceStore::MAX_SAMPLES + 1}")
     expect(samples.last[:path]).to eq("/w/#{workspace.slug}/pages/2")
   end
+
+  it "evaluates request samples against action budgets" do
+    healthy_sample = {
+      action: "WorkspaceHomeController#show",
+      path: "/w/performance-store",
+      total_ms: 420.0,
+      sql_queries: 22,
+      sql_ms: 81.0,
+      status: 200,
+      recorded_at: Time.zone.parse("2026-04-19 09:00:00")
+    }
+    over_budget_sample = healthy_sample.merge(total_ms: 910.0, sql_queries: 72, sql_ms: 310.0)
+
+    expect(described_class.budget_for(action: "WorkspaceHomeController#show")).to include(
+      total_ms: 700.0,
+      sql_ms: 180.0,
+      sql_queries: 45
+    )
+    expect(described_class.budget_status(healthy_sample)).to eq(:healthy)
+    expect(described_class.budget_breaches(healthy_sample)).to eq([])
+
+    expect(described_class.budget_status(over_budget_sample)).to eq(:over_budget)
+    expect(described_class.budget_breaches(over_budget_sample)).to contain_exactly("total time", "sql time", "sql queries")
+  end
 end

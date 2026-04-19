@@ -64,6 +64,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceHomeController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "WorkspaceHomeController#show").fetch(:sql_queries)
     expect(response.headers["Server-Timing"]).to include("app;dur=")
     expect(response.headers["Server-Timing"]).to include("sql;dur=")
     expect(response.body).to include("Open AI assistant")

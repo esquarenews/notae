@@ -56,6 +56,35 @@ RSpec.describe "Account settings", type: :request do
     expect(user.personal_bio).to eq("Building Notae.")
   end
 
+  it "updates account profile fields over turbo stream without redirecting" do
+    user = User.create!(email: "account-settings-update-turbo@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Account settings update turbo", slug: "account-settings-update-turbo")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_account_settings_path(workspace_slug: workspace.slug),
+          params: {
+            user: {
+              full_name: "Turbo Errol",
+              backup_email: "turbo@example.com",
+              personal_bio: "Turbo profile update."
+            }
+          },
+          as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include('turbo-stream action="replace" target="account_settings_content"')
+    expect(response.body).to include("Account settings updated.")
+
+    user.reload
+    expect(user.full_name).to eq("Turbo Errol")
+    expect(user.backup_email).to eq("turbo@example.com")
+    expect(user.personal_bio).to eq("Turbo profile update.")
+  end
+
   it "resizes a large png avatar upload before storing it" do
     user = User.create!(email: "account-settings-avatar@example.com", password: "password123")
     workspace = Workspace.create!(name: "Account settings avatar", slug: "account-settings-avatar")
@@ -107,5 +136,28 @@ RSpec.describe "Account settings", type: :request do
     expect(email.body.encoded).to include("A request to delete the Notae account account-settings-delete@example.com was started.")
     expect(email.body.encoded).to include("This email is a confirmation notice only. The account has not been deleted by this message.")
     expect(email.body.encoded).to include("If you started this request, keep this email as your record.")
+  end
+
+  it "sends account deletion confirmation over turbo stream without redirecting" do
+    user = User.create!(
+      email: "account-settings-delete-turbo@example.com",
+      password: "password123",
+      backup_email: "backup-delete-turbo@example.com"
+    )
+    workspace = Workspace.create!(name: "Account settings delete turbo", slug: "account-settings-delete-turbo")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    expect {
+      post workspace_account_delete_request_path(workspace_slug: workspace.slug), as: :turbo_stream
+    }.to change { ActionMailer::Base.deliveries.count }.by(2)
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="replace" target="settings_flash_messages"')
+    expect(response.body).to include("Account deletion confirmation sent to")
+    expect(response.body).to include("account-settings-delete-turbo@example.com")
+    expect(response.body).to include("backup-delete-turbo@example.com")
   end
 end

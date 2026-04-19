@@ -13,14 +13,24 @@ module Operations
     end
 
     def call
+      epistularium = epistularium_accounts_snapshot
+      kalendarium = kalendarium_connections_snapshot
+      push_delivery = push_delivery_snapshot
+
       {
         background_jobs: background_jobs_snapshot,
+        scheduled_tasks: scheduled_tasks_snapshot,
         request_performance: request_performance_snapshot,
         session_authentication: session_authentication_snapshot,
         api_token_activity: api_token_activity_snapshot,
-        epistularium_accounts: epistularium_accounts_snapshot,
-        kalendarium_connections: kalendarium_connections_snapshot,
-        push_delivery: push_delivery_snapshot,
+        integration_health: integration_health_snapshot(
+          epistularium:,
+          kalendarium:,
+          push_delivery:
+        ),
+        epistularium_accounts: epistularium,
+        kalendarium_connections: kalendarium,
+        push_delivery:,
         meeting_capture: meeting_capture_snapshot
       }
     end
@@ -28,6 +38,21 @@ module Operations
     private
 
     attr_reader :workspace, :user, :reference_time
+
+    def scheduled_tasks_snapshot
+      items = Notae::ScheduledTaskStore.fetch_all(reference_time:)
+
+      {
+        counts: {
+          total: items.size,
+          healthy: items.count { |item| item[:status] == :healthy },
+          attention_needed: items.count { |item| %i[failed drifted].include?(item[:status]) },
+          never_run: items.count { |item| item[:status] == :never_run }
+        },
+        latest_success_at: items.map { |item| item[:last_succeeded_at] }.compact.max,
+        items: items
+      }
+    end
 
     def background_jobs_snapshot
       queues = QUEUE_NAMES.map do |name|
@@ -109,6 +134,9 @@ module Operations
 
     def request_performance_snapshot
       items = Notae::RequestPerformanceStore.fetch(workspace_id: workspace.id, limit: 10).map do |sample|
+        budget = Notae::RequestPerformanceStore.budget_for(action: sample[:action])
+        budget_breaches = Notae::RequestPerformanceStore.budget_breaches(sample)
+
         {
           action: sample[:action],
           path: sample[:path],
@@ -116,15 +144,44 @@ module Operations
           sql_queries: sample[:sql_queries].to_i,
           sql_ms: sample[:sql_ms].to_f,
           status: sample[:status].to_i,
-          recorded_at: sample[:recorded_at]
+          recorded_at: sample[:recorded_at],
+          budget: budget,
+          budget_breaches: budget_breaches,
+          budget_status: budget_breaches.any? ? :over_budget : :healthy
         }
       end
+
+      worst_actions = items
+        .group_by { |item| item[:action] }
+        .map do |action, action_items|
+          {
+            action: action,
+            sample_count: action_items.size,
+            max_total_ms: action_items.map { |item| item[:total_ms] }.max,
+            max_sql_queries: action_items.map { |item| item[:sql_queries] }.max,
+            latest_recorded_at: action_items.map { |item| item[:recorded_at] }.compact.max,
+            budget_breach_count: action_items.count { |item| item[:budget_status] == :over_budget },
+            budget_status: action_items.any? { |item| item[:budget_status] == :over_budget } ? :over_budget : :healthy
+          }
+        end
+        .sort_by do |item|
+          [
+            item[:budget_status] == :over_budget ? 0 : 1,
+            -(item[:budget_breach_count] || 0),
+            -(item[:max_total_ms] || 0.0),
+            -(item[:max_sql_queries] || 0)
+          ]
+        end
+        .first(5)
 
       {
         sample_count: items.size,
         slow_count: items.count { |item| item[:total_ms] >= Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS },
+        budget_breach_count: items.count { |item| item[:budget_status] == :over_budget },
         slowest_total_ms: items.map { |item| item[:total_ms] }.max,
+        highest_sql_queries: items.map { |item| item[:sql_queries] }.max,
         latest_recorded_at: items.map { |item| item[:recorded_at] }.compact.max,
+        worst_actions: worst_actions,
         items: items
       }
     end
@@ -175,12 +232,12 @@ module Operations
         .for_workspace(workspace)
         .order(Arel.sql("LOWER(label) ASC"), created_at: :asc)
         .to_a
-      calendar_counts = KalendariumCalendar
-        .where(kalendarium_connection_id: connections.map(&:id))
-        .group(:kalendarium_connection_id)
-        .count
+      calendars = KalendariumCalendar.where(kalendarium_connection_id: connections.map(&:id)).to_a
+      calendars_by_connection = calendars.group_by(&:kalendarium_connection_id)
 
       items = connections.map do |connection|
+        connection_calendars = calendars_by_connection.fetch(connection.id, [])
+
         {
           id: connection.id,
           label: connection.label,
@@ -189,7 +246,8 @@ module Operations
           status: connection.status,
           last_synced_at: connection.last_synced_at,
           last_error: connection.last_error.to_s.strip.presence,
-          calendar_count: calendar_counts.fetch(connection.id, 0)
+          calendar_count: connection_calendars.size,
+          writable_calendar_count: connection_calendars.count(&:user_writable?)
         }
       end
 
@@ -197,9 +255,67 @@ module Operations
         counts: {
           total: connections.size,
           connected: items.count { |item| item[:status] == "connected" },
-          attention_needed: items.count { |item| item[:status] == "sync_error" || item[:last_error].present? }
+          attention_needed: items.count { |item| item[:status] == "sync_error" || item[:last_error].present? },
+          writable_calendars: items.sum { |item| item[:writable_calendar_count] }
         },
         items: items
+      }
+    end
+
+    def integration_health_snapshot(epistularium:, kalendarium:, push_delivery:)
+      providers = [
+        {
+          key: :epistularium,
+          label: "Email sync",
+          status: provider_status(
+            total: epistularium.dig(:counts, :total),
+            attention: epistularium.dig(:counts, :attention_needed)
+          ),
+          connection_count: epistularium.dig(:counts, :total),
+          attention_count: epistularium.dig(:counts, :attention_needed),
+          capability_summary: "Read mailbox import only",
+          writable_target_count: 0,
+          latest_activity_at: epistularium[:items].map { |item| item[:last_fresh_sync_at] || item[:last_synced_at] }.compact.max
+        },
+        {
+          key: :kalendarium,
+          label: "Calendar sync",
+          status: provider_status(
+            total: kalendarium.dig(:counts, :total),
+            attention: kalendarium.dig(:counts, :attention_needed)
+          ),
+          connection_count: kalendarium.dig(:counts, :total),
+          attention_count: kalendarium.dig(:counts, :attention_needed),
+          capability_summary: "Read sync with selective write-back",
+          writable_target_count: kalendarium.dig(:counts, :writable_calendars),
+          latest_activity_at: kalendarium[:items].map { |item| item[:last_synced_at] }.compact.max
+        },
+        {
+          key: :push_delivery,
+          label: "Push delivery",
+          status: if push_delivery[:subscription_count].to_i <= 0
+            :missing
+          elsif push_delivery[:failing_count].to_i.positive?
+            :attention
+          else
+            :healthy
+          end,
+          connection_count: push_delivery[:subscription_count],
+          attention_count: push_delivery[:failing_count],
+          capability_summary: "Browser/device banner delivery",
+          writable_target_count: push_delivery[:subscription_count],
+          latest_activity_at: [ push_delivery[:latest_delivery_at], push_delivery[:latest_error_at] ].compact.max
+        }
+      ]
+
+      {
+        counts: {
+          total: providers.size,
+          healthy: providers.count { |provider| provider[:status] == :healthy },
+          attention_needed: providers.count { |provider| provider[:status] == :attention },
+          missing: providers.count { |provider| provider[:status] == :missing }
+        },
+        providers:
       }
     end
 
@@ -301,6 +417,13 @@ module Operations
       Time.zone.at(raw_value.to_f)
     rescue StandardError
       nil
+    end
+
+    def provider_status(total:, attention:)
+      return :missing if total.to_i <= 0
+      return :attention if attention.to_i.positive?
+
+      :healthy
     end
 
   end
