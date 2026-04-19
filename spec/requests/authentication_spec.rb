@@ -1,6 +1,12 @@
 require "rails_helper"
 
 RSpec.describe "Authentication", type: :request do
+  around do |example|
+    Rails.cache.clear
+    example.run
+    Rails.cache.clear
+  end
+
   it "signs in a valid user through the Devise session form" do
     user = User.create!(email: "auth-request@example.com", password: "password123")
 
@@ -66,5 +72,23 @@ RSpec.describe "Authentication", type: :request do
     expect(response.body).to include("notae-auth-card")
     expect(response.body).to include("notae-auth-input")
     expect(response.body).not_to include("devise/shared/_links")
+  end
+
+  it "records sign-in and sign-out diagnostics for the user" do
+    user = User.create!(email: "auth-diagnostics@example.com", password: "password123")
+
+    post user_session_path, params: {
+      user: {
+        email: user.email,
+        password: "password123",
+        remember_me: "1"
+      }
+    }
+
+    delete destroy_user_session_path
+
+    reasons = Notae::SessionEventStore.fetch(user_id: user.id).map { |event| event[:reason] }
+
+    expect(reasons).to include("signed_in", "signed_out")
   end
 end

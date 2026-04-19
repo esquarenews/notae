@@ -4,6 +4,7 @@ module Operations
   class DashboardBuilder
     QUEUE_NAMES = %w[default epistularium_backfill].freeze
     PUSH_DEVICE_LIMIT = 5
+    SESSION_EVENT_LIMIT = 10
 
     def initialize(workspace:, user:, reference_time: Time.current)
       @workspace = workspace
@@ -15,6 +16,7 @@ module Operations
       {
         background_jobs: background_jobs_snapshot,
         request_performance: request_performance_snapshot,
+        session_authentication: session_authentication_snapshot,
         api_token_activity: api_token_activity_snapshot,
         epistularium_accounts: epistularium_accounts_snapshot,
         kalendarium_connections: kalendarium_connections_snapshot,
@@ -156,6 +158,18 @@ module Operations
       }
     end
 
+    def session_authentication_snapshot
+      items = Notae::SessionEventStore.fetch(user_id: user.id, limit: SESSION_EVENT_LIMIT)
+
+      {
+        event_count: items.size,
+        warning_count: items.count { |item| warning_session_reason?(item[:reason]) },
+        latest_event_at: items.first&.dig(:recorded_at),
+        latest_warning_at: items.find { |item| warning_session_reason?(item[:reason]) }&.dig(:recorded_at),
+        items: items
+      }
+    end
+
     def kalendarium_connections_snapshot
       connections = KalendariumConnection
         .for_workspace(workspace)
@@ -263,6 +277,10 @@ module Operations
           updated_at: latest_failed_run.updated_at
         }
       }
+    end
+
+    def warning_session_reason?(reason)
+      %w[cookie_session_near_limit cookie_overflow invalid_authenticity_token failed_authentication].include?(reason.to_s)
     end
 
     def meeting_session_payload(session)

@@ -1,5 +1,7 @@
 require "uri"
 require Rails.root.join("lib/notae/session_diagnostics")
+require Rails.root.join("lib/notae/session_event_store")
+require Rails.root.join("lib/notae/session_state_pruner")
 
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
@@ -95,6 +97,7 @@ class ApplicationController < ActionController::Base
 
   def prune_workspace_session_state
     prune_legacy_workspace_session_state!
+    Notae::SessionStatePruner.prune!(session)
     last_page_visit_store
   end
 
@@ -521,13 +524,10 @@ class ApplicationController < ActionController::Base
 
   def last_page_visit_store
     raw_store = session["notae_last_page_visits"]
-    normalized_store =
-      if raw_store.is_a?(Hash)
-        raw_store.to_h.stringify_keys.transform_values { |value| value.to_s }
-      else
-        {}
-      end
-    pruned_store = normalized_store.to_a.last(LAST_PAGE_VISIT_SESSION_LIMIT).to_h
+    pruned_store =
+      Notae::SessionStatePruner
+        .normalized_workspace_scoped_hash(raw_store, limit: LAST_PAGE_VISIT_SESSION_LIMIT)
+        .transform_values { |value| value.to_s }
 
     session["notae_last_page_visits"] = pruned_store if raw_store != pruned_store
     pruned_store
@@ -737,6 +737,10 @@ class ApplicationController < ActionController::Base
     ).merge(extra)
 
     Notae::SessionDiagnostics.instrument!(payload)
+    Notae::SessionEventStore.record!(
+      user_id: current_user&.id,
+      event: payload.merge(recorded_at: Time.current.iso8601)
+    )
     Rails.logger.warn("[SessionDiagnostic] #{payload.to_json}")
   rescue StandardError => diagnostic_error
     Rails.logger.warn("[SessionDiagnostic] failed to capture #{reason}: #{diagnostic_error.class}: #{diagnostic_error.message}")

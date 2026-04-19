@@ -7,6 +7,7 @@
 
 <% background_jobs = @dashboard.fetch(:background_jobs) %>
 <% request_performance = @dashboard.fetch(:request_performance) %>
+<% session_authentication = @dashboard.fetch(:session_authentication) %>
 <% api_token_activity = @dashboard.fetch(:api_token_activity) %>
 <% epistularium = @dashboard.fetch(:epistularium_accounts) %>
 <% kalendarium = @dashboard.fetch(:kalendarium_connections) %>
@@ -122,6 +123,59 @@
         </div>
       <% else %>
         <p class="notae-page-subtle">No request samples have been captured for this workspace yet.</p>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Session and authentication</h2>
+      <p class="notae-pref-description">Recent sign-in, sign-out, failed-authentication, and session safety events captured for the current account.</p>
+
+      <div class="notae-operations-grid">
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Recent events</p>
+          <p class="notae-operations-card-value"><%= session_authentication[:event_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Warnings</p>
+          <p class="notae-operations-card-value"><%= session_authentication[:warning_count] %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Latest event</p>
+          <p class="notae-operations-card-value"><%= session_authentication[:latest_event_at].present? ? format_relative_time.call(session_authentication[:latest_event_at]) : "Not yet" %></p>
+        </article>
+        <article class="notae-operations-card">
+          <p class="notae-operations-card-label">Latest warning</p>
+          <p class="notae-operations-card-value"><%= session_authentication[:latest_warning_at].present? ? format_relative_time.call(session_authentication[:latest_warning_at]) : "None" %></p>
+        </article>
+      </div>
+
+      <% if session_authentication[:items].any? %>
+        <div class="notae-operations-list">
+          <% session_authentication[:items].each do |event| %>
+            <% warning = %w[cookie_session_near_limit cookie_overflow invalid_authenticity_token failed_authentication].include?(event[:reason].to_s) %>
+            <article class="notae-operations-item">
+              <div class="notae-operations-item-copy">
+                <p class="notae-operations-item-title"><%= event[:reason].to_s.humanize %></p>
+                <p class="notae-operations-item-subtitle"><%= event[:request_method].presence || "Session" %> <%= event[:path].presence || "No path captured" %></p>
+                <p class="notae-operations-item-meta">
+                  <span>Store <%= event[:session_store].presence || "Unknown" %></span>
+                  <span>Payload <%= number_with_precision(event[:approximate_session_bytes], precision: 0) %> bytes</span>
+                  <span><%= event[:session_key_count] %> keys</span>
+                  <% if event[:error_class].present? %>
+                    <span><%= event[:error_class] %></span>
+                  <% end %>
+                  <span>Captured <%= format_relative_time.call(event[:recorded_at]) %></span>
+                </p>
+              </div>
+
+              <div class="notae-operations-pills">
+                <span class="notae-operations-pill <%= warning ? "is-warn" : "is-ok" %>"><%= warning ? "Needs review" : "Healthy" %></span>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="notae-page-subtle">No session/authentication events have been captured for this account yet.</p>
       <% end %>
     </section>
 

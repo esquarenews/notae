@@ -173,6 +173,30 @@ RSpec.describe Operations::DashboardBuilder do
         status: 200
       )
 
+      Notae::SessionEventStore.record!(
+        user_id: user.id,
+        event: {
+          reason: "cookie_session_near_limit",
+          session_store: "cookie_store",
+          path: "/w/#{workspace.slug}",
+          request_method: "GET",
+          approximate_session_bytes: 3200,
+          session_key_count: 8,
+          recorded_at: reference_time - 30.seconds
+        }
+      )
+
+      snapshot = described_class.new(workspace: workspace, user: user, reference_time: reference_time).call
+
+      expect(snapshot.dig(:session_authentication, :event_count)).to eq(1)
+      expect(snapshot.dig(:session_authentication, :warning_count)).to eq(1)
+      expect(snapshot.dig(:session_authentication, :items).first).to include(
+        reason: "cookie_session_near_limit",
+        session_store: "cookie_store",
+        request_method: "GET",
+        approximate_session_bytes: 3200
+      )
+
       expect(snapshot.dig(:api_token_activity, :event_count)).to eq(1)
       expect(snapshot.dig(:api_token_activity, :items).first).to include(
         token_name: "Scoped MCP token",

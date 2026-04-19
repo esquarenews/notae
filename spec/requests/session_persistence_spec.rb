@@ -21,6 +21,31 @@ RSpec.describe "Session persistence", type: :request do
     expect(cookie_header).to match(/samesite=lax/i)
   end
 
+  it "issues a rememberable cookie when remember me is enabled" do
+    user = User.create!(email: "persistent-remember-session@example.com", password: "password123")
+
+    post user_session_path, params: {
+      user: {
+        email: user.email,
+        password: "password123",
+        remember_me: "1"
+      }
+    }
+
+    cookie_header = response.headers["Set-Cookie"].to_s
+
+    expect(cookie_header).to include("remember_user_token")
+    expect(cookie_header).to match(/expires=/i)
+    expect(cookie_header).to match(/samesite=lax/i)
+  end
+
+  it "checks remember me by default on the sign-in form" do
+    get new_user_session_path
+
+    expect(response.body).to include('name="user[remember_me]"')
+    expect(response.body).to include("checked=")
+  end
+
   it "configures the cookie store with a persistent expiry for standalone relaunches" do
     options = Rails.application.config.session_options
 
