@@ -1,6 +1,8 @@
-A Notae account deletion request was submitted for <%= @user.email %>.
+A request to delete the Notae account <%= @user.email %> was started.
+
+This email is a confirmation notice only. The account has not been deleted by this message.
 
 Workspace context: <%= @workspace.name %>
 Requested at: <%= Time.current.in_time_zone(@user.time_zone).strftime("%d %b %Y %H:%M %Z") %>
 
-This message confirms the request reached Notae. If you did not expect this request, sign in and review your account settings immediately.
+If you started this request, keep this email as your record. If you did not expect this request, sign in to Notae and review your account settings immediately.

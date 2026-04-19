@@ -5,7 +5,7 @@ class AccountSettingsMailer < ApplicationMailer
 
     mail(
       to: params[:recipient],
-      subject: "Notae account deletion request received",
+      subject: "Notae account deletion request started",
       from: mail_from_value
     )
   end

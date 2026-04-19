@@ -12,13 +12,27 @@ class AccountSettingsController < ApplicationController
     authorize @workspace, :show?
     authorize @user, :update?
 
-    remove_avatar_if_requested!
+    attachment_payload = avatar_attachment_payload
+    remove_avatar = remove_avatar_requested?
+    profile_params = account_params.except(:avatar)
 
-    if @user.update(account_params)
-      redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), notice: "Account settings updated."
-    else
-      redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), alert: @user.errors.full_messages.to_sentence
+    ActiveRecord::Base.transaction do
+      @user.update!(profile_params)
+      @user.avatar.purge if remove_avatar && @user.avatar.attached?
+      @user.avatar.attach(
+        io: attachment_payload[:io],
+        filename: attachment_payload[:filename],
+        content_type: attachment_payload[:content_type]
+      ) if attachment_payload.present?
     end
+
+    redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), notice: "Account settings updated."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+  rescue Users::AvatarUploadProcessor::Error => error
+    redirect_to workspace_account_settings_path(workspace_slug: @workspace.slug), alert: error.message
+  ensure
+    Users::AvatarUploadProcessor.close(attachment_payload)
   end
 
   def request_deletion
@@ -47,10 +61,14 @@ class AccountSettingsController < ApplicationController
     params.fetch(:user, {}).permit(:avatar, :full_name, :backup_email, :personal_bio)
   end
 
-  def remove_avatar_if_requested!
-    return unless ActiveModel::Type::Boolean.new.cast(params.dig(:user, :remove_avatar))
-    return unless @user.avatar.attached?
+  def avatar_attachment_payload
+    upload = account_params[:avatar]
+    return nil if upload.blank?
 
-    @user.avatar.purge
+    Users::AvatarUploadProcessor.new(upload: upload).call
+  end
+
+  def remove_avatar_requested?
+    ActiveModel::Type::Boolean.new.cast(params.dig(:user, :remove_avatar))
   end
 end

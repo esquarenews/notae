@@ -19,9 +19,14 @@
                     url: workspace_account_settings_path(workspace_slug: @workspace.slug),
                     method: :patch,
                     html: { multipart: true },
+                    data: {
+                      controller: "avatar-crop",
+                      avatar_crop_output_size_value: Users::AvatarUploadProcessor::MAX_DIMENSION,
+                      avatar_crop_preview_alt_value: @user.display_name
+                    },
                     class: "notae-account-form" do |form| %>
         <div class="notae-account-profile-head">
-          <div class="notae-account-avatar-panel">
+          <div class="notae-account-avatar-panel" data-avatar-crop-target="previewPanel">
             <% if @user.avatar.attached? %>
               <%= image_tag @user.avatar, alt: @user.display_name, class: "notae-account-avatar-image" %>
             <% else %>
@@ -38,7 +43,13 @@
         <div class="notae-ai-guardrails-grid">
           <label>
             <span>Avatar</span>
-            <%= form.file_field :avatar, accept: "image/png,image/jpeg,image/webp,image/gif", class: "notae-pref-select" %>
+            <%= form.file_field :avatar,
+                                accept: ".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif",
+                                class: "notae-pref-select",
+                                data: {
+                                  avatar_crop_target: "input",
+                                  action: "change->avatar-crop#open"
+                                } %>
           </label>
 
           <label>
@@ -70,6 +81,57 @@
 
           <%= form.submit "Save profile", class: "notae-chip-button is-primary" %>
         </div>
+
+        <dialog class="notae-avatar-crop-modal"
+                data-avatar-crop-target="dialog"
+                data-action="click->avatar-crop#backdropClose cancel->avatar-crop#cancelDialog">
+          <div class="notae-avatar-crop-modal-panel">
+            <header class="notae-avatar-crop-modal-header">
+              <div>
+                <p class="notae-pref-label">Avatar</p>
+                <h3>Adjust avatar</h3>
+              </div>
+            </header>
+
+            <div class="notae-avatar-crop-stage"
+                 data-avatar-crop-target="stage"
+                 data-action="pointerdown->avatar-crop#startDrag pointermove->avatar-crop#drag pointerup->avatar-crop#stopDrag pointercancel->avatar-crop#stopDrag lostpointercapture->avatar-crop#stopDrag">
+              <div class="notae-avatar-crop-frame" data-avatar-crop-target="frame">
+                <img alt=""
+                     class="notae-avatar-crop-image"
+                     data-avatar-crop-target="image"
+                     draggable="false">
+              </div>
+            </div>
+
+            <label class="notae-avatar-crop-zoom">
+              <span>Zoom</span>
+              <input type="range"
+                     min="1"
+                     max="3"
+                     step="0.01"
+                     value="1"
+                     data-avatar-crop-target="zoom"
+                     data-action="input->avatar-crop#zoom">
+            </label>
+
+            <p class="notae-pref-description">Drag the image to position it, then save the crop.</p>
+
+            <div class="notae-avatar-crop-actions">
+              <button type="button"
+                      class="notae-chip-button"
+                      data-action="avatar-crop#close">
+                Cancel
+              </button>
+              <button type="button"
+                      class="notae-chip-button is-primary"
+                      data-avatar-crop-target="saveButton"
+                      data-action="avatar-crop#save">
+                Save
+              </button>
+            </div>
+          </div>
+        </dialog>
       <% end %>
     </section>
 
@@ -78,18 +140,20 @@
 
       <div class="notae-pref-row notae-pref-row--stacked">
         <div class="notae-pref-copy">
-          <p class="notae-pref-label">Request account deletion</p>
+          <p class="notae-pref-label">Start account deletion request</p>
           <p class="notae-pref-description">
-            A confirmation notice will be sent to <strong><%= @user.email %></strong><% if @user.backup_email.present? %> and <strong><%= @user.backup_email %></strong><% end %>.
+            This does not delete your account immediately.
           </p>
-          <p class="notae-pref-description">Use this when you want Notae to record and confirm an account removal request before the account is deleted.</p>
+          <p class="notae-pref-description">
+            Notae will send a confirmation email to <strong><%= @user.email %></strong><% if @user.backup_email.present? %> and <strong><%= @user.backup_email %></strong><% end %> so you have a record that the deletion request was started.
+          </p>
         </div>
 
-        <%= button_to "Request account deletion",
+        <%= button_to "Send deletion confirmation email",
                       workspace_account_delete_request_path(workspace_slug: @workspace.slug),
                       method: :post,
                       class: "notae-chip-button notae-account-delete-button",
-                      data: { turbo_confirm: "Send an account deletion confirmation email now?" } %>
+                      data: { turbo_confirm: "Send a deletion request confirmation email now?" } %>
       </div>
     </section>
   </div>

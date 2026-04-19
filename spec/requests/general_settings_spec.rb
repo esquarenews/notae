@@ -45,6 +45,21 @@ RSpec.describe "General settings", type: :request do
     expect(selected_option&.[]("value")).to eq(workspace_general_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
   end
 
+  it "hides the favicon lab navigation item in production" do
+    user = User.create!(email: "general-settings-production@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Production settings", slug: "production-settings")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+
+    get workspace_general_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("Favicon Lab")
+    expect(response.body).not_to include("Internal")
+  end
+
   it "renders workspace name and colour for the selected workspace context" do
     user = User.create!(email: "general-settings-context@example.com", password: "password123")
     primary_workspace = Workspace.create!(name: "Primary Workspace", slug: "general-settings-context-primary", workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.first.fetch(:value))

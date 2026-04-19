@@ -141,13 +141,15 @@
       <span>Epistularium</span>
     </span>
   <% end %>
-  <span class="<%= [ "notae-settings-nav-item", "is-disabled", ("active" if active_item == :favicon) ].compact.join(" ") %>">
-    <span class="notae-settings-nav-item-label">
-      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
-      <span>Favicon Lab</span>
+  <% unless Rails.env.production? %>
+    <span class="<%= [ "notae-settings-nav-item", "is-disabled", ("active" if active_item == :favicon) ].compact.join(" ") %>">
+      <span class="notae-settings-nav-item-label">
+        <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+        <span>Favicon Lab</span>
+      </span>
+      <em>Internal</em>
     </span>
-    <em>Internal</em>
-  </span>
+  <% end %>
   <%= link_to workspace_emoji_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),
               class: [ "notae-settings-nav-item", ("active" if active_item == :emoji) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
