@@ -1,3 +1,12 @@
 #!/usr/bin/env node
 
-import "../services/notae_mcp_server/server.mjs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { ensureSidecarDependencies } from "../services/notae_mcp_server/bootstrap.mjs";
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const serviceDir = resolve(repoRoot, "services/notae_mcp_server");
+
+ensureSidecarDependencies({ serviceDir });
+await import(pathToFileURL(resolve(serviceDir, "server.mjs")).href);

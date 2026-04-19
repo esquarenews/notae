@@ -37,6 +37,8 @@ cd /Users/errolschmidt/Documents/notae_app/notae/services/notae_mcp_server
 npm install
 ```
 
+The launcher now bootstraps these dependencies automatically on first run if `node_modules` is missing, so a clean checkout can still start the MCP server. A manual install is still useful when you want to prewarm the sidecar or verify dependencies explicitly.
+
 ## Connect from Codex
 
 Add this to [`/Users/errolschmidt/.codex/config.toml`](/Users/errolschmidt/.codex/config.toml):
@@ -47,7 +49,7 @@ command = "/Users/errolschmidt/Documents/notae_app/notae/bin/notae-mcp-server"
 env = { NOTAE_BASE_URL = "https://notae.example.com", NOTAE_API_TOKEN = "replace-with-a-real-token" }
 ```
 
-Then restart Codex so it reloads the MCP server list.
+Then restart Codex so it reloads the MCP server list. If Codex started while the sidecar was broken or missing dependencies, the current session will not discover Notae tools until a restart or a fresh session.
 
 ## Notae API token
 
