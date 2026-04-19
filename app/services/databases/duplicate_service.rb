@@ -92,7 +92,6 @@ module Databases
           }
         end
         DbCell.insert_all(duplicate_cell_payloads, unique_by: :index_db_cells_on_db_row_id_and_db_property_id) if duplicate_cell_payloads.any?
-
       end
     end
 

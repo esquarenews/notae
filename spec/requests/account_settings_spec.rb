@@ -94,7 +94,7 @@ RSpec.describe "Account settings", type: :request do
     Membership.create!(workspace: workspace, user: user, role: :owner)
     sign_in user
 
-    Tempfile.create(["account-avatar", ".png"]) do |file|
+    Tempfile.create([ "account-avatar", ".png" ]) do |file|
       create_png(path: file.path, width: 2200, height: 1600)
 
       uploaded_file = Rack::Test::UploadedFile.new(file.path, "image/png")

@@ -31,8 +31,16 @@ RSpec.describe WebPush::DeliverNotificationJob do
 
     allow(WebPush::Configuration).to receive(:configured?).and_return(true)
     allow(WebPush::NotificationPayloadBuilder).to receive(:new).with(notification: notification).and_return(payload_builder)
-    expect(WebPush::DeliveryService).to receive(:new).with(subscription: first_subscription, payload: payload).and_return(first_delivery)
-    expect(WebPush::DeliveryService).to receive(:new).with(subscription: second_subscription, payload: payload).and_return(second_delivery)
+    expect(WebPush::DeliveryService).to receive(:new).with(
+      subscription: first_subscription,
+      payload: payload,
+      notification: notification
+    ).and_return(first_delivery)
+    expect(WebPush::DeliveryService).to receive(:new).with(
+      subscription: second_subscription,
+      payload: payload,
+      notification: notification
+    ).and_return(second_delivery)
 
     described_class.perform_now(notification.id)
   end
@@ -107,7 +115,11 @@ RSpec.describe WebPush::DeliverNotificationJob do
     allow(WebPush::Configuration).to receive(:configured?).and_return(true)
     allow(Time).to receive(:current).and_return(within_quiet_hours)
     allow(WebPush::NotificationPayloadBuilder).to receive(:new).with(notification: workflow_failure).and_return(payload_builder)
-    allow(WebPush::DeliveryService).to receive(:new).with(subscription: subscription, payload: { title: "Notae", body: "Workflow failed", url: "/app" }).and_return(delivery)
+    allow(WebPush::DeliveryService).to receive(:new).with(
+      subscription: subscription,
+      payload: { title: "Notae", body: "Workflow failed", url: "/app" },
+      notification: workflow_failure
+    ).and_return(delivery)
 
     described_class.perform_now(mention.id)
     described_class.perform_now(workflow_failure.id)

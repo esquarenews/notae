@@ -186,7 +186,7 @@ module ApplicationHelper
     return [] unless workspace
 
     @ui_sidebar_recent_favorites ||= {}
-    @ui_sidebar_recent_favorites[[workspace.id, limit]] ||= begin
+    @ui_sidebar_recent_favorites[[ workspace.id, limit ]] ||= begin
       policy_scope(Favorite)
         .for_workspace(workspace)
         .for_user(current_user)

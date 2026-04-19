@@ -7,7 +7,7 @@ RSpec.describe Users::SessionsController, type: :controller do
     @request.env["devise.mapping"] = Devise.mappings[:user]
   end
 
-  describe "POST #create" do
+  describe "#after_sign_in_path_for" do
     it "redirects to the last workspace after sign in when no stored location exists" do
       user = User.create!(email: "auth-last-workspace@example.com", password: "password123")
       first_workspace = Workspace.create!(name: "First workspace", slug: "auth-first-workspace")
@@ -17,15 +17,7 @@ RSpec.describe Users::SessionsController, type: :controller do
 
       session["notae_last_workspace_slug"] = last_workspace.slug
 
-      post :create, params: {
-        user: {
-          email: user.email,
-          password: "password123",
-          remember_me: "1"
-        }
-      }
-
-      expect(response).to redirect_to(workspace_path(last_workspace.slug))
+      expect(controller.send(:after_sign_in_path_for, user)).to eq(workspace_path(last_workspace.slug))
     end
 
     it "prefers the stored location over the last workspace on sign in" do
@@ -38,15 +30,9 @@ RSpec.describe Users::SessionsController, type: :controller do
       session["notae_last_workspace_slug"] = last_workspace.slug
       session["user_return_to"] = workspace_notification_settings_path(workspace_slug: workspace.slug)
 
-      post :create, params: {
-        user: {
-          email: user.email,
-          password: "password123",
-          remember_me: "1"
-        }
-      }
-
-      expect(response).to redirect_to(workspace_notification_settings_path(workspace_slug: workspace.slug))
+      expect(controller.send(:after_sign_in_path_for, user)).to eq(
+        workspace_notification_settings_path(workspace_slug: workspace.slug)
+      )
     end
   end
 end

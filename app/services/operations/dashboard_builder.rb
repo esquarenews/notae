@@ -295,11 +295,11 @@ module Operations
           label: "Push delivery",
           status: if push_delivery[:subscription_count].to_i <= 0
             :missing
-          elsif push_delivery[:failing_count].to_i.positive?
+                  elsif push_delivery[:failing_count].to_i.positive?
             :attention
-          else
+                  else
             :healthy
-          end,
+                  end,
           connection_count: push_delivery[:subscription_count],
           attention_count: push_delivery[:failing_count],
           capability_summary: "Browser/device banner delivery",
@@ -425,6 +425,5 @@ module Operations
 
       :healthy
     end
-
   end
 end

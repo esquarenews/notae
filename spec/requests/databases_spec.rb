@@ -72,8 +72,10 @@ RSpec.describe "Databases", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
     template = Rails.root.join("app/views/databases/show.html.erb").read
 
-    expect(stylesheet).to include(".notae-db-inline-flash-host {\n  position: fixed;\n  top: var(--notae-topbar-content-clearance);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
-    expect(stylesheet).to include(".notae-db-inline-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
+    expect(stylesheet).to include(".notae-page-inline-flash-host,\n.notae-db-inline-flash-host,")
+    expect(stylesheet).to include(".notae-settings-inline-flash-host,\n.notae-auth-flash-host {\n  position: fixed;\n  top: var(--notae-topbar-content-clearance);\n  left: 0;\n  right: 0;\n  z-index: var(--notae-layer-flash);")
+    expect(stylesheet).to include(".notae-page-inline-flash-host .notae-flash-stack,\n.notae-db-inline-flash-host .notae-flash-stack,")
+    expect(stylesheet).to include(".notae-settings-inline-flash-host .notae-flash-stack,\n.notae-auth-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
     expect(template).to include('flash_dom_id: "database_flash_messages"')
     expect(template).to include('flash_host_class: "notae-db-inline-flash-host"')
   end
@@ -311,7 +313,7 @@ RSpec.describe "Databases", type: :request do
       database: database,
       name: "Priority",
       property_type: :select,
-      select_options_json: ["High"]
+      select_options_json: [ "High" ]
     )
     row = DbRow.create!(workspace: workspace, database: database, title: "Task one")
     DbCell.create!(workspace: workspace, db_row: row, db_property: property, value_text: "High")
@@ -337,7 +339,7 @@ RSpec.describe "Databases", type: :request do
           }
 
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
-    expect(property.reload.select_options_list).to eq(["High", "Low"])
+    expect(property.reload.select_options_list).to eq([ "High", "Low" ])
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
 
@@ -354,7 +356,7 @@ RSpec.describe "Databases", type: :request do
           }
 
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
-    expect(property.reload.select_options_list).to eq(["Low"])
+    expect(property.reload.select_options_list).to eq([ "Low" ])
   end
 
   it "creates a dropdown property with configured options from the add-property form" do
@@ -375,13 +377,13 @@ RSpec.describe "Databases", type: :request do
            db_property: {
              name: "Priority",
              property_type: "select",
-             select_options_json: ["High", "Low", "Medium"]
+             select_options_json: [ "High", "Low", "Medium" ]
            }
          }
 
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
     property = database.db_properties.find_by!(name: "Priority")
-    expect(property.select_options_list).to eq(["High", "Low", "Medium"])
+    expect(property.select_options_list).to eq([ "High", "Low", "Medium" ])
   end
 
   it "disables taskify for custom grids and rejects direct taskify requests" do

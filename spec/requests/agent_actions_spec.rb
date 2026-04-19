@@ -56,8 +56,8 @@ RSpec.describe "Agent actions", type: :request do
     draft_options = document.css("select[name='agent_action[draft_type]'] option").map { |node| node["value"] }
     target_options = document.css("select[name='agent_action[target_system]'] option").map { |node| node["value"] }
 
-    expect(draft_options).to eq(["email_draft"])
-    expect(target_options).to eq(["gmail"])
+    expect(draft_options).to eq([ "email_draft" ])
+    expect(target_options).to eq([ "gmail" ])
     expect(response.body).not_to include("GitHub Comment Draft")
   end
 

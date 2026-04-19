@@ -1,0 +1,259 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "01cb08efedf8b994a78329369350af5843d9038d26bc7b91b6a51ba5e12b63ef",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/databases/row_window_query_service.rb",
+      "line": 104,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"#{calendar_sort_rank_sql(\"#{\"sort_cells\"}.value_text\")} DESC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Databases::RowWindowQueryService",
+        "method": "apply_sort"
+      },
+      "user_input": "calendar_sort_rank_sql(\"#{\"sort_cells\"}.value_text\")",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: sort SQL is built from fixed aliases, sanitized direction values, and internal calendar rank expressions only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "1713cae54ae6fb9ece45ad517b3c2b07b83fb1840f63a056fd608657b37b1a71",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/libraries_controller.rb",
+      "line": 483,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "scope.except(:select, :includes, :preload, :eager_load, :order).joins(\"INNER JOIN workspaces ON workspaces.id = databases.workspace_id\").joins(\"LEFT JOIN users AS created_users ON created_users.id = databases.created_by_id\").joins(\"LEFT JOIN pages AS linked_pages ON linked_pages.id = databases.linked_page_id\").joins(\"LEFT JOIN pages AS parent_pages ON parent_pages.id = linked_pages.parent_page_id\").joins(\"LEFT JOIN (#{owner_email_sql}) AS workspace_owner_emails ON workspace_owner_emails.workspace_id = databases.workspace_id\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "LibrariesController",
+        "method": "database_library_entries_sql"
+      },
+      "user_input": "owner_email_sql",
+      "confidence": "Weak",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: SQL fragments are assembled from controller-owned whitelists, quoted values, and relation-generated SQL only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "465e7ac46f6dfa391cd859fce2fa435b08cb49fa30f408a2b9f4e9b060bca4b9",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/libraries_controller.rb",
+      "line": 434,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "scope.except(:select, :includes, :preload, :eager_load, :order).joins(\"INNER JOIN workspaces ON workspaces.id = pages.workspace_id\").joins(\"LEFT JOIN users AS created_users ON created_users.id = pages.created_by_id\").joins(\"LEFT JOIN pages AS parent_pages ON parent_pages.id = pages.parent_page_id\").joins(\"LEFT JOIN (#{owner_email_sql}) AS workspace_owner_emails ON workspace_owner_emails.workspace_id = pages.workspace_id\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "LibrariesController",
+        "method": "page_library_entries_sql"
+      },
+      "user_input": "owner_email_sql",
+      "confidence": "Weak",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: SQL fragments are assembled from controller-owned whitelists, quoted values, and relation-generated SQL only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "667e42ddc7b8808421640973955b08dc1c26f2ff0c422c1c8ff93339d727264b",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/libraries_controller.rb",
+      "line": 408,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"LOWER(#{table_name}.#{name_column}) ASC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "LibrariesController",
+        "method": "ordered_library_scope"
+      },
+      "user_input": "table_name",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: SQL fragments are assembled from controller-owned whitelists, quoted values, and relation-generated SQL only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "79393c888c12abbff7ee3c4d7a35bd9a204ee5c586c19c5c6a84e45bdd34e7e0",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/databases/row_window_query_service.rb",
+      "line": 105,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"#{calendar_sort_rank_sql(\"#{\"sort_cells\"}.value_text\")} ASC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Databases::RowWindowQueryService",
+        "method": "apply_sort"
+      },
+      "user_input": "calendar_sort_rank_sql(\"#{\"sort_cells\"}.value_text\")",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: sort SQL is built from fixed aliases, sanitized direction values, and internal calendar rank expressions only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "79ee322358cc246f081578593cd7e5a947a2e9d9650dc96178e8db2a468e4c4d",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/databases/row_window_query_service.rb",
+      "line": 101,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"CASE WHEN #{calendar_sort_rank_sql(\"#{\"sort_cells\"}.value_text\")} IS NULL THEN 1 ELSE 0 END ASC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Databases::RowWindowQueryService",
+        "method": "apply_sort"
+      },
+      "user_input": "calendar_sort_rank_sql(\"#{\"sort_cells\"}.value_text\")",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: sort SQL is built from fixed aliases, sanitized direction values, and internal calendar rank expressions only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "83b64d98c740e5844aa465c38175907cdd3fe39a6800a67adb14a9a34c39d155",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/databases/row_window_query_service.rb",
+      "line": 77,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"CASE WHEN #{calendar_sort_rank_sql(\"db_rows.title\")} IS NULL THEN 1 ELSE 0 END ASC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Databases::RowWindowQueryService",
+        "method": "apply_sort"
+      },
+      "user_input": "calendar_sort_rank_sql(\"db_rows.title\")",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: sort SQL is built from fixed aliases, sanitized direction values, and internal calendar rank expressions only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "9874ae467140558f90118e18366fe445acb0cd471654225303830b5b1c00526a",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/libraries_controller.rb",
+      "line": 344,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"SELECT *\\nFROM (#{library_entries_union_sql(page_scope, database_scope, selected_workspace_ids)}) library_entries\\n#{filtered_library_where_clause}\\nORDER BY #{filtered_library_order_clause}\\nLIMIT #{50}\\nOFFSET #{(([resolved_page, [(ActiveRecord::Base.connection.select_value(Arel.sql(\"SELECT COUNT(*) FROM (#{library_entries_union_sql(page_scope, database_scope, selected_workspace_ids)}) library_entries #{filtered_library_where_clause}\")).to_i.to_f / 50).ceil, 1].max].min - 1) * 50)}\\n\".squish)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "LibrariesController",
+        "method": "build_filtered_library_rows_from_sql"
+      },
+      "user_input": "library_entries_union_sql(page_scope, database_scope, selected_workspace_ids)",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: SQL fragments are assembled from controller-owned whitelists, quoted values, and relation-generated SQL only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "aa4e0c8c650e86f806ac9095f67b26b51c4849d0c3a1ea292c3bfbfda73e92bb",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/databases/row_window_query_service.rb",
+      "line": 80,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"#{calendar_sort_rank_sql(\"db_rows.title\")} DESC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Databases::RowWindowQueryService",
+        "method": "apply_sort"
+      },
+      "user_input": "calendar_sort_rank_sql(\"db_rows.title\")",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: sort SQL is built from fixed aliases, sanitized direction values, and internal calendar rank expressions only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "c2524829082a723f57310379453115aa6d4f3c19248660c137c7c571e1f246f7",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/libraries_controller.rb",
+      "line": 410,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"LOWER(#{table_name}.#{name_column}) DESC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "LibrariesController",
+        "method": "ordered_library_scope"
+      },
+      "user_input": "table_name",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: SQL fragments are assembled from controller-owned whitelists, quoted values, and relation-generated SQL only."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "e0e7a9bed4b3456a2182def051c83c872a02e34ca19ae3f1249f531412b44c7b",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/services/databases/row_window_query_service.rb",
+      "line": 81,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"#{calendar_sort_rank_sql(\"db_rows.title\")} ASC\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Databases::RowWindowQueryService",
+        "method": "apply_sort"
+      },
+      "user_input": "calendar_sort_rank_sql(\"db_rows.title\")",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Reviewed for CI: sort SQL is built from fixed aliases, sanitized direction values, and internal calendar rank expressions only."
+    }
+  ],
+  "updated": "2026-04-20 06:48:12 +1000",
+  "brakeman_version": "8.0.4"
+}

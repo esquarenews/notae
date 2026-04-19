@@ -635,8 +635,10 @@ RSpec.describe "Blocks", type: :request do
     expect(stylesheet).to include(".notae-content > #notae_flash_messages {\n  position: fixed;\n  top: var(--notae-topbar-content-clearance);\n  left: 0;\n  right: 0;")
     expect(stylesheet).to include("  height: 0;\n  margin: 0;\n  overflow: visible;")
     expect(stylesheet).to include(".notae-content > #notae_flash_messages .notae-flash-stack {\n  width: min(50%, 760px);")
-    expect(stylesheet).to include(".notae-page-inline-flash-host,\n.notae-db-inline-flash-host {\n  position: fixed;\n  top: var(--notae-topbar-content-clearance);\n  left: 0;\n  right: 0;")
-    expect(stylesheet).to include(".notae-page-inline-flash-host .notae-flash-stack,\n.notae-db-inline-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
+    expect(stylesheet).to include(".notae-page-inline-flash-host,\n.notae-db-inline-flash-host,")
+    expect(stylesheet).to include(".notae-settings-inline-flash-host,\n.notae-auth-flash-host {\n  position: fixed;\n  top: var(--notae-topbar-content-clearance);\n  left: 0;\n  right: 0;")
+    expect(stylesheet).to include(".notae-page-inline-flash-host .notae-flash-stack,\n.notae-db-inline-flash-host .notae-flash-stack,")
+    expect(stylesheet).to include(".notae-settings-inline-flash-host .notae-flash-stack,\n.notae-auth-flash-host .notae-flash-stack {\n  width: min(44rem, calc(100% - 1.2rem));")
   end
 
   it "archives and restores blocks while preserving original position priority" do

@@ -231,5 +231,4 @@ RSpec.describe "API V1 Agent actions", type: :request do
     )
     expect(payload.dig("policy_evaluation_json", "policy_snapshot", "effective_approval_required")).to eq(true)
   end
-
 end

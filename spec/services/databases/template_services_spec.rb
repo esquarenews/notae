@@ -13,7 +13,7 @@ RSpec.describe "Database template services" do
       name: "Status",
       property_type: :select,
       position: 1024,
-      select_options_json: ["not started", "started", "done"]
+      select_options_json: [ "not started", "started", "done" ]
     )
     due_date_property = DbProperty.create!(workspace: workspace, database: source_database, name: "Due date", property_type: :date, position: 2048)
     DatabaseView.create!(
@@ -52,7 +52,7 @@ RSpec.describe "Database template services" do
         [ "Due date", "date" ]
       ]
     )
-    expect(template.snapshot_json["properties"].first["select_options"]).to eq(["not started", "started", "done"])
+    expect(template.snapshot_json["properties"].first["select_options"]).to eq([ "not started", "started", "done" ])
     expect(template.snapshot_json.dig("view", "config_json", "visible_property_names")).to eq([ "Status", "Due date" ])
     expect(template.snapshot_json.dig("view", "config_json", "sort_property_name")).to eq("Due date")
     expect(template.snapshot_json.dig("view", "config_json", "graph_type")).to eq("bar")
@@ -77,7 +77,7 @@ RSpec.describe "Database template services" do
         [ "Existing notes", "text" ]
       ]
     )
-    expect(target_database.db_properties.find_by!(name: "Status").select_options_list).to eq(["not started", "started", "done"])
+    expect(target_database.db_properties.find_by!(name: "Status").select_options_list).to eq([ "not started", "started", "done" ])
 
     applied_view = target_database.database_views.find_by!(default: true)
     expect(applied_view.view_type).to eq("table")

@@ -51,7 +51,7 @@ RSpec.describe Kalendarium::ReminderDispatchJob do
       status: "confirmed",
       visibility: "default",
       source_kind: "provider",
-      reminder_offsets_minutes: [0],
+      reminder_offsets_minutes: [ 0 ],
       meeting_capture_enabled: false
     )
 

@@ -51,11 +51,11 @@ RSpec.describe DbProperty, type: :model do
     property.apply_select_option_action!(action: "add_select_option", option_value: "Done")
     property.save!
 
-    expect(property.reload.select_options_list).to eq(["Started", "Done"])
+    expect(property.reload.select_options_list).to eq([ "Started", "Done" ])
 
     property.apply_select_option_action!(action: "remove_select_option", option_value: "Started")
     property.save!
 
-    expect(property.reload.select_options_list).to eq(["Done"])
+    expect(property.reload.select_options_list).to eq([ "Done" ])
   end
 end

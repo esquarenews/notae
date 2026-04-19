@@ -205,8 +205,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(document.at_css(".notae-kalendarium-sidebar")).to be_nil
     expect(document.at_css(".notae-kalendarium-filter-controls")).to be_nil
     expect(document.at_css(".notae-kalendarium-widget-view-switch")).to be_present
-    expect(widget_view_switch.map { |link| link.text.strip }).to eq(["(1)", "(7)", "(7+)", "(31)", "(365)"])
-    expect(widget_view_switch.map { |link| link["aria-label"] }).to eq(["Day", "Week", "Next 7 days", "Month", "Year"])
+    expect(widget_view_switch.map { |link| link.text.strip }).to eq([ "(1)", "(7)", "(7+)", "(31)", "(365)" ])
+    expect(widget_view_switch.map { |link| link["aria-label"] }).to eq([ "Day", "Week", "Next 7 days", "Month", "Year" ])
     expect(create_button).to be_present
     expect(minimize_button).to be_present
     expect(create_dialog).to be_present
