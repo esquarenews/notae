@@ -205,4 +205,32 @@ RSpec.describe "Notification settings", type: :request do
       )
     )
   end
+
+  it "renders without raising when push delivery schema is unavailable" do
+    user = User.create!(email: "notification-settings-schema-gap@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification schema gap", slug: "notification-schema-gap")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    allow(ActiveRecord::Base.connection).to receive(:data_source_exists?).and_call_original
+    allow(ActiveRecord::Base.connection).to receive(:data_source_exists?).with("web_push_subscriptions").and_return(false)
+    allow(ActiveRecord::Base.connection).to receive(:data_source_exists?).with("web_push_delivery_attempts").and_return(false)
+
+    allow(User).to receive(:column_names).and_call_original
+    allow(User).to receive(:column_names).and_return(User.column_names - %w[
+      push_notification_preferences
+      push_quiet_hours_enabled
+      push_quiet_hours_starts_at
+      push_quiet_hours_ends_at
+    ])
+
+    allow(Membership).to receive(:column_names).and_call_original
+    allow(Membership).to receive(:column_names).and_return(Membership.column_names - %w[notification_preferences_json])
+
+    get workspace_notification_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Push delivery diagnostics are not available on this server yet.")
+    expect(response.body).to include("Recent push history will appear here after the notification delivery schema is available.")
+  end
 end

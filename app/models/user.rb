@@ -215,15 +215,15 @@ class User < ApplicationRecord
   validates :meeting_notify_join_transcribing, inclusion: { in: [ true, false ] }
   validates :meeting_notify_transcribed, inclusion: { in: [ true, false ] }
   validates :meeting_notify_summarized, inclusion: { in: [ true, false ] }
-  validates :push_quiet_hours_enabled, inclusion: { in: [ true, false ] }
+  validates :push_quiet_hours_enabled, inclusion: { in: [ true, false ] }, if: -> { self.class.column_names.include?("push_quiet_hours_enabled") }
   validates :email_notify_activity, inclusion: { in: [ true, false ] }
   validates :email_notify_always_send, inclusion: { in: [ true, false ] }
   validates :email_notify_page_updates, inclusion: { in: [ true, false ] }
   validates :email_notify_workspace_digest, inclusion: { in: [ true, false ] }
   validates :slack_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
   validates :discord_notification_preference, inclusion: { in: CHANNEL_NOTIFICATION_OPTIONS.map(&:last) }
-  validates :push_quiet_hours_starts_at, format: { with: CLOCK_TIME_PATTERN }
-  validates :push_quiet_hours_ends_at, format: { with: CLOCK_TIME_PATTERN }
+  validates :push_quiet_hours_starts_at, format: { with: CLOCK_TIME_PATTERN }, if: -> { self.class.column_names.include?("push_quiet_hours_starts_at") }
+  validates :push_quiet_hours_ends_at, format: { with: CLOCK_TIME_PATTERN }, if: -> { self.class.column_names.include?("push_quiet_hours_ends_at") }
   validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
   validates :smtp_address, length: { maximum: 255 }, allow_blank: true
   validates :full_name, length: { maximum: 120 }, allow_blank: true
@@ -345,8 +345,28 @@ class User < ApplicationRecord
   end
 
   def push_notification_preferences
+    return {} unless self.class.column_names.include?("push_notification_preferences")
+
     raw_preferences = self[:push_notification_preferences]
     raw_preferences.is_a?(Hash) ? raw_preferences : {}
+  end
+
+  def push_quiet_hours_enabled?
+    return false unless self.class.column_names.include?("push_quiet_hours_enabled")
+
+    ActiveModel::Type::Boolean.new.cast(self[:push_quiet_hours_enabled])
+  end
+
+  def push_quiet_hours_starts_at
+    return "22:00" unless self.class.column_names.include?("push_quiet_hours_starts_at")
+
+    self[:push_quiet_hours_starts_at].to_s.presence || "22:00"
+  end
+
+  def push_quiet_hours_ends_at
+    return "07:00" unless self.class.column_names.include?("push_quiet_hours_ends_at")
+
+    self[:push_quiet_hours_ends_at].to_s.presence || "07:00"
   end
 
   def push_notification_enabled_for?(notification_type, workspace: nil, membership: nil)
@@ -440,6 +460,8 @@ class User < ApplicationRecord
   end
 
   def push_notification_preferences_supported
+    return unless self.class.column_names.include?("push_notification_preferences")
+
     unsupported_keys = push_notification_preferences.keys.map(&:to_s) - self.class.push_notification_types
     return if unsupported_keys.empty?
 

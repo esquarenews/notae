@@ -308,7 +308,9 @@
     <section class="notae-settings-section">
       <h2>Push delivery state</h2>
 
-      <% if @push_subscriptions.any? %>
+      <% if !@push_delivery_schema_available %>
+        <p class="notae-page-subtle">Push delivery diagnostics are not available on this server yet. Run the latest notification delivery migrations, then reload this page.</p>
+      <% elsif @push_subscriptions.any? %>
         <div class="notae-operations-list">
           <% @push_subscriptions.each do |subscription| %>
             <article class="notae-operations-item">
@@ -337,7 +339,9 @@
     <section class="notae-settings-section">
       <h2>Recent push history</h2>
 
-      <% if @web_push_delivery_attempts.any? %>
+      <% if !@push_delivery_schema_available %>
+        <p class="notae-page-subtle">Recent push history will appear here after the notification delivery schema is available.</p>
+      <% elsif @web_push_delivery_attempts.any? %>
         <div class="notae-operations-list">
           <% @web_push_delivery_attempts.each do |attempt| %>
             <article class="notae-operations-item">

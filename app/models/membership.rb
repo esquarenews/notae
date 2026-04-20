@@ -36,6 +36,8 @@ class Membership < ApplicationRecord
   end
 
   def notification_preferences
+    return {} unless self.class.column_names.include?("notification_preferences_json")
+
     raw_preferences = notification_preferences_json
     raw_preferences.is_a?(Hash) ? raw_preferences : {}
   end
