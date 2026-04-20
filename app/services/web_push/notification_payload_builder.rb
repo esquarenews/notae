@@ -120,7 +120,7 @@ module WebPush
     end
 
     def require_interaction?
-      notification.codex_completion_notification?
+      notification.codex_completion_notification? || notification.notification_type == Notification::TYPE_TEST_PUSH
     end
 
     def knowledge_suggestion_body(suggestion)

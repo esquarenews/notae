@@ -160,5 +160,6 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:title]).to eq("Notae test notification")
     expect(payload[:body]).to eq("Push notifications are working on this device for Test Push.")
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
+    expect(payload[:require_interaction]).to eq(true)
   end
 end
