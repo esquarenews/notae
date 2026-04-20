@@ -167,42 +167,100 @@ RSpec.describe "Notification settings", type: :request do
     expect(response.body).to include("Notification settings updated.")
   end
 
-  it "sends a test push to the current device subscription" do
+  it "fans a test push out to all registered subscriptions and reports whether the current browser received it" do
     user = User.create!(email: "notification-settings-test-push@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notification settings push", slug: "notification-settings-push")
     Membership.create!(workspace: workspace, user: user, role: :owner)
-    subscription = user.web_push_subscriptions.create!(
+    other_subscription = user.web_push_subscriptions.create!(
+      endpoint: "https://push.example.test/subscriptions/other-device",
+      p256dh: "p256dh-other",
+      auth: "auth-other"
+    )
+    current_subscription = user.web_push_subscriptions.create!(
       endpoint: "https://push.example.test/subscriptions/test-device",
       p256dh: "p256dh-test",
       auth: "auth-test"
     )
-    delivery_service = instance_double(WebPush::DeliveryService, call: true)
+    current_delivery_service = instance_double(WebPush::DeliveryService, call: true)
+    other_delivery_service = instance_double(WebPush::DeliveryService, call: true)
     sign_in user
 
     allow(WebPush::Configuration).to receive(:configured?).and_return(true)
-    allow(WebPush::DeliveryService).to receive(:new).and_return(delivery_service)
+    allow(WebPush::DeliveryService).to receive(:new) do |subscription:, **|
+      case subscription.endpoint
+      when current_subscription.endpoint
+        current_delivery_service
+      when other_subscription.endpoint
+        other_delivery_service
+      else
+        raise "Unexpected subscription endpoint #{subscription.endpoint}"
+      end
+    end
 
     post workspace_notification_settings_test_push_path(workspace_slug: workspace.slug),
-         params: { endpoint: subscription.endpoint },
+         params: { endpoint: current_subscription.endpoint },
          as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(JSON.parse(response.body)).to include("ok" => true, "message" => "Test push sent to this device.")
+    expect(JSON.parse(response.body)).to include(
+      "ok" => true,
+      "message" => "Test push sent to 2 devices.",
+      "current_device_delivered" => true,
+      "delivered_subscription_count" => 2
+    )
     notification = Notification.order(:created_at).last
     expect(notification.notification_type).to eq(Notification::TYPE_TEST_PUSH)
     expect(notification.recipient).to eq(user)
     expect(notification.metadata).to include(
       "title" => "Notae test notification",
       "path" => workspace_notification_settings_path(workspace_slug: workspace.slug),
-      "endpoint" => subscription.endpoint
+      "endpoint" => current_subscription.endpoint
     )
     expect(WebPush::DeliveryService).to have_received(:new).with(
-      subscription: subscription,
+      subscription: current_subscription,
       notification: notification,
       payload: hash_including(
         title: "Notae test notification",
         url: "/app/notifications/#{notification.id}"
       )
+    )
+    expect(WebPush::DeliveryService).to have_received(:new).with(
+      subscription: other_subscription,
+      notification: notification,
+      payload: hash_including(
+        title: "Notae test notification",
+        url: "/app/notifications/#{notification.id}"
+      )
+    )
+  end
+
+  it "returns a stale subscription error when the current device subscription expires during delivery" do
+    user = User.create!(email: "notification-settings-test-push-stale@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification settings stale push", slug: "notification-settings-stale-push")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    subscription = user.web_push_subscriptions.create!(
+      endpoint: "https://push.example.test/subscriptions/stale-device",
+      p256dh: "p256dh-stale",
+      auth: "auth-stale"
+    )
+    delivery_service = instance_double(WebPush::DeliveryService)
+    sign_in user
+
+    allow(WebPush::Configuration).to receive(:configured?).and_return(true)
+    allow(WebPush::DeliveryService).to receive(:new).and_return(delivery_service)
+    allow(delivery_service).to receive(:call) do
+      subscription.destroy!
+      false
+    end
+
+    post workspace_notification_settings_test_push_path(workspace_slug: workspace.slug),
+         params: { endpoint: subscription.endpoint },
+         as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(JSON.parse(response.body)).to include(
+      "ok" => false,
+      "error_code" => "stale_subscription"
     )
   end
 

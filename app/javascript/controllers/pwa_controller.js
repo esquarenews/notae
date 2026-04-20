@@ -179,8 +179,7 @@ export default class extends Controller {
     await this.syncPushSubscription().catch(() => {})
     this.refreshPushUi()
 
-    const registration = await navigator.serviceWorker.ready.catch(() => null)
-    const subscription = await registration?.pushManager?.getSubscription?.()
+    const subscription = await this.currentPushSubscription()
     if (!subscription?.endpoint) {
       this.setPushSettingsFeedback("This browser does not have an active push subscription.", "error")
       this.showNetworkToast("This device does not have an active push subscription.")
@@ -199,22 +198,27 @@ export default class extends Controller {
     this.refreshPushUi()
 
     try {
-      const response = await fetch(path, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "X-CSRF-Token": this.csrfToken()
-        },
-        body: JSON.stringify({ endpoint: subscription.endpoint })
-      })
-      const payload = await response.json().catch(() => ({}))
+      let payload
+      let response = await this.sendTestPushRequest(path, subscription.endpoint)
+      payload = await response.json().catch(() => ({}))
+
+      if (!response.ok && payload.error_code === "stale_subscription") {
+        this.setPushSettingsFeedback("Refreshing this device subscription…", "pending")
+        const refreshedSubscription = await this.rebuildPushSubscription()
+        response = await this.sendTestPushRequest(path, refreshedSubscription.endpoint)
+        payload = await response.json().catch(() => ({}))
+      }
+
       if (!response.ok) throw new Error(payload.error || "Test push could not be sent.")
 
-      this.markPushTestDelivered()
-      this.setPushSettingsFeedback("Test push delivered to this browser. Confirm whether you also saw the device banner.", "pending")
-      this.showNetworkToast(payload.message || "Test push sent to this device.")
+      if (payload.current_device_delivered) {
+        this.markPushTestDelivered()
+        this.setPushSettingsFeedback("Test push reached this browser. Confirm whether you also saw the device banner.", "pending")
+      } else {
+        this.setPushSettingsFeedback("Test push was sent to your signed-in devices, but this browser did not confirm delivery.", "error")
+      }
+
+      this.showNetworkToast(payload.message || "Test push sent.")
     } catch (error) {
       this.setPushSettingsFeedback(error.message || "Test push could not be sent.", "error")
       this.showNetworkToast(error.message || "Test push could not be sent.")
@@ -835,6 +839,46 @@ export default class extends Controller {
     })
 
     if (!response.ok) throw new Error("push_subscription_sync_failed")
+  }
+
+  async currentPushSubscription() {
+    const registration = await navigator.serviceWorker.ready.catch(() => null)
+    return registration?.pushManager?.getSubscription?.()
+  }
+
+  async rebuildPushSubscription() {
+    const registration = await navigator.serviceWorker.ready.catch(() => null)
+    if (!registration) throw new Error("push_subscription_refresh_failed")
+
+    const existingSubscription = await registration.pushManager.getSubscription()
+    if (existingSubscription) {
+      await existingSubscription.unsubscribe().catch(() => {})
+    }
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: this.urlBase64ToUint8Array(this.webPushPublicKeyValue)
+    })
+
+    await this.persistPushSubscription(subscription)
+    this.devicePushSubscribed = true
+    this.resetBannerConfirmation()
+    this.syncPushPrompt()
+    this.refreshPushUi()
+    return subscription
+  }
+
+  async sendTestPushRequest(path, endpoint) {
+    return fetch(path, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-Token": this.csrfToken()
+      },
+      body: JSON.stringify({ endpoint })
+    })
   }
 
   async detachPushSubscription({ keepBrowserSubscription = false } = {}) {

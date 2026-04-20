@@ -57,8 +57,8 @@ class NotificationSettingsController < ApplicationController
     return render json: { ok: false, error: "Push subscription storage is not available on this server yet." }, status: :service_unavailable unless push_subscription_schema_available?
     return render json: { ok: false, error: "Push notifications are not configured on this server yet." }, status: :service_unavailable unless WebPush::Configuration.configured?
 
-    subscription = current_user.web_push_subscriptions.find_by(endpoint: test_push_endpoint)
-    return render json: { ok: false, error: "This device is not subscribed for push notifications." }, status: :unprocessable_entity if subscription.blank?
+    subscriptions = current_user.web_push_subscriptions.order(created_at: :desc).to_a
+    return render json: { ok: false, error: "No devices are subscribed for push notifications yet." }, status: :unprocessable_entity if subscriptions.empty?
 
     test_payload = WebPush::TestPayloadBuilder.new(user: current_user, workspace: @workspace).call
 
@@ -71,22 +71,62 @@ class NotificationSettingsController < ApplicationController
         "title" => "Notae test notification",
         "body" => test_payload[:body],
         "path" => workspace_notification_settings_path(workspace_slug: @workspace.slug),
-        "endpoint" => subscription.endpoint
+        "endpoint" => test_push_endpoint
       }
     )
 
-    delivered = WebPush::DeliveryService.new(
-      subscription: subscription,
-      payload: WebPush::NotificationPayloadBuilder.new(notification: notification).call,
-      notification: notification
-    ).call
+    payload = WebPush::NotificationPayloadBuilder.new(notification: notification).call
+    current_endpoint = test_push_endpoint
+    current_device_delivered = false
+    delivered_subscription_count = 0
+    current_subscription_seen = false
+    current_subscription_stale = false
+    error_messages = []
 
-    if delivered
-      render json: { ok: true, message: "Test push sent to this device.", notification_id: notification.id }
+    subscriptions.each do |subscription|
+      delivered = WebPush::DeliveryService.new(
+        subscription: subscription,
+        payload: payload,
+        notification: notification
+      ).call
+
+      delivered_subscription_count += 1 if delivered
+
+      next unless current_endpoint.present? && subscription.endpoint == current_endpoint
+
+      current_subscription_seen = true
+      current_device_delivered = delivered
+      current_subscription_stale = !delivered && !WebPushSubscription.exists?(subscription.id)
+    end
+
+    subscriptions.each do |subscription|
+      next unless WebPushSubscription.exists?(subscription.id)
+
+      error_message = subscription.reload.last_error_message.presence
+      error_messages << error_message if error_message.present?
+    end
+
+    if delivered_subscription_count.positive?
+      render json: {
+        ok: true,
+        message: "Test push sent to #{ActionController::Base.helpers.pluralize(delivered_subscription_count, 'device')}.",
+        notification_id: notification.id,
+        current_device_delivered: current_device_delivered,
+        delivered_subscription_count: delivered_subscription_count
+      }
     else
+      if current_subscription_seen && current_subscription_stale
+        return render json: {
+          ok: false,
+          error: "This device subscription expired and needs to be refreshed.",
+          error_code: "stale_subscription"
+        }, status: :unprocessable_entity
+      end
+
       render json: {
         ok: false,
-        error: subscription.reload.last_error_message.presence || "Test push could not be delivered to this device."
+        error: error_messages.first || "Test push could not be delivered to any device.",
+        error_code: "delivery_failed"
       }, status: :unprocessable_entity
     end
   end
