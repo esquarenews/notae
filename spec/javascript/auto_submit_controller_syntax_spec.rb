@@ -46,4 +46,18 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include('form.dataset.preserveScroll = "true"')
     expect(source).to include('form.dataset.turboStream = "true"')
   end
+
+  it "restores the next clicked cell instead of stealing focus back to the submitted cell" do
+    source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
+
+    expect(source).to include("document.addEventListener(\"pointerdown\", this.handlePointerDown, true)")
+    expect(source).to include("document.removeEventListener(\"pointerdown\", this.handlePointerDown, true)")
+    expect(source).to include("capturePendingFocusTarget(event)")
+    expect(source).to include("pendingFocusSelector")
+    expect(source).to include("pendingFocusCapturedAt")
+    expect(source).to include("preferredFocusSelector(payload)")
+    expect(source).to include("payload?.pendingFocusSelector && pendingCapturedAt >= submittedAt")
+    expect(source).to include("target.closest(\"input, textarea, select, [contenteditable='true']\")")
+    expect(source).to include("this.clearPendingFocusTarget()")
+  end
 end

@@ -3,6 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static VIEW_STATE_KEY = "notae:auto-submit:view-state"
   static VIEW_STATE_TTL_MS = 10_000
+
   static values = {
     focusOnConnect: Boolean
   }
@@ -26,6 +27,9 @@ export default class extends Controller {
   static STATUS_CLASSES = Object.values(this.STATUS_CLASS_BY_VALUE)
 
   connect() {
+    this.handlePointerDown = (event) => {
+      this.capturePendingFocusTarget(event)
+    }
     this.handleSubmitStart = (event) => {
       const form = this.eventForm(event)
       this.markSubmitting(form)
@@ -47,10 +51,12 @@ export default class extends Controller {
       this.focusPrimaryInput()
     }
 
+    document.addEventListener("pointerdown", this.handlePointerDown, true)
     this.restoreViewState()
   }
 
   disconnect() {
+    document.removeEventListener("pointerdown", this.handlePointerDown, true)
     this.element.removeEventListener("turbo:submit-start", this.handleSubmitStart)
     this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd)
   }
@@ -166,7 +172,9 @@ export default class extends Controller {
       focusSelector,
       scrollY: window.scrollY,
       capturedAt: Date.now(),
-      formAction: form?.action || ""
+      formAction: form?.action || "",
+      pendingFocusSelector: this.pendingFocusSelector,
+      pendingFocusCapturedAt: this.pendingFocusCapturedAt
     }
 
     window.sessionStorage.setItem(this.constructor.VIEW_STATE_KEY, JSON.stringify(payload))
@@ -191,10 +199,12 @@ export default class extends Controller {
       return
     }
 
-    const target = payload?.focusSelector ? document.querySelector(payload.focusSelector) : null
+    const selector = this.preferredFocusSelector(payload)
+    const target = selector ? document.querySelector(selector) : null
     if (!(target instanceof HTMLElement)) return
 
     window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)
+    this.clearPendingFocusTarget()
     requestAnimationFrame(() => {
       window.scrollTo({ top: Number(payload.scrollY) || 0, behavior: "auto" })
       requestAnimationFrame(() => {
@@ -204,6 +214,17 @@ export default class extends Controller {
         }
       })
     })
+  }
+
+  preferredFocusSelector(payload) {
+    const pendingCapturedAt = Number(payload?.pendingFocusCapturedAt || 0)
+    const submittedAt = Number(payload?.capturedAt || 0)
+
+    if (payload?.pendingFocusSelector && pendingCapturedAt >= submittedAt) {
+      return payload.pendingFocusSelector
+    }
+
+    return payload?.focusSelector || ""
   }
 
   focusSelectorFor(target) {
@@ -219,6 +240,22 @@ export default class extends Controller {
 
   escapeAttribute(value) {
     return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+  }
+
+  capturePendingFocusTarget(event) {
+    const target = event?.target
+    if (!(target instanceof HTMLElement)) return
+
+    const focusTarget = target.closest("input, textarea, select, [contenteditable='true']")
+    if (!(focusTarget instanceof HTMLElement)) return
+
+    this.pendingFocusSelector = this.focusSelectorFor(focusTarget)
+    this.pendingFocusCapturedAt = Date.now()
+  }
+
+  clearPendingFocusTarget() {
+    this.pendingFocusSelector = ""
+    this.pendingFocusCapturedAt = 0
   }
 
   markSubmitting(form = this.element) {
