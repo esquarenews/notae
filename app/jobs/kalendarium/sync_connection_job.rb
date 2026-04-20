@@ -11,6 +11,7 @@ module Kalendarium
       return unless acquire_sync_lock(connection.id)
 
       Kalendarium::ConnectionSyncService.new(connection: connection).call
+      Search::QueueKnowledgeSuggestionRefreshJob.perform_later(connection.workspace_id)
     rescue StandardError => error
       raise unless permanent_auth_failure?(error)
 

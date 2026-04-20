@@ -62,4 +62,14 @@ RSpec.describe Kalendarium::SyncConnectionJob, type: :job do
 
     expect(sync_service).not_to have_received(:call)
   end
+
+  it "queues a knowledge suggestion refresh after a successful sync" do
+    connection = build_connection(suffix: "knowledge-refresh")
+    sync_service = instance_double(Kalendarium::ConnectionSyncService, call: true)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).with(connection: connection).and_return(sync_service)
+
+    expect do
+      described_class.perform_now(connection.id)
+    end.to have_enqueued_job(Search::QueueKnowledgeSuggestionRefreshJob).with(connection.workspace_id).on_queue("default")
+  end
 end

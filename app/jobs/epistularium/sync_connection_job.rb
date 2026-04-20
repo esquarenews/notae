@@ -14,6 +14,7 @@ module Epistularium
 
       Epistularium::ConnectionSyncService.new(account: account, **sync_options_for(account: account, mode: mode)).call
       enqueue_follow_up_sync(account: account, mode: mode)
+      Search::QueueKnowledgeSuggestionRefreshJob.perform_later(account.workspace_id)
     rescue StandardError => error
       raise unless permanent_auth_failure?(error)
 

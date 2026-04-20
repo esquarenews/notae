@@ -134,6 +134,21 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
     expect(sync_service).to have_received(:call)
   end
 
+  it "queues a knowledge suggestion refresh after a successful sync" do
+    account = build_account(suffix: "knowledge-refresh")
+    sync_service = instance_double(Epistularium::ConnectionSyncService, call: { backfill_remaining: false })
+    allow(Epistularium::ConnectionSyncService).to receive(:new).with(
+      account: account,
+      full_backfill: true,
+      max_messages_per_mailbox: 50,
+      update_cursor: true
+    ).and_return(sync_service)
+
+    expect do
+      described_class.perform_now(account.id)
+    end.to have_enqueued_job(Search::QueueKnowledgeSuggestionRefreshJob).with(account.workspace_id).on_queue("default")
+  end
+
   it "kicks off backfill after a fresh incremental run only when the backfill window is due" do
     account = build_account(
       suffix: "incremental-backfill-follow-up",
@@ -194,7 +209,8 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     described_class.perform_now(account.id, mode: "incremental")
 
-    expect(enqueued_jobs).to be_empty
+    follow_up_jobs = enqueued_jobs.select { |job| job[:job] == described_class }
+    expect(follow_up_jobs).to be_empty
   end
 
   it "does not immediately chain another full backfill batch when more IMAP history remains" do
@@ -209,7 +225,8 @@ RSpec.describe Epistularium::SyncConnectionJob, type: :job do
 
     described_class.perform_now(account.id, mode: "full_backfill")
 
-    expect(enqueued_jobs).to be_empty
+    follow_up_jobs = enqueued_jobs.select { |job| job[:job] == described_class }
+    expect(follow_up_jobs).to be_empty
   end
 
   it "clears stale sync state before claiming a new run" do
