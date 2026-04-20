@@ -307,9 +307,15 @@ export default class extends Controller {
   }
 
   handleIncomingPushReceipt(payload) {
+    const foregroundBrowserNotificationRequested = payload.notificationType === "test_push"
+      ? this.requestForegroundBrowserNotification(payload)
+      : false
+
     if (payload.notificationType === "test_push") {
       this.markPushTestDelivered()
-      if (payload.notificationDisplayed === false) {
+      if (foregroundBrowserNotificationRequested) {
+        this.setPushSettingsFeedback("Test push reached this browser. Notae requested a foreground Chrome notification for it.", "pending")
+      } else if (payload.notificationDisplayed === false) {
         this.setPushSettingsFeedback("Test push reached this browser, but the browser did not present a desktop notification banner.", "error")
       } else {
         this.setPushSettingsFeedback("Test push reached this browser. Confirm whether you also saw the device banner.", "pending")
@@ -327,6 +333,32 @@ export default class extends Controller {
     })
     window.dispatchEvent(new CustomEvent("notae:push-received", { detail: payload }))
     this.showIncomingPushToast(payload)
+  }
+
+  requestForegroundBrowserNotification(payload) {
+    if (document.visibilityState !== "visible") return false
+    if (this.pushPermissionState() !== "granted") return false
+    if (!("Notification" in window)) return false
+
+    try {
+      const notification = new Notification(this.normalizedText(payload?.title, "Notae"), {
+        body: this.normalizedText(payload?.body),
+        icon: this.normalizedText(payload?.icon, "/icon-192-v5.png"),
+        tag: this.normalizedText(payload?.tag, `notae-foreground-${payload?.notificationId || Date.now()}`),
+        requireInteraction: Boolean(payload?.requireInteraction)
+      })
+
+      notification.onclick = () => {
+        window.focus?.()
+        window.location.assign(this.normalizedText(payload?.url, "/app"))
+        notification.close?.()
+      }
+
+      window.setTimeout(() => notification.close?.(), PUSH_LIVE_BANNER_MS)
+      return true
+    } catch (_error) {
+      return false
+    }
   }
 
   showIncomingPushToast(payload) {

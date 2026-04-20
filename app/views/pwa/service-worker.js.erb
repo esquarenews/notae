@@ -288,6 +288,9 @@ async function notifyPushReceipt(payload, { notificationDisplayed = false, notif
           title: payload.title || "Notae",
           body: payload.body || "",
           url: payload.url || "/app",
+          tag: payload.tag || "",
+          icon: payload.icon || "/icon-192-v5.png",
+          requireInteraction: Boolean(payload.require_interaction),
           notificationDisplayed,
           notificationError
         }
