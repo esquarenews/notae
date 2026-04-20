@@ -6,6 +6,7 @@ class NotaeMeetTranscriptCollector {
     this.startedAtMs = 0
     this.lastEntrySignature = null
     this.lastEntrySeenAt = 0
+    this.recentEntrySeenAt = new Map()
     this.snapshotTimer = null
     this.scanTimer = null
     this.observer = null
@@ -39,6 +40,7 @@ class NotaeMeetTranscriptCollector {
     this.startedAtMs = Date.now()
     this.lastEntrySignature = null
     this.lastEntrySeenAt = 0
+    this.recentEntrySeenAt = new Map()
     this.disconnectObserver()
 
     this.observer = new MutationObserver(() => this.scan())
@@ -175,22 +177,28 @@ class NotaeMeetTranscriptCollector {
     const text = entry.text.trim()
     const nowMs = Math.max(Date.now() - this.startedAtMs, 0)
     const signature = `${speakerName}|${text}`
+    const priorSeenAt = this.recentEntrySeenAt.get(signature)
+    if (priorSeenAt && nowMs - priorSeenAt < this.recentSignatureWindowMs(text)) {
+      this.recentEntrySeenAt.set(signature, nowMs)
+      return false
+    }
 
     if (signature === this.lastEntrySignature && nowMs - this.lastEntrySeenAt < 2500) {
+      this.recentEntrySeenAt.set(signature, nowMs)
       return false
     }
 
     const lastUtterance = this.utterances[this.utterances.length - 1]
-    if (lastUtterance && lastUtterance.speaker_name === speakerName) {
+    if (lastUtterance && lastUtterance.speaker_name === speakerName && this.incrementalExtension(lastUtterance.text, text)) {
       const mergedText = this.longerVariant(lastUtterance.text, text)
-      if (mergedText === lastUtterance.text || mergedText === text) {
-        const changed = mergedText !== lastUtterance.text
-        lastUtterance.text = mergedText
-        lastUtterance.ended_ms = nowMs
-        this.lastEntrySignature = signature
-        this.lastEntrySeenAt = nowMs
-        return changed
-      }
+      const changed = mergedText !== lastUtterance.text
+      lastUtterance.text = mergedText
+      lastUtterance.ended_ms = nowMs
+      this.lastEntrySignature = signature
+      this.lastEntrySeenAt = nowMs
+      this.recentEntrySeenAt.set(signature, nowMs)
+      this.pruneRecentEntries(nowMs)
+      return changed
     }
 
     this.utterances.push({
@@ -204,6 +212,8 @@ class NotaeMeetTranscriptCollector {
     })
     this.lastEntrySignature = signature
     this.lastEntrySeenAt = nowMs
+    this.recentEntrySeenAt.set(signature, nowMs)
+    this.pruneRecentEntries(nowMs)
     return true
   }
 
@@ -328,6 +338,7 @@ class NotaeMeetTranscriptCollector {
       /^(?:you\s+)?on live captions are turned on\.?\s*/i,
       /^(?:live\s+)?captions are turned on\.?\s*/i,
       /^(?:live\s+)?captions are turned off\.?\s*/i,
+      /^(?:you\s+just\s+then[,:\s-]*)/i,
       /^arrow_downward\s*jump to bottom\.?\s*/i,
       /^jump to bottom\.?\s*/i
     ]
@@ -341,8 +352,10 @@ class NotaeMeetTranscriptCollector {
     }
 
     return text
+      .replace(/\byou\s+just\s+then[,:\s-]*/ig, " ")
       .replace(/arrow_downward\s*jump to bottom/ig, "")
       .replace(/\bclosed_caption\b/ig, "")
+      .replace(/\s+/g, " ")
       .trim()
   }
 
@@ -369,6 +382,40 @@ class NotaeMeetTranscriptCollector {
     if (normalizedLeft.startsWith(normalizedRight)) return normalizedLeft
 
     return normalizedRight
+  }
+
+  incrementalExtension(left, right) {
+    const normalizedLeft = this.canonicalText(left)
+    const normalizedRight = this.canonicalText(right)
+    if (!normalizedLeft || !normalizedRight) return false
+
+    return normalizedRight.startsWith(normalizedLeft) || normalizedLeft.startsWith(normalizedRight)
+  }
+
+  canonicalText(value) {
+    return this.normalizeInlineText(String(value || ""))
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
+  recentSignatureWindowMs(text) {
+    const canonical = this.canonicalText(text)
+    const wordCount = canonical ? canonical.split(/\s+/).length : 0
+
+    if (canonical.length >= 24 || wordCount >= 5) return 30_000
+    if (canonical.length >= 10 || wordCount >= 3) return 12_000
+
+    return 6_000
+  }
+
+  pruneRecentEntries(nowMs) {
+    const maxAgeMs = 45_000
+
+    for (const [signature, seenAt] of this.recentEntrySeenAt.entries()) {
+      if (nowMs - seenAt > maxAgeMs) this.recentEntrySeenAt.delete(signature)
+    }
   }
 
   uniqueElements(elements) {

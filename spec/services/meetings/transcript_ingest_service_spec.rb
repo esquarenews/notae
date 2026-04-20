@@ -164,4 +164,61 @@ RSpec.describe Meetings::TranscriptIngestService do
     ])
     expect(session.transcript_text).to include("You: What was the cause of the success of Heroku? Was it because it was something completely unique?")
   end
+
+  it "drops replayed caption windows and leaked meet ui fragments" do
+    session = build_session(suffix: "replayed")
+
+    described_class.new(session: session, actor: session.updated_by).ingest!(
+      utterances: [
+        {
+          speaker_key: "S1",
+          speaker_name: "Matenia Rossides",
+          text: "I should have checked my calendar before messaging. You just then,",
+          started_ms: 1_000,
+          ended_ms: 2_000,
+          confidence: 0.8
+        },
+        {
+          speaker_key: "S2",
+          speaker_name: "You",
+          text: "S. Alright, it's quite funny.",
+          started_ms: 2_100,
+          ended_ms: 2_900,
+          confidence: 0.8
+        },
+        {
+          speaker_key: "S1",
+          speaker_name: "Matenia Rossides",
+          text: "I should have checked my calendar before messaging. You just then,",
+          started_ms: 4_000,
+          ended_ms: 4_900,
+          confidence: 0.82
+        },
+        {
+          speaker_key: "S2",
+          speaker_name: "You",
+          text: "S. Alright, it's quite funny.",
+          started_ms: 4_950,
+          ended_ms: 5_800,
+          confidence: 0.82
+        },
+        {
+          speaker_key: "S1",
+          speaker_name: "Matenia Rossides",
+          text: "You got something in your teeth.",
+          started_ms: 6_000,
+          ended_ms: 6_800,
+          confidence: 0.81
+        }
+      ]
+    )
+
+    session.reload
+    expect(session.meeting_utterances.ordered.pluck(:speaker_name, :text)).to eq([
+      [ "Matenia Rossides", "I should have checked my calendar before messaging." ],
+      [ "You", "S. Alright, it's quite funny." ],
+      [ "Matenia Rossides", "You got something in your teeth." ]
+    ])
+    expect(session.transcript_text).not_to include("You just then")
+  end
 end

@@ -7,6 +7,7 @@ module Meetings
       /^(?:you\s+)?on live captions are turned on\.?\s*/i,
       /^(?:live\s+)?captions are turned on\.?\s*/i,
       /^(?:live\s+)?captions are turned off\.?\s*/i,
+      /^(?:you\s+just\s+then[,:\s-]*)/i,
       /^arrow_downward\s*jump to bottom\.?\s*/i,
       /^jump to bottom\.?\s*/i
     ].freeze
@@ -64,6 +65,8 @@ module Meetings
     def ingest!(utterances:, transcript_text: nil, metadata: {})
       normalized_turns = normalize_turns(Array(utterances), transcript_text)
       normalized_turns = collapse_incremental_turns(normalized_turns)
+      normalized_turns = deduplicate_replayed_turns(normalized_turns)
+      normalized_turns = reindex_turns(normalized_turns)
       raise Error, "Transcript is empty" if normalized_turns.empty?
       normalized_turns = filter_system_turns(normalized_turns)
       raise Error, INTERFACE_TEXT_ERROR if normalized_turns.empty?
@@ -172,6 +175,31 @@ module Meetings
       end.join("\n")
     end
 
+    def deduplicate_replayed_turns(turns)
+      recent_by_signature = {}
+
+      turns.each_with_object([]) do |turn, deduped|
+        signature = replay_signature_for(turn)
+        prior = signature.present? ? recent_by_signature[signature] : nil
+
+        if prior.present? && replay_duplicate?(prior[:turn], turn)
+          prior[:turn].ended_ms = [ prior[:turn].ended_ms.to_i, turn.ended_ms.to_i ].max
+          prior[:turn].confidence = [ prior[:turn].confidence.to_f, turn.confidence.to_f ].max
+          next
+        end
+
+        copy = TurnInput.new(**turn.to_h)
+        deduped << copy
+        recent_by_signature[signature] = { turn: copy } if signature.present?
+      end
+    end
+
+    def reindex_turns(turns)
+      turns.each_with_index.map do |turn, index|
+        TurnInput.new(**turn.to_h.merge(position: index))
+      end
+    end
+
     def validate_transcript_quality!(turns)
       return if turns.any? { |turn| !system_turn?(turn) }
 
@@ -199,8 +227,10 @@ module Meetings
       end
 
       text
+        .gsub(/\byou\s+just\s+then[,:\s-]*/i, " ")
         .gsub(/arrow_downward\s*jump to bottom/i, "")
         .gsub(/\bclosed_caption\b/i, "")
+        .gsub(/\s+/, " ")
         .strip
     end
 
@@ -225,6 +255,35 @@ module Meetings
       return false if left_text.blank? || right_text.blank?
 
       right_text.start_with?(left_text) || left_text.start_with?(right_text)
+    end
+
+    def replay_signature_for(turn)
+      speaker = turn.speaker_name.to_s.strip.presence || turn.speaker_key.to_s.strip
+      text = canonical_text(turn.text)
+      return nil if speaker.blank? || text.blank?
+
+      "#{speaker.downcase}|#{text}"
+    end
+
+    def replay_duplicate?(left, right)
+      return false unless same_speaker?(left, right)
+      return false unless canonical_text(left.text) == canonical_text(right.text)
+
+      elapsed_ms = right.started_ms.to_i - left.started_ms.to_i
+      elapsed_ms >= 0 && elapsed_ms <= replay_duplicate_window_ms(right.text)
+    end
+
+    def replay_duplicate_window_ms(text)
+      normalized = canonical_text(text)
+      word_count = normalized.blank? ? 0 : normalized.split.size
+
+      if normalized.length >= 24 || word_count >= 5
+        30_000
+      elsif normalized.length >= 10 || word_count >= 3
+        12_000
+      else
+        6_000
+      end
     end
 
     def longer_variant(left, right)
