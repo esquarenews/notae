@@ -309,7 +309,11 @@ export default class extends Controller {
   handleIncomingPushReceipt(payload) {
     if (payload.notificationType === "test_push") {
       this.markPushTestDelivered()
-      this.setPushSettingsFeedback("Test push reached this browser. Confirm whether you also saw the device banner.", "pending")
+      if (payload.notificationDisplayed === false) {
+        this.setPushSettingsFeedback("Test push reached this browser, but the browser did not present a desktop notification banner.", "error")
+      } else {
+        this.setPushSettingsFeedback("Test push reached this browser. Confirm whether you also saw the device banner.", "pending")
+      }
       this.refreshPushUi()
     }
 
@@ -317,7 +321,9 @@ export default class extends Controller {
       title: this.normalizedText(payload?.title, "Notae"),
       body: this.normalizedText(payload?.body, "A live notification reached this app."),
       url: payload?.url || "/app",
-      tone: payload.notificationType === "test_push" ? "success" : "neutral"
+      tone: payload.notificationType === "test_push"
+        ? (payload.notificationDisplayed === false ? "error" : "success")
+        : "neutral"
     })
     window.dispatchEvent(new CustomEvent("notae:push-received", { detail: payload }))
     this.showIncomingPushToast(payload)

@@ -53,6 +53,7 @@ RSpec.describe "PwaController JavaScript syntax" do
     expect(source).to include("sendTestPushRequest(path, endpoint)")
     expect(source).to include("setPushSettingsFeedback(message, tone = \"neutral\")")
     expect(source).to include("Test push reached this browser. Confirm whether you also saw the device banner.")
+    expect(source).to include("Test push reached this browser, but the browser did not present a desktop notification banner.")
     expect(source).to include("Test push was sent to your signed-in devices, but this browser did not confirm delivery.")
     expect(source).to include("Test push was accepted for this browser. It should appear here immediately if desktop notifications are working.")
     expect(source).to include("navigator.serviceWorker?.addEventListener?.(\"message\", this.serviceWorkerMessageHandler)")

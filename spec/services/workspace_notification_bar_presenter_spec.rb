@@ -209,6 +209,29 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.recent_ai_update_detail).to include("11:30 — Client review")
   end
 
+  it "uses explicit push wording for test notifications in the shell widget" do
+    user = User.create!(email: "notification-bar-test-push@example.com", password: "password123", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "Push status workspace", slug: "push-status-workspace", shell_status_bar_mode: "all")
+
+    Notification.create!(
+      workspace: workspace,
+      recipient: user,
+      actor: user,
+      notification_type: Notification::TYPE_TEST_PUSH,
+      metadata: {
+        "title" => "Notae test notification",
+        "body" => "Push notifications are working on this device for Push status workspace."
+      }
+    )
+
+    presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
+
+    expect(presenter.recent_update_count).to eq(1)
+    expect(presenter.recent_update_kind_label).to eq("Push")
+    expect(presenter.recent_update_headline).to eq("Notae test notification")
+    expect(presenter.recent_update_detail).to eq("Push notifications are working on this device for Push status workspace.")
+  end
+
   it "respects time-only and off modes" do
     user = User.create!(email: "notification-bar-modes@example.com", password: "password123")
     time_only_workspace = Workspace.create!(name: "Clock only", slug: "clock-only", shell_status_bar_mode: "time_only")

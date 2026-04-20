@@ -18699,7 +18699,7 @@ body.notae-theme-system .notae-account-delete-button {
 
 .notae-pwa-shell {
   position: relative;
-  z-index: 140;
+  z-index: 360;
 }
 
 .notae-pwa-offline-banner,
@@ -18767,6 +18767,7 @@ body.notae-theme-system .notae-account-delete-button {
   gap: 0.72rem;
   padding: 0.88rem 0.95rem;
   border-radius: 1.15rem;
+  z-index: 380;
 }
 
 .notae-pwa-live-banner[data-state="success"] {

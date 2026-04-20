@@ -187,7 +187,16 @@ class WorkspaceNotificationBarPresenter
   def recent_update_headline
     return "" unless recent_update_present?
 
-    recent_update_count == 1 ? "1 new workspace update" : "#{recent_update_count} new workspace updates"
+    latest_notification = recent_update_latest_notification
+    return "" if latest_notification.blank?
+
+    if recent_update_count == 1
+      return latest_notification.metadata["title"].to_s.presence || "Desktop test notification" if latest_notification.notification_type == Notification::TYPE_TEST_PUSH
+
+      "1 new workspace update"
+    else
+      "#{recent_update_count} new workspace updates"
+    end
   end
 
   def recent_update_detail
@@ -196,8 +205,16 @@ class WorkspaceNotificationBarPresenter
 
     return "New mention or comment" if latest_notification.notification_type == Notification::TYPE_MENTION
     return "Calendar reminder" if latest_notification.notification_type == Notification::TYPE_CALENDAR_REMINDER
+    return latest_notification.metadata["body"].to_s.presence || "A test push reached this workspace." if latest_notification.notification_type == Notification::TYPE_TEST_PUSH
 
     "Arrived in the last hour"
+  end
+
+  def recent_update_kind_label
+    latest_notification = recent_update_latest_notification
+    return "Updates" if latest_notification.blank?
+
+    latest_notification.notification_type == Notification::TYPE_TEST_PUSH ? "Push" : "Updates"
   end
 
   def recent_update_alert_key
@@ -251,7 +268,7 @@ class WorkspaceNotificationBarPresenter
     return nil unless recent_update_present?
 
     @recent_update_latest_notification ||= recent_update_scope
-      .select(:id, :notification_type, :created_at)
+      .select(:id, :notification_type, :created_at, :metadata)
       .order(created_at: :desc)
       .first
   end

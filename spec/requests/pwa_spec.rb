@@ -81,6 +81,8 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("type: \"notae:push-received\"")
     expect(response.body).to include("client.postMessage")
     expect(response.body).to include("notificationType: payload.type || payload.notification_type || null")
+    expect(response.body).to include("notificationDisplayed")
+    expect(response.body).to include("notificationError")
     expect(response.body).to include("} finally {")
 
     Tempfile.create([ "notae-pwa-service-worker", ".js" ]) do |file|
