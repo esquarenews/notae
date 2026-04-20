@@ -211,20 +211,22 @@ async function showPushNotification(event) {
   const payload = parsePushPayload(event.data)
   const title = payload.title || "Notae"
 
-  await self.registration.showNotification(title, {
-    body: payload.body || "",
-    icon: payload.icon || "/icon-192-v5.png",
-    badge: payload.badge || "/icon-192-v5.png",
-    tag: payload.tag || "notae-notification",
-    requireInteraction: Boolean(payload.require_interaction),
-    renotify: false,
-    data: {
-      url: payload.url || "/app",
-      notificationId: payload.notification_id || null
-    }
-  })
-
-  await notifyPushReceipt(payload)
+  try {
+    await self.registration.showNotification(title, {
+      body: payload.body || "",
+      icon: payload.icon || "/icon-192-v5.png",
+      badge: payload.badge || "/icon-192-v5.png",
+      tag: payload.tag || "notae-notification",
+      requireInteraction: Boolean(payload.require_interaction),
+      renotify: false,
+      data: {
+        url: payload.url || "/app",
+        notificationId: payload.notification_id || null
+      }
+    })
+  } finally {
+    await notifyPushReceipt(payload)
+  }
 }
 
 function parsePushPayload(data) {

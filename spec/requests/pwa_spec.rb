@@ -24,6 +24,9 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("theme-color")
     expect(response.body).to include("data-controller=\"pwa\"")
     expect(response.body).to include("data-pwa-web-push-public-key-value=")
+    expect(response.body).to include("data-pwa-target=\"pushLiveBanner\"")
+    expect(response.body).to include("data-pwa-target=\"pushLiveBannerTitle\"")
+    expect(response.body).to include("data-pwa-target=\"pushLiveBannerBody\"")
   end
 
   it "keeps hidden PWA shell cards hidden until the controller reveals them" do
@@ -32,6 +35,7 @@ RSpec.describe "PWA", type: :request do
     expect(stylesheet).to include(".notae-pwa-offline-banner[hidden],")
     expect(stylesheet).to include(".notae-pwa-install-card[hidden],")
     expect(stylesheet).to include(".notae-pwa-push-card[hidden],")
+    expect(stylesheet).to include(".notae-pwa-live-banner[hidden],")
     expect(stylesheet).to include(".notae-pwa-network-toast[hidden] {")
     expect(stylesheet).to include("display: none !important;")
   end
@@ -77,6 +81,7 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("type: \"notae:push-received\"")
     expect(response.body).to include("client.postMessage")
     expect(response.body).to include("notificationType: payload.type || payload.notification_type || null")
+    expect(response.body).to include("} finally {")
 
     Tempfile.create([ "notae-pwa-service-worker", ".js" ]) do |file|
       file.write(response.body)

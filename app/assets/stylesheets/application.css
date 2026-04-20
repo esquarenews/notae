@@ -18705,6 +18705,7 @@ body.notae-theme-system .notae-account-delete-button {
 .notae-pwa-offline-banner,
 .notae-pwa-install-card,
 .notae-pwa-push-card,
+.notae-pwa-live-banner,
 .notae-pwa-network-toast {
   position: fixed;
   left: 50%;
@@ -18719,6 +18720,7 @@ body.notae-theme-system .notae-account-delete-button {
 .notae-pwa-offline-banner[hidden],
 .notae-pwa-install-card[hidden],
 .notae-pwa-push-card[hidden],
+.notae-pwa-live-banner[hidden],
 .notae-pwa-network-toast[hidden] {
   display: none !important;
 }
@@ -18757,6 +18759,22 @@ body.notae-theme-system .notae-account-delete-button {
   gap: 0.72rem;
   padding: 0.88rem 0.95rem;
   border-radius: 1.15rem;
+}
+
+.notae-pwa-live-banner {
+  top: calc(env(safe-area-inset-top, 0px) + 0.8rem);
+  display: grid;
+  gap: 0.72rem;
+  padding: 0.88rem 0.95rem;
+  border-radius: 1.15rem;
+}
+
+.notae-pwa-live-banner[data-state="success"] {
+  border-color: color-mix(in srgb, var(--notae-success, #2f8f68) 42%, var(--notae-border-muted));
+}
+
+.notae-pwa-live-banner[data-state="error"] {
+  border-color: color-mix(in srgb, var(--notae-danger, #c24b4b) 42%, var(--notae-border-muted));
 }
 
 .notae-pwa-install-copy {
