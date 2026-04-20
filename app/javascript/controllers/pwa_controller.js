@@ -56,6 +56,7 @@ export default class extends Controller {
     this.submitHandler = (event) => this.handleDocumentSubmit(event)
     this.clickHandler = (event) => this.handleDocumentClick(event)
     this.turboLoadHandler = () => this.refreshNetworkState()
+    this.serviceWorkerMessageHandler = (event) => this.handleServiceWorkerMessage(event)
 
     window.addEventListener("beforeinstallprompt", this.beforeInstallPromptHandler)
     window.addEventListener("appinstalled", this.appInstalledHandler)
@@ -64,6 +65,7 @@ export default class extends Controller {
     document.addEventListener("submit", this.submitHandler, true)
     document.addEventListener("click", this.clickHandler, true)
     document.addEventListener("turbo:load", this.turboLoadHandler)
+    navigator.serviceWorker?.addEventListener?.("message", this.serviceWorkerMessageHandler)
 
     if (!this.authenticatedValue) this.clearPrivateCaches()
 
@@ -80,6 +82,7 @@ export default class extends Controller {
     document.removeEventListener("submit", this.submitHandler, true)
     document.removeEventListener("click", this.clickHandler, true)
     document.removeEventListener("turbo:load", this.turboLoadHandler)
+    navigator.serviceWorker?.removeEventListener?.("message", this.serviceWorkerMessageHandler)
     this.clearNetworkToast()
   }
 
@@ -277,6 +280,29 @@ export default class extends Controller {
       event.preventDefault()
       this.showNetworkToast("Reconnect to complete this action.")
     }
+  }
+
+  handleServiceWorkerMessage(event) {
+    if (event.data?.type !== "notae:push-received") return
+
+    this.handleIncomingPushReceipt(event.data.payload || {})
+  }
+
+  handleIncomingPushReceipt(payload) {
+    if (payload.notificationType === "test_push") {
+      this.markPushTestDelivered()
+      this.setPushSettingsFeedback("Test push reached this browser. Confirm whether you also saw the device banner.", "pending")
+      this.refreshPushUi()
+    }
+
+    window.dispatchEvent(new CustomEvent("notae:push-received", { detail: payload }))
+    this.showIncomingPushToast(payload)
+  }
+
+  showIncomingPushToast(payload) {
+    const title = payload?.title?.toString().trim() || "Notae"
+    const body = payload?.body?.toString().trim() || ""
+    this.showNetworkToast(body.length > 0 ? `${title} · ${body}` : title)
   }
 
   syncInstallPrompts() {

@@ -38,6 +38,8 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
     expect(source).to include("stopAlertPolling()")
     expect(source).to include("this.refreshPathValue")
     expect(source).to include("document.addEventListener(\"visibilitychange\", this.visibilityChangeHandler)")
+    expect(source).to include("window.addEventListener(\"notae:push-received\", this.pushReceivedHandler)")
+    expect(source).to include("this.pushReceivedHandler = () => this.pollAlerts({ force: true })")
     expect(source).to include("toggleCalendar(event)")
     expect(source).to include("openCalendar()")
     expect(source).to include("closeCalendar(event)")

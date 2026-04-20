@@ -136,6 +136,7 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:title]).to eq("codex: request completed")
     expect(payload[:body]).to eq("The grid cleanup is ready for review.")
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
+    expect(payload[:type]).to eq(Notification::TYPE_CODEX_REQUEST_COMPLETED)
     expect(payload[:require_interaction]).to eq(true)
   end
 
@@ -160,6 +161,7 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:title]).to eq("Notae test notification")
     expect(payload[:body]).to eq("Push notifications are working on this device for Test Push.")
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
+    expect(payload[:type]).to eq(Notification::TYPE_TEST_PUSH)
     expect(payload[:require_interaction]).to eq(true)
   end
 end

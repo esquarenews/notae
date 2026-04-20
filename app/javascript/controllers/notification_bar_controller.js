@@ -19,6 +19,7 @@ export default class extends Controller {
     this.pointerMoveHandler = (event) => this.drag(event)
     this.pointerUpHandler = () => this.stopDrag()
     this.resizeHandler = () => this.applyStoredBarPosition()
+    this.pushReceivedHandler = () => this.pollAlerts({ force: true })
     this.alertPollTimer = null
     this.alertPollRequest = null
     this.dragPointerId = null
@@ -29,6 +30,7 @@ export default class extends Controller {
     document.addEventListener("turbo:before-cache", this.beforeCache)
     document.addEventListener("visibilitychange", this.visibilityChangeHandler)
     window.addEventListener("resize", this.resizeHandler)
+    window.addEventListener("notae:push-received", this.pushReceivedHandler)
     if (this.hasCalendarFrameTarget) {
       this.calendarFrameTarget.addEventListener("load", this.calendarFrameLoadHandler)
     }
@@ -43,6 +45,7 @@ export default class extends Controller {
     document.removeEventListener("turbo:before-cache", this.beforeCache)
     document.removeEventListener("visibilitychange", this.visibilityChangeHandler)
     window.removeEventListener("resize", this.resizeHandler)
+    window.removeEventListener("notae:push-received", this.pushReceivedHandler)
     this.releaseDragListeners()
     if (this.hasCalendarFrameTarget) {
       this.calendarFrameTarget.removeEventListener("load", this.calendarFrameLoadHandler)

@@ -223,6 +223,8 @@ async function showPushNotification(event) {
       notificationId: payload.notification_id || null
     }
   })
+
+  await notifyPushReceipt(payload)
 }
 
 function parsePushPayload(data) {
@@ -262,4 +264,27 @@ async function openNotificationDestination(rawUrl) {
   if (self.clients.openWindow) {
     await self.clients.openWindow(destinationUrl)
   }
+}
+
+async function notifyPushReceipt(payload) {
+  const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+
+  await Promise.all(
+    clientsList.map((client) => {
+      if (typeof client.postMessage !== "function") return Promise.resolve()
+
+      client.postMessage({
+        type: "notae:push-received",
+        payload: {
+          notificationId: payload.notification_id || null,
+          notificationType: payload.type || payload.notification_type || null,
+          title: payload.title || "Notae",
+          body: payload.body || "",
+          url: payload.url || "/app"
+        }
+      })
+
+      return Promise.resolve()
+    })
+  )
 }

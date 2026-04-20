@@ -9,6 +9,7 @@ module WebPush
     def call
       {
         notification_id: notification.id,
+        type: notification.notification_type,
         title: title,
         body: body,
         url: pwa_notification_launch_path(id: notification.id),
