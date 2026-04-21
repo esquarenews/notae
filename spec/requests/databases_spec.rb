@@ -2242,6 +2242,8 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Pastel")
     expect(response.body).to include("Bold")
     expect(response.body).to include("Gradient")
+    expect(response.body).to include('data-cover-carousel-target="uploadInput"')
+    expect(response.body).to include('data-cover-carousel-target="uploadError"')
 
     patch database_path(workspace_slug: workspace.slug, id: database.id),
           params: { database: { description_action: "set", description: "Tracks launch tasks" } }
@@ -3453,7 +3455,7 @@ RSpec.describe "Databases", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-panel,\n.notae-shell.is-mobile-viewport .notae-cover-picker-panel:not(.is-embedded),\n.notae-shell.is-mobile-viewport .notae-db-inline-panel,\n.notae-shell.is-mobile-viewport .notae-db-settings-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + var(--notae-overlay-mobile-gutter));\n  right: calc(env(safe-area-inset-right, 0px) + var(--notae-overlay-mobile-gutter));\n  width: var(--notae-overlay-mobile-width);")
-    expect(stylesheet).to include("  max-height: var(--notae-overlay-panel-max-height);\n  box-sizing: border-box;\n  overflow: auto;\n  top: var(--notae-overlay-panel-top);\n}")
+    expect(stylesheet).to include("  max-height: var(--notae-overlay-panel-max-height);\n  box-sizing: border-box;\n  overflow-x: hidden;\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  touch-action: pan-y;\n  top: var(--notae-overlay-panel-top);\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-db-row-more-panel.is-floating {\n  width: min(18rem, var(--notae-overlay-mobile-width));")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-create-menu,\n.notae-shell.is-mobile-viewport .notae-library-popover-panel,\n.notae-shell.is-mobile-viewport .notae-people-add-panel,\n.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,\n.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,\n.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {\n  min-width: min(18rem, var(--notae-overlay-mobile-width));")
   end

@@ -143,6 +143,8 @@ RSpec.describe "Page header features", type: :request do
     expect(response.body).to include("Browse Unsplash")
     expect(response.body).to include("notae-cover-unsplash-modal")
     expect(response.body).to include('enctype="multipart/form-data"')
+    expect(response.body).to include('data-cover-carousel-target="uploadInput"')
+    expect(response.body).to include('data-cover-carousel-target="uploadError"')
     expect(response.body).to include("data-controller=\"cover-carousel\"")
     expect(response.body).to include("Original")
     expect(response.body).to include("Vector")

@@ -33,4 +33,17 @@ RSpec.describe "CoverCarouselController JavaScript syntax" do
     expect(source).to include("prefetchNextPage")
     expect(source).to include("requestSubmit()")
   end
+
+  it "keeps no-file upload submits local so the picker does not hang" do
+    source = Rails.root.join("app/javascript/controllers/cover_carousel_controller.js").read
+
+    expect(source).to include("\"uploadInput\"")
+    expect(source).to include("\"uploadError\"")
+    expect(source).to include("startUploadSubmit(event)")
+    expect(source).to include("if (!this.hasSelectedUploadFile())")
+    expect(source).to include("event.preventDefault()")
+    expect(source).to include("showUploadError(\"Choose an image before uploading.\")")
+    expect(source).to include("this.uploadSubmitTarget.disabled = true")
+    expect(source).to include("this.uploadSpinnerTarget.hidden = false")
+  end
 end

@@ -146,13 +146,19 @@
       <%= hidden_field_tag :return_to, return_path %>
     <% end %>
     <%= hidden_field_tag "#{param_key}[cover_action]", "upload" %>
-    <%= file_field_tag "#{param_key}[cover_image]", accept: "image/*", class: "notae-cover-picker-upload-input" %>
+    <%= file_field_tag "#{param_key}[cover_image]",
+                       accept: "image/*",
+                       class: "notae-cover-picker-upload-input",
+                       data: { cover_carousel_target: "uploadInput" } %>
     <button type="submit"
             class="notae-cover-picker-action notae-cover-picker-submit-button"
             data-cover-carousel-target="uploadSubmit">
       <span>Upload</span>
       <span class="notae-cover-picker-spinner" hidden data-cover-carousel-target="uploadSpinner"></span>
     </button>
+    <p class="notae-cover-picker-upload-error" hidden data-cover-carousel-target="uploadError">
+      Choose an image before uploading.
+    </p>
   <% end %>
 
   <%= form_with url: update_url,

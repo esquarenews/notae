@@ -6,6 +6,8 @@ export default class extends Controller {
     "label",
     "dot",
     "uploadForm",
+    "uploadInput",
+    "uploadError",
     "uploadSubmit",
     "uploadSpinner",
     "applyForm",
@@ -57,10 +59,37 @@ export default class extends Controller {
     this.element.classList.add("is-submitting")
   }
 
-  startUploadSubmit() {
+  startUploadSubmit(event) {
+    if (!this.hasSelectedUploadFile()) {
+      if (event) event.preventDefault()
+      this.showUploadError("Choose an image before uploading.")
+      return
+    }
+
+    this.clearUploadError()
     this.startInlineSubmit()
     if (this.hasUploadSubmitTarget) this.uploadSubmitTarget.disabled = true
     if (this.hasUploadSpinnerTarget) this.uploadSpinnerTarget.hidden = false
+  }
+
+  hasSelectedUploadFile() {
+    return this.hasUploadInputTarget &&
+      this.uploadInputTarget.files &&
+      this.uploadInputTarget.files.length > 0
+  }
+
+  showUploadError(message) {
+    if (!this.hasUploadErrorTarget) return
+
+    this.uploadErrorTarget.textContent = message
+    this.uploadErrorTarget.hidden = false
+  }
+
+  clearUploadError() {
+    if (!this.hasUploadErrorTarget) return
+
+    this.uploadErrorTarget.textContent = ""
+    this.uploadErrorTarget.hidden = true
   }
 
   openUnsplash(event) {
