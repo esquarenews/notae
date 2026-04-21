@@ -12,7 +12,8 @@
       pwa_offline_path
     ]
   ).uniq
-  cache_version = "pwa-#{Digest::SHA256.hexdigest(precache_urls.join("|")).first(12)}"
+  service_worker_behavior_version = "documents-network-only-v2"
+  cache_version = "pwa-#{Digest::SHA256.hexdigest((precache_urls + [ service_worker_behavior_version ]).join("|")).first(12)}"
 %>
 const CACHE_VERSION = "<%= cache_version %>"
 const SHELL_CACHE = `notae-shell-${CACHE_VERSION}`
@@ -74,6 +75,7 @@ self.addEventListener("fetch", (event) => {
   if (request.cache === "only-if-cached" && request.mode !== "same-origin") return
 
   const url = new URL(request.url)
+  if (!cacheableRequestUrl(url)) return
 
   if (isTopLevelDocumentRequest(request, url)) {
     event.respondWith(networkFirstDocument(request))
@@ -110,6 +112,10 @@ function isSameOriginAsset(url) {
   return url.origin === self.location.origin && (url.pathname.startsWith("/assets/") || url.pathname === "/icon-192-v5.png" || url.pathname === "/icon-512-v5.png" || url.pathname === "/icon-maskable-512-v5.png" || url.pathname === "/icon-v5.png" || url.pathname === "/icon-v5.svg" || url.pathname === "/icon-light-v5.svg" || url.pathname === "/icon-dark-v5.svg" || url.pathname === "/apple-touch-icon-v5.png")
 }
 
+function cacheableRequestUrl(url) {
+  return url.protocol === "http:" || url.protocol === "https:"
+}
+
 function isImageRequest(request, url) {
   if (request.destination === "image") return true
 
@@ -120,7 +126,7 @@ function isFontRequest(url) {
   return (
     url.origin === "https://fonts.googleapis.com" ||
     url.origin === "https://fonts.gstatic.com" ||
-    /\.(?:woff2?|ttf|otf)$/i.test(url.pathname)
+    (url.origin === self.location.origin && /\.(?:woff2?|ttf|otf)$/i.test(url.pathname))
   )
 }
 
@@ -133,6 +139,8 @@ async function networkFirstDocument(request) {
 }
 
 async function staleWhileRevalidate(request, cacheName) {
+  if (!cacheableRequestUrl(new URL(request.url))) return fetch(request)
+
   const cache = await caches.open(cacheName)
   const cached = await cache.match(request)
   const networkRequest = fetch(request)
@@ -153,6 +161,8 @@ async function staleWhileRevalidate(request, cacheName) {
 }
 
 async function cacheFirst(request, cacheName) {
+  if (!cacheableRequestUrl(new URL(request.url))) return fetch(request)
+
   const cache = await caches.open(cacheName)
   const cached = await cache.match(request)
   if (cached) return cached
