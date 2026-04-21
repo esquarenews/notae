@@ -700,6 +700,27 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-mobile-toggle,\n.notae-shell.is-mobile-viewport .notae-sidebar-close,\n.notae-shell.is-ai-rail-collapsed .notae-ai-rail-reopen {\n  display: inline-flex;\n}")
   end
 
+  it "keeps mobile navigation and AI controls large enough to select comfortably" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("--notae-mobile-menu-icon-size: 1.36rem;")
+    expect(stylesheet).to include("--notae-mobile-open-button-size: 3.14rem;")
+    expect(stylesheet).to include("--notae-ai-mobile-floating-size: 3.35rem;")
+    expect(stylesheet).to include("--notae-ai-mobile-floating-icon-size: 1.92rem;")
+    expect(stylesheet).to include(".notae-mobile-tabbar-icon {\n    width: var(--notae-mobile-menu-icon-size);\n    height: var(--notae-mobile-menu-icon-size);")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-mobile-toggle {\n    width: var(--notae-mobile-open-button-size);\n    height: var(--notae-mobile-open-button-size);")
+    expect(stylesheet).to include(".notae-shell.is-ai-compact-viewport .notae-ai-floating-toggle {\n  display: inline-flex;\n  width: var(--notae-ai-mobile-floating-size);")
+  end
+
+  it "uses larger compact AI text while hiding nonessential intro copy on mobile" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("--notae-ai-mobile-text: 0.86rem;")
+    expect(stylesheet).to include("--notae-ai-mobile-small-text: 0.74rem;")
+    expect(stylesheet).to include(".notae-shell.is-ai-compact-viewport .notae-ai-rail > .notae-ai-card > .notae-ai-copy {\n  display: none;\n}")
+    expect(stylesheet).to include(".notae-shell.is-ai-compact-viewport .notae-ai-message-body,\n.notae-shell.is-ai-compact-viewport .notae-ai-result-text {\n  font-size: var(--notae-ai-mobile-text);")
+  end
+
   it "uses high-contrast hover text for dark topbar menus" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 

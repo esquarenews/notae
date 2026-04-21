@@ -71,6 +71,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("notae-ai-rail-reopen")
     expect(response.body).to include("notae-ai-floating-toggle")
     expect(response.body).to include("notae-ai-loader")
+    expect(response.body).to include("--notae-ai-loader-size: 22px;")
     expect(response.body).to include("Kalendārium")
     expect(response.body).to include("AI Conversation History")
     expect(response.body).to include("notae-sidebar-collapse-toggle")
