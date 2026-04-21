@@ -78,12 +78,13 @@
   </button>
 
   <div class="notae-ai-head">
-    <span>New AI chat</span>
+    <span class="notae-ai-head-title">New AI chat</span>
     <div class="notae-ai-head-controls">
       <% if ai_rail_workspace_ready %>
         <%= select_tag "ai_assistant[scope]",
                        options_for_select(ai_scope_options, ai_scope_value),
                        class: "notae-ai-scope-select",
+                       aria: { label: "AI search scope" },
                        form: "notae_ai_assistant_form" %>
       <% else %>
         <span class="notae-ai-kicker">Auto</span>
@@ -192,7 +193,8 @@
               class="notae-chip-button notae-ai-usage-toggle"
               data-ai-rail-target="usageToggle"
               data-action="click->ai-rail#toggleUsage"
-              aria-expanded="false">
+              aria-expanded="false"
+              aria-label="Show AI usage and guardrails">
         Usage
       </button>
       <div class="notae-ai-card notae-ai-usage-card notae-ai-usage-drawer" data-ai-rail-target="usageDrawer" hidden>

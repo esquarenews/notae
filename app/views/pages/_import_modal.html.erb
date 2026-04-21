@@ -28,7 +28,7 @@
                   multipart: true,
                   data: {
                     controller: "import-status",
-                    action: "submit->page-import#prepareSubmit turbo:submit-start->import-status#submitStart turbo:submit-end->import-status#submitEnd"
+                    action: "submit->page-import#prepareSubmit submit->import-status#validateSelection turbo:submit-start->import-status#submitStart turbo:submit-end->import-status#submitEnd"
                   } do |form| %>
       <%= hidden_field_tag :return_to, current_path %>
       <%= hidden_field_tag "import[insert_after_id]", "", data: { page_import_target: "insertAfterInput" } %>
@@ -48,17 +48,23 @@
       </div>
 
       <label class="notae-page-import-modal-label" for="page_import_files">Files</label>
-      <%= form.file_field :files,
-                          id: "page_import_files",
-                          multiple: true,
-                          required: true,
-                          accept: ".txt,.md,.markdown,.html,.htm,.pdf,.docx,.epub,image/*,video/*,audio/*",
-                          class: "notae-import-file-input notae-page-import-file-input",
-                          name: "import[files][]",
-                          data: {
-                            import_status_target: "fileInput",
-                            page_import_target: "fileInput"
-                          } %>
+      <div class="notae-import-file-picker">
+        <%= form.file_field :files,
+                            id: "page_import_files",
+                            multiple: true,
+                            accept: ".txt,.md,.markdown,.html,.htm,.pdf,.docx,.epub,image/*,video/*,audio/*",
+                            class: "notae-import-file-input notae-page-import-file-input",
+                            name: "import[files][]",
+                            data: {
+                              import_status_target: "fileInput",
+                              page_import_target: "fileInput"
+                            } %>
+        <button type="button"
+                class="notae-chip-button notae-import-file-picker-button"
+                data-action="click->import-status#browseFiles">
+          Select files
+        </button>
+      </div>
 
       <div class="notae-page-import-modal-actions">
         <button type="button"

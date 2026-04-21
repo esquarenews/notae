@@ -29,7 +29,7 @@ module Pages
       @page = page
       @workspace = workspace
       @user = user
-      @files = Array(files).reject(&:blank?)
+      @files = normalize_files(files)
       @insert_after_block = page.blocks.active.find_by(id: insert_after_id)
       @imported_blocks = []
       @skipped_files = []
@@ -56,6 +56,14 @@ module Pages
     attr_reader :page, :workspace, :user, :files, :insert_after_block, :imported_blocks, :skipped_files, :errors, :target_parent, :target_parent_id
     attr_accessor :next_index
 
+    def normalize_files(files)
+      Array(files).select { |file| upload_file_present?(file) }
+    end
+
+    def upload_file_present?(file)
+      file.respond_to?(:original_filename) && file.original_filename.to_s.strip.present?
+    end
+
     def initial_target_index
       siblings = ordered_target_siblings
       return siblings.size if insert_after_block.blank?
@@ -79,11 +87,11 @@ module Pages
     rescue Imports::ContentParser::UnsupportedFormatError
       errors << unsupported_message_for(uploaded_file)
     rescue StandardError => error
-      errors << "Failed to import #{uploaded_file.original_filename}: #{error.message}"
+      errors << "Failed to import #{uploaded_filename(uploaded_file)}: #{error.message}"
     end
 
     def text_import?(uploaded_file)
-      TEXT_IMPORT_EXTENSIONS.include?(File.extname(uploaded_file.original_filename.to_s).downcase)
+      TEXT_IMPORT_EXTENSIONS.include?(File.extname(uploaded_filename(uploaded_file)).downcase)
     end
 
     def media_import?(uploaded_file)
@@ -91,11 +99,11 @@ module Pages
     end
 
     def unsupported_message_for(uploaded_file)
-      "Unsupported file for page import: #{uploaded_file.original_filename}. Use Settings → Import for CSV or ZIP imports."
+      "Unsupported file for page import: #{uploaded_filename(uploaded_file)}. Use Settings → Import for CSV or ZIP imports."
     end
 
     def import_document_file(uploaded_file)
-      parse_result = Imports::ContentParser.parse(filename: uploaded_file.original_filename, io: uploaded_file.tempfile)
+      parse_result = Imports::ContentParser.parse(filename: uploaded_filename(uploaded_file), io: uploaded_file.tempfile)
       skipped_files.concat(parse_result.skipped_files)
 
       parse_result.documents.each do |document|
@@ -144,6 +152,10 @@ module Pages
       return "video" if content_type.start_with?("video/")
 
       "file"
+    end
+
+    def uploaded_filename(uploaded_file)
+      uploaded_file.respond_to?(:original_filename) ? uploaded_file.original_filename.to_s : "selected file"
     end
 
     def default_block_payload

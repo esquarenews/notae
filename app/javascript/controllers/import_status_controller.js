@@ -3,6 +3,20 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["statusCard", "statusTitle", "statusBody", "submitButton", "fileInput"]
 
+  browseFiles(event) {
+    if (event) event.preventDefault()
+    if (!this.hasFileInputTarget) return
+
+    this.fileInputTarget.click()
+  }
+
+  validateSelection(event) {
+    if (this.hasSelectedFiles()) return
+
+    if (event) event.preventDefault()
+    this.showError("Import needs attention", "Select at least one file to import.")
+  }
+
   submitStart() {
     this.element.setAttribute("aria-busy", "true")
     if (this.hasStatusCardTarget) {
@@ -27,18 +41,27 @@ export default class extends Controller {
     if (event.detail?.success) return
 
     this.element.removeAttribute("aria-busy")
-    if (this.hasStatusCardTarget) {
-      this.statusCardTarget.hidden = false
-      this.statusCardTarget.classList.remove("is-working", "is-success")
-      this.statusCardTarget.classList.add("is-error")
-    }
-    if (this.hasStatusTitleTarget) this.statusTitleTarget.textContent = "Import failed"
-    if (this.hasStatusBodyTarget) this.statusBodyTarget.textContent = "The import could not finish. Fix the issue and try again."
+    this.showError("Import failed", "The import could not finish. Fix the issue and try again.")
 
     if (this.hasSubmitButtonTarget) {
       this.submitButtonTarget.value = this.submitButtonTarget.dataset.originalText || "Import into Nota"
       this.submitButtonTarget.disabled = false
     }
     if (this.hasFileInputTarget) this.fileInputTarget.disabled = false
+  }
+
+  hasSelectedFiles() {
+    return this.hasFileInputTarget && this.fileInputTarget.files && this.fileInputTarget.files.length > 0
+  }
+
+  showError(title, body) {
+    this.element.removeAttribute("aria-busy")
+    if (this.hasStatusCardTarget) {
+      this.statusCardTarget.hidden = false
+      this.statusCardTarget.classList.remove("is-working", "is-success")
+      this.statusCardTarget.classList.add("is-error")
+    }
+    if (this.hasStatusTitleTarget) this.statusTitleTarget.textContent = title
+    if (this.hasStatusBodyTarget) this.statusBodyTarget.textContent = body
   }
 }

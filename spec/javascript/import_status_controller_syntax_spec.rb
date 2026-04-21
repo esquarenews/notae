@@ -19,9 +19,15 @@ RSpec.describe "ImportStatusController JavaScript syntax" do
   it "shows progress and failure states for imports" do
     source = Rails.root.join("app/javascript/controllers/import_status_controller.js").read
 
+    expect(source).to include("browseFiles(event)")
+    expect(source).to include("validateSelection(event)")
+    expect(source).to include("this.fileInputTarget.click()")
+    expect(source).to include("hasSelectedFiles()")
+    expect(source).to include("showError(title, body)")
     expect(source).to include("submitStart()")
     expect(source).to include("submitEnd(event)")
     expect(source).to include("Import in progress")
+    expect(source).to include("Select at least one file to import.")
     expect(source).to include("Import failed")
     expect(source).to include("Importing...")
   end

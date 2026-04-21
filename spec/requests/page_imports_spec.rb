@@ -138,4 +138,51 @@ RSpec.describe "Page imports", type: :request do
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
     expect(flash[:alert]).to include("Use Settings → Import for CSV or ZIP imports.")
   end
+
+  it "does not crash when the import form submits without an uploaded file" do
+    owner = User.create!(email: "page-import-empty-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page import empty", slug: "page-import-empty")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Empty import note")
+    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph", content_json: paragraph_content("Anchor"))
+    sign_in owner
+
+    expect do
+      post import_page_path(workspace_slug: workspace.slug, id: page.id),
+           params: {
+             return_to: page_path(workspace_slug: workspace.slug, id: page.id),
+             import: { files: { "0" => "" } }
+           }
+    end.not_to change(Block, :count)
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    expect(flash[:alert]).to eq("Choose at least one supported file to import.")
+  end
+
+  it "renders a reliable select-files control in the page import modal" do
+    owner = User.create!(email: "page-import-picker-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page import picker", slug: "page-import-picker")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Picker import note")
+    Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph", content_json: paragraph_content("Anchor"))
+    sign_in owner
+
+    get panel_page_path(
+      workspace_slug: workspace.slug,
+      id: page.id,
+      panel: "actions",
+      current_path: page_path(workspace_slug: workspace.slug, id: page.id)
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    import_form = document.at_css("form.notae-page-import-form")
+    expect(import_form["data-action"]).to include(
+      "submit->page-import#prepareSubmit submit->import-status#validateSelection"
+    )
+    expect(response.body).to include("notae-import-file-picker")
+    picker_button = document.at_css(".notae-import-file-picker-button")
+    expect(picker_button["data-action"]).to eq("click->import-status#browseFiles")
+    expect(response.body).to include("Select files")
+  end
 end

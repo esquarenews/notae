@@ -25,6 +25,8 @@ RSpec.describe "Import settings", type: :request do
     expect(response.body).to include("some structure, styling")
     expect(response.body).to include("CSV files import as grids by default.")
     expect(response.body).to include('data-controller="import-status"')
+    expect(response.body).to include('data-action="submit-&gt;import-status#validateSelection')
+    expect(response.body).to include("Select files")
     expect(response.body).to include("Import ready")
 
     document = Nokogiri::HTML(response.body)
@@ -37,6 +39,21 @@ RSpec.describe "Import settings", type: :request do
     )
     selected_option = workspace_picker.css("option").find { |option| option["selected"].present? }
     expect(selected_option&.[]("value")).to eq(workspace_import_settings_path(workspace_slug: workspace.slug, settings_workspace_slug: workspace.slug))
+  end
+
+  it "redirects with a clear error when import is submitted without a selected file" do
+    owner = User.create!(email: "import-settings-empty-upload@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Import empty upload", slug: "import-empty-upload")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    expect do
+      post workspace_import_settings_path(workspace_slug: workspace.slug),
+           params: { import: { files: { "0" => "" } } }
+    end.not_to change(Page, :count)
+
+    expect(response).to redirect_to(workspace_import_settings_path(workspace_slug: workspace.slug))
+    expect(flash[:alert]).to eq("Select at least one file to import.")
   end
 
   it "imports uploaded files into pages" do

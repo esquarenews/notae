@@ -101,6 +101,9 @@ RSpec.describe "Notae AI settings", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-ai-usage-card")
+    expect(response.body).to include("notae-ai-head-title")
+    expect(response.body).to include("aria-label=\"AI search scope\"")
+    expect(response.body).to include("aria-label=\"Show AI usage and guardrails\"")
     expect(response.body).to include("Today usage")
     expect(response.body).to include("1,110")
     expect(response.body).to include("$0.38")

@@ -7,7 +7,9 @@ class ImportSettingsController < ApplicationController
   end
 
   def create
-    files = import_params[:files].to_a.reject(&:blank?)
+    authorize @workspace, :show?
+
+    files = normalized_import_files
     if files.empty?
       redirect_to workspace_import_settings_path(workspace_slug: @workspace.slug), alert: "Select at least one file to import."
       return
@@ -44,6 +46,14 @@ class ImportSettingsController < ApplicationController
 
   def import_params
     params.fetch(:import, {}).permit(files: [])
+  end
+
+  def normalized_import_files
+    Array(import_params[:files]).select { |file| uploaded_file_present?(file) }
+  end
+
+  def uploaded_file_present?(file)
+    file.respond_to?(:original_filename) && file.original_filename.to_s.strip.present?
   end
 
   def files_require_grid_import_authorization?(files)

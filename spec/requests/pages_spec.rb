@@ -622,7 +622,7 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {\n  max-width: 100%;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
     expect(stylesheet).to include(".notae-actions-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
     expect(stylesheet).to include(".notae-options-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel,\n.notae-shell.is-mobile-viewport .notae-options-panel,\n.notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + var(--notae-overlay-mobile-gutter));\n  right: calc(env(safe-area-inset-right, 0px) + var(--notae-overlay-mobile-gutter));\n  width: var(--notae-overlay-mobile-width);\n  max-width: var(--notae-overlay-mobile-width);\n  min-width: var(--notae-overlay-mobile-width);\n  box-sizing: border-box;\n  top: var(--notae-overlay-mobile-top);\n  max-height: var(--notae-overlay-mobile-max-height);\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel,\n.notae-shell.is-mobile-viewport .notae-options-panel,\n.notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + var(--notae-overlay-mobile-gutter));\n  right: calc(env(safe-area-inset-right, 0px) + var(--notae-overlay-mobile-gutter));\n  width: var(--notae-overlay-mobile-width);\n  max-width: var(--notae-overlay-mobile-width);\n  min-width: var(--notae-overlay-mobile-width);\n  box-sizing: border-box;\n  top: var(--notae-overlay-mobile-top);\n  max-height: var(--notae-overlay-mobile-max-height);\n  overscroll-behavior: contain;\n  touch-action: pan-y;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel {\n  overflow-x: hidden;\n  z-index: 124;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-link[data-action*=\"openCommentsMenu\"] {\n  display: none;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-tools,\n.notae-shell.is-mobile-viewport .notae-db-header-tools {\n  opacity: 1;\n  transform: none;\n  pointer-events: auto;\n  flex-wrap: nowrap;\n}")
@@ -719,6 +719,16 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include("--notae-ai-mobile-small-text: 0.74rem;")
     expect(stylesheet).to include(".notae-shell.is-ai-compact-viewport .notae-ai-rail > .notae-ai-card > .notae-ai-copy {\n  display: none;\n}")
     expect(stylesheet).to include(".notae-shell.is-ai-compact-viewport .notae-ai-message-body,\n.notae-shell.is-ai-compact-viewport .notae-ai-result-text {\n  font-size: var(--notae-ai-mobile-text);")
+  end
+
+  it "prevents long mobile sidebar titles from creating horizontal drawer scroll" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-sidebar-page-title {\n  display: inline-flex;\n  align-items: center;")
+    expect(stylesheet).to include("--notae-mobile-sidebar-width: min(88vw, 336px);")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-sidebar {\n  position: fixed;\n  inset: 0 auto 0 0;\n  width: var(--notae-mobile-sidebar-width);\n  max-width: var(--notae-mobile-sidebar-width);\n  min-width: 0;\n  overflow-x: hidden;\n  overscroll-behavior-x: none;\n  touch-action: pan-y;")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-sidebar-main,\n.notae-shell.is-mobile-viewport .notae-sidebar-header,\n.notae-shell.is-mobile-viewport .notae-sidebar-scroll,")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-sidebar-link,\n.notae-shell.is-mobile-viewport .notae-sidebar-page-title,\n.notae-shell.is-mobile-viewport .notae-sidebar-link-label,\n.notae-shell.is-mobile-viewport .notae-user-label {\n  max-width: 100%;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}")
   end
 
   it "uses high-contrast hover text for dark topbar menus" do

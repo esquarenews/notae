@@ -41,7 +41,7 @@
                     multipart: true,
                     data: {
                       controller: "import-status",
-                      action: "turbo:submit-start->import-status#submitStart turbo:submit-end->import-status#submitEnd"
+                      action: "submit->import-status#validateSelection turbo:submit-start->import-status#submitStart turbo:submit-end->import-status#submitEnd"
                     } do |form| %>
         <div class="notae-import-dropzone">
           <div class="notae-import-status-card<%= " is-#{import_status_kind}" if import_status_kind.present? %>"
@@ -57,12 +57,19 @@
           </div>
           <p class="notae-import-dropzone-title">Import your content to Notae</p>
           <p class="notae-pref-description">Drag and drop ZIP, CSV, PDF, text, markdown, HTML, DOCX, or EPUB files.</p>
-          <%= form.file_field :files,
-                              multiple: true,
-                              accept: ".zip,.csv,.pdf,.txt,.md,.markdown,.html,.htm,.docx,.epub",
-                              class: "notae-import-file-input",
-                              name: "import[files][]",
-                              data: { import_status_target: "fileInput" } %>
+          <div class="notae-import-file-picker">
+            <%= form.file_field :files,
+                                multiple: true,
+                                accept: ".zip,.csv,.pdf,.txt,.md,.markdown,.html,.htm,.docx,.epub",
+                                class: "notae-import-file-input",
+                                name: "import[files][]",
+                                data: { import_status_target: "fileInput" } %>
+            <button type="button"
+                    class="notae-chip-button notae-import-file-picker-button"
+                    data-action="click->import-status#browseFiles">
+              Select files
+            </button>
+          </div>
           <%= form.submit "Import files", class: "notae-chip-button", data: { import_status_target: "submitButton" } %>
         </div>
       <% end %>
