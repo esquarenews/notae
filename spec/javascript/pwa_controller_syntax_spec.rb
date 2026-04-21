@@ -60,6 +60,8 @@ RSpec.describe "PwaController JavaScript syntax" do
     expect(source).to include("navigator.serviceWorker?.addEventListener?.(\"message\", this.serviceWorkerMessageHandler)")
     expect(source).to include("event.data?.type !== \"notae:push-received\"")
     expect(source).to include("handleIncomingPushReceipt(payload)")
+    expect(source).to include("this.handleIncomingPushReceipt(this.normalizePushReceiptPayload(event.data.payload))")
+    expect(source).to include("normalizePushReceiptPayload(payload)")
     expect(source).to include("requestForegroundBrowserNotification(payload)")
     expect(source).to include("new Notification(this.normalizedText(payload?.title, \"Notae\")")
     expect(source).to include("new CustomEvent(\"notae:push-received\"")
@@ -75,5 +77,8 @@ RSpec.describe "PwaController JavaScript syntax" do
     expect(source).to include("pushReadinessState(state)")
     expect(source).to include("Push notifications turned off on this device.")
     expect(source).to include("Home Screen app")
+    expect(source).not_to include("setAppBadge(")
+    expect(source).not_to include("clearAppBadge(")
+    expect(source).not_to include("unreadCount")
   end
 end

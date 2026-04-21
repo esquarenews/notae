@@ -138,6 +138,17 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
     expect(payload[:type]).to eq(Notification::TYPE_CODEX_REQUEST_COMPLETED)
     expect(payload[:require_interaction]).to eq(true)
+    expect(payload.keys).to contain_exactly(
+      :notification_id,
+      :type,
+      :title,
+      :body,
+      :url,
+      :tag,
+      :icon,
+      :badge,
+      :require_interaction
+    )
   end
 
   it "builds a test push payload from notification metadata" do
@@ -163,5 +174,16 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
     expect(payload[:type]).to eq(Notification::TYPE_TEST_PUSH)
     expect(payload[:require_interaction]).to eq(true)
+    expect(payload.keys).to contain_exactly(
+      :notification_id,
+      :type,
+      :title,
+      :body,
+      :url,
+      :tag,
+      :icon,
+      :badge,
+      :require_interaction
+    )
   end
 end

@@ -275,6 +275,7 @@ async function openNotificationDestination(rawUrl) {
 
 async function notifyPushReceipt(payload, { notificationDisplayed = false, notificationError = "" } = {}) {
   const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+  const receiptPayload = pushReceiptPayload(payload, { notificationDisplayed, notificationError })
 
   await Promise.all(
     clientsList.map((client) => {
@@ -282,21 +283,25 @@ async function notifyPushReceipt(payload, { notificationDisplayed = false, notif
 
       client.postMessage({
         type: "notae:push-received",
-        payload: {
-          notificationId: payload.notification_id || null,
-          notificationType: payload.type || payload.notification_type || null,
-          title: payload.title || "Notae",
-          body: payload.body || "",
-          url: payload.url || "/app",
-          tag: payload.tag || "",
-          icon: payload.icon || "/icon-192-v5.png",
-          requireInteraction: Boolean(payload.require_interaction),
-          notificationDisplayed,
-          notificationError
-        }
+        payload: receiptPayload
       })
 
       return Promise.resolve()
     })
   )
+}
+
+function pushReceiptPayload(payload, { notificationDisplayed = false, notificationError = "" } = {}) {
+  return {
+    notificationId: payload.notification_id || null,
+    notificationType: payload.type || payload.notification_type || null,
+    title: payload.title || "Notae",
+    body: payload.body || "",
+    url: payload.url || "/app",
+    tag: payload.tag || "",
+    icon: payload.icon || "/icon-192-v5.png",
+    requireInteraction: Boolean(payload.require_interaction),
+    notificationDisplayed,
+    notificationError
+  }
 }

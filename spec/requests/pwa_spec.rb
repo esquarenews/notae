@@ -27,6 +27,7 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("data-pwa-target=\"pushLiveBanner\"")
     expect(response.body).to include("data-pwa-target=\"pushLiveBannerTitle\"")
     expect(response.body).to include("data-pwa-target=\"pushLiveBannerBody\"")
+    expect(response.body).not_to include("data-pwa-unread-notification-count-value=")
   end
 
   it "keeps hidden PWA shell cards hidden until the controller reveals them" do
@@ -80,6 +81,8 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("requireInteraction: Boolean(payload.require_interaction)")
     expect(response.body).to include("type: \"notae:push-received\"")
     expect(response.body).to include("client.postMessage")
+    expect(response.body).to include("const receiptPayload = pushReceiptPayload(payload, { notificationDisplayed, notificationError })")
+    expect(response.body).to include("function pushReceiptPayload(payload, { notificationDisplayed = false, notificationError = \"\" } = {})")
     expect(response.body).to include("notificationType: payload.type || payload.notification_type || null")
     expect(response.body).to include("tag: payload.tag || \"\"")
     expect(response.body).to include("icon: payload.icon || \"/icon-192-v5.png\"")
@@ -87,6 +90,8 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("notificationDisplayed")
     expect(response.body).to include("notificationError")
     expect(response.body).to include("} finally {")
+    expect(response.body).not_to include("unreadCount")
+    expect(response.body).not_to include("unread_count")
 
     Tempfile.create([ "notae-pwa-service-worker", ".js" ]) do |file|
       file.write(response.body)

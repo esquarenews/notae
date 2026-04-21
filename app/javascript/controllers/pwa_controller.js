@@ -303,7 +303,7 @@ export default class extends Controller {
   handleServiceWorkerMessage(event) {
     if (event.data?.type !== "notae:push-received") return
 
-    this.handleIncomingPushReceipt(event.data.payload || {})
+    this.handleIncomingPushReceipt(this.normalizePushReceiptPayload(event.data.payload))
   }
 
   handleIncomingPushReceipt(payload) {
@@ -333,6 +333,21 @@ export default class extends Controller {
     })
     window.dispatchEvent(new CustomEvent("notae:push-received", { detail: payload }))
     this.showIncomingPushToast(payload)
+  }
+
+  normalizePushReceiptPayload(payload) {
+    return {
+      notificationId: this.normalizedText(payload?.notificationId) || null,
+      notificationType: this.normalizedText(payload?.notificationType) || null,
+      title: this.normalizedText(payload?.title, "Notae"),
+      body: this.normalizedText(payload?.body),
+      url: this.normalizedText(payload?.url, "/app"),
+      tag: this.normalizedText(payload?.tag),
+      icon: this.normalizedText(payload?.icon, "/icon-192-v5.png"),
+      requireInteraction: Boolean(payload?.requireInteraction),
+      notificationDisplayed: payload?.notificationDisplayed === true ? true : (payload?.notificationDisplayed === false ? false : null),
+      notificationError: this.normalizedText(payload?.notificationError)
+    }
   }
 
   requestForegroundBrowserNotification(payload) {
