@@ -234,6 +234,17 @@
                flash_dom_id: "page_flash_messages",
                flash_host_class: "notae-page-inline-flash-host" %>
 
+    <% if @page.locked? %>
+      <%= render "shared/read_only_notice",
+                 label: "Locked page",
+                 message: "This page is view-only right now. Unlock it to edit blocks, comments, or page settings.",
+                 tone: :warning %>
+    <% elsif @page_reader_mode %>
+      <%= render "shared/read_only_notice",
+                 label: "Reader mode",
+                 message: "This page is intentionally view-only here. Editing chrome stays hidden so the content reads cleanly." %>
+    <% end %>
+
     <%= render partial: "pages/document_canvas",
                locals: {
                  workspace: @workspace,

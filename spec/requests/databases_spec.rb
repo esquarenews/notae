@@ -2157,6 +2157,10 @@ RSpec.describe "Databases", type: :request do
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
     expect(database.reload.locked).to eq(true)
 
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response.body).to include("Locked grid")
+    expect(response.body).to include("This grid is view-only right now.")
+
     get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "view_settings", view_settings: "open")
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Grid is locked. Unlock to edit settings.")
@@ -3432,6 +3436,14 @@ RSpec.describe "Databases", type: :request do
     expect(stylesheet).to include("  font-family: inherit;")
     expect(stylesheet).to include(".notae-db-template-button,\n.notae-db-toolbar-icon,\n.notae-page-tab-create-button {\n  min-height: 2.25rem;")
     expect(stylesheet).not_to include(".notae-db-gantt-toolbar-form .notae-chip-button.notae-db-gantt-toolbar-button {\n  appearance: none;\n  -webkit-appearance: none;\n  text-decoration: none;\n  cursor: pointer;\n  font: inherit;")
+  end
+
+  it "makes dense mobile controls easier to tap" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport {\n    --notae-mobile-tap-target: 2.85rem;\n  }")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-db-toolbar-icon,\n  .notae-shell.is-mobile-viewport .notae-comments-trigger {\n    width: var(--notae-mobile-tap-target);")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-mobile-nav-button,\n  .notae-shell.is-mobile-viewport .notae-options-mobile-nav-button,\n  .notae-shell.is-mobile-viewport .notae-kalendarium-nav-buttons .notae-chip-button,")
   end
 
   it "keeps mobile grid menus wide enough to render labels horizontally" do

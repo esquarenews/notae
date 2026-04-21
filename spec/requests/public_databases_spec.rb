@@ -17,6 +17,8 @@ RSpec.describe "Public databases", type: :request do
     expect(response.body).to include("Shared grid")
     expect(response.body).to include("Row one")
     expect(response.body).to include("In progress")
+    expect(response.body).to include("Read-only share")
+    expect(response.body).to include("This shared grid is view-only here.")
     expect(share_link.reload.last_viewed_at).to be_present
   end
 

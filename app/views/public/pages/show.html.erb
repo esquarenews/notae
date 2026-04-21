@@ -7,6 +7,10 @@
     <p class="text-sm text-stone-500">Shared from <%= @workspace.name %></p>
   </header>
 
+  <%= render "shared/read_only_notice",
+             label: "Read-only share",
+             message: "This shared page is view-only here. Open Notae with edit access to change content or add comments." %>
+
   <section class="space-y-3">
     <%= render partial: "public/pages/block_tree",
                locals: {

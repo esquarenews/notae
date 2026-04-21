@@ -20,6 +20,8 @@ RSpec.describe "Public pages", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Shared document")
     expect(response.body).to include("Hello public world")
+    expect(response.body).to include("Read-only share")
+    expect(response.body).to include("This shared page is view-only here.")
     expect(response.body).not_to include("Add block")
     view_event = ShareLinkView.recent_first.first
     expect(view_event.share_link_id).to eq(share_link.id)

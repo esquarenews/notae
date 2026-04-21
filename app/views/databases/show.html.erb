@@ -136,6 +136,12 @@
   <%= render "shared/flash_messages",
              flash_dom_id: "database_flash_messages",
              flash_host_class: "notae-db-inline-flash-host" %>
+  <% if @database.locked? %>
+    <%= render "shared/read_only_notice",
+               label: "Locked grid",
+               message: "This grid is view-only right now. Unlock it to edit rows, properties, views, or comments.",
+               tone: :warning %>
+  <% end %>
   <% if (shell_page.present? ? shell_page.cover? : @database.cover?) && !embedded_preview %>
     <section class="notae-page-cover">
       <div class="notae-page-cover-frame">

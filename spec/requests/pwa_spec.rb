@@ -41,6 +41,17 @@ RSpec.describe "PWA", type: :request do
     expect(stylesheet).to include("display: none !important;")
   end
 
+  it "explains offline mode as read-only in the shell and fallback page" do
+    get root_path
+
+    expect(response.body).to include("Cached screens stay available in read-only mode.")
+
+    get pwa_offline_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Recently opened screens can still load from cache in read-only mode")
+  end
+
   it "serves a production-ready web manifest" do
     get pwa_manifest_path
 

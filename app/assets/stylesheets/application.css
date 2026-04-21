@@ -9182,15 +9182,16 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
 
 .notae-actions-mobile-nav-button {
   width: 100%;
+  min-height: 2.85rem;
   border: 1px solid #e7e5e4;
   background: #fff;
   border-radius: 0.55rem;
-  padding: 0.52rem 0.58rem;
+  padding: 0.72rem 0.7rem;
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--notae-text);
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
   gap: 0.55rem;
   cursor: pointer;
@@ -9499,15 +9500,16 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
 
 .notae-options-mobile-nav-button {
   width: 100%;
+  min-height: 2.85rem;
   border: 1px solid #e7e5e4;
   background: #fff;
   border-radius: 0.55rem;
-  padding: 0.52rem 0.58rem;
+  padding: 0.72rem 0.7rem;
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--notae-text);
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
   gap: 0.55rem;
   cursor: pointer;
@@ -18819,6 +18821,10 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
 }
 
 @media (max-width: 960px) {
+  .notae-shell.is-mobile-viewport {
+    --notae-mobile-tap-target: 2.85rem;
+  }
+
   .notae-mobile-tabbar {
     position: fixed;
     left: 0.75rem;
@@ -18924,15 +18930,15 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
   .notae-shell.is-mobile-viewport .notae-page-header-action > summary,
   .notae-shell.is-mobile-viewport .notae-page-header-link,
   .notae-shell.is-mobile-viewport .notae-chip-button {
-    min-height: 2.65rem;
+    min-height: var(--notae-mobile-tap-target);
     font-size: 0.8rem;
   }
 
   .notae-shell.is-mobile-viewport .notae-page-header-action > summary,
   .notae-shell.is-mobile-viewport .notae-page-header-link {
-    width: 2.65rem;
-    min-width: 2.65rem;
-    max-width: 2.65rem;
+    width: var(--notae-mobile-tap-target);
+    min-width: var(--notae-mobile-tap-target);
+    max-width: var(--notae-mobile-tap-target);
     padding: 0;
     justify-content: center;
     gap: 0;
@@ -18950,6 +18956,27 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
   .notae-shell.is-mobile-viewport .notae-page-header-tools,
   .notae-shell.is-mobile-viewport .notae-db-header-tools {
     padding-top: 0.16rem;
+  }
+
+  .notae-shell.is-mobile-viewport .notae-db-toolbar-icon,
+  .notae-shell.is-mobile-viewport .notae-comments-trigger {
+    width: var(--notae-mobile-tap-target);
+    height: var(--notae-mobile-tap-target);
+    min-width: var(--notae-mobile-tap-target);
+    min-height: var(--notae-mobile-tap-target);
+  }
+
+  .notae-shell.is-mobile-viewport .notae-actions-mobile-nav-button,
+  .notae-shell.is-mobile-viewport .notae-options-mobile-nav-button,
+  .notae-shell.is-mobile-viewport .notae-kalendarium-nav-buttons .notae-chip-button,
+  .notae-shell.is-mobile-viewport .notae-kalendarium-view-switch .notae-chip-button,
+  .notae-shell.is-mobile-viewport .notae-kalendarium-calendar-filter details > summary.notae-chip-button,
+  .notae-shell.is-mobile-viewport .notae-kalendarium-project-filter details > summary.notae-chip-button {
+    min-height: var(--notae-mobile-tap-target);
+  }
+
+  .notae-shell.is-mobile-viewport .notae-read-only-notice {
+    margin: 0 0.65rem;
   }
 
   .notae-shell.is-mobile-viewport .notae-page-title-form .notae-doc-muted,
@@ -19046,6 +19073,34 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
+}
+
+.notae-read-only-notice {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.82rem 0.96rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 88%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--notae-panel-elevated) 92%, transparent);
+  box-shadow: var(--notae-shadow-soft);
+}
+
+.notae-read-only-notice strong {
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--notae-text-strong);
+}
+
+.notae-read-only-notice span {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--notae-text-muted);
+}
+
+.notae-read-only-notice.is-warning {
+  border-color: color-mix(in srgb, var(--notae-accent-strong) 24%, var(--notae-border-muted));
+  background: color-mix(in srgb, var(--notae-accent-soft) 50%, var(--notae-panel-elevated));
 }
 
 /* Executive Atelier consistency refinement pass */
