@@ -16,11 +16,10 @@
 %>
 const CACHE_VERSION = "<%= cache_version %>"
 const SHELL_CACHE = `notae-shell-${CACHE_VERSION}`
-const DOCUMENT_CACHE = `notae-documents-${CACHE_VERSION}`
 const ASSET_CACHE = `notae-assets-${CACHE_VERSION}`
 const FONT_CACHE = `notae-fonts-${CACHE_VERSION}`
 const PRIVATE_CACHE_PREFIXES = ["notae-documents-"]
-const ACTIVE_CACHES = [SHELL_CACHE, DOCUMENT_CACHE, ASSET_CACHE, FONT_CACHE]
+const ACTIVE_CACHES = [SHELL_CACHE, ASSET_CACHE, FONT_CACHE]
 const OFFLINE_FALLBACK_URL = "<%= pwa_offline_path %>"
 const NOTIFICATION_LAUNCH_TEMPLATE = "<%= pwa_notification_launch_path(id: "__NOTIFICATION_ID__") %>"
 const PRECACHE_URLS = <%= raw(precache_urls.to_json) %>
@@ -126,34 +125,11 @@ function isFontRequest(url) {
 }
 
 async function networkFirstDocument(request) {
-  const cache = await caches.open(DOCUMENT_CACHE)
   try {
-    const response = await fetch(request)
-
-    if (cacheableDocumentResponse(request, response)) {
-      await cache.put(request, response.clone())
-    }
-
-    return response
+    return await fetch(request)
   } catch (_error) {
-    const cached = await cache.match(request)
-    if (cached) return cached
-
     return offlineFallbackResponse()
   }
-}
-
-function cacheableDocumentResponse(request, response) {
-  if (!response || !response.ok) return false
-
-  const contentType = response.headers.get("content-type") || ""
-  if (!contentType.includes("text/html")) return false
-
-  const finalUrl = new URL(response.url || request.url)
-  if (finalUrl.origin !== self.location.origin) return false
-  if (finalUrl.pathname.startsWith("/users/sign_in")) return false
-
-  return true
 }
 
 async function staleWhileRevalidate(request, cacheName) {
