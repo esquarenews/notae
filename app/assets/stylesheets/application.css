@@ -24,6 +24,26 @@
   --notae-text-default: rgba(41, 37, 36, 0.84);
   --notae-text-muted: rgba(68, 64, 60, 0.8);
   --notae-text-soft: rgba(87, 83, 78, 0.7);
+  --notae-space-1: 0.25rem;
+  --notae-space-2: 0.5rem;
+  --notae-space-3: 0.72rem;
+  --notae-space-4: 0.9rem;
+  --notae-radius-button: 0.5rem;
+  --notae-radius-panel: 0.7rem;
+  --notae-radius-overlay: 1.1rem;
+  --notae-control-height: 2.25rem;
+  --notae-control-icon-size: 2.25rem;
+  --notae-mobile-tap-target-default: 2.85rem;
+  --notae-heading-display: clamp(2.6rem, 5vw, 4.1rem);
+  --notae-heading-hero: clamp(2.8rem, 6vw, 5rem);
+  --notae-heading-utility: clamp(2.4rem, 4vw, 3.65rem);
+  --notae-heading-section: clamp(2.2rem, 4vw, 3.4rem);
+  --notae-overlay-mobile-gutter: 0.72rem;
+  --notae-overlay-mobile-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - (var(--notae-overlay-mobile-gutter) * 2));
+  --notae-overlay-mobile-top: calc(env(safe-area-inset-top, 0px) + 3.05rem);
+  --notae-overlay-mobile-max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);
+  --notae-overlay-panel-top: calc(env(safe-area-inset-top, 0px) + 6rem);
+  --notae-overlay-panel-max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 6.4rem);
   --notae-layer-popover-region: 1080;
   --notae-layer-popover-parent: 1100;
   --notae-layer-popover: 1120;
@@ -3702,8 +3722,8 @@ turbo-frame#notae_sidebar_sections {
   max-width: min(18rem, calc(100vw - 2rem));
   display: grid;
   gap: 0.6rem;
-  padding: 0.72rem;
-  border-radius: 0.85rem;
+  padding: var(--notae-space-3);
+  border-radius: var(--notae-radius-overlay);
   border: 1px solid var(--notae-border);
   background: var(--notae-surface-raised);
   box-shadow: 0 20px 42px rgba(15, 23, 42, 0.16);
@@ -3866,8 +3886,8 @@ turbo-frame#notae_sidebar_sections {
 }
 
 .notae-db-template-button {
-  min-height: 2.25rem;
-  padding: 0.5rem 0.9rem;
+  min-height: var(--notae-control-height);
+  padding: var(--notae-space-2) var(--notae-space-4);
   font-size: 0.75rem;
 }
 
@@ -3961,7 +3981,7 @@ turbo-frame#notae_sidebar_sections {
   max-height: min(78vh, 720px);
   overflow: auto;
   border: 1px solid var(--notae-border);
-  border-radius: 0.7rem;
+  border-radius: var(--notae-radius-panel);
   background: var(--notae-surface-raised);
   box-shadow: 0 14px 28px rgba(24, 24, 27, 0.16);
   padding: 0.6rem;
@@ -12387,14 +12407,14 @@ body.notae-theme-dark .notae-doc-muted {
 .notae-shell.is-mobile-viewport .notae-options-panel,
 .notae-shell.is-mobile-viewport .notae-actions-panel {
   position: fixed;
-  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);
-  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);
-  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  left: calc(env(safe-area-inset-left, 0px) + var(--notae-overlay-mobile-gutter));
+  right: calc(env(safe-area-inset-right, 0px) + var(--notae-overlay-mobile-gutter));
+  width: var(--notae-overlay-mobile-width);
+  max-width: var(--notae-overlay-mobile-width);
+  min-width: var(--notae-overlay-mobile-width);
   box-sizing: border-box;
-  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);
-  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);
+  top: var(--notae-overlay-mobile-top);
+  max-height: var(--notae-overlay-mobile-max-height);
 }
 
 .notae-shell.is-mobile-viewport .notae-comments-panel {
@@ -12488,20 +12508,20 @@ body.notae-theme-dark .notae-doc-muted {
 .notae-shell.is-mobile-viewport .notae-db-inline-panel,
 .notae-shell.is-mobile-viewport .notae-db-settings-panel {
   position: fixed;
-  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);
-  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);
-  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 6.4rem);
+  left: calc(env(safe-area-inset-left, 0px) + var(--notae-overlay-mobile-gutter));
+  right: calc(env(safe-area-inset-right, 0px) + var(--notae-overlay-mobile-gutter));
+  width: var(--notae-overlay-mobile-width);
+  max-width: var(--notae-overlay-mobile-width);
+  min-width: var(--notae-overlay-mobile-width);
+  max-height: var(--notae-overlay-panel-max-height);
   box-sizing: border-box;
   overflow: auto;
-  top: calc(env(safe-area-inset-top, 0px) + 6rem);
+  top: var(--notae-overlay-panel-top);
 }
 
 .notae-shell.is-mobile-viewport .notae-db-row-more-panel.is-floating {
-  width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));
-  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  width: min(18rem, var(--notae-overlay-mobile-width));
+  max-width: var(--notae-overlay-mobile-width);
   box-sizing: border-box;
 }
 
@@ -12511,9 +12531,9 @@ body.notae-theme-dark .notae-doc-muted {
 .notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,
 .notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,
 .notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {
-  min-width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));
-  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 6.4rem);
+  min-width: min(18rem, var(--notae-overlay-mobile-width));
+  max-width: var(--notae-overlay-mobile-width);
+  max-height: var(--notae-overlay-panel-max-height);
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
@@ -15599,9 +15619,9 @@ button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button:ho
 }
 
 .notae-shell.is-mobile-viewport .notae-kalendarium-event-modal {
-  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
-  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);
+  width: var(--notae-overlay-mobile-width);
+  max-width: var(--notae-overlay-mobile-width);
+  min-width: var(--notae-overlay-mobile-width);
 }
 
 .notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-panel {
@@ -17677,11 +17697,11 @@ body.notae-theme {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.25rem;
-  padding: 0.5rem 0.9rem;
+  min-height: var(--notae-control-height);
+  padding: var(--notae-space-2) var(--notae-space-4);
   margin: 0;
   border: 1px solid var(--notae-border-muted);
-  border-radius: 0.5rem;
+  border-radius: var(--notae-radius-button);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--notae-panel-elevated) 96%, white 4%), color-mix(in srgb, var(--notae-panel-muted) 92%, transparent));
   color: var(--notae-text-strong);
@@ -17856,7 +17876,7 @@ body.notae-theme-system .notae-account-delete-button {
   justify-content: center;
   margin: 0;
   border: 1px solid var(--notae-border-muted);
-  border-radius: 0.5rem;
+  border-radius: var(--notae-radius-button);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--notae-panel-elevated) 96%, white 4%), color-mix(in srgb, var(--notae-panel-muted) 92%, transparent));
   color: var(--notae-text-strong);
@@ -17874,10 +17894,10 @@ body.notae-theme-system .notae-account-delete-button {
 .notae-inline-icon-button,
 .notae-comments-trigger,
 .notae-db-toolbar-icon {
-  width: 2.25rem;
-  height: 2.25rem;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
+  width: var(--notae-control-icon-size);
+  height: var(--notae-control-icon-size);
+  min-width: var(--notae-control-icon-size);
+  min-height: var(--notae-control-icon-size);
   padding: 0;
 }
 
@@ -18395,7 +18415,7 @@ body.notae-theme-system .notae-account-delete-button {
 .notae-workspace-home-hero h1 {
   margin: 0;
   max-width: 10ch;
-  font-size: clamp(2.8rem, 6vw, 5rem);
+  font-size: var(--notae-heading-hero);
   line-height: 0.95;
   letter-spacing: -0.055em;
 }
@@ -18452,7 +18472,7 @@ body.notae-theme-system .notae-account-delete-button {
 }
 
 .notae-utility-title {
-  font-size: clamp(2.4rem, 4vw, 3.65rem);
+  font-size: var(--notae-heading-utility);
   line-height: 0.96;
   letter-spacing: -0.05em;
 }
@@ -18565,7 +18585,7 @@ body.notae-theme-system .notae-account-delete-button {
   min-height: calc(1.08em + 0.42rem);
   height: calc(1.08em + 0.42rem);
   padding-bottom: 0.42rem;
-  font-size: clamp(2.6rem, 5vw, 4.1rem);
+  font-size: var(--notae-heading-display);
 }
 
 .notae-db-canvas {
@@ -18586,9 +18606,9 @@ body.notae-theme-system .notae-account-delete-button {
 }
 
 .notae-db-toolbar-icon {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.5rem;
+  width: var(--notae-control-icon-size);
+  height: var(--notae-control-icon-size);
+  border-radius: var(--notae-radius-button);
 }
 
 .notae-db-board-column,
@@ -18641,7 +18661,7 @@ body.notae-theme-system .notae-account-delete-button {
 .notae-tool-page-title,
 .notae-kalendarium-head-top h1,
 .notae-meetings-hero h1 {
-  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-size: var(--notae-heading-section);
   line-height: 0.98;
   letter-spacing: -0.045em;
 }
@@ -18822,7 +18842,7 @@ body.notae-pwa-is-offline form:not([method='get']) button:not([type]),
 
 @media (max-width: 960px) {
   .notae-shell.is-mobile-viewport {
-    --notae-mobile-tap-target: 2.85rem;
+    --notae-mobile-tap-target: var(--notae-mobile-tap-target-default);
   }
 
   .notae-mobile-tabbar {
@@ -19308,7 +19328,7 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
 .notae-db-template-button,
 .notae-db-toolbar-icon,
 .notae-page-tab-create-button {
-  min-height: 2.25rem;
+  min-height: var(--notae-control-height);
 }
 
 .notae-kalendarium-head {

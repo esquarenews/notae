@@ -622,14 +622,14 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-doc-editor:not(.is-code-block) .ProseMirror {\n  max-width: 100%;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n}")
     expect(stylesheet).to include(".notae-actions-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
     expect(stylesheet).to include(".notae-options-mobile-nav-button-label {\n  flex: 1 1 auto;\n  display: block;\n  min-width: 0;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  line-height: 1.3;\n  color: inherit;\n  -webkit-text-fill-color: currentColor;\n}")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel,\n.notae-shell.is-mobile-viewport .notae-options-panel,\n.notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);\n  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);\n  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);\n  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);\n  min-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);\n  box-sizing: border-box;\n  top: calc(env(safe-area-inset-top, 0px) + 3.05rem);\n  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 3.6rem);\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel,\n.notae-shell.is-mobile-viewport .notae-options-panel,\n.notae-shell.is-mobile-viewport .notae-actions-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + var(--notae-overlay-mobile-gutter));\n  right: calc(env(safe-area-inset-right, 0px) + var(--notae-overlay-mobile-gutter));\n  width: var(--notae-overlay-mobile-width);\n  max-width: var(--notae-overlay-mobile-width);\n  min-width: var(--notae-overlay-mobile-width);\n  box-sizing: border-box;\n  top: var(--notae-overlay-mobile-top);\n  max-height: var(--notae-overlay-mobile-max-height);\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel {\n  overflow-x: hidden;\n  z-index: 124;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-link[data-action*=\"openCommentsMenu\"] {\n  display: none;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-tools,\n.notae-shell.is-mobile-viewport .notae-db-header-tools {\n  opacity: 1;\n  transform: none;\n  pointer-events: auto;\n  flex-wrap: nowrap;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-panes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  width: 200%;")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown .notae-options-mobile-panes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  width: 200%;")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-create-menu,\n.notae-shell.is-mobile-viewport .notae-library-popover-panel,\n.notae-shell.is-mobile-viewport .notae-people-add-panel,\n.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,\n.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,\n.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {\n  min-width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));")
-    expect(stylesheet).to include("  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 6.4rem);\n  box-sizing: border-box;\n  overflow-x: hidden;\n  overflow-y: auto;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-create-menu,\n.notae-shell.is-mobile-viewport .notae-library-popover-panel,\n.notae-shell.is-mobile-viewport .notae-people-add-panel,\n.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,\n.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,\n.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {\n  min-width: min(18rem, var(--notae-overlay-mobile-width));")
+    expect(stylesheet).to include("  max-height: var(--notae-overlay-panel-max-height);\n  box-sizing: border-box;\n  overflow-x: hidden;\n  overflow-y: auto;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown {\n  display: block;\n  overflow-x: clip;\n  overflow-y: auto;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-options-panel.is-mobile-drilldown {\n  display: block;\n  overflow-x: clip;\n  overflow-y: auto;\n}")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-panel.is-mobile-drilldown .notae-actions-mobile-pane {\n  display: block;\n  min-width: 0;\n  max-width: 100%;\n  box-sizing: border-box;\n  overflow-x: hidden;\n}")
@@ -673,6 +673,15 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-page-cover-controls {\n  position: absolute;")
     expect(stylesheet).to include("  z-index: var(--notae-layer-popover-region);")
     expect(stylesheet).to include(".notae-topbar:has(.notae-actions-menu[open]),\n.notae-topbar:has(.notae-options-menu[open]),\n.notae-topbar:has(.notae-comments-menu[open]) {\n  position: relative;\n  z-index: var(--notae-layer-popover-parent);")
+  end
+
+  it "uses shared heading scale tokens for major page titles" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include("  --notae-heading-display: clamp(2.6rem, 5vw, 4.1rem);\n")
+    expect(stylesheet).to include("  --notae-heading-hero: clamp(2.8rem, 6vw, 5rem);\n")
+    expect(stylesheet).to include(".notae-workspace-home-hero h1 {\n  margin: 0;\n  max-width: 10ch;\n  font-size: var(--notae-heading-hero);")
+    expect(stylesheet).to include(".notae-page-title-input {\n  min-height: calc(1.08em + 0.42rem);\n  height: calc(1.08em + 0.42rem);\n  padding-bottom: 0.42rem;\n  font-size: var(--notae-heading-display);")
   end
 
   it "uses darker label text for primary buttons in dark themes" do

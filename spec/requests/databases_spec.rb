@@ -3431,17 +3431,20 @@ RSpec.describe "Databases", type: :request do
   it "shares neutral button styling across grid and split-view controls" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
+    expect(stylesheet).to include("  --notae-control-height: 2.25rem;\n")
+    expect(stylesheet).to include("  --notae-control-icon-size: 2.25rem;\n")
+    expect(stylesheet).to include("  --notae-overlay-mobile-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - (var(--notae-overlay-mobile-gutter) * 2));\n")
     expect(stylesheet).to include(".notae-chip-button,\n.notae-page-tab-create-button {\n  appearance: none;")
     expect(stylesheet).to include(".notae-inline-icon-button,\n.notae-db-toolbar-icon,\n.notae-comments-trigger,")
     expect(stylesheet).to include("  font-family: inherit;")
-    expect(stylesheet).to include(".notae-db-template-button,\n.notae-db-toolbar-icon,\n.notae-page-tab-create-button {\n  min-height: 2.25rem;")
+    expect(stylesheet).to include(".notae-db-template-button,\n.notae-db-toolbar-icon,\n.notae-page-tab-create-button {\n  min-height: var(--notae-control-height);")
     expect(stylesheet).not_to include(".notae-db-gantt-toolbar-form .notae-chip-button.notae-db-gantt-toolbar-button {\n  appearance: none;\n  -webkit-appearance: none;\n  text-decoration: none;\n  cursor: pointer;\n  font: inherit;")
   end
 
   it "makes dense mobile controls easier to tap" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport {\n    --notae-mobile-tap-target: 2.85rem;\n  }")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport {\n    --notae-mobile-tap-target: var(--notae-mobile-tap-target-default);\n  }")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-db-toolbar-icon,\n  .notae-shell.is-mobile-viewport .notae-comments-trigger {\n    width: var(--notae-mobile-tap-target);")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-actions-mobile-nav-button,\n  .notae-shell.is-mobile-viewport .notae-options-mobile-nav-button,\n  .notae-shell.is-mobile-viewport .notae-kalendarium-nav-buttons .notae-chip-button,")
   end
@@ -3449,10 +3452,10 @@ RSpec.describe "Databases", type: :request do
   it "keeps mobile grid menus wide enough to render labels horizontally" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-panel,\n.notae-shell.is-mobile-viewport .notae-cover-picker-panel:not(.is-embedded),\n.notae-shell.is-mobile-viewport .notae-db-inline-panel,\n.notae-shell.is-mobile-viewport .notae-db-settings-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + 0.72rem);\n  right: calc(env(safe-area-inset-right, 0px) + 0.72rem);\n  width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem);")
-    expect(stylesheet).to include("  max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 6.4rem);\n  box-sizing: border-box;\n  overflow: auto;\n  top: calc(env(safe-area-inset-top, 0px) + 6rem);\n}")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-db-row-more-panel.is-floating {\n  width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));")
-    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-create-menu,\n.notae-shell.is-mobile-viewport .notae-library-popover-panel,\n.notae-shell.is-mobile-viewport .notae-people-add-panel,\n.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,\n.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,\n.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {\n  min-width: min(18rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.44rem));")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-page-header-panel,\n.notae-shell.is-mobile-viewport .notae-cover-picker-panel:not(.is-embedded),\n.notae-shell.is-mobile-viewport .notae-db-inline-panel,\n.notae-shell.is-mobile-viewport .notae-db-settings-panel {\n  position: fixed;\n  left: calc(env(safe-area-inset-left, 0px) + var(--notae-overlay-mobile-gutter));\n  right: calc(env(safe-area-inset-right, 0px) + var(--notae-overlay-mobile-gutter));\n  width: var(--notae-overlay-mobile-width);")
+    expect(stylesheet).to include("  max-height: var(--notae-overlay-panel-max-height);\n  box-sizing: border-box;\n  overflow: auto;\n  top: var(--notae-overlay-panel-top);\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-db-row-more-panel.is-floating {\n  width: min(18rem, var(--notae-overlay-mobile-width));")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-create-menu,\n.notae-shell.is-mobile-viewport .notae-library-popover-panel,\n.notae-shell.is-mobile-viewport .notae-people-add-panel,\n.notae-shell.is-mobile-viewport .notae-page-tab-menu-panel,\n.notae-shell.is-mobile-viewport .notae-kalendarium-calendar-popover,\n.notae-shell.is-mobile-viewport .notae-kalendarium-project-popover {\n  min-width: min(18rem, var(--notae-overlay-mobile-width));")
   end
 
   it "shows column hover controls and persistent column styling rules in the stylesheet" do
