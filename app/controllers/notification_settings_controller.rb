@@ -57,7 +57,8 @@ class NotificationSettingsController < ApplicationController
     return render json: { ok: false, error: "Push subscription storage is not available on this server yet." }, status: :service_unavailable unless push_subscription_schema_available?
     return render json: { ok: false, error: "Push notifications are not configured on this server yet." }, status: :service_unavailable unless WebPush::Configuration.configured?
 
-    subscriptions = current_user.web_push_subscriptions.order(created_at: :desc).to_a
+    current_endpoint = test_push_endpoint
+    subscriptions = test_push_subscriptions(current_endpoint)
     return render json: { ok: false, error: "No devices are subscribed for push notifications yet." }, status: :unprocessable_entity if subscriptions.empty?
 
     test_payload = WebPush::TestPayloadBuilder.new(user: current_user, workspace: @workspace).call
@@ -76,11 +77,11 @@ class NotificationSettingsController < ApplicationController
     )
 
     payload = WebPush::NotificationPayloadBuilder.new(notification: notification).call
-    current_endpoint = test_push_endpoint
     current_device_delivered = false
     delivered_subscription_count = 0
     current_subscription_seen = false
     current_subscription_stale = false
+    current_device_error = nil
     error_messages = []
 
     subscriptions.each do |subscription|
@@ -97,6 +98,7 @@ class NotificationSettingsController < ApplicationController
       current_subscription_seen = true
       current_device_delivered = delivered
       current_subscription_stale = !delivered && !WebPushSubscription.exists?(subscription.id)
+      current_device_error = subscription.reload.last_error_message.presence if !delivered && WebPushSubscription.exists?(subscription.id)
     end
 
     subscriptions.each do |subscription|
@@ -109,24 +111,27 @@ class NotificationSettingsController < ApplicationController
     if delivered_subscription_count.positive?
       render json: {
         ok: true,
-        message: "Test push sent to #{ActionController::Base.helpers.pluralize(delivered_subscription_count, 'device')}.",
+        message: test_push_success_message(delivered_subscription_count),
         notification_id: notification.id,
         current_device_delivered: current_device_delivered,
-        delivered_subscription_count: delivered_subscription_count
+        delivered_subscription_count: delivered_subscription_count,
+        current_device_error: current_device_error
       }
     else
       if current_subscription_seen && current_subscription_stale
         return render json: {
           ok: false,
           error: "This device subscription expired and needs to be refreshed.",
-          error_code: "stale_subscription"
+          error_code: "stale_subscription",
+          current_device_error: current_device_error
         }, status: :unprocessable_entity
       end
 
       render json: {
         ok: false,
         error: error_messages.first || "Test push could not be delivered to any device.",
-        error_code: "delivery_failed"
+        error_code: "delivery_failed",
+        current_device_error: current_device_error
       }, status: :unprocessable_entity
     end
   end
@@ -162,6 +167,23 @@ class NotificationSettingsController < ApplicationController
 
   def test_push_endpoint
     params[:endpoint].to_s.strip
+  end
+
+  def test_push_scope
+    params[:scope].to_s == "current_endpoint" ? :current_endpoint : :all
+  end
+
+  def test_push_subscriptions(current_endpoint)
+    subscriptions = current_user.web_push_subscriptions.order(created_at: :desc).to_a
+    return subscriptions unless test_push_scope == :current_endpoint && current_endpoint.present?
+
+    subscriptions.select { |subscription| subscription.endpoint == current_endpoint }
+  end
+
+  def test_push_success_message(delivered_subscription_count)
+    return "Test push sent to this device." if test_push_scope == :current_endpoint
+
+    "Test push sent to #{ActionController::Base.helpers.pluralize(delivered_subscription_count, 'device')}."
   end
 
   def merged_push_notification_preferences

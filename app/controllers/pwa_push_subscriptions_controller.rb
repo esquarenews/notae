@@ -15,6 +15,8 @@ class PwaPushSubscriptionsController < ApplicationController
     subscription.auth = keys.fetch(:auth)
     subscription.expiration_time = normalized_expiration_time(subscription_params[:expiration_time])
     subscription.user_agent = request.user_agent.to_s
+    subscription.last_error_at = nil
+    subscription.last_error_message = nil
     subscription.save!
 
     render json: { ok: true, id: subscription.id }

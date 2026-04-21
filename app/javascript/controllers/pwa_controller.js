@@ -212,14 +212,14 @@ export default class extends Controller {
       let response = await this.sendTestPushRequest(path, subscription.endpoint)
       payload = await response.json().catch(() => ({}))
 
-      if (!response.ok && payload.error_code === "stale_subscription") {
+      if (this.shouldRetryCurrentDeviceTestPush(response, payload)) {
         this.setPushSettingsFeedback("Refreshing this device subscription…", "pending")
         const refreshedSubscription = await this.rebuildPushSubscription()
-        response = await this.sendTestPushRequest(path, refreshedSubscription.endpoint)
+        response = await this.sendTestPushRequest(path, refreshedSubscription.endpoint, "current_endpoint")
         payload = await response.json().catch(() => ({}))
       }
 
-      if (!response.ok) throw new Error(payload.error || "Test push could not be sent.")
+      if (!response.ok) throw new Error(payload.current_device_error || payload.error || "Test push could not be sent.")
 
       if (payload.current_device_delivered) {
         this.setPushSettingsFeedback("Test push was accepted for this browser. It should appear here immediately if desktop notifications are working.", "pending")
@@ -1017,7 +1017,14 @@ export default class extends Controller {
     return subscription
   }
 
-  async sendTestPushRequest(path, endpoint) {
+  shouldRetryCurrentDeviceTestPush(response, payload) {
+    if (payload?.current_device_delivered === false) return true
+    if (response.ok) return false
+
+    return payload?.error_code === "stale_subscription" || payload?.error_code === "delivery_failed"
+  }
+
+  async sendTestPushRequest(path, endpoint, scope = "all") {
     return fetch(path, {
       method: "POST",
       credentials: "same-origin",
@@ -1026,7 +1033,7 @@ export default class extends Controller {
         "Content-Type": "application/json",
         "X-CSRF-Token": this.csrfToken()
       },
-      body: JSON.stringify({ endpoint })
+      body: JSON.stringify({ endpoint, scope })
     })
   }
 

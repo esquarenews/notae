@@ -206,7 +206,8 @@ RSpec.describe "Notification settings", type: :request do
       "ok" => true,
       "message" => "Test push sent to 2 devices.",
       "current_device_delivered" => true,
-      "delivered_subscription_count" => 2
+      "delivered_subscription_count" => 2,
+      "current_device_error" => nil
     )
     notification = Notification.order(:created_at).last
     expect(notification.notification_type).to eq(Notification::TYPE_TEST_PUSH)
@@ -231,6 +232,53 @@ RSpec.describe "Notification settings", type: :request do
         title: "Notae test notification",
         url: "/app/notifications/#{notification.id}"
       )
+    )
+  end
+
+  it "retries only the current endpoint when the browser refreshes its subscription" do
+    user = User.create!(email: "notification-settings-current-only@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification settings current only", slug: "notification-settings-current-only")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    other_subscription = user.web_push_subscriptions.create!(
+      endpoint: "https://push.example.test/subscriptions/other-device",
+      p256dh: "p256dh-other",
+      auth: "auth-other"
+    )
+    current_subscription = user.web_push_subscriptions.create!(
+      endpoint: "https://push.example.test/subscriptions/test-device",
+      p256dh: "p256dh-test",
+      auth: "auth-test"
+    )
+    current_delivery_service = instance_double(WebPush::DeliveryService, call: true)
+    sign_in user
+
+    allow(WebPush::Configuration).to receive(:configured?).and_return(true)
+    allow(WebPush::DeliveryService).to receive(:new) do |subscription:, **|
+      raise "Unexpected subscription endpoint #{subscription.endpoint}" unless subscription.endpoint == current_subscription.endpoint
+
+      current_delivery_service
+    end
+
+    post workspace_notification_settings_test_push_path(workspace_slug: workspace.slug),
+         params: { endpoint: current_subscription.endpoint, scope: "current_endpoint" },
+         as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(JSON.parse(response.body)).to include(
+      "ok" => true,
+      "message" => "Test push sent to this device.",
+      "current_device_delivered" => true,
+      "delivered_subscription_count" => 1
+    )
+    expect(WebPush::DeliveryService).to have_received(:new).once.with(
+      subscription: current_subscription,
+      notification: kind_of(Notification),
+      payload: hash_including(title: "Notae test notification")
+    )
+    expect(WebPush::DeliveryService).not_to have_received(:new).with(
+      subscription: other_subscription,
+      notification: anything,
+      payload: anything
     )
   end
 
@@ -260,7 +308,39 @@ RSpec.describe "Notification settings", type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(JSON.parse(response.body)).to include(
       "ok" => false,
-      "error_code" => "stale_subscription"
+      "error_code" => "stale_subscription",
+      "current_device_error" => nil
+    )
+  end
+
+  it "returns the current device delivery error when the push provider rejects that endpoint" do
+    user = User.create!(email: "notification-settings-current-error@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notification settings current error", slug: "notification-settings-current-error")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    subscription = user.web_push_subscriptions.create!(
+      endpoint: "https://push.example.test/subscriptions/failing-device",
+      p256dh: "p256dh-failing",
+      auth: "auth-failing"
+    )
+    delivery_service = instance_double(WebPush::DeliveryService)
+    sign_in user
+
+    allow(WebPush::Configuration).to receive(:configured?).and_return(true)
+    allow(WebPush::DeliveryService).to receive(:new).and_return(delivery_service)
+    allow(delivery_service).to receive(:call) do
+      subscription.update_columns(last_error_at: Time.current, last_error_message: "Webpush::ResponseError: 403 Forbidden")
+      false
+    end
+
+    post workspace_notification_settings_test_push_path(workspace_slug: workspace.slug),
+         params: { endpoint: subscription.endpoint, scope: "current_endpoint" },
+         as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(JSON.parse(response.body)).to include(
+      "ok" => false,
+      "error_code" => "delivery_failed",
+      "current_device_error" => "Webpush::ResponseError: 403 Forbidden"
     )
   end
 
