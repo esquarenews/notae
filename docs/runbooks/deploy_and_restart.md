@@ -15,7 +15,14 @@ git pull --ff-only origin main
 
 ```bash
 bundle install
-bundle exec rails db:migrate
+sudo systemd-run --wait --collect --pty \
+  -p User=esquarenews \
+  -p Group=esquarenews \
+  -p WorkingDirectory=/home/esquarenews/apps/notae \
+  -p EnvironmentFile=/etc/notae/notae.env \
+  -p Environment=RAILS_ENV=production \
+  -p Environment=PATH=/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  /usr/bin/bash -lc 'bundle exec rails db:migrate'
 ```
 
 If a migration is not intended, stop here and review before continuing.
@@ -23,8 +30,14 @@ If a migration is not intended, stop here and review before continuing.
 ## 3. Rebuild assets
 
 ```bash
-bundle exec rails assets:clobber
-bundle exec rails assets:precompile
+sudo systemd-run --wait --collect --pty \
+  -p User=esquarenews \
+  -p Group=esquarenews \
+  -p WorkingDirectory=/home/esquarenews/apps/notae \
+  -p EnvironmentFile=/etc/notae/notae.env \
+  -p Environment=RAILS_ENV=production \
+  -p Environment=PATH=/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  /usr/bin/bash -lc 'bundle exec rails assets:clobber assets:precompile'
 ```
 
 ## 4. Restart application services
@@ -61,7 +74,17 @@ Check that sign-in HTML is pointing at compiled assets:
 curl -s https://notae.esquarenews.tech/users/sign_in | rg '/assets/application.*\.(css|js)'
 ```
 
-If the CSS or JS link is missing, the asset build or production asset serving is still broken.
+Then check that each linked asset returns `200`:
+
+```bash
+curl -s https://notae.esquarenews.tech/users/sign_in \
+  | rg -o '/assets/[^"]+\.(css|js)' \
+  | while read -r asset; do
+      curl -s -o /dev/null -w "%{http_code} ${asset}\n" "https://notae.esquarenews.tech${asset}"
+    done
+```
+
+If the CSS or JS link is missing or returns `404`, the asset build or production asset serving is still broken.
 
 ## 6. Quick rollback checklist
 
@@ -94,7 +117,13 @@ Usually one of:
 Re-run:
 
 ```bash
-bundle exec rails assets:clobber
-bundle exec rails assets:precompile
+sudo systemd-run --wait --collect --pty \
+  -p User=esquarenews \
+  -p Group=esquarenews \
+  -p WorkingDirectory=/home/esquarenews/apps/notae \
+  -p EnvironmentFile=/etc/notae/notae.env \
+  -p Environment=RAILS_ENV=production \
+  -p Environment=PATH=/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  /usr/bin/bash -lc 'bundle exec rails assets:clobber assets:precompile'
 sudo systemctl restart notae
 ```
