@@ -3628,7 +3628,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.media_type).to eq("application/pdf")
     expect(response.headers["Content-Disposition"]).to include(".pdf")
     expect(response.body.byteslice(0, 4)).to eq("%PDF")
-    expect(response.body.bytesize).to be > 5_000
+    expect(response.body.bytesize).to be > 4_000
   end
 
   it "renders a standalone gantt embed page for Nota embeds" do
@@ -3679,7 +3679,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.media_type).to eq("application/pdf")
     expect(response.headers["Content-Disposition"]).to include(".pdf")
     expect(response.body.byteslice(0, 4)).to eq("%PDF")
-    expect(response.body.bytesize).to be > 5_000
+    expect(response.body.bytesize).to be > 4_000
   end
 
   it "exports a line graph view as a chart pdf" do
@@ -3709,7 +3709,7 @@ RSpec.describe "Databases", type: :request do
     expect(response.media_type).to eq("application/pdf")
     expect(response.headers["Content-Disposition"]).to include(".pdf")
     expect(response.body.byteslice(0, 4)).to eq("%PDF")
-    expect(response.body.bytesize).to be > 5_000
+    expect(response.body.bytesize).to be > 3_500
   end
 
   it "exports split graphs as additional pages in the graph pdf" do

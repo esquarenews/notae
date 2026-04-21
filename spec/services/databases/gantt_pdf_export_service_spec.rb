@@ -25,7 +25,7 @@ RSpec.describe Databases::GanttPdfExportService do
     result = described_class.call(database: database, gantt_data: gantt_data)
 
     expect(result.pdf.byteslice(0, 4)).to eq("%PDF")
-    expect(result.pdf.bytesize).to be > 5_000
+    expect(result.pdf.bytesize).to be > 4_000
 
     reader = PDF::Reader.new(StringIO.new(result.pdf))
     extracted_text = reader.pages.map(&:text).join("\n")

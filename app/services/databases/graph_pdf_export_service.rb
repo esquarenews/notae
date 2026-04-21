@@ -61,11 +61,11 @@ module Databases
         page_layout: PAGE_LAYOUT,
         margin: PAGE_MARGIN,
         info: {
-          Title: [ database.name.presence || "Graph", "Graph view" ].join(" · ")
+          Title: [ database.name.presence || "Graph", "Graph view" ].join(" - ")
         }
       )
       register_fonts(pdf)
-      pdf.font("Manrope")
+      pdf.font(pdf_font_family)
 
       if graph_data.eligible?
         draw_graph(pdf)
@@ -81,12 +81,18 @@ module Databases
     attr_reader :database, :graph_data
 
     def register_fonts(pdf)
+      return unless FONT_FILE.exist?
+
       pdf.font_families.update(
         "Manrope" => {
           normal: FONT_FILE.to_s,
           bold: FONT_FILE.to_s
         }
       )
+    end
+
+    def pdf_font_family
+      FONT_FILE.exist? ? "Manrope" : "Helvetica"
     end
 
     def draw_graph(pdf)
@@ -116,7 +122,7 @@ module Databases
           pdf,
           chart_data: split_series_chart_data(series_graph),
           legend_items: [ series_graph.series ],
-          subtitle: "Split graph · #{series_graph.series.name}"
+          subtitle: "Split graph - #{series_graph.series.name}"
         )
       end
     end
