@@ -38,4 +38,13 @@ RSpec.describe "Mobile UX styles" do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-comments-panel *,\n.notae-shell.is-mobile-viewport .notae-options-panel *,\n.notae-shell.is-mobile-viewport .notae-actions-panel *,")
     expect(stylesheet).to include("  overscroll-behavior: contain;\n  touch-action: pan-y;\n  top: var(--notae-overlay-panel-top);")
   end
+
+  it "prevents horizontal panning in the open mobile sidebar" do
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport {\n  grid-template-columns: minmax(0, 1fr);\n  max-width: 100vw;\n  overflow-x: hidden;")
+    expect(stylesheet).to include("body.notae-sidebar-open {\n  max-width: 100vw;\n  overflow: hidden;\n  overscroll-behavior: none;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-sidebar,\n.notae-shell.is-mobile-viewport .notae-sidebar * {\n  box-sizing: border-box;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-sidebar-scroll {\n  overscroll-behavior: contain;\n  touch-action: pan-y;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-sidebar-list.is-indented {\n  width: 100%;\n  padding-left: 0.45rem;\n}")
+    expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-sidebar-page-title {\n  display: block;\n}")
+  end
 end

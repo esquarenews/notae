@@ -12360,6 +12360,8 @@ body.notae-theme-dark .notae-doc-muted {
 
 .notae-shell.is-mobile-viewport {
   grid-template-columns: minmax(0, 1fr);
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .notae-shell.is-mobile-viewport .notae-sidebar {
@@ -12368,6 +12370,7 @@ body.notae-theme-dark .notae-doc-muted {
   width: var(--notae-mobile-sidebar-width);
   max-width: var(--notae-mobile-sidebar-width);
   min-width: 0;
+  contain: layout paint;
   overflow-x: hidden;
   overscroll-behavior-x: none;
   touch-action: pan-y;
@@ -12375,6 +12378,17 @@ body.notae-theme-dark .notae-doc-muted {
   transition: transform 160ms ease;
   box-shadow: 2px 0 24px rgba(24, 24, 27, 0.16);
   z-index: 90;
+}
+
+body.notae-sidebar-open {
+  max-width: 100vw;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.notae-shell.is-mobile-viewport .notae-sidebar,
+.notae-shell.is-mobile-viewport .notae-sidebar * {
+  box-sizing: border-box;
 }
 
 .notae-shell.is-mobile-viewport .notae-sidebar-main,
@@ -12385,16 +12399,29 @@ body.notae-theme-dark .notae-doc-muted {
 .notae-shell.is-mobile-viewport .notae-sidebar-list,
 .notae-shell.is-mobile-viewport .notae-sidebar-list > li,
 .notae-shell.is-mobile-viewport .notae-sidebar-section,
+.notae-shell.is-mobile-viewport .notae-sidebar-section-head,
 .notae-shell.is-mobile-viewport .notae-sidebar-section-body {
   min-width: 0;
+  width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+.notae-shell.is-mobile-viewport .notae-sidebar-scroll {
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.notae-shell.is-mobile-viewport .notae-sidebar-list.is-indented {
+  width: 100%;
+  padding-left: 0.45rem;
 }
 
 .notae-shell.is-mobile-viewport .notae-sidebar-link,
 .notae-shell.is-mobile-viewport .notae-sidebar-page-title,
 .notae-shell.is-mobile-viewport .notae-sidebar-link-label,
 .notae-shell.is-mobile-viewport .notae-user-label {
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -12402,9 +12429,23 @@ body.notae-theme-dark .notae-doc-muted {
 }
 
 .notae-shell.is-mobile-viewport .notae-sidebar-link {
+  width: 100%;
   min-height: 2.72rem;
   padding-block: 0.52rem;
   border-radius: 0.72rem;
+}
+
+.notae-shell.is-mobile-viewport .notae-sidebar-link-content,
+.notae-shell.is-mobile-viewport .notae-sidebar-page-link-content,
+.notae-shell.is-mobile-viewport .notae-sidebar-section-toggle,
+.notae-shell.is-mobile-viewport .notae-user-chip {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.notae-shell.is-mobile-viewport .notae-sidebar-page-title {
+  display: block;
 }
 
 .notae-shell.is-mobile-viewport .notae-sidebar-link.active {
