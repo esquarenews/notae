@@ -20,6 +20,7 @@ RSpec.describe "PageImportController JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/page_import_controller.js").read
 
     expect(source).to include("showModal()")
+    expect(source).not_to include("closeMenu")
     expect(source).to include("prepareSubmit()")
     expect(source).to include("window.notaeAiInsertionPoint?.blockId")
     expect(source).to include("this.insertAfterInputTarget.value = this.resolveBlockId()")

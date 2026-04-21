@@ -6,7 +6,6 @@ export default class extends Controller {
 
   open(event) {
     if (event) event.preventDefault()
-    this.closeMenu(event)
     this.prepareTarget()
     if (!this.hasDialogTarget) return
 
@@ -51,10 +50,5 @@ export default class extends Controller {
 
     const block = document.getElementById(`block_${blockId}`)
     return !!block
-  }
-
-  closeMenu(event) {
-    const menu = event?.currentTarget?.closest("details")
-    if (menu?.open) menu.open = false
   }
 }
