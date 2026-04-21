@@ -59,16 +59,16 @@
           <p class="notae-pref-description">Drag and drop ZIP, CSV, PDF, text, markdown, HTML, DOCX, or EPUB files.</p>
           <div class="notae-import-file-picker">
             <%= form.file_field :files,
+                                id: "workspace_import_files",
                                 multiple: true,
                                 accept: ".zip,.csv,.pdf,.txt,.md,.markdown,.html,.htm,.docx,.epub",
                                 class: "notae-import-file-input",
                                 name: "import[files][]",
                                 data: { import_status_target: "fileInput" } %>
-            <button type="button"
-                    class="notae-chip-button notae-import-file-picker-button"
-                    data-action="click->import-status#browseFiles">
+            <label for="workspace_import_files"
+                   class="notae-chip-button notae-import-file-picker-button">
               Select files
-            </button>
+            </label>
           </div>
           <%= form.submit "Import files", class: "notae-chip-button", data: { import_status_target: "submitButton" } %>
         </div>

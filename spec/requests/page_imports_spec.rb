@@ -181,8 +181,8 @@ RSpec.describe "Page imports", type: :request do
       "submit->page-import#prepareSubmit submit->import-status#validateSelection"
     )
     expect(response.body).to include("notae-import-file-picker")
-    picker_button = document.at_css(".notae-import-file-picker-button")
-    expect(picker_button["data-action"]).to eq("click->import-status#browseFiles")
+    picker_label = document.at_css("label.notae-import-file-picker-button")
+    expect(picker_label["for"]).to eq("page_import_files")
     expect(response.body).to include("Select files")
   end
 end

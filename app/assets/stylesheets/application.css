@@ -9009,6 +9009,10 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
 }
 
 .notae-import-file-picker-button {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
   min-height: 2.3rem;
   white-space: nowrap;
 }

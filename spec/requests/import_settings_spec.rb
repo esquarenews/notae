@@ -30,6 +30,12 @@ RSpec.describe "Import settings", type: :request do
     expect(response.body).to include("Import ready")
 
     document = Nokogiri::HTML(response.body)
+    file_input = document.at_css("#workspace_import_files")
+    picker_label = document.at_css("label.notae-import-file-picker-button")
+    expect(file_input["name"]).to eq("import[files][]")
+    expect(file_input["data-import-status-target"]).to eq("fileInput")
+    expect(picker_label["for"]).to eq("workspace_import_files")
+
     workspace_picker = document.at_css(".notae-settings-workspace-picker select[name='workspace_nav_picker']")
     expect(workspace_picker).to be_present
     picker_options = workspace_picker.css("option").map { |option| [ option.text.strip, option["value"] ] }
