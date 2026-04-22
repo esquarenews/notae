@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_22_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -503,6 +503,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_22_120000) do
     t.index ["internet_message_id"], name: "index_epistularium_messages_on_internet_message_id"
     t.index ["workspace_id", "mailbox", "received_at"], name: "index_epistularium_messages_on_workspace_mailbox_received_at"
     t.index ["workspace_id", "thread_key"], name: "index_epistularium_messages_on_workspace_and_thread_key"
+  end
+
+  create_table "fat_zebra_webhook_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_name", null: false
+    t.jsonb "headers_json", default: {}, null: false
+    t.jsonb "payload_json", default: {}, null: false
+    t.datetime "processed_at"
+    t.text "processing_error"
+    t.string "provider_event_id", null: false
+    t.string "provider_object_id"
+    t.string "provider_object_type"
+    t.string "raw_body_sha256", null: false
+    t.string "status", default: "received", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "verified", default: false, null: false
+    t.index ["event_name", "created_at"], name: "index_fat_zebra_webhook_events_on_event_name_and_created_at"
+    t.index ["provider_event_id"], name: "index_fat_zebra_webhook_events_on_provider_event_id", unique: true
+    t.index ["provider_object_type", "provider_object_id"], name: "idx_fat_zebra_webhook_events_on_provider_object"
+    t.index ["status", "created_at"], name: "index_fat_zebra_webhook_events_on_status_and_created_at"
   end
 
   create_table "favorites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

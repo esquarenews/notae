@@ -30,6 +30,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("SaaS admin dashboard")
     expect(response.body).to include("Fat Zebra")
+    expect(response.body).to include("/webhooks/fat_zebra")
     expect(response.body).to include("Admin Visible")
   end
 

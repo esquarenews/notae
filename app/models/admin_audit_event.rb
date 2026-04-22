@@ -3,6 +3,7 @@ class AdminAuditEvent < ApplicationRecord
     workspace_suspended
     workspace_reactivated
     subscription_updated
+    fat_zebra_webhook_processed
   ].freeze
 
   belongs_to :actor, class_name: "User"

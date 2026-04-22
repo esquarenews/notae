@@ -9,6 +9,8 @@ module Admin
       @recent_workspaces = Workspace.includes(:workspace_subscription).order(updated_at: :desc).limit(8)
       @recent_admin_events = AdminAuditEvent.recent_first.includes(:actor, :workspace).limit(12)
       @billing_provider_ready = Billing::FatZebraGateway.configured?
+      @fat_zebra_webhook_path = fat_zebra_webhook_path
+      @fat_zebra_webhook_auth_ready = Billing::FatZebraGateway.webhook_secret.present?
     end
   end
 end

@@ -30,6 +30,12 @@
           <p class="notae-utility-title">Fat Zebra</p>
           <p class="notae-pref-description"><%= @billing_provider_ready ? "Credentials configured." : "Credentials not configured yet." %></p>
         </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Webhook endpoint</p>
+          <p class="notae-utility-title"><%= @fat_zebra_webhook_path %></p>
+          <p class="notae-pref-description"><%= @fat_zebra_webhook_auth_ready ? "Webhook token configured." : "Set FAT_ZEBRA_WEBHOOK_SECRET before registering in production." %></p>
+        </article>
       </div>
     </section>
 
