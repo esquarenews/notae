@@ -5,6 +5,15 @@ require "tmpdir"
 
 RSpec.describe "storage recovery verifier script" do
   let(:script_path) { Rails.root.join("script/ops/verify_notae_storage_recovery.sh") }
+  let(:rehearsal_script_path) { Rails.root.join("script/ops/rehearse_storage_recovery_locally.sh") }
+
+  it "runs the local end-to-end storage recovery rehearsal" do
+    stdout, status = Open3.capture2e("bash", rehearsal_script_path.to_s)
+
+    expect(status.success?).to be(true), stdout
+    expect(stdout).to include("Storage recovery verification passed.")
+    expect(stdout).to include("Local storage recovery rehearsal passed.")
+  end
 
   it "passes when restored storage contains every archived file" do
     Dir.mktmpdir("notae-storage-recovery") do |tmpdir|

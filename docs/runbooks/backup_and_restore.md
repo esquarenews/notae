@@ -94,6 +94,15 @@ Then verify in the app:
 
 ## Attachment and file recovery drill
 
+Run the local rehearsal first after changing the backup tooling:
+
+```bash
+cd /home/esquarenews/apps/notae
+script/ops/rehearse_storage_recovery_locally.sh
+```
+
+This creates a temporary storage archive, restores it into a temporary storage tree, and runs the same verifier used for staging or production rehearsal.
+
 To verify storage recovery without a full rollback:
 
 1. restore a backup into a non-production environment
@@ -126,11 +135,27 @@ tar -tzf /var/backups/notae/20260419_190000/storage.tar.gz | head
 
 ## Migration rollback readiness
 
+Use the rollback readiness checker before any deploy that includes migrations:
+
+```bash
+cd /home/esquarenews/apps/notae
+script/ops/check_migration_rollback_readiness.rb --strict db/migrate/20260422000000_example.rb
+```
+
+For all pending migrations in a local checkout, pass the specific files from the deploy diff rather than the entire historical migration directory. The checker reports:
+
+- `OK` when the migration has no risky operations
+- `REVIEW` when risky operations have a code-supported rollback path
+- `BACKUP_REQUIRED` when the migration is restore-only and needs a rehearsed backup before production
+
 Before a migration with destructive risk:
 
 - create a fresh backup with `script/ops/backup_notae_production.sh`
+- run `shasum -a 256 -c SHA256SUMS` inside the backup directory
 - inspect the migration for irreversible operations
+- run `script/ops/check_migration_rollback_readiness.rb --strict` against the migration file or deploy diff
 - confirm whether rollback is code-supported or restore-only
+- rehearse restore-only rollback in a non-production environment before deploying
 - if rollback is restore-only, treat the backup as mandatory and verify its artifact checksums before deploy
 
 ## Notes
