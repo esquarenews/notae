@@ -23,16 +23,35 @@ RSpec.describe WorkspacePolicy do
     expect(described_class.new(member, workspace).update?).to be(false)
     expect(described_class.new(guest, workspace).update?).to be(false)
   end
+
+  it "blocks member access when a workspace is suspended" do
+    workspace = Workspace.create!(
+      name: "Suspended Policy Workspace",
+      slug: "suspended-policy-workspace",
+      suspended_at: Time.current,
+      suspension_reason: "Billing overdue"
+    )
+    owner = User.create!(email: "suspended-policy-owner@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+
+    policy = described_class.new(owner, workspace)
+
+    expect(policy.show?).to be(false)
+    expect(policy.update?).to be(false)
+    expect(policy.destroy?).to be(false)
+  end
 end
 
 RSpec.describe WorkspacePolicy::Scope do
-  it "returns only workspaces the user belongs to" do
+  it "returns only active workspaces the user belongs to" do
     user = User.create!(email: "scope@example.com", password: "password123")
     other_user = User.create!(email: "scope-other@example.com", password: "password123")
     visible_workspace = Workspace.create!(name: "Visible Workspace", slug: "visible-workspace")
     hidden_workspace = Workspace.create!(name: "Hidden Workspace", slug: "hidden-workspace")
+    suspended_workspace = Workspace.create!(name: "Suspended Workspace", slug: "suspended-workspace", suspended_at: Time.current)
 
     Membership.create!(user: user, workspace: visible_workspace, role: :owner)
+    Membership.create!(user: user, workspace: suspended_workspace, role: :owner)
     Membership.create!(user: other_user, workspace: hidden_workspace, role: :owner)
 
     resolved_scope = described_class.new(user, Workspace.all).resolve

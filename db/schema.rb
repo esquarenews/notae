@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_19_103500) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_22_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -42,6 +42,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_103500) do
     t.uuid "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "admin_audit_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "action", null: false
+    t.uuid "actor_id", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.uuid "target_id"
+    t.string "target_type"
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id"
+    t.index ["action"], name: "index_admin_audit_events_on_action"
+    t.index ["actor_id", "created_at"], name: "index_admin_audit_events_on_actor_id_and_created_at"
+    t.index ["actor_id"], name: "index_admin_audit_events_on_actor_id"
+    t.index ["target_type", "target_id"], name: "index_admin_audit_events_on_target_type_and_target_id"
+    t.index ["workspace_id", "created_at"], name: "index_admin_audit_events_on_workspace_id_and_created_at"
+    t.index ["workspace_id"], name: "index_admin_audit_events_on_workspace_id"
   end
 
   create_table "agent_action_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1012,11 +1029,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_103500) do
     t.integer "smtp_port"
     t.string "smtp_username"
     t.boolean "start_week_on_monday", default: true, null: false
+    t.boolean "super_admin", default: false, null: false
     t.string "theme_preference", default: "light", null: false
     t.string "time_zone", default: "UTC", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["super_admin"], name: "index_users_on_super_admin"
   end
 
   create_table "versions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1143,6 +1162,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_103500) do
     t.index ["workspace_id"], name: "index_workspace_exports_on_workspace_id"
   end
 
+  create_table "workspace_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "billing_provider", default: "fat_zebra", null: false
+    t.datetime "created_at", null: false
+    t.datetime "current_period_ends_at"
+    t.jsonb "limits_json", default: {}, null: false
+    t.jsonb "metadata_json", default: {}, null: false
+    t.string "plan_key", default: "free", null: false
+    t.string "provider_customer_id"
+    t.string "provider_subscription_id"
+    t.string "status", default: "trialing", null: false
+    t.datetime "trial_ends_at"
+    t.datetime "updated_at", null: false
+    t.uuid "workspace_id", null: false
+    t.index ["provider_customer_id"], name: "index_workspace_subscriptions_on_provider_customer_id"
+    t.index ["provider_subscription_id"], name: "index_workspace_subscriptions_on_provider_subscription_id"
+    t.index ["status", "plan_key"], name: "index_workspace_subscriptions_on_status_and_plan_key"
+    t.index ["workspace_id"], name: "index_workspace_subscriptions_on_workspace_id", unique: true
+  end
+
   create_table "workspaces", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "analytics_enabled", default: true, null: false
     t.datetime "archived_at"
@@ -1153,15 +1191,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_103500) do
     t.string "name", null: false
     t.string "shell_status_bar_mode", default: "all", null: false
     t.string "slug", null: false
+    t.datetime "suspended_at"
+    t.text "suspension_reason"
     t.datetime "updated_at", null: false
     t.string "workspace_color", default: "#f43f5e", null: false
     t.index ["archived_at"], name: "index_workspaces_on_archived_at"
     t.index ["join_link_token"], name: "index_workspaces_on_join_link_token", unique: true
     t.index ["slug"], name: "index_workspaces_on_slug", unique: true
+    t.index ["suspended_at"], name: "index_workspaces_on_suspended_at"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "admin_audit_events", "users", column: "actor_id"
+  add_foreign_key "admin_audit_events", "workspaces"
   add_foreign_key "agent_action_events", "agent_actions"
   add_foreign_key "agent_action_events", "users", column: "actor_id"
   add_foreign_key "agent_action_events", "workspaces"
@@ -1300,4 +1343,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_19_103500) do
   add_foreign_key "workspace_emojis", "workspaces"
   add_foreign_key "workspace_exports", "users", column: "requested_by_id"
   add_foreign_key "workspace_exports", "workspaces"
+  add_foreign_key "workspace_subscriptions", "workspaces"
 end

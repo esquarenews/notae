@@ -18,6 +18,17 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  namespace :admin do
+    root "dashboard#show"
+    resources :workspaces, only: %i[index show update] do
+      member do
+        patch :suspend
+        patch :reactivate
+      end
+    end
+    resources :users, only: %i[index show]
+  end
+
   resources :workspaces, only: %i[new create]
 
   scope "w/:workspace_slug" do

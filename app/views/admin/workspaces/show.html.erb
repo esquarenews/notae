@@ -1,0 +1,105 @@
+<% content_for :title, @workspace.name %>
+<% content_for :topbar_page_icon, "🏢" %>
+<% content_for :topbar_privacy, "Platform" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "All workspaces", admin_workspaces_path, class: "notae-chip-button" %>
+  <%= link_to "Open app", workspace_path(@workspace.slug), class: "notae-chip-button notae-chip-button-subtle" unless @workspace.suspended? %>
+<% end %>
+
+<section class="notae-settings-shell">
+  <div class="notae-settings-content">
+    <section class="notae-settings-section">
+      <h2><%= @workspace.name %></h2>
+      <p class="notae-pref-description"><%= @workspace.slug %> · <%= @workspace.id %></p>
+
+      <% if @workspace.suspended? %>
+        <div class="notae-read-only-notice is-warning">
+          <strong>Workspace suspended</strong>
+          <span><%= @workspace.suspension_reason.presence || "No reason recorded." %></span>
+        </div>
+      <% end %>
+
+      <div class="notae-ai-analytics-grid">
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Plan</p>
+          <p class="notae-utility-title"><%= @subscription.display_plan %></p>
+          <p class="notae-pref-description"><%= @subscription.display_status %> via <%= Billing::FatZebraGateway.display_name %>.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Members</p>
+          <p class="notae-utility-title"><%= @tenant_snapshot.dig(:usage, :members) %> / <%= @tenant_snapshot.dig(:limits, :members) %></p>
+          <p class="notae-pref-description">Current workspace memberships.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">AI requests</p>
+          <p class="notae-utility-title"><%= @tenant_snapshot.dig(:usage, :ai_requests_this_month) %> / <%= @tenant_snapshot.dig(:limits, :ai_requests_per_month) %></p>
+          <p class="notae-pref-description">Usage this calendar month.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Subscription controls</h2>
+      <%= form_with model: @subscription, url: admin_workspace_path(@workspace), method: :patch, class: "notae-pref-form" do |form| %>
+        <div class="notae-pref-row">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Plan and status</p>
+            <p class="notae-pref-description">Update billing state after Fat Zebra customer/payment-plan changes.</p>
+          </div>
+          <div class="notae-pref-controls">
+            <%= form.select :plan_key, WorkspaceSubscription::PLAN_KEYS.map { |plan| [ Billing::PlanCatalog.name_for(plan), plan ] }, {}, class: "notae-pref-select" %>
+            <%= form.select :status, WorkspaceSubscription::STATUSES.map { |status| [ status.humanize, status ] }, {}, class: "notae-pref-select" %>
+          </div>
+        </div>
+
+        <div class="notae-pref-row">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Fat Zebra references</p>
+            <p class="notae-pref-description">Store provider customer and subscription/payment-plan IDs for support reconciliation.</p>
+          </div>
+          <div class="notae-pref-controls">
+            <%= form.text_field :provider_customer_id, class: "notae-auth-input", placeholder: "Customer ID" %>
+            <%= form.text_field :provider_subscription_id, class: "notae-auth-input", placeholder: "Payment plan ID" %>
+          </div>
+        </div>
+
+        <%= form.hidden_field :billing_provider, value: WorkspaceSubscription::PROVIDER_FAT_ZEBRA %>
+        <%= form.submit "Save subscription", class: "notae-chip-button" %>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Workspace controls</h2>
+      <% if @workspace.suspended? %>
+        <%= button_to "Reactivate workspace", reactivate_admin_workspace_path(@workspace), method: :patch, class: "notae-chip-button" %>
+      <% else %>
+        <%= form_with scope: :workspace, url: suspend_admin_workspace_path(@workspace), method: :patch, class: "notae-pref-form" do |form| %>
+          <div class="notae-pref-row">
+            <div class="notae-pref-copy">
+              <p class="notae-pref-label">Suspend workspace</p>
+              <p class="notae-pref-description">Blocks member access while keeping data intact for admin review and billing recovery.</p>
+            </div>
+            <%= form.text_field :suspension_reason, class: "notae-auth-input", placeholder: "Reason" %>
+          </div>
+          <%= form.submit "Suspend workspace", class: "notae-account-delete-button" %>
+        <% end %>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Members</h2>
+      <div class="notae-general-backup-list">
+        <% @memberships.each do |membership| %>
+          <article class="notae-general-backup-item">
+            <div class="notae-general-backup-item-copy">
+              <p class="notae-general-backup-item-title"><%= link_to membership.user.email, admin_user_path(membership.user) %></p>
+              <p class="notae-general-backup-item-meta"><%= membership.role.humanize %> · joined <%= time_ago_in_words(membership.created_at) %> ago</p>
+            </div>
+          </article>
+        <% end %>
+      </div>
+    </section>
+  </div>
+</section>

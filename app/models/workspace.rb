@@ -100,7 +100,9 @@ class Workspace < ApplicationRecord
   has_many :meeting_speaker_aliases, dependent: :destroy
   has_many :workflow_runs, dependent: :destroy
   has_many :web_push_delivery_attempts, dependent: :nullify
+  has_many :admin_audit_events, dependent: :nullify
   has_one :agent_policy, dependent: :destroy
+  has_one :workspace_subscription, dependent: :destroy
 
   scope :active, lambda {
     if column_names.include?("archived_at")
@@ -140,6 +142,16 @@ class Workspace < ApplicationRecord
     return false unless has_attribute?(:archived_at)
 
     self[:archived_at].present?
+  end
+
+  def suspended?
+    return false unless has_attribute?(:suspended_at)
+
+    suspended_at.present?
+  end
+
+  def subscription_record
+    workspace_subscription || build_workspace_subscription
   end
 
   def ensure_join_link_token!

@@ -178,6 +178,7 @@ class User < ApplicationRecord
   has_many :created_cover_assets, class_name: "WorkspaceCoverAsset", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :api_tokens, dependent: :destroy
   has_many :api_token_audit_events, dependent: :destroy
+  has_many :admin_audit_events, foreign_key: :actor_id, inverse_of: :actor, dependent: :nullify
   has_many :favorites, dependent: :destroy
   has_many :ai_usage_logs, dependent: :destroy
   has_many :ai_conversations, dependent: :destroy
@@ -263,6 +264,10 @@ class User < ApplicationRecord
 
   def display_name
     full_name.to_s.strip.presence || email.to_s
+  end
+
+  def platform_admin?
+    super_admin? || platform_admin_email_allowlisted?
   end
 
   def avatar_initials
@@ -476,6 +481,15 @@ class User < ApplicationRecord
     else
       memberships.find_by(workspace_id: workspace_id)
     end
+  end
+
+  def platform_admin_email_allowlisted?
+    allowlist = ENV.fetch("NOTAE_PLATFORM_ADMIN_EMAILS", "")
+                   .split(",")
+                   .map { |email_address| email_address.strip.downcase }
+                   .reject(&:blank?)
+
+    allowlist.include?(email.to_s.downcase)
   end
 
   def clock_string_to_minutes(raw_value)

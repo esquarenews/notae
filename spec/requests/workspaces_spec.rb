@@ -46,12 +46,16 @@ RSpec.describe "Workspaces", type: :request do
              }
            }
     end.to change(Workspace, :count).by(1)
+      .and change(WorkspaceSubscription, :count).by(1)
 
     workspace = Workspace.find_by!(slug: "product-team")
 
     expect(response).to redirect_to(workspace_path("product-team"))
     expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
     expect(workspace.workspace_color).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value))
+    expect(workspace.workspace_subscription.plan_key).to eq(WorkspaceSubscription::PLAN_FREE)
+    expect(workspace.workspace_subscription.status).to eq(WorkspaceSubscription::STATUS_TRIALING)
+    expect(workspace.workspace_subscription.billing_provider).to eq(WorkspaceSubscription::PROVIDER_FAT_ZEBRA)
   end
 
   it "derives the workspace slug from the name when slug is omitted" do
