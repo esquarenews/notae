@@ -187,7 +187,7 @@
   </td>
   <% visible_properties.each do |db_property| %>
     <% db_cell = cells_by_key[[row.id, db_property.id]] %>
-    <% property_style_classes = column_style_classes_for(db_property) %>
+    <% property_style_classes = local_assigns.fetch(:column_style_classes_by_property_id, {}).fetch(db_property.id) { column_style_classes_for(db_property) } %>
     <td class="<%= property_style_classes %>">
       <% if db_cell && cell_can_update %>
         <%= form_with model: db_cell,

@@ -16,6 +16,25 @@ RSpec.describe "Application JavaScript syntax" do
     skip "node is not available in this environment"
   end
 
+  it "lazy loads Stimulus controllers instead of blocking every page on editor dependencies" do
+    source = Rails.root.join("app/javascript/controllers/index.js").read
+    importmap = Rails.root.join("config/importmap.rb").read
+
+    expect(source).to include("lazyLoadControllersFrom")
+    expect(source).to include('lazyLoadControllersFrom("controllers", application)')
+    expect(source).not_to include("eagerLoadControllersFrom")
+    expect(importmap).to include('pin_all_from "app/javascript/controllers", under: "controllers", preload: false')
+    %w[
+      @tiptap/core
+      @tiptap/starter-kit
+      @tiptap/extension-link
+      @tiptap/extension-task-list
+      @tiptap/extension-task-item
+    ].each do |package_name|
+      expect(importmap).to match(/pin "#{Regexp.escape(package_name)}".*preload: false/)
+    end
+  end
+
   it "recovers ai rail frame-missing responses instead of showing Turbo's placeholder" do
     source = Rails.root.join("app/javascript/application.js").read
 

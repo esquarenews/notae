@@ -40,8 +40,8 @@ module DatabaseTablePresentation
     return {} if select_properties.empty?
 
     values_by_property = Hash.new { |hash, key| hash[key] = [] }
-    policy_scope(DbCell)
-      .for_database(database)
+    DbCell
+      .where(workspace_id: database.workspace_id)
       .where(db_property_id: select_properties.map(&:id))
       .where.not(value_text: [ nil, "" ])
       .distinct

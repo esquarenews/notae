@@ -48,6 +48,9 @@ end %>
 <% name_is_sorted = @sort_by_name %>
 <% name_next_direction = name_is_sorted && @sort_direction == "asc" ? "desc" : "asc" %>
 <% name_column_style_classes = name_column_style_classes_for(@database) %>
+<% column_style_classes_by_property_id = visible_properties.each_with_object({}) do |property, lookup|
+  lookup[property.id] = column_style_classes_for(property)
+end %>
 <% page_search_url = workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page") %>
 
 <div class="notae-db-grid-wrap"
@@ -311,9 +314,10 @@ end %>
            data-db-table-reorder-database-id-value="<%= @database.id %>"
            data-db-table-reorder-view-id-value="<%= @current_view&.id %>"
            data-db-table-reorder-month-value="<%= row_params[:month] %>">
-      <% @rows.each do |row| %>
-        <%= render "databases/table_row",
-                   row: row,
+      <%= render partial: "databases/table_row",
+                 collection: @rows,
+                 as: :row,
+                 locals: {
                    workspace: @workspace,
                    database: @database,
                    row_params: row_params,
@@ -326,8 +330,9 @@ end %>
                    row_color_options: row_color_options,
                    page_search_url: page_search_url,
                    name_column_style_classes: name_column_style_classes,
-                   highlight_row_id: highlight_row_id %>
-      <% end %>
+                   column_style_classes_by_property_id: column_style_classes_by_property_id,
+                   highlight_row_id: highlight_row_id
+                 } %>
     </tbody>
 
     <tbody id="database_table_placeholders">

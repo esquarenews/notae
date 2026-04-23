@@ -187,8 +187,8 @@ class DbCellsController < ApplicationController
     @cells_by_key = if rows.empty? || property_ids.empty?
       {}
     else
-      policy_scope(DbCell)
-        .for_database(@database)
+      DbCell
+        .where(workspace_id: @workspace.id)
         .where(db_row_id: rows.map(&:id), db_property_id: property_ids)
         .to_a
         .index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }

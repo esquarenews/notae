@@ -146,6 +146,8 @@ class DbCell < ApplicationRecord
   end
 
   def row_for_cache_sync
+    return db_row if association(:db_row).loaded?
+
     DbRow.find_by(id: db_row_id)
   end
 

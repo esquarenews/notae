@@ -958,8 +958,8 @@ class DatabasesController < ApplicationController
     row_ids = @rows.map(&:id)
     return [] if row_ids.empty? || property_ids.empty?
 
-    policy_scope(DbCell)
-      .for_database(@database)
+    DbCell
+      .where(workspace_id: @workspace.id)
       .where(db_row_id: row_ids, db_property_id: property_ids)
       .to_a
   end
@@ -969,8 +969,8 @@ class DatabasesController < ApplicationController
     property_ids = Array(properties).map(&:id)
     return {} if row_ids.empty? || property_ids.empty?
 
-    policy_scope(DbCell)
-      .for_database(@database)
+    DbCell
+      .where(workspace_id: @workspace.id)
       .where(db_row_id: row_ids, db_property_id: property_ids)
       .to_a
       .index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
