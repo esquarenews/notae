@@ -38,6 +38,7 @@ RSpec.describe "Library page", type: :request do
     expect(library_row_classes(response.body).all? { |klass| klass.include?("notae-library-row") }).to be(true)
     expect(response.body).to include("Filters")
     expect(response.body).to include("Columns")
+    expect(library_apply_button_classes(response.body)).to include("notae-chip-button-primary", "notae-library-apply-button")
 
     default_titles = library_titles(response.body)
     expect(default_titles).to include("Product brief", "Quarterly archive", "Weekly meeting notes", "🗃️ Roadmap DB")
@@ -67,8 +68,38 @@ RSpec.describe "Library page", type: :request do
 
     get workspace_library_path(workspace_slug: workspace.slug), params: { workspace_filter: "all", q: "Other workspace page" }
     expect(library_titles(response.body)).to include("Other workspace page")
+    other_page_href = library_link_href(response.body, "Other workspace page")
+    expect(other_page_href).to eq(page_path(workspace_slug: other_workspace.slug, id: other_page.id))
+
+    get other_page_href
+    expect(response).to have_http_status(:ok)
 
     expect(recent_page).to be_present
+  end
+
+  it "preserves UUID record ids in filtered library result links" do
+    user = User.create!(email: "library-filtered-link-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Library filtered links", slug: "library-filtered-links")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Exact filtered page")
+    database = Database.create!(workspace: workspace, created_by: user, name: "Exact filtered grid")
+    sign_in user
+
+    get workspace_library_path(workspace_slug: workspace.slug), params: { q: "Exact filtered page" }
+
+    page_href = library_link_href(response.body, "Exact filtered page")
+    expect(page_href).to eq(page_path(workspace_slug: workspace.slug, id: page.id))
+
+    get page_href
+    expect(response).to have_http_status(:ok)
+
+    get workspace_library_path(workspace_slug: workspace.slug), params: { q: "Exact filtered grid" }
+
+    database_href = library_link_href(response.body, "Exact filtered grid")
+    expect(database_href).to eq(database_path(workspace_slug: workspace.slug, id: database.id))
+
+    get database_href
+    expect(response).to have_http_status(:ok)
   end
 
   it "allows property visibility selection for the library table" do
@@ -285,6 +316,17 @@ RSpec.describe "Library page", type: :request do
       node.text.include?(title)
     end
     row&.text.to_s
+  end
+
+  def library_link_href(html_body, title)
+    link = Nokogiri::HTML(html_body).css(".notae-library-name-link").find do |node|
+      node.text.squish.include?(title)
+    end
+    link&.[]("href")
+  end
+
+  def library_apply_button_classes(html_body)
+    Nokogiri::HTML(html_body).at_css("input.notae-library-apply-button[type='submit']")&.[]("class").to_s.split
   end
 
   def thumbnail_card_titles(html_body)

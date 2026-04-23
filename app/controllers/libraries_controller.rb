@@ -585,10 +585,10 @@ class LibrariesController < ApplicationController
   end
 
   def library_row_from_sql_result(row, workspace_lookup)
-    workspace_id = row.fetch("workspace_id").to_i
+    workspace_id = row.fetch("workspace_id").to_s
     workspace_slug = row.fetch("workspace_slug")
     record_type = row.fetch("record_type")
-    record_id = row.fetch("record_id").to_i
+    record_id = row.fetch("record_id").to_s
     kind = row.fetch("kind")
     workspace = workspace_lookup[workspace_id] || Workspace.new(id: workspace_id, slug: workspace_slug, name: row.fetch("workspace_name"))
 
