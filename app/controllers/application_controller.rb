@@ -218,6 +218,42 @@ class ApplicationController < ActionController::Base
     AI_AGENT_UPDATE_LIMIT
   end
 
+  def workspace_calendar_preferences_available?
+    user_signed_in? &&
+      defined?(@workspace) &&
+      @workspace.present? &&
+      Membership.column_names.include?("calendar_preferences_json")
+  end
+
+  def workspace_calendar_preferences
+    return {} unless workspace_calendar_preferences_available?
+
+    @workspace_calendar_preferences ||= begin
+      membership = current_user.memberships.find_by(workspace_id: @workspace.id)
+      membership&.calendar_preferences || {}
+    end
+  end
+
+  def workspace_calendar_preference(key, fallback: nil)
+    preferences = workspace_calendar_preferences
+    preferences.key?(key.to_s) ? preferences[key.to_s] : fallback
+  end
+
+  def workspace_calendar_preference_present?(key)
+    workspace_calendar_preferences.key?(key.to_s)
+  end
+
+  def persist_workspace_calendar_preference!(key, value)
+    return false unless workspace_calendar_preferences_available?
+
+    membership = current_user.memberships.find_by!(workspace_id: @workspace.id)
+    preferences = membership.calendar_preferences.deep_dup
+    preferences[key.to_s] = value
+    membership.update!(calendar_preferences_json: preferences)
+    @workspace_calendar_preferences = preferences
+    true
+  end
+
   def external_app_base_url
     explicit_base_url = normalized_explicit_base_url(ENV["APP_BASE_URL"])
     return explicit_base_url if explicit_base_url.present?

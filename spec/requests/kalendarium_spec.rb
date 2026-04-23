@@ -991,6 +991,26 @@ RSpec.describe "Kalendarium", type: :request do
     expect(close_link["href"]).to include("date=2026-03-01")
   end
 
+  it "keeps the last calendar view after a session reset" do
+    user, workspace, = build_stack(suffix: "last-view-reset")
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+    expect(response).to have_http_status(:ok)
+
+    reset!
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    close_link = document.at_css(".notae-kalendarium-project-close-button")
+    expect(close_link).to be_present
+    expect(close_link["href"]).to include("view=day")
+    expect(close_link["href"]).to include("date=2026-03-01")
+  end
+
   it "toggles project visibility independently from calendar visibility" do
     user, workspace, calendar = build_stack(suffix: "project-toggle")
     sign_in user
@@ -1055,6 +1075,13 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).not_to include(project_event.title)
     expect(response.body).to include("Projects (0)")
 
+    expect(user.memberships.find_by!(workspace: workspace).calendar_preference("project_visibility")).to eq(
+      "mode" => "none"
+    )
+
+    reset!
+    sign_in user
+
     get kalendarium_path(
       workspace_slug: workspace.slug,
       view: "day",
@@ -1067,7 +1094,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("Projects (0)")
   end
 
-  it "persists calendar selections when navigating away and returning to kalendarium" do
+  it "persists calendar selections after a session reset" do
     user, workspace, calendar = build_stack(suffix: "persisted-calendar-filter")
     sign_in user
 
@@ -1111,6 +1138,14 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("Calendars (1)")
     expect(response.body).to include("Primary event")
     expect(response.body).not_to include("Secondary event")
+
+    expect(user.memberships.find_by!(workspace: workspace).calendar_preference("calendar_selection")).to eq(
+      "mode" => "selected",
+      "ids" => [ calendar.id.to_s ]
+    )
+
+    reset!
+    sign_in user
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
 

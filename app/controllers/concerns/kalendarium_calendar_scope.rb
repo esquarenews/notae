@@ -43,11 +43,15 @@ module KalendariumCalendarScope
   end
 
   def stored_calendar_selection_for_workspace?
-    calendar_filter_session_for_workspace.key?(calendar_filter_workspace_key)
+    workspace_calendar_preference_present?("calendar_selection") ||
+      calendar_filter_session_for_workspace.key?(calendar_filter_workspace_key)
   end
 
   def persisted_calendar_selection_payload_for_workspace
-    raw = calendar_filter_session_for_workspace[calendar_filter_workspace_key]
+    raw = workspace_calendar_preference(
+      "calendar_selection",
+      fallback: calendar_filter_session_for_workspace[calendar_filter_workspace_key]
+    )
     if raw.is_a?(Hash)
       mode = (raw["mode"] || raw[:mode]).to_s
       if %w[all none selected all_except].include?(mode)

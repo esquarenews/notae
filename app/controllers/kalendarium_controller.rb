@@ -668,11 +668,15 @@ class KalendariumController < ApplicationController
   end
 
   def stored_calendar_selection?
-    calendar_filter_session.key?(calendar_filter_workspace_key)
+    workspace_calendar_preference_present?("calendar_selection") ||
+      calendar_filter_session.key?(calendar_filter_workspace_key)
   end
 
   def persisted_calendar_selection_payload
-    raw = calendar_filter_session[calendar_filter_workspace_key]
+    raw = workspace_calendar_preference(
+      "calendar_selection",
+      fallback: calendar_filter_session[calendar_filter_workspace_key]
+    )
     if raw.is_a?(Hash)
       mode = (raw["mode"] || raw[:mode]).to_s
       if %w[all none selected all_except].include?(mode)
@@ -727,7 +731,9 @@ class KalendariumController < ApplicationController
   end
 
   def persist_selected_calendar_ids(ids, available_ids: nil)
-    calendar_filter_session[calendar_filter_workspace_key] = compact_visibility_payload(ids, available_ids)
+    payload = compact_visibility_payload(ids, available_ids)
+    persist_workspace_calendar_preference!("calendar_selection", payload)
+    calendar_filter_session[calendar_filter_workspace_key] = payload
   end
 
   def project_visibility_session
@@ -739,11 +745,15 @@ class KalendariumController < ApplicationController
   end
 
   def stored_project_visibility?
-    project_visibility_session.key?(project_visibility_workspace_key)
+    workspace_calendar_preference_present?("project_visibility") ||
+      project_visibility_session.key?(project_visibility_workspace_key)
   end
 
   def persisted_project_visibility_payload
-    raw = project_visibility_session[project_visibility_workspace_key]
+    raw = workspace_calendar_preference(
+      "project_visibility",
+      fallback: project_visibility_session[project_visibility_workspace_key]
+    )
     if raw.is_a?(Hash)
       mode = (raw["mode"] || raw[:mode]).to_s
       if %w[all none selected all_except].include?(mode)
@@ -772,7 +782,9 @@ class KalendariumController < ApplicationController
   end
 
   def persist_visible_project_ids(ids, available_ids: nil)
-    project_visibility_session[project_visibility_workspace_key] = compact_visibility_payload(ids, available_ids)
+    payload = compact_visibility_payload(ids, available_ids)
+    persist_workspace_calendar_preference!("project_visibility", payload)
+    project_visibility_session[project_visibility_workspace_key] = payload
   end
 
   def persisted_visible_project_ids(allowed_ids:)
@@ -817,6 +829,7 @@ class KalendariumController < ApplicationController
   def persist_last_calendar_view!
     return if @view == "project"
 
+    persist_workspace_calendar_preference!("last_view", @view)
     last_calendar_view_session[last_calendar_view_workspace_key] = @view
   end
 
@@ -824,7 +837,10 @@ class KalendariumController < ApplicationController
     requested = params[:return_view].to_s
     return requested if requested.present? && VIEW_OPTIONS.include?(requested) && requested != "project"
 
-    stored = last_calendar_view_session[last_calendar_view_workspace_key].to_s
+    stored = workspace_calendar_preference(
+      "last_view",
+      fallback: last_calendar_view_session[last_calendar_view_workspace_key]
+    ).to_s
     return stored if stored.present? && VIEW_OPTIONS.include?(stored) && stored != "project"
 
     "week"

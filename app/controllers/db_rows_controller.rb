@@ -597,11 +597,15 @@ class DbRowsController < ApplicationController
   end
 
   def stored_project_visibility_for_workspace?
-    project_visibility_session_for_workspace.key?(project_visibility_workspace_key)
+    workspace_calendar_preference_present?("project_visibility") ||
+      project_visibility_session_for_workspace.key?(project_visibility_workspace_key)
   end
 
   def persisted_project_visibility_payload_for_workspace
-    raw = project_visibility_session_for_workspace[project_visibility_workspace_key]
+    raw = workspace_calendar_preference(
+      "project_visibility",
+      fallback: project_visibility_session_for_workspace[project_visibility_workspace_key]
+    )
     if raw.is_a?(Hash)
       mode = (raw["mode"] || raw[:mode]).to_s
       if %w[all none selected all_except].include?(mode)
@@ -649,7 +653,9 @@ class DbRowsController < ApplicationController
   end
 
   def persist_visible_project_ids_for_workspace(ids, available_ids: nil)
-    project_visibility_session_for_workspace[project_visibility_workspace_key] = compact_visibility_payload_for_workspace(ids, available_ids)
+    payload = compact_visibility_payload_for_workspace(ids, available_ids)
+    persist_workspace_calendar_preference!("project_visibility", payload)
+    project_visibility_session_for_workspace[project_visibility_workspace_key] = payload
   end
 
   def compact_visibility_payload_for_workspace(ids, available_ids)

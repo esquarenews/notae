@@ -42,6 +42,23 @@ class Membership < ApplicationRecord
     raw_preferences.is_a?(Hash) ? raw_preferences : {}
   end
 
+  def calendar_preferences
+    return {} unless self.class.column_names.include?("calendar_preferences_json")
+
+    raw_preferences = calendar_preferences_json
+    raw_preferences.is_a?(Hash) ? raw_preferences : {}
+  end
+
+  def calendar_preference(key)
+    calendar_preferences[key.to_s]
+  end
+
+  def update_calendar_preference!(key, value)
+    preferences = calendar_preferences.deep_dup
+    preferences[key.to_s] = value
+    update!(calendar_preferences_json: preferences)
+  end
+
   def workspace_email_notify_activity_override
     raw_value = notification_preferences["email_notify_activity"]
     return nil if raw_value.nil?

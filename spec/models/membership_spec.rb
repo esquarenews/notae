@@ -60,4 +60,20 @@ RSpec.describe Membership, type: :model do
     expect(membership.workspace_email_notify_activity_override).to be(false)
     expect(membership.workspace_email_notify_activity_enabled?(default: true)).to be(false)
   end
+
+  it "stores workspace-level calendar preferences" do
+    user = User.create!(email: "calendar-preferences@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Calendar Preferences", slug: "calendar-preferences")
+    membership = described_class.create!(user: user, workspace: workspace, role: :owner)
+
+    membership.update_calendar_preference!("calendar_selection", { "mode" => "selected", "ids" => [ "cal-1" ] })
+
+    expect(membership.reload.calendar_preferences).to eq(
+      "calendar_selection" => { "mode" => "selected", "ids" => [ "cal-1" ] }
+    )
+    expect(membership.calendar_preference("calendar_selection")).to eq(
+      "mode" => "selected",
+      "ids" => [ "cal-1" ]
+    )
+  end
 end
