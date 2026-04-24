@@ -19,8 +19,8 @@ class PagesController < ApplicationController
     @can_create_block = policy(Block.new(workspace: @workspace, page: @page, created_by: current_user)).create?
     page_render_context = build_page_render_context
     if page_render_context.active_blocks.empty? && @can_create_block
-      @page.blocks.create!(workspace: @workspace, created_by: current_user, block_type: "paragraph")
-      page_render_context = build_page_render_context
+      starter_block = @page.blocks.create!(workspace: @workspace, created_by: current_user, block_type: "paragraph")
+      page_render_context = page_render_context_with_starter_block(starter_block)
     end
 
     @active_blocks = page_render_context.active_blocks
@@ -29,7 +29,7 @@ class PagesController < ApplicationController
     @row_backlink_databases = resolve_row_backlink_databases
     @can_comment_on_page = can_comment_on_page?
     @page_favorite = policy_scope(Favorite).for_workspace(@workspace).for_user(current_user).find_by(favoritable: @page)
-    @page_reader_mode = @page.remove_blocks? || @page.locked?
+    @page_reader_mode = page_render_context.reader_mode
     @can_create_tab_page =
       if @page_tabs.group_page.present?
         policy(Page.new(workspace: @workspace, created_by: current_user, parent_page: @page_tabs.group_page, title: "New tab")).create?
@@ -425,6 +425,14 @@ class PagesController < ApplicationController
       page: @page,
       block_scope: policy_scope(Block)
     ).call
+  end
+
+  def page_render_context_with_starter_block(starter_block)
+    Pages::RenderContextBuilder::Result.new(
+      active_blocks: [ starter_block ],
+      blocks_by_parent: { nil => [ starter_block ] },
+      reader_mode: @page.remove_blocks? || @page.locked?
+    )
   end
 
   def can_comment_on_page?

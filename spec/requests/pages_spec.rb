@@ -1011,6 +1011,34 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Heading 4")
   end
 
+  it "renders a newly opened empty page without reloading blocks after creating the starter paragraph" do
+    owner = User.create!(email: "page-empty-first-open-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Empty first open", slug: "empty-first-open")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Fresh page")
+    sign_in owner
+
+    block_load_queries = []
+    sql_probe = lambda do |_name, _started, _finished, _unique_id, payload|
+      next if payload[:name].to_s == "SCHEMA"
+      next if payload[:cached]
+
+      sql = payload[:sql].to_s.squish
+      block_load_queries << sql if sql.match?(/\ASELECT "?blocks"?\.\* FROM "?blocks"?/i)
+    end
+
+    ActiveSupport::Notifications.subscribed(sql_probe, "sql.active_record") do
+      get page_path(workspace_slug: workspace.slug, id: page.id)
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-doc-canvas")
+
+    starter_block = page.blocks.active.sole
+    expect(response.body).to include(%(data-block-editor-block-id-value="#{starter_block.id}"))
+    expect(block_load_queries.size).to eq(1)
+  end
+
   it "renders embedded page previews without full page chrome and keeps block actions embedded" do
     owner = User.create!(email: "page-embedded-preview-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Embedded page preview", slug: "embedded-page-preview")
