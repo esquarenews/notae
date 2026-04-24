@@ -19,6 +19,7 @@
 <% can_edit_grid = policy(@database).update? && !@database.locked? %>
 <% can_persist_sort = @current_view.present? && policy(@current_view).update? && !@database.locked? %>
 <% can_edit_properties = policy(DbProperty.new(database: @database, workspace: @workspace)).update? && !@database.locked? %>
+<% can_create_properties = can_edit_properties %>
 <% can_create_rows = policy(DbRow.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
 <% can_destroy_rows = policy(@database).destroy? && !@database.locked? %>
 <% new_row_form_id = "db_new_row_form_#{@database.id}" %>
@@ -51,6 +52,7 @@ end %>
 <% column_style_classes_by_property_id = visible_properties.each_with_object({}) do |property, lookup|
   lookup[property.id] = column_style_classes_for(property)
 end %>
+<% grid_form_authenticity_token = form_authenticity_token %>
 <% page_search_url = workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page") %>
 
 <div class="notae-db-grid-wrap"
@@ -244,7 +246,7 @@ end %>
           </th>
         <% end %>
         <th class="notae-db-grid-add-col">
-          <% if policy(DbProperty.new(database: @database, workspace: @workspace)).create? && !@database.locked? %>
+          <% if can_create_properties %>
             <details class="notae-db-inline-details">
               <summary class="notae-db-grid-add-link">+ Add property</summary>
               <div class="notae-db-inline-panel">
@@ -331,6 +333,7 @@ end %>
                    page_search_url: page_search_url,
                    name_column_style_classes: name_column_style_classes,
                    column_style_classes_by_property_id: column_style_classes_by_property_id,
+                   form_authenticity_token_value: grid_form_authenticity_token,
                    highlight_row_id: highlight_row_id
                  } %>
     </tbody>

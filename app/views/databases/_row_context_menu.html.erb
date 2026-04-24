@@ -3,6 +3,14 @@
 <% button_title = local_assigns.fetch(:button_title, "Row options") %>
 <% linked_page = local_assigns[:linked_page] %>
 <% row_can_destroy = local_assigns.fetch(:row_can_destroy) { policy(row).destroy? && !database.locked? } %>
+<% row_is_bold = local_assigns.fetch(:row_is_bold) { row.row_bold? } %>
+<% row_is_italic = local_assigns.fetch(:row_is_italic) { row.row_italic? } %>
+<% row_text_color = local_assigns.fetch(:row_text_color) { row.row_text_color } %>
+<% row_background_color = local_assigns.fetch(:row_background_color) { row.row_background_color } %>
+<% form_authenticity_token_value = local_assigns[:form_authenticity_token_value] || form_authenticity_token %>
+<% row_params_hidden_fields = safe_join(row_params.map do |name, value|
+  hidden_field_tag(name, value, id: nil)
+end) %>
 
 <div class="<%= wrapper_class %>"
      data-controller="row-menu"
@@ -17,104 +25,119 @@
           data-action="click->row-menu#toggle">⋯</button>
   <div class="notae-db-inline-panel notae-db-row-more-panel" data-row-menu-target="panel" hidden>
     <div class="notae-db-row-more-actions">
-      <%= button_to duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
-                    params: row_params,
-                    class: "notae-db-row-menu-button",
-                    form: { class: "notae-db-row-menu-form" } do %>
-        <span class="notae-db-row-menu-icon">⧉</span>
-        <span class="notae-db-row-menu-label">Duplicate row</span>
-      <% end %>
-      <%= button_to schedule_in_kalendarium_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
-                    params: row_params,
-                    class: "notae-db-row-menu-button",
-                    form: { class: "notae-db-row-menu-form" } do %>
-        <span class="notae-db-row-menu-icon">🗓️</span>
-        <span class="notae-db-row-menu-label">Find space in my calendar</span>
-      <% end %>
+      <form class="notae-db-row-menu-form"
+            method="post"
+            action="<%= duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id) %>">
+        <button class="notae-db-row-menu-button" type="submit">
+          <span class="notae-db-row-menu-icon">⧉</span>
+          <span class="notae-db-row-menu-label">Duplicate row</span>
+        </button>
+        <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+        <%= row_params_hidden_fields %>
+      </form>
+      <form class="notae-db-row-menu-form"
+            method="post"
+            action="<%= schedule_in_kalendarium_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id) %>">
+        <button class="notae-db-row-menu-button" type="submit">
+          <span class="notae-db-row-menu-icon">🗓️</span>
+          <span class="notae-db-row-menu-label">Find space in my calendar</span>
+        </button>
+        <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+        <%= row_params_hidden_fields %>
+      </form>
       <% if linked_page.present? %>
-        <%= form_with model: row,
-                      url: row_update_path,
-                      method: :patch,
-                      class: "notae-db-row-menu-form",
-                      data: { preserve_database_scroll: true } do |form| %>
-          <%= form.hidden_field :linked_page_id, value: "" %>
+        <form class="notae-db-row-menu-form"
+              data-preserve-database-scroll="true"
+              action="<%= row_update_path %>"
+              accept-charset="UTF-8"
+              method="post">
+          <input type="hidden" name="_method" value="patch">
+          <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+          <input value="" type="hidden" name="db_row[linked_page_id]" id="db_row_linked_page_id">
           <button type="submit" class="notae-db-row-menu-button">
             <span class="notae-db-row-menu-icon">⤬</span>
             <span class="notae-db-row-menu-label">Remove Nota association</span>
           </button>
-        <% end %>
+        </form>
       <% end %>
-      <%= form_with model: row,
-                    url: row_update_path,
-                    method: :patch,
-                    class: "notae-db-row-menu-form",
-                    data: { preserve_database_scroll: true } do |form| %>
-        <%= form.hidden_field :style_action, value: "toggle_bold" %>
+      <form class="notae-db-row-menu-form"
+            data-preserve-database-scroll="true"
+            action="<%= row_update_path %>"
+            accept-charset="UTF-8"
+            method="post">
+        <input type="hidden" name="_method" value="patch">
+        <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+        <input value="toggle_bold" type="hidden" name="db_row[style_action]" id="db_row_style_action">
         <button type="submit" class="notae-db-row-menu-button">
           <span class="notae-db-row-menu-icon">B</span>
-          <span class="notae-db-row-menu-label"><%= row.row_bold? ? "Unbold row" : "Bold row" %></span>
+          <span class="notae-db-row-menu-label"><%= row_is_bold ? "Unbold row" : "Bold row" %></span>
         </button>
-      <% end %>
-      <%= form_with model: row,
-                    url: row_update_path,
-                    method: :patch,
-                    class: "notae-db-row-menu-form",
-                    data: { preserve_database_scroll: true } do |form| %>
-        <%= form.hidden_field :style_action, value: "toggle_italic" %>
+      </form>
+      <form class="notae-db-row-menu-form"
+            data-preserve-database-scroll="true"
+            action="<%= row_update_path %>"
+            accept-charset="UTF-8"
+            method="post">
+        <input type="hidden" name="_method" value="patch">
+        <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+        <input value="toggle_italic" type="hidden" name="db_row[style_action]" id="db_row_style_action">
         <button type="submit" class="notae-db-row-menu-button">
           <span class="notae-db-row-menu-icon">I</span>
-          <span class="notae-db-row-menu-label"><%= row.row_italic? ? "Unitalic row" : "Italic row" %></span>
+          <span class="notae-db-row-menu-label"><%= row_is_italic ? "Unitalic row" : "Italic row" %></span>
         </button>
-      <% end %>
+      </form>
       <div class="notae-db-row-menu-section-label">Text colour</div>
       <div class="notae-db-row-menu-color-grid">
         <% row_color_options.each do |label, color_key| %>
-          <%= form_with model: row,
-                        url: row_update_path,
-                        method: :patch,
-                        class: "notae-db-row-menu-form",
-                        data: { preserve_database_scroll: true } do |form| %>
-            <%= form.hidden_field :style_action, value: "set_color" %>
-            <%= form.hidden_field :text_color, value: color_key %>
-            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_text_color == color_key %>">
+          <form class="notae-db-row-menu-form"
+                data-preserve-database-scroll="true"
+                action="<%= row_update_path %>"
+                accept-charset="UTF-8"
+                method="post">
+            <input type="hidden" name="_method" value="patch">
+            <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+            <input value="set_color" type="hidden" name="db_row[style_action]" id="db_row_style_action">
+            <input value="<%= color_key %>" type="hidden" name="db_row[text_color]" id="db_row_text_color">
+            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row_text_color == color_key %>">
               <span class="notae-db-row-menu-color-swatch is-<%= color_key %>"></span>
               <span class="notae-db-row-menu-label"><%= label %></span>
             </button>
-          <% end %>
+          </form>
         <% end %>
       </div>
       <div class="notae-db-row-menu-section-label">Background colour</div>
       <div class="notae-db-row-menu-color-grid">
         <% DbRow::BACKGROUND_COLOR_OPTIONS.each do |label, color_key| %>
-          <%= form_with model: row,
-                        url: row_update_path,
-                        method: :patch,
-                        class: "notae-db-row-menu-form",
-                        data: { preserve_database_scroll: true } do |form| %>
-            <%= form.hidden_field :style_action, value: "set_background_color" %>
-            <%= form.hidden_field :background_color, value: color_key %>
-            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row.row_background_color == color_key %>">
+          <form class="notae-db-row-menu-form"
+                data-preserve-database-scroll="true"
+                action="<%= row_update_path %>"
+                accept-charset="UTF-8"
+                method="post">
+            <input type="hidden" name="_method" value="patch">
+            <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+            <input value="set_background_color" type="hidden" name="db_row[style_action]" id="db_row_style_action">
+            <input value="<%= color_key %>" type="hidden" name="db_row[background_color]" id="db_row_background_color">
+            <button type="submit" class="notae-db-row-menu-button <%= 'is-active' if row_background_color == color_key %>">
               <span class="notae-db-row-menu-color-swatch notae-menu-highlight-swatch is-<%= color_key %>"></span>
               <span class="notae-db-row-menu-label"><%= label %></span>
             </button>
-          <% end %>
+          </form>
         <% end %>
       </div>
       <% if row_can_destroy %>
-        <%= button_to database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id),
-                      method: :delete,
-                      params: row_params,
-                      class: "notae-db-row-menu-button is-danger",
-                      form: {
-                        class: "notae-db-row-menu-form",
-                        data: {
-                          preserve_database_scroll: true,
-                          turbo_confirm: "Are you sure?"
-                        }
-                      } do %>
-          <span class="notae-db-row-menu-icon">x</span>
-          <span class="notae-db-row-menu-label">Delete row</span>
-        <% end %>
+        <form class="notae-db-row-menu-form"
+              data-preserve-database-scroll="true"
+              data-turbo-confirm="Are you sure?"
+              method="post"
+              action="<%= database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id) %>">
+          <input type="hidden" name="_method" value="delete">
+          <button class="notae-db-row-menu-button is-danger" type="submit">
+            <span class="notae-db-row-menu-icon">x</span>
+            <span class="notae-db-row-menu-label">Delete row</span>
+          </button>
+          <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token_value %>">
+          <%= row_params_hidden_fields %>
+        </form>
       <% end %>
     </div>
   </div>
