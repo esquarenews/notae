@@ -20504,6 +20504,30 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   isolation: isolate;
 }
 
+.notae-archive-game::before,
+.notae-archive-game::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.notae-archive-game::before {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(130, 223, 189, 0.08), transparent 42%),
+    linear-gradient(90deg, rgba(3, 9, 8, 0.62), transparent 18%, transparent 82%, rgba(3, 9, 8, 0.62)),
+    linear-gradient(180deg, rgba(248, 211, 138, 0.07), transparent 18%, transparent 76%, rgba(4, 8, 7, 0.72));
+  mix-blend-mode: screen;
+}
+
+.notae-archive-game::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 246, 224, 0.04) 0 1px, transparent 1px 5px),
+    radial-gradient(ellipse at center, transparent 46%, rgba(0, 0, 0, 0.5));
+  opacity: 0.42;
+}
+
 .notae-archive-game-canvas {
   position: absolute;
   inset: 0;

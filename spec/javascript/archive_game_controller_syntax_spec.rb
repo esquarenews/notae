@@ -21,9 +21,12 @@ RSpec.describe "Archive game controller JavaScript syntax" do
 
     expect(source).to include('import * as THREE from "three"')
     expect(source).to include("FRAGMENT_COUNT = 7")
+    expect(source).to include("PLAY_BOUNDS = Object.freeze")
+    expect(source).to include("clampVectorToPlayBounds")
+    expect(source).to include("SENTINEL_HIT_DAMAGE")
     expect(source).to include("handlePointerdown")
     expect(source).to include("checkWin()")
-    expect(source).to include("Sentinel contact.")
+    expect(source).to include("Sentinel breach.")
     expect(source).to include("Index restored.")
   end
 end

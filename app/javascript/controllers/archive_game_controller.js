@@ -4,10 +4,18 @@ import * as THREE from "three"
 const FRAGMENT_COUNT = 7
 const PLAYER_SPEED = 8.5
 const SENTINEL_SPEED = 0.72
-const WORLD_LIMIT = 18
-const HAZARD_RADIUS = 1.15
+const HAZARD_RADIUS = 1.45
 const FRAGMENT_RADIUS = 1.05
 const INDEX_RADIUS = 1.75
+const SENTINEL_HIT_DAMAGE = 24
+const SENTINEL_HIT_COOLDOWN = 0.78
+const SENTINEL_KNOCKBACK = 2.2
+const PLAY_BOUNDS = Object.freeze({
+  minX: -14.5,
+  maxX: 14.5,
+  minZ: -16.4,
+  maxZ: 14.2
+})
 
 export default class extends Controller {
   static targets = ["canvas", "status", "fragments", "integrity", "depth"]
@@ -23,6 +31,8 @@ export default class extends Controller {
     this.running = false
     this.gameOver = false
     this.won = false
+    this.hitFlash = 0
+    this.lastSentinelHitAt = -Infinity
 
     this.boundKeydown = (event) => this.handleKeydown(event)
     this.boundKeyup = (event) => this.handleKeyup(event)
@@ -58,6 +68,8 @@ export default class extends Controller {
     this.fragmentsCollected = 0
     this.integrity = 100
     this.depth = 0
+    this.hitFlash = 0
+    this.lastSentinelHitAt = -Infinity
     this.gameOver = false
     this.won = false
     this.running = true
@@ -100,6 +112,7 @@ export default class extends Controller {
 
     this.buildLights()
     this.buildRoom()
+    this.buildAtmosphere()
     this.buildPlayer()
     this.buildFragments()
     this.buildSentinels()
@@ -131,13 +144,35 @@ export default class extends Controller {
     indexLight.position.set(0, 2.8, -17.2)
     this.indexLight = indexLight
     this.scene.add(indexLight)
+
+    this.boundaryLights = []
+    const cornerPositions = [
+      [PLAY_BOUNDS.minX, 1.1, PLAY_BOUNDS.minZ],
+      [PLAY_BOUNDS.maxX, 1.1, PLAY_BOUNDS.minZ],
+      [PLAY_BOUNDS.minX, 1.1, PLAY_BOUNDS.maxZ],
+      [PLAY_BOUNDS.maxX, 1.1, PLAY_BOUNDS.maxZ]
+    ]
+    cornerPositions.forEach((position) => {
+      const light = new THREE.PointLight(0x82dfbd, 0.48, 7, 1.8)
+      light.position.set(position[0], position[1], position[2])
+      this.boundaryLights.push(light)
+      this.scene.add(light)
+    })
   }
 
   buildRoom() {
+    const floorTexture = this.createFloorTexture()
+    floorTexture.wrapS = THREE.RepeatWrapping
+    floorTexture.wrapT = THREE.RepeatWrapping
+    floorTexture.repeat.set(10, 10)
+
     const floorMaterial = new THREE.MeshStandardMaterial({
       color: 0x1d221f,
+      map: floorTexture,
       roughness: 0.72,
-      metalness: 0.04
+      metalness: 0.04,
+      emissive: 0x07120f,
+      emissiveIntensity: 0.1
     })
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 80, 80), floorMaterial)
     floor.rotation.x = -Math.PI / 2
@@ -208,6 +243,138 @@ export default class extends Controller {
       marker.receiveShadow = true
       this.archiveGroup.add(marker)
     }
+
+    this.buildBoundary()
+  }
+
+  createFloorTexture() {
+    const canvas = document.createElement("canvas")
+    canvas.width = 512
+    canvas.height = 512
+    const context = canvas.getContext("2d")
+    context.fillStyle = "#19201c"
+    context.fillRect(0, 0, canvas.width, canvas.height)
+
+    for (let y = 0; y < canvas.height; y += 32) {
+      const shade = 24 + ((y / 32) % 3) * 6
+      context.fillStyle = `rgba(${shade}, ${shade + 18}, ${shade + 12}, 0.28)`
+      context.fillRect(0, y, canvas.width, 18)
+    }
+
+    context.strokeStyle = "rgba(130, 223, 189, 0.2)"
+    context.lineWidth = 2
+    for (let line = 0; line <= canvas.width; line += 64) {
+      context.beginPath()
+      context.moveTo(line, 0)
+      context.lineTo(line, canvas.height)
+      context.moveTo(0, line)
+      context.lineTo(canvas.width, line)
+      context.stroke()
+    }
+
+    context.strokeStyle = "rgba(248, 211, 138, 0.16)"
+    context.lineWidth = 3
+    context.strokeRect(46, 46, 420, 420)
+    context.strokeRect(118, 118, 276, 276)
+
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    return texture
+  }
+
+  buildBoundary() {
+    this.boundaryGroup = new THREE.Group()
+    const width = PLAY_BOUNDS.maxX - PLAY_BOUNDS.minX
+    const depth = PLAY_BOUNDS.maxZ - PLAY_BOUNDS.minZ
+    const centerX = (PLAY_BOUNDS.minX + PLAY_BOUNDS.maxX) / 2
+    const centerZ = (PLAY_BOUNDS.minZ + PLAY_BOUNDS.maxZ) / 2
+    const railMaterial = new THREE.MeshStandardMaterial({
+      color: 0x79d9bb,
+      roughness: 0.34,
+      metalness: 0.16,
+      emissive: 0x1b725c,
+      emissiveIntensity: 0.66
+    })
+    const panelMaterial = new THREE.MeshBasicMaterial({
+      color: 0x7be3c5,
+      transparent: true,
+      opacity: 0.1,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    })
+
+    const railDepth = 0.12
+    const north = new THREE.Mesh(new THREE.BoxGeometry(width, 0.12, railDepth), railMaterial)
+    const south = north.clone()
+    north.position.set(centerX, 0.14, PLAY_BOUNDS.minZ)
+    south.position.set(centerX, 0.14, PLAY_BOUNDS.maxZ)
+
+    const west = new THREE.Mesh(new THREE.BoxGeometry(railDepth, 0.12, depth), railMaterial)
+    const east = west.clone()
+    west.position.set(PLAY_BOUNDS.minX, 0.14, centerZ)
+    east.position.set(PLAY_BOUNDS.maxX, 0.14, centerZ)
+
+    const backPanel = new THREE.Mesh(new THREE.PlaneGeometry(width, 2.6), panelMaterial)
+    backPanel.position.set(centerX, 1.3, PLAY_BOUNDS.minZ - 0.02)
+
+    const frontPanel = backPanel.clone()
+    frontPanel.position.set(centerX, 1.3, PLAY_BOUNDS.maxZ + 0.02)
+
+    const leftPanel = new THREE.Mesh(new THREE.PlaneGeometry(depth, 2.6), panelMaterial)
+    leftPanel.rotation.y = Math.PI / 2
+    leftPanel.position.set(PLAY_BOUNDS.minX - 0.02, 1.3, centerZ)
+
+    const rightPanel = leftPanel.clone()
+    rightPanel.position.set(PLAY_BOUNDS.maxX + 0.02, 1.3, centerZ)
+
+    this.boundaryGroup.add(north, south, west, east, backPanel, frontPanel, leftPanel, rightPanel)
+
+    const postMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2e4f45,
+      roughness: 0.42,
+      metalness: 0.2,
+      emissive: 0x123b32,
+      emissiveIntensity: 0.5
+    })
+    const postGeometry = new THREE.CylinderGeometry(0.13, 0.17, 1.4, 12)
+    const postPositions = [
+      [PLAY_BOUNDS.minX, PLAY_BOUNDS.minZ],
+      [PLAY_BOUNDS.maxX, PLAY_BOUNDS.minZ],
+      [PLAY_BOUNDS.minX, PLAY_BOUNDS.maxZ],
+      [PLAY_BOUNDS.maxX, PLAY_BOUNDS.maxZ]
+    ]
+    postPositions.forEach((position) => {
+      const post = new THREE.Mesh(postGeometry, postMaterial)
+      post.position.set(position[0], 0.7, position[1])
+      post.castShadow = true
+      this.boundaryGroup.add(post)
+    })
+
+    this.archiveGroup.add(this.boundaryGroup)
+  }
+
+  buildAtmosphere() {
+    const dustCount = 190
+    const positions = new Float32Array(dustCount * 3)
+
+    for (let index = 0; index < dustCount; index += 1) {
+      positions[index * 3] = THREE.MathUtils.randFloat(PLAY_BOUNDS.minX, PLAY_BOUNDS.maxX)
+      positions[index * 3 + 1] = THREE.MathUtils.randFloat(1.4, 8.6)
+      positions[index * 3 + 2] = THREE.MathUtils.randFloat(PLAY_BOUNDS.minZ, PLAY_BOUNDS.maxZ)
+    }
+
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3))
+    const material = new THREE.PointsMaterial({
+      color: 0xf7e0ad,
+      size: 0.035,
+      transparent: true,
+      opacity: 0.46,
+      depthWrite: false
+    })
+
+    this.dust = new THREE.Points(geometry, material)
+    this.scene.add(this.dust)
   }
 
   buildPlayer() {
@@ -220,15 +387,27 @@ export default class extends Controller {
     })
     const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.72, 1), material)
     body.castShadow = true
+    body.userData.baseEmissiveIntensity = material.emissiveIntensity
 
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.95, 0.025, 10, 48),
       new THREE.MeshBasicMaterial({ color: 0xbdf6df, transparent: true, opacity: 0.66 })
     )
     ring.rotation.x = Math.PI / 2
+    ring.userData.baseOpacity = ring.material.opacity
+
+    const beacon = new THREE.PointLight(0x9df3d7, 1.2, 7, 2)
+    beacon.position.set(0, 0.8, 0)
+
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(1.25, 40),
+      new THREE.MeshBasicMaterial({ color: 0x0a0e0c, transparent: true, opacity: 0.34, depthWrite: false })
+    )
+    shadow.rotation.x = -Math.PI / 2
+    shadow.position.y = -0.79
 
     this.player = new THREE.Group()
-    this.player.add(body, ring)
+    this.player.add(body, ring, beacon, shadow)
     this.scene.add(this.player)
   }
 
@@ -279,12 +458,28 @@ export default class extends Controller {
       roughness: 0.62,
       metalness: 0.02,
       emissive: 0x4d3f1c,
-      emissiveIntensity: 0.09,
+      emissiveIntensity: 0.16,
       side: THREE.DoubleSide
     })
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.08, 1.42, 0.045), material)
-    mesh.castShadow = true
-    return mesh
+    const page = new THREE.Mesh(new THREE.BoxGeometry(1.08, 1.42, 0.045), material)
+    page.castShadow = true
+
+    const glow = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.58, 1.92),
+      new THREE.MeshBasicMaterial({
+        color: index % 2 === 0 ? 0xf8d38a : 0x82dfbd,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    )
+    glow.position.z = -0.04
+
+    const fragment = new THREE.Group()
+    fragment.add(glow, page)
+    fragment.userData.glow = glow
+    return fragment
   }
 
   buildSentinels() {
@@ -305,25 +500,36 @@ export default class extends Controller {
 
   createSentinel() {
     const core = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.7, 0),
+      new THREE.OctahedronGeometry(0.82, 0),
       new THREE.MeshStandardMaterial({
         color: 0xd95d49,
         roughness: 0.26,
         metalness: 0.18,
         emissive: 0x8d1d14,
-        emissiveIntensity: 0.68
+        emissiveIntensity: 0.82
       })
     )
     core.castShadow = true
 
     const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(1.02, 0.035, 12, 44),
-      new THREE.MeshBasicMaterial({ color: 0xffad8b, transparent: true, opacity: 0.56 })
+      new THREE.TorusGeometry(1.25, 0.035, 12, 56),
+      new THREE.MeshBasicMaterial({ color: 0xffad8b, transparent: true, opacity: 0.62 })
     )
     halo.rotation.x = Math.PI / 2
+    halo.userData.baseOpacity = halo.material.opacity
+
+    const detection = new THREE.Mesh(
+      new THREE.RingGeometry(1.15, 1.48, 48),
+      new THREE.MeshBasicMaterial({ color: 0xff6f57, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+    )
+    detection.rotation.x = -Math.PI / 2
+    detection.position.y = -0.7
+
+    const glow = new THREE.PointLight(0xff6a4d, 1.45, 8.5, 2)
+    glow.position.set(0, 0.5, 0)
 
     const sentinel = new THREE.Group()
-    sentinel.add(core, halo)
+    sentinel.add(core, halo, detection, glow)
     return sentinel
   }
 
@@ -362,7 +568,7 @@ export default class extends Controller {
   }
 
   resetSceneObjects() {
-    this.player.position.set(0, 0.82, 13)
+    this.player.position.set(0, 0.82, -1.5)
     this.player.rotation.set(0, 0, 0)
     this.camera.position.set(0, 9.5, 17)
     this.indexGate.scale.set(1, 1, 1)
@@ -385,6 +591,8 @@ export default class extends Controller {
       this.updateFragments(elapsed)
       this.updateSentinels(delta, elapsed)
       this.updateIndexGate(delta, elapsed)
+      this.updateAtmosphere(delta, elapsed)
+      this.updatePlayerEffects(delta, elapsed)
       this.updateCamera(delta)
       this.depth = Math.max(0, Math.round(18 - this.player.position.z))
       this.checkWin()
@@ -392,6 +600,8 @@ export default class extends Controller {
     } else {
       this.updateFragments(elapsed)
       this.updateIndexGate(delta, elapsed)
+      this.updateAtmosphere(delta, elapsed)
+      this.updatePlayerEffects(delta, elapsed)
     }
 
     this.renderer.render(this.scene, this.camera)
@@ -417,11 +627,11 @@ export default class extends Controller {
     if (movement.lengthSq() > 0) {
       movement.normalize()
       this.player.position.addScaledVector(movement, PLAYER_SPEED * delta)
+      this.clampPlayerToBounds()
       this.player.rotation.y = Math.atan2(movement.x, movement.z)
     }
 
-    this.player.position.x = THREE.MathUtils.clamp(this.player.position.x, -WORLD_LIMIT, WORLD_LIMIT)
-    this.player.position.z = THREE.MathUtils.clamp(this.player.position.z, -WORLD_LIMIT, WORLD_LIMIT - 2)
+    this.clampPlayerToBounds()
     this.player.children[1].rotation.z += delta * 1.8
   }
 
@@ -432,6 +642,9 @@ export default class extends Controller {
       fragment.rotation.y = elapsed * 0.72 + index
       fragment.rotation.z = Math.sin(elapsed * 1.1 + index) * 0.08
       fragment.position.y = fragment.userData.homeY + Math.sin(elapsed * 1.6 + index) * 0.22
+      if (fragment.userData.glow) {
+        fragment.userData.glow.material.opacity = 0.14 + Math.sin(elapsed * 2.4 + index) * 0.045
+      }
 
       if (fragment.position.distanceTo(this.player.position) < FRAGMENT_RADIUS) {
         fragment.userData.collected = true
@@ -454,15 +667,16 @@ export default class extends Controller {
       )
       sentinel.rotation.y += delta * 2.4
       sentinel.children[1].rotation.z += delta * 1.7
+      sentinel.children[2].rotation.z -= delta * 0.9
 
-      if (sentinel.position.distanceTo(this.player.position) < HAZARD_RADIUS && !this.gameOver && !this.won) {
-        this.integrity = Math.max(0, this.integrity - Math.round(42 * delta))
-        this.updateHud("Sentinel contact.")
-        if (this.integrity <= 0) {
-          this.running = false
-          this.gameOver = true
-          this.updateHud("The Archive sealed. Restart to try again.")
-        }
+      const distance = this.horizontalDistance(sentinel.position, this.player.position)
+      const proximity = Math.max(0, 1 - distance / (HAZARD_RADIUS * 2.4))
+      sentinel.children[1].material.opacity = 0.44 + proximity * 0.34
+      sentinel.children[2].material.opacity = 0.13 + proximity * 0.28
+      sentinel.children[3].intensity = 1.2 + proximity * 2.4
+
+      if (distance < HAZARD_RADIUS && !this.gameOver && !this.won) {
+        this.triggerSentinelHit(sentinel, elapsed)
       }
     })
   }
@@ -475,14 +689,91 @@ export default class extends Controller {
     this.indexGate.rotation.y = Math.sin(elapsed * 0.8) * (open ? 0.04 : 0.015)
   }
 
+  updateAtmosphere(delta, elapsed) {
+    if (this.dust) {
+      this.dust.rotation.y += delta * 0.018
+      this.dust.position.y = Math.sin(elapsed * 0.45) * 0.08
+    }
+
+    this.boundaryGroup?.children?.forEach((child, index) => {
+      if (!child.material?.emissive) return
+
+      child.material.emissiveIntensity = 0.5 + Math.sin(elapsed * 1.6 + index) * 0.12
+    })
+
+    this.boundaryLights?.forEach((light, index) => {
+      light.intensity = 0.42 + Math.sin(elapsed * 1.9 + index) * 0.11
+    })
+  }
+
+  updatePlayerEffects(delta, elapsed) {
+    this.hitFlash = Math.max(0, this.hitFlash - delta * 2.5)
+    const body = this.player.children[0]
+    const ring = this.player.children[1]
+    const beacon = this.player.children[2]
+    const pulse = 0.5 + Math.sin(elapsed * 4.8) * 0.5
+
+    body.material.emissiveIntensity = body.userData.baseEmissiveIntensity + pulse * 0.18 + this.hitFlash * 1.25
+    ring.material.opacity = ring.userData.baseOpacity + pulse * 0.14 + this.hitFlash * 0.12
+    beacon.intensity = 1.05 + pulse * 0.45 + this.hitFlash * 1.8
+  }
+
   updateCamera(delta) {
     const target = new THREE.Vector3(
-      this.player.position.x * 0.42,
+      this.player.position.x * 0.82,
       9.5,
       this.player.position.z + 8.2
     )
-    this.camera.position.lerp(target, delta * 3.8)
-    this.camera.lookAt(this.player.position.x * 0.2, 0.8, this.player.position.z - 5)
+    this.camera.position.lerp(target, delta * 5.2)
+    this.camera.lookAt(this.player.position.x * 0.72, 0.8, this.player.position.z - 2.2)
+  }
+
+  triggerSentinelHit(sentinel, elapsed) {
+    if (elapsed - this.lastSentinelHitAt < SENTINEL_HIT_COOLDOWN) return
+
+    this.lastSentinelHitAt = elapsed
+    this.hitFlash = 1
+    this.integrity = Math.max(0, this.integrity - SENTINEL_HIT_DAMAGE)
+
+    const knockback = this.player.position.clone().sub(sentinel.position)
+    knockback.y = 0
+    if (knockback.lengthSq() < 0.001) {
+      knockback.set(0, 0, 1)
+    }
+    knockback.normalize()
+    this.player.position.addScaledVector(knockback, SENTINEL_KNOCKBACK)
+    this.clampPlayerToBounds()
+    this.pointerTarget = null
+
+    if (this.integrity <= 0) {
+      this.running = false
+      this.gameOver = true
+      this.updateHud("The Archive sealed. Restart to try again.")
+    } else {
+      this.updateHud(`Sentinel breach. Integrity -${SENTINEL_HIT_DAMAGE}.`)
+    }
+  }
+
+  horizontalDistance(first, second) {
+    const dx = first.x - second.x
+    const dz = first.z - second.z
+    return Math.sqrt(dx * dx + dz * dz)
+  }
+
+  clampPlayerToBounds() {
+    const beforeX = this.player.position.x
+    const beforeZ = this.player.position.z
+    this.clampVectorToPlayBounds(this.player.position)
+
+    if (this.pointerTarget && (beforeX !== this.player.position.x || beforeZ !== this.player.position.z)) {
+      this.pointerTarget = null
+    }
+  }
+
+  clampVectorToPlayBounds(vector) {
+    vector.x = THREE.MathUtils.clamp(vector.x, PLAY_BOUNDS.minX, PLAY_BOUNDS.maxX)
+    vector.z = THREE.MathUtils.clamp(vector.z, PLAY_BOUNDS.minZ, PLAY_BOUNDS.maxZ)
+    return vector
   }
 
   checkWin() {
@@ -540,8 +831,7 @@ export default class extends Controller {
 
     const target = new THREE.Vector3()
     if (this.raycaster.ray.intersectPlane(this.floorPlane, target)) {
-      target.x = THREE.MathUtils.clamp(target.x, -WORLD_LIMIT, WORLD_LIMIT)
-      target.z = THREE.MathUtils.clamp(target.z, -WORLD_LIMIT, WORLD_LIMIT - 2)
+      this.clampVectorToPlayBounds(target)
       target.y = 0.82
       this.pointerTarget = target
     }
