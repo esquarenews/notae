@@ -20,10 +20,13 @@ RSpec.describe "Global shortcuts controller JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/global_shortcuts_controller.js").read
 
     expect(source).to include('this.easterEggSequence === "archive"')
-    expect(source).to include('query === "archive" && this.currentWorkspaceSlug()')
+    expect(source).to include("this.archiveGameMatchesQuery(query)")
+    expect(source).to include('"archive".startsWith(query)')
+    expect(source).to include('query.length < 3')
     expect(source).to include('title: "The Archive"')
     expect(source).to include("openArchiveGame()")
     expect(source).to include('/w/${encodeURIComponent(workspaceSlug)}/_archive')
+    expect(source).to include('window.location.pathname.match(/^\\/w\\/([^/]+)/)')
     expect(source).to include("interactiveElement(event.target)")
   end
 end

@@ -50,14 +50,20 @@ export default class extends Controller {
     const query = this.quickInputTarget.value.toLowerCase().trim()
     this.quickSelectedIndex = 0
 
-    if (query === "archive" && this.currentWorkspaceSlug()) {
-      this.filteredQuickItems = [this.archiveGameQuickItem()]
-    } else if (!query) {
+    if (!query) {
       this.filteredQuickItems = this.quickItems.slice(0, 30)
     } else {
       this.filteredQuickItems = this.quickItems
         .filter((item) => item.title.toLowerCase().includes(query))
         .slice(0, 30)
+
+      if (this.archiveGameMatchesQuery(query)) {
+        const archiveItem = this.archiveGameQuickItem()
+        this.filteredQuickItems = [
+          archiveItem,
+          ...this.filteredQuickItems.filter((item) => item.url !== archiveItem.url)
+        ].slice(0, 30)
+      }
     }
 
     this.renderQuickResults()
@@ -167,12 +173,24 @@ export default class extends Controller {
     }
   }
 
+  archiveGameMatchesQuery(query) {
+    if (!query || query.length < 3 || !this.currentWorkspaceSlug()) return false
+
+    return "archive".startsWith(query) || "the archive".includes(query)
+  }
+
   archiveGamePath(workspaceSlug) {
     return `/w/${encodeURIComponent(workspaceSlug)}/_archive`
   }
 
   currentWorkspaceSlug() {
-    return document.body.dataset.aiRailWorkspaceSlugValue?.toString().trim()
+    const bodySlug = document.body.dataset.aiRailWorkspaceSlugValue?.toString().trim()
+    if (bodySlug) return bodySlug
+
+    const workspacePath = window.location.pathname.match(/^\/w\/([^/]+)/)
+    if (!workspacePath) return ""
+
+    return decodeURIComponent(workspacePath[1])
   }
 
   interactiveElement(target) {
