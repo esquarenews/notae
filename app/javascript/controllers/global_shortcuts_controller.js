@@ -50,7 +50,9 @@ export default class extends Controller {
     const query = this.quickInputTarget.value.toLowerCase().trim()
     this.quickSelectedIndex = 0
 
-    if (!query) {
+    if (query === "archive" && this.currentWorkspaceSlug()) {
+      this.filteredQuickItems = [this.archiveGameQuickItem()]
+    } else if (!query) {
       this.filteredQuickItems = this.quickItems.slice(0, 30)
     } else {
       this.filteredQuickItems = this.quickItems
@@ -150,12 +152,23 @@ export default class extends Controller {
     const workspaceSlug = this.currentWorkspaceSlug()
     if (!workspaceSlug) return
 
-    const path = `/w/${encodeURIComponent(workspaceSlug)}/_archive`
+    const path = this.archiveGamePath(workspaceSlug)
     if (window.Turbo?.visit) {
       window.Turbo.visit(path)
     } else {
       window.location.assign(path)
     }
+  }
+
+  archiveGameQuickItem() {
+    return {
+      title: "The Archive",
+      url: this.archiveGamePath(this.currentWorkspaceSlug())
+    }
+  }
+
+  archiveGamePath(workspaceSlug) {
+    return `/w/${encodeURIComponent(workspaceSlug)}/_archive`
   }
 
   currentWorkspaceSlug() {
