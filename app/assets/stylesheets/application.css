@@ -20583,7 +20583,7 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
 
 .notae-archive-game-meters {
   display: grid;
-  grid-template-columns: repeat(3, minmax(5.2rem, auto));
+  grid-template-columns: repeat(4, minmax(4.7rem, auto));
   gap: 0.55rem;
   margin: 0;
 }
@@ -20686,7 +20686,7 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   }
 
   .notae-archive-game-meters {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .notae-archive-game-meters div {

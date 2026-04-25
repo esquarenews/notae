@@ -10,15 +10,20 @@ const INDEX_RADIUS = 1.75
 const SENTINEL_HIT_DAMAGE = 24
 const SENTINEL_HIT_COOLDOWN = 0.78
 const SENTINEL_KNOCKBACK = 2.2
+const LEVEL_SPEED_STEP = 0.1
+const PLAYER_LEVEL_SPEED_STEP = 0.035
+const LEVEL_INTEGRITY_BONUS = 18
+const TOUCH_DRAG_THRESHOLD = 16
 const PLAY_BOUNDS = Object.freeze({
   minX: -14.5,
   maxX: 14.5,
   minZ: -16.4,
   maxZ: 14.2
 })
+const PLAYER_START = Object.freeze({ x: 0, y: 0.82, z: -1.5 })
 
 export default class extends Controller {
-  static targets = ["canvas", "status", "fragments", "integrity", "depth"]
+  static targets = ["canvas", "status", "level", "fragments", "integrity", "depth", "soundButton"]
   static values = {
     exitUrl: String
   }
@@ -28,24 +33,40 @@ export default class extends Controller {
     this.clock = new THREE.Clock()
     this.pointer = new THREE.Vector2()
     this.pointerTarget = null
+    this.touchMoveVector = new THREE.Vector3()
+    this.touchPointerId = null
+    this.touchStart = null
+    this.touchDragging = false
     this.running = false
     this.gameOver = false
     this.won = false
     this.hitFlash = 0
     this.lastSentinelHitAt = -Infinity
+    this.level = 1
+    this.soundEnabled = false
+    this.audioContext = null
+    this.masterGain = null
+    this.musicTimer = null
+    this.musicStep = 0
 
     this.boundKeydown = (event) => this.handleKeydown(event)
     this.boundKeyup = (event) => this.handleKeyup(event)
     this.boundResize = () => this.resize()
     this.boundPointerdown = (event) => this.handlePointerdown(event)
+    this.boundPointermove = (event) => this.handlePointermove(event)
+    this.boundPointerup = (event) => this.handlePointerup(event)
 
     window.addEventListener("keydown", this.boundKeydown)
     window.addEventListener("keyup", this.boundKeyup)
     window.addEventListener("resize", this.boundResize)
     this.canvasTarget.addEventListener("pointerdown", this.boundPointerdown)
+    this.canvasTarget.addEventListener("pointermove", this.boundPointermove)
+    this.canvasTarget.addEventListener("pointerup", this.boundPointerup)
+    this.canvasTarget.addEventListener("pointercancel", this.boundPointerup)
 
     this.buildScene()
     this.restart()
+    this.updateSoundButton()
   }
 
   disconnect() {
@@ -53,20 +74,36 @@ export default class extends Controller {
     window.removeEventListener("keyup", this.boundKeyup)
     window.removeEventListener("resize", this.boundResize)
     this.canvasTarget.removeEventListener("pointerdown", this.boundPointerdown)
+    this.canvasTarget.removeEventListener("pointermove", this.boundPointermove)
+    this.canvasTarget.removeEventListener("pointerup", this.boundPointerup)
+    this.canvasTarget.removeEventListener("pointercancel", this.boundPointerup)
 
     if (this.animationFrame) {
       window.cancelAnimationFrame(this.animationFrame)
       this.animationFrame = null
     }
 
+    this.stopMusic()
+    this.audioContext?.close?.()
+    this.audioContext = null
+    this.masterGain = null
     this.disposeScene()
   }
 
   restart() {
+    this.level = 1
+    this.integrity = 100
+    this.startLevel("Level 1. Recover the lost fragments.")
+  }
+
+  startLevel(statusText) {
     this.keys.clear()
     this.pointerTarget = null
+    this.touchMoveVector.set(0, 0, 0)
+    this.touchPointerId = null
+    this.touchStart = null
+    this.touchDragging = false
     this.fragmentsCollected = 0
-    this.integrity = 100
     this.depth = 0
     this.hitFlash = 0
     this.lastSentinelHitAt = -Infinity
@@ -75,7 +112,9 @@ export default class extends Controller {
     this.running = true
 
     this.resetSceneObjects()
-    this.updateHud("Recover the lost fragments.")
+    this.randomizeFragments()
+    this.randomizeSentinels()
+    this.updateHud(statusText)
     this.element.focus({ preventScroll: true })
 
     if (!this.animationFrame) {
@@ -413,24 +452,15 @@ export default class extends Controller {
 
   buildFragments() {
     this.fragments = []
-    const positions = [
-      [-12, 0.82, 9],
-      [11, 0.82, 8],
-      [-8, 0.82, 0],
-      [7, 0.82, -2],
-      [-13, 0.82, -10],
-      [13, 0.82, -12],
-      [0, 0.82, -15]
-    ]
 
-    positions.forEach((position, index) => {
+    for (let index = 0; index < FRAGMENT_COUNT; index += 1) {
       const fragment = this.createFragment(index)
-      fragment.position.set(position[0], position[1], position[2])
-      fragment.userData.homeY = position[1]
+      fragment.position.set(0, 0.82, 0)
+      fragment.userData.homeY = 0.82
       fragment.userData.collected = false
       this.fragments.push(fragment)
       this.fragmentGroup.add(fragment)
-    })
+    }
   }
 
   createFragment(index) {
@@ -484,18 +514,13 @@ export default class extends Controller {
 
   buildSentinels() {
     this.sentinels = []
-    const paths = [
-      { center: new THREE.Vector3(-8, 0.75, 4), radius: 3.6, phase: 0 },
-      { center: new THREE.Vector3(8, 0.75, 3), radius: 4.2, phase: 2.2 },
-      { center: new THREE.Vector3(0, 0.75, -8), radius: 5.3, phase: 4.2 }
-    ]
 
-    paths.forEach((path) => {
+    for (let index = 0; index < 3; index += 1) {
       const sentinel = this.createSentinel()
-      sentinel.userData.path = path
+      sentinel.userData.path = this.randomSentinelPath()
       this.sentinels.push(sentinel)
       this.sentinelGroup.add(sentinel)
-    })
+    }
   }
 
   createSentinel() {
@@ -568,7 +593,7 @@ export default class extends Controller {
   }
 
   resetSceneObjects() {
-    this.player.position.set(0, 0.82, -1.5)
+    this.player.position.set(PLAYER_START.x, PLAYER_START.y, PLAYER_START.z)
     this.player.rotation.set(0, 0, 0)
     this.camera.position.set(0, 9.5, 17)
     this.indexGate.scale.set(1, 1, 1)
@@ -579,6 +604,70 @@ export default class extends Controller {
       fragment.userData.collected = false
       fragment.scale.set(1, 1, 1)
     })
+  }
+
+  randomizeFragments() {
+    const reserved = [
+      this.player.position.clone(),
+      new THREE.Vector3(0, 0.82, PLAY_BOUNDS.minZ)
+    ]
+
+    this.fragments.forEach((fragment) => {
+      const position = this.randomPlayfieldPoint(reserved, 3.2)
+      fragment.position.set(position.x, 0.82, position.z)
+      fragment.userData.homeY = 0.82
+      reserved.push(fragment.position.clone())
+    })
+  }
+
+  randomizeSentinels() {
+    this.sentinels.forEach((sentinel) => {
+      sentinel.userData.path = this.randomSentinelPath()
+    })
+  }
+
+  randomSentinelPath() {
+    const radius = this.randomFloat(2.8, 5.1)
+    const minX = PLAY_BOUNDS.minX + radius + 1.2
+    const maxX = PLAY_BOUNDS.maxX - radius - 1.2
+    const minZ = PLAY_BOUNDS.minZ + radius + 1.2
+    const maxZ = PLAY_BOUNDS.maxZ - radius - 1.2
+    const playerPosition = new THREE.Vector3(PLAYER_START.x, PLAYER_START.y, PLAYER_START.z)
+
+    let center = new THREE.Vector3()
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      center = new THREE.Vector3(this.randomFloat(minX, maxX), 0.75, this.randomFloat(minZ, maxZ))
+      if (this.horizontalDistance(center, playerPosition) > radius + 3) break
+    }
+
+    return {
+      center,
+      radius,
+      phase: Math.random() * Math.PI * 2,
+      direction: Math.random() > 0.5 ? 1 : -1
+    }
+  }
+
+  randomPlayfieldPoint(reservedPositions, minDistance) {
+    const margin = 1.4
+    let candidate = new THREE.Vector3(0, 0.82, 0)
+
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      candidate = new THREE.Vector3(
+        this.randomFloat(PLAY_BOUNDS.minX + margin, PLAY_BOUNDS.maxX - margin),
+        0.82,
+        this.randomFloat(PLAY_BOUNDS.minZ + margin, PLAY_BOUNDS.maxZ - margin)
+      )
+      if (reservedPositions.every((position) => this.horizontalDistance(candidate, position) >= minDistance)) {
+        return candidate
+      }
+    }
+
+    return candidate
+  }
+
+  randomFloat(min, max) {
+    return min + Math.random() * (max - min)
   }
 
   animate() {
@@ -614,6 +703,10 @@ export default class extends Controller {
     if (this.keys.has("a") || this.keys.has("arrowleft")) movement.x -= 1
     if (this.keys.has("d") || this.keys.has("arrowright")) movement.x += 1
 
+    if (this.touchMoveVector.lengthSq() > 0) {
+      movement.add(this.touchMoveVector)
+    }
+
     if (this.pointerTarget) {
       const targetOffset = this.pointerTarget.clone().sub(this.player.position)
       targetOffset.y = 0
@@ -626,7 +719,7 @@ export default class extends Controller {
 
     if (movement.lengthSq() > 0) {
       movement.normalize()
-      this.player.position.addScaledVector(movement, PLAYER_SPEED * delta)
+      this.player.position.addScaledVector(movement, PLAYER_SPEED * this.playerSpeedMultiplier() * delta)
       this.clampPlayerToBounds()
       this.player.rotation.y = Math.atan2(movement.x, movement.z)
     }
@@ -650,6 +743,7 @@ export default class extends Controller {
         fragment.userData.collected = true
         fragment.visible = false
         this.fragmentsCollected += 1
+        this.playSound("fragment")
         const remaining = FRAGMENT_COUNT - this.fragmentsCollected
         this.updateHud(remaining === 0 ? "The Index is open." : `${remaining} fragments remain.`)
       }
@@ -659,7 +753,7 @@ export default class extends Controller {
   updateSentinels(delta, elapsed) {
     this.sentinels.forEach((sentinel, index) => {
       const path = sentinel.userData.path
-      const angle = elapsed * SENTINEL_SPEED * (1 + index * 0.11) + path.phase
+      const angle = elapsed * SENTINEL_SPEED * this.levelSpeedMultiplier() * path.direction * (1 + index * 0.11) + path.phase
       sentinel.position.set(
         path.center.x + Math.cos(angle) * path.radius,
         path.center.y + Math.sin(elapsed * 2 + index) * 0.18,
@@ -728,12 +822,150 @@ export default class extends Controller {
     this.camera.lookAt(this.player.position.x * 0.72, 0.8, this.player.position.z - 2.2)
   }
 
+  levelSpeedMultiplier() {
+    return 1 + (this.level - 1) * LEVEL_SPEED_STEP
+  }
+
+  playerSpeedMultiplier() {
+    return 1 + (this.level - 1) * PLAYER_LEVEL_SPEED_STEP
+  }
+
+  async toggleSound() {
+    this.soundEnabled = !this.soundEnabled
+
+    if (this.soundEnabled) {
+      const ready = await this.ensureAudio()
+      if (!ready) {
+        this.soundEnabled = false
+        this.updateSoundButton()
+        return
+      }
+
+      this.playSound("toggle")
+      this.startMusic()
+    } else {
+      this.stopMusic()
+    }
+
+    this.updateSoundButton()
+  }
+
+  async ensureAudio() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextClass) return false
+
+    if (!this.audioContext) {
+      this.audioContext = new AudioContextClass()
+      this.masterGain = this.audioContext.createGain()
+      this.masterGain.gain.value = 0.18
+      this.masterGain.connect(this.audioContext.destination)
+    }
+
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume()
+    }
+
+    return true
+  }
+
+  startMusic() {
+    this.stopMusic()
+    if (!this.soundEnabled) return
+
+    this.musicStep = 0
+    this.musicTimer = window.setInterval(() => this.playMusicStep(), 165)
+  }
+
+  stopMusic() {
+    if (!this.musicTimer) return
+
+    window.clearInterval(this.musicTimer)
+    this.musicTimer = null
+  }
+
+  playMusicStep() {
+    if (!this.soundEnabled || !this.audioContext || !this.masterGain) return
+
+    const bass = [110, 110, 146.83, 110, 164.81, 146.83, 98, 123.47]
+    const lead = [440, 0, 493.88, 0, 392, 0, 329.63, 0, 369.99, 0, 493.88, 0, 440, 0, 293.66, 0]
+    const bassNote = bass[this.musicStep % bass.length] * this.levelSpeedMultiplier()
+    const leadNote = lead[this.musicStep % lead.length]
+
+    this.playTone(bassNote, 0.105, "square", 0.12)
+    if (leadNote) {
+      this.playTone(leadNote, 0.055, "square", 0.055, 0.02)
+    }
+
+    this.musicStep += 1
+  }
+
+  playSound(kind) {
+    if (!this.soundEnabled || !this.audioContext || !this.masterGain) return
+
+    if (kind === "fragment") {
+      this.playTone(659.25, 0.055, "square", 0.16)
+      this.playTone(987.77, 0.075, "square", 0.12, 0.055)
+      return
+    }
+
+    if (kind === "hit") {
+      this.playTone(146.83, 0.08, "sawtooth", 0.2)
+      this.playTone(92.5, 0.13, "square", 0.17, 0.04)
+      return
+    }
+
+    if (kind === "level") {
+      ;[523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+        this.playTone(frequency, 0.075, "square", 0.13, index * 0.075)
+      })
+      return
+    }
+
+    if (kind === "gameOver") {
+      ;[246.94, 196, 146.83, 98].forEach((frequency, index) => {
+        this.playTone(frequency, 0.12, "square", 0.14, index * 0.09)
+      })
+      return
+    }
+
+    if (kind === "toggle") {
+      this.playTone(523.25, 0.06, "square", 0.09)
+      this.playTone(783.99, 0.08, "square", 0.08, 0.06)
+    }
+  }
+
+  playTone(frequency, duration, type, volume, delay = 0) {
+    if (!this.audioContext || !this.masterGain) return
+
+    const startAt = this.audioContext.currentTime + delay
+    const oscillator = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+
+    oscillator.type = type
+    oscillator.frequency.setValueAtTime(frequency, startAt)
+    gain.gain.setValueAtTime(0.0001, startAt)
+    gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), startAt + 0.012)
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration)
+    oscillator.connect(gain)
+    gain.connect(this.masterGain)
+    oscillator.start(startAt)
+    oscillator.stop(startAt + duration + 0.025)
+  }
+
+  updateSoundButton() {
+    if (!this.hasSoundButtonTarget) return
+
+    this.soundButtonTarget.textContent = this.soundEnabled ? "Sound on" : "Sound off"
+    this.soundButtonTarget.setAttribute("aria-pressed", this.soundEnabled ? "true" : "false")
+  }
+
   triggerSentinelHit(sentinel, elapsed) {
     if (elapsed - this.lastSentinelHitAt < SENTINEL_HIT_COOLDOWN) return
 
     this.lastSentinelHitAt = elapsed
     this.hitFlash = 1
     this.integrity = Math.max(0, this.integrity - SENTINEL_HIT_DAMAGE)
+    this.playSound("hit")
 
     const knockback = this.player.position.clone().sub(sentinel.position)
     knockback.y = 0
@@ -748,6 +980,7 @@ export default class extends Controller {
     if (this.integrity <= 0) {
       this.running = false
       this.gameOver = true
+      this.playSound("gameOver")
       this.updateHud("The Archive sealed. Restart to try again.")
     } else {
       this.updateHud(`Sentinel breach. Integrity -${SENTINEL_HIT_DAMAGE}.`)
@@ -781,10 +1014,16 @@ export default class extends Controller {
 
     const gateCenter = new THREE.Vector3(0, 0.82, -17.9)
     if (this.player.position.distanceTo(gateCenter) <= INDEX_RADIUS) {
-      this.won = true
-      this.running = false
-      this.updateHud("Index restored.")
+      this.advanceLevel()
     }
+  }
+
+  advanceLevel() {
+    this.won = true
+    this.level += 1
+    this.integrity = Math.min(100, this.integrity + LEVEL_INTEGRITY_BONUS)
+    this.playSound("level")
+    this.startLevel(`Level ${this.level}. The archive shifts faster.`)
   }
 
   updateHud(statusText = null) {
@@ -792,6 +1031,7 @@ export default class extends Controller {
       this.statusTarget.textContent = statusText
     }
     this.fragmentsTarget.textContent = `${this.fragmentsCollected}/${FRAGMENT_COUNT}`
+    this.levelTarget.textContent = `${this.level}`
     this.integrityTarget.textContent = `${this.integrity}`
     this.depthTarget.textContent = `${this.depth}`
   }
@@ -824,6 +1064,25 @@ export default class extends Controller {
   }
 
   handlePointerdown(event) {
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      this.touchPointerId = event.pointerId
+      this.touchStart = { x: event.clientX, y: event.clientY }
+      this.touchDragging = false
+      this.touchMoveVector.set(0, 0, 0)
+      this.captureTouchPointer(event.pointerId)
+      event.preventDefault()
+    }
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      this.element.focus({ preventScroll: true })
+      return
+    }
+
+    this.setPointerTargetFromEvent(event)
+    this.element.focus({ preventScroll: true })
+  }
+
+  setPointerTargetFromEvent(event) {
     const rect = this.canvasTarget.getBoundingClientRect()
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     this.pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
@@ -835,8 +1094,54 @@ export default class extends Controller {
       target.y = 0.82
       this.pointerTarget = target
     }
+  }
 
-    this.element.focus({ preventScroll: true })
+  handlePointermove(event) {
+    if (event.pointerId !== this.touchPointerId || !this.touchStart) return
+
+    const deltaX = event.clientX - this.touchStart.x
+    const deltaY = event.clientY - this.touchStart.y
+    const distance = Math.hypot(deltaX, deltaY)
+    if (distance < TOUCH_DRAG_THRESHOLD) return
+
+    this.touchDragging = true
+    this.pointerTarget = null
+    this.touchMoveVector.set(deltaX, 0, deltaY).normalize()
+    event.preventDefault()
+  }
+
+  handlePointerup(event) {
+    if (event.pointerId !== this.touchPointerId) return
+
+    if (!this.touchDragging && event.type !== "pointercancel") {
+      this.setPointerTargetFromEvent(event)
+    }
+
+    this.releaseTouchPointer(event.pointerId)
+    this.touchMoveVector.set(0, 0, 0)
+    this.touchPointerId = null
+    this.touchStart = null
+    this.touchDragging = false
+
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      event.preventDefault()
+    }
+  }
+
+  captureTouchPointer(pointerId) {
+    try {
+      this.canvasTarget.setPointerCapture?.(pointerId)
+    } catch (_error) {
+      // Synthetic and cancelled pointer streams can lack an active pointer capture.
+    }
+  }
+
+  releaseTouchPointer(pointerId) {
+    try {
+      this.canvasTarget.releasePointerCapture?.(pointerId)
+    } catch (_error) {
+      // Movement state still resets even if the browser has already released capture.
+    }
   }
 
   resize() {

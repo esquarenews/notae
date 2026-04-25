@@ -14,6 +14,11 @@ RSpec.describe "Archive game", type: :request do
     expect(response.body).to include('data-controller="archive-game"')
     expect(response.body).to include("notae-archive-game-canvas")
     expect(response.body).to include("Recover the lost fragments.")
+    expect(response.body).to include('data-archive-game-target="level"')
+    expect(response.body).to include('data-archive-game-target="soundButton"')
+    expect(response.body).to include("Sound off")
+    expect(response.body).to include("Enter the Index to open the next faster level.")
+    expect(response.body).to include("Tap, drag, or swipe to move.")
   end
 
   it "does not expose the archive game through visible workspace navigation" do

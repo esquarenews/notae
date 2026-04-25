@@ -19,6 +19,8 @@ RSpec.describe "Global shortcuts controller JavaScript syntax" do
   it "keeps the archive game behind a typed easter egg sequence" do
     source = Rails.root.join("app/javascript/controllers/global_shortcuts_controller.js").read
 
+    expect(source).to include("ARCHIVE_LONG_PRESS_MS = 850")
+    expect(source).to include("ARCHIVE_LONG_PRESS_MOVE_TOLERANCE = 14")
     expect(source).to include('this.easterEggSequence === "archive"')
     expect(source).to include("this.archiveGameMatchesQuery(query)")
     expect(source).to include('"archive".startsWith(query)')
@@ -28,5 +30,9 @@ RSpec.describe "Global shortcuts controller JavaScript syntax" do
     expect(source).to include('/w/${encodeURIComponent(workspaceSlug)}/_archive')
     expect(source).to include('window.location.pathname.match(/^\\/w\\/([^/]+)/)')
     expect(source).to include("interactiveElement(event.target)")
+    expect(source).to include("beginArchiveLongPress(event)")
+    expect(source).to include("trackArchiveLongPressMove(event)")
+    expect(source).to include("cancelArchiveLongPress()")
+    expect(source).to include(".notae-topbar-title, .notae-topbar-page-icon")
   end
 end

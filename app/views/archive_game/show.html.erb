@@ -21,6 +21,10 @@
     </div>
     <dl class="notae-archive-game-meters">
       <div>
+        <dt>Level</dt>
+        <dd data-archive-game-target="level">1</dd>
+      </div>
+      <div>
         <dt>Fragments</dt>
         <dd data-archive-game-target="fragments">0/7</dd>
       </div>
@@ -36,11 +40,18 @@
   </div>
 
   <div class="notae-archive-game-brief">
-    <p>Move through the stacks. Gather seven fragments. Red sentinels breach integrity. Enter the Index when it opens.</p>
-    <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys. Tap the floor to move.</p>
+    <p>Gather seven fragments. Enter the Index to open the next faster level. Red sentinels breach integrity.</p>
+    <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys. Tap, drag, or swipe to move.</p>
   </div>
 
   <div class="notae-archive-game-actions">
+    <button type="button"
+            class="notae-chip-button"
+            data-archive-game-target="soundButton"
+            data-action="archive-game#toggleSound"
+            aria-pressed="false">
+      Sound off
+    </button>
     <button type="button"
             class="notae-chip-button"
             data-action="archive-game#restart">
