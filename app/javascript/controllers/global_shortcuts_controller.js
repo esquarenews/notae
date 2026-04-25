@@ -7,6 +7,8 @@ export default class extends Controller {
     this.quickItems = []
     this.filteredQuickItems = []
     this.quickSelectedIndex = 0
+    this.easterEggSequence = ""
+    this.easterEggSequenceTimer = null
 
     this.onWindowKeydown = (event) => this.handleWindowKeydown(event)
     window.addEventListener("keydown", this.onWindowKeydown)
@@ -14,6 +16,9 @@ export default class extends Controller {
 
   disconnect() {
     window.removeEventListener("keydown", this.onWindowKeydown)
+    if (this.easterEggSequenceTimer) {
+      window.clearTimeout(this.easterEggSequenceTimer)
+    }
   }
 
   openQuickSwitcher() {
@@ -114,10 +119,51 @@ export default class extends Controller {
       return
     }
 
+    if (!metaOrCtrl && !event.altKey && !event.shiftKey && key.length === 1 && !this.interactiveElement(event.target)) {
+      this.trackArchiveSequence(key)
+      if (this.easterEggSequence === "archive") {
+        event.preventDefault()
+        this.openArchiveGame()
+        return
+      }
+    }
+
     if (event.key === "Escape" && (this.quickSwitcherOpen() || this.shortcutGuideOpen())) {
       event.preventDefault()
       this.closeAll()
     }
+  }
+
+  trackArchiveSequence(key) {
+    if (!this.currentWorkspaceSlug()) return
+
+    this.easterEggSequence = `${this.easterEggSequence}${key}`.slice(-7)
+    if (this.easterEggSequenceTimer) {
+      window.clearTimeout(this.easterEggSequenceTimer)
+    }
+    this.easterEggSequenceTimer = window.setTimeout(() => {
+      this.easterEggSequence = ""
+    }, 2200)
+  }
+
+  openArchiveGame() {
+    const workspaceSlug = this.currentWorkspaceSlug()
+    if (!workspaceSlug) return
+
+    const path = `/w/${encodeURIComponent(workspaceSlug)}/_archive`
+    if (window.Turbo?.visit) {
+      window.Turbo.visit(path)
+    } else {
+      window.location.assign(path)
+    }
+  }
+
+  currentWorkspaceSlug() {
+    return document.body.dataset.aiRailWorkspaceSlugValue?.toString().trim()
+  }
+
+  interactiveElement(target) {
+    return Boolean(target?.closest?.("input, textarea, select, button, a, [contenteditable='true']"))
   }
 
   quickSwitcherOpen() {

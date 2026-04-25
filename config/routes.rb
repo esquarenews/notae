@@ -41,6 +41,7 @@ Rails.application.routes.draw do
     get "ai-conversation-history", to: "ai_conversation_histories#show", as: :workspace_ai_conversation_history
     get "library", to: "libraries#show", as: :workspace_library
     get "trash", to: "trash#show", as: :workspace_trash
+    get "_archive", to: "archive_game#show", as: :workspace_archive_game
     get "epistularium", to: "epistularium#show", as: :workspace_epistularium
     get "settings/general", to: "general_settings#show", as: :workspace_general_settings
     patch "settings/general", to: "general_settings#update"

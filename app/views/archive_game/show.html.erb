@@ -1,0 +1,51 @@
+<% content_for :title, "The Archive" %>
+<% content_for :content_class, "notae-content-wide notae-content-archive-game" %>
+<% content_for :suppress_layout_flash, true %>
+<% content_for :topbar_page_icon, "*" %>
+<% content_for :topbar_privacy, "Hidden" %>
+<% content_for :topbar_meta, "Recovered fragments unlock the Index" %>
+
+<section class="notae-archive-game"
+         data-controller="archive-game"
+         data-archive-game-exit-url-value="<%= workspace_path(@workspace.slug) %>"
+         tabindex="0"
+         aria-label="The Archive">
+  <canvas class="notae-archive-game-canvas"
+          data-archive-game-target="canvas"
+          aria-label="Three dimensional archive chamber"></canvas>
+
+  <div class="notae-archive-game-hud" aria-live="polite">
+    <div class="notae-archive-game-status">
+      <span class="notae-archive-game-kicker">The Archive</span>
+      <strong data-archive-game-target="status">Recover the lost fragments.</strong>
+    </div>
+    <dl class="notae-archive-game-meters">
+      <div>
+        <dt>Fragments</dt>
+        <dd data-archive-game-target="fragments">0/7</dd>
+      </div>
+      <div>
+        <dt>Integrity</dt>
+        <dd data-archive-game-target="integrity">100</dd>
+      </div>
+      <div>
+        <dt>Depth</dt>
+        <dd data-archive-game-target="depth">0</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="notae-archive-game-brief">
+    <p>Move through the stacks. Gather seven fragments. Avoid red sentinels. Enter the Index when it opens.</p>
+    <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys. Tap the floor to move.</p>
+  </div>
+
+  <div class="notae-archive-game-actions">
+    <button type="button"
+            class="notae-chip-button"
+            data-action="archive-game#restart">
+      Restart
+    </button>
+    <%= link_to "Leave", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+  </div>
+</section>

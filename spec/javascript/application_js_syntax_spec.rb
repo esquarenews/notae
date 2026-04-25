@@ -30,6 +30,7 @@ RSpec.describe "Application JavaScript syntax" do
       @tiptap/extension-link
       @tiptap/extension-task-list
       @tiptap/extension-task-item
+      three
     ].each do |package_name|
       expect(importmap).to match(/pin "#{Regexp.escape(package_name)}".*preload: false/)
     end

@@ -20485,3 +20485,206 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
     grid-template-columns: auto minmax(0, 1fr);
   }
 }
+
+.notae-content.notae-content-archive-game {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: var(--notae-topbar-content-clearance) 0 0;
+}
+
+.notae-archive-game {
+  position: relative;
+  min-height: calc(100dvh - var(--notae-topbar-content-clearance));
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #141715 0%, #1b1d19 50%, #111413 100%);
+  color: #f0eadf;
+  outline: none;
+  isolation: isolate;
+}
+
+.notae-archive-game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.notae-archive-game-hud,
+.notae-archive-game-brief,
+.notae-archive-game-actions {
+  position: absolute;
+  z-index: 2;
+  border: 1px solid rgba(206, 190, 154, 0.24);
+  border-radius: 8px;
+  background: rgba(18, 20, 18, 0.76);
+  box-shadow: 0 18px 44px rgba(3, 8, 7, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.notae-archive-game-hud {
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+}
+
+.notae-archive-game-status {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.notae-archive-game-kicker {
+  color: #82dfbd;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.notae-archive-game-status strong {
+  color: #fff7e7;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.notae-archive-game-meters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(5.2rem, auto));
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.notae-archive-game-meters div {
+  min-height: 3.15rem;
+  display: grid;
+  align-content: center;
+  gap: 0.18rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(130, 223, 189, 0.18);
+  border-radius: 8px;
+  background: rgba(36, 45, 38, 0.64);
+}
+
+.notae-archive-game-meters dt,
+.notae-archive-game-meters dd {
+  margin: 0;
+}
+
+.notae-archive-game-meters dt {
+  color: #cabf9e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.notae-archive-game-meters dd {
+  color: #f8d38a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.notae-archive-game-brief {
+  left: 1rem;
+  bottom: 1rem;
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0.82rem 0.9rem;
+  display: grid;
+  gap: 0.48rem;
+}
+
+.notae-archive-game-brief p {
+  margin: 0;
+  color: rgba(248, 242, 224, 0.9);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.notae-archive-game-brief kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  margin-right: 0.24rem;
+  border: 1px solid rgba(248, 211, 138, 0.34);
+  border-radius: 6px;
+  background: rgba(97, 73, 37, 0.52);
+  color: #ffe3a5;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.notae-archive-game-actions {
+  right: 1rem;
+  bottom: 7.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem;
+}
+
+.notae-archive-game-actions .notae-chip-button {
+  border-color: rgba(248, 211, 138, 0.28);
+  background: rgba(45, 56, 48, 0.78);
+  color: #f7ead1;
+}
+
+.notae-archive-game-actions .notae-chip-button:hover {
+  border-color: rgba(130, 223, 189, 0.56);
+  background: rgba(54, 76, 64, 0.88);
+}
+
+@media (max-width: 760px) {
+  .notae-content.notae-content-archive-game {
+    padding-top: var(--notae-topbar-content-clearance);
+  }
+
+  .notae-archive-game {
+    min-height: calc(100dvh - var(--notae-topbar-content-clearance));
+  }
+
+  .notae-archive-game-hud {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .notae-archive-game-meters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .notae-archive-game-meters div {
+    min-height: 2.85rem;
+    padding: 0.48rem;
+  }
+
+  .notae-archive-game-brief {
+    left: 0.7rem;
+    right: 0.7rem;
+    bottom: calc(var(--notae-mobile-bottom-clearance) + 6.6rem);
+    max-width: none;
+  }
+
+  .notae-archive-game-actions {
+    left: 0.7rem;
+    right: 4.9rem;
+    bottom: calc(var(--notae-mobile-bottom-clearance) + 1.2rem);
+    justify-content: stretch;
+  }
+
+  .notae-archive-game-actions .notae-chip-button {
+    flex: 1 1 0;
+  }
+}
