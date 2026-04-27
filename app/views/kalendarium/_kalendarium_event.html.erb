@@ -23,7 +23,7 @@
          data-end-minutes="<%= timeline_end_minutes if timeline %>"
          data-controller="kalendarium-event-modal"
          data-kalendarium-event-modal-event-title-value="<%= event.title %>"
-         data-action="click->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
+         data-action="dblclick->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
          role="button"
          tabindex="0"
          aria-label="View event details for <%= event.title %>">
@@ -40,13 +40,7 @@
   <% else %>
     <header>
       <strong><%= event.title %></strong>
-      <div class="notae-kalendarium-event-header-actions">
-        <span><%= all_day_badge ? "All day" : "#{starts_local.strftime("%H:%M")} - #{ends_local.strftime("%H:%M")}" %></span>
-        <button type="button"
-                class="notae-inline-icon-button notae-kalendarium-event-edit-button"
-                aria-label="Edit event"
-                data-action="kalendarium-event-modal#openEdit">✎</button>
-      </div>
+      <span class="notae-kalendarium-event-time-line"><%= all_day_badge ? "All day" : "#{starts_local.strftime("%H:%M")} - #{ends_local.strftime("%H:%M")}" %></span>
     </header>
   <% end %>
 

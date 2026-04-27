@@ -15496,43 +15496,29 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   line-height: 1.2;
 }
 
-.notae-kalendarium-event-card.is-all-day .notae-kalendarium-event-edit-button {
-  width: 1.3rem;
-  height: 1.3rem;
-  font-size: 0.72rem;
-}
-
 .notae-kalendarium-event-card header {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.08rem;
   font-size: 0.8rem;
   min-width: 0;
 }
 
 .notae-kalendarium-event-card header strong {
+  display: block;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
   overflow-wrap: anywhere;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .notae-kalendarium-event-card:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--kal-color) 60%, #1d4ed8 40%);
   outline-offset: 2px;
-}
-
-.notae-kalendarium-event-header-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.18rem;
-  font-size: 0.75rem;
-}
-
-.notae-kalendarium-event-edit-button {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 0.38rem;
 }
 
 .notae-kalendarium-event-card p {
@@ -15961,12 +15947,6 @@ button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button:ho
 .notae-shell.is-mobile-viewport .notae-kalendarium-event-modal-title h3 {
   font-size: 1.08rem;
   line-height: 1.2;
-}
-
-.notae-shell.is-mobile-viewport .notae-kalendarium-event-edit-button {
-  width: 1.9rem;
-  height: 1.9rem;
-  min-width: 1.9rem;
 }
 
 .notae-shell.is-mobile-viewport .notae-kalendarium-event-view-list > div {

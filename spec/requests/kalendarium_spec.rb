@@ -550,8 +550,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-time-half")
     expect(response.body).to include("notae-kalendarium-now-line")
     expect(response.body).to include("data-kalendarium-timeline-time-zone-value=")
-    expect(response.body).to include("aria-label=\"Edit event\"")
-    expect(response.body).to include("kalendarium-event-modal#openView")
+    expect(response.body).not_to include("aria-label=\"Edit event\"")
+    expect(response.body).not_to include("notae-kalendarium-event-edit-button")
     expect(response.body).to include("Event details")
     expect(response.body).to include("data-kalendarium-event-modal-event-title-value=\"Timeline event\"")
     expect(response.body).to include("notae-kalendarium-event-delete-button")
@@ -567,6 +567,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(document.at_css("[data-kalendarium-focus-target='createEndInput']")).to be_present
     timeline_event = document.at_css(".notae-kalendarium-day-track .notae-kalendarium-event-card.is-timeline")
     expect(timeline_event).to be_present
+    expect(timeline_event["data-action"]).to include("dblclick->kalendarium-event-modal#openView")
     expect(timeline_event["data-start-minutes"]).to eq("570")
     expect(timeline_event["data-end-minutes"]).to eq("630")
     modal_heading = document.at_css(".notae-kalendarium-event-modal [data-kalendarium-event-modal-target='heading']")
@@ -574,6 +575,7 @@ RSpec.describe "Kalendarium", type: :request do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-kalendarium-event-modal")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-kalendarium-event-edit-actions")
+    expect(stylesheet).to include("-webkit-line-clamp: 2;")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)
