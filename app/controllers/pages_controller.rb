@@ -431,6 +431,8 @@ class PagesController < ApplicationController
     Pages::RenderContextBuilder::Result.new(
       active_blocks: [ starter_block ],
       blocks_by_parent: { nil => [ starter_block ] },
+      block_lookup: { starter_block.id => starter_block },
+      indexes: { starter_block.id => 0 },
       reader_mode: @page.remove_blocks? || @page.locked?
     )
   end

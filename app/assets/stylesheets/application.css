@@ -20537,6 +20537,96 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   touch-action: none;
 }
 
+.notae-archive-game-screen-flash,
+.notae-archive-game-event-cue {
+  position: absolute;
+  pointer-events: none;
+}
+
+.notae-archive-game-screen-flash {
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+
+.notae-archive-game-screen-flash.is-visible[data-kind="collect"] {
+  animation: notae-archive-collect-flash 640ms ease-out both;
+  background:
+    radial-gradient(circle at center, rgba(248, 211, 138, 0.36), transparent 22%),
+    radial-gradient(circle at center, rgba(130, 223, 189, 0.26), transparent 46%);
+}
+
+.notae-archive-game-screen-flash.is-visible[data-kind="hit"] {
+  animation: notae-archive-hit-flash 560ms ease-out both;
+  background:
+    radial-gradient(circle at center, rgba(255, 226, 210, 0.22), transparent 20%),
+    radial-gradient(circle at center, rgba(255, 99, 72, 0.34), transparent 54%);
+}
+
+.notae-archive-game-event-cue {
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  min-width: min(24rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  padding: 0.95rem 1.2rem;
+  border: 2px solid rgba(248, 211, 138, 0.78);
+  border-radius: 8px;
+  background: rgba(13, 17, 16, 0.86);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 36px rgba(130, 223, 189, 0.24),
+    0 24px 62px rgba(0, 0, 0, 0.42);
+  color: #fff2c9;
+  font-size: clamp(1.65rem, 5vw, 4.1rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(248, 211, 138, 0.45);
+  transform: translate(-50%, -50%) scale(0.88);
+}
+
+.notae-archive-game-event-cue::before,
+.notae-archive-game-event-cue::after {
+  content: "";
+  position: absolute;
+  left: 0.85rem;
+  right: 0.85rem;
+  height: 0.18rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.62;
+  box-shadow: 0 0 18px currentColor;
+}
+
+.notae-archive-game-event-cue::before {
+  top: -0.45rem;
+}
+
+.notae-archive-game-event-cue::after {
+  bottom: -0.45rem;
+}
+
+.notae-archive-game-event-cue.is-visible[data-kind="collect"] {
+  animation: notae-archive-collect-cue 920ms cubic-bezier(0.2, 0.9, 0.22, 1) both;
+  border-color: rgba(248, 211, 138, 0.9);
+  color: #fff2bd;
+}
+
+.notae-archive-game-event-cue.is-visible[data-kind="hit"] {
+  animation: notae-archive-hit-cue 920ms cubic-bezier(0.12, 0.86, 0.28, 1) both;
+  border-color: rgba(255, 111, 87, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 42px rgba(255, 111, 87, 0.34),
+    0 24px 62px rgba(0, 0, 0, 0.42);
+  color: #ffe0d5;
+  text-shadow: 0 0 18px rgba(255, 111, 87, 0.62);
+}
+
 .notae-archive-game-hud,
 .notae-archive-game-brief,
 .notae-archive-game-actions {
@@ -20694,6 +20784,13 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
     padding: 0.48rem;
   }
 
+  .notae-archive-game-event-cue {
+    min-width: min(20rem, calc(100vw - 4.5rem));
+    max-width: calc(100vw - 4.5rem);
+    padding: 0.82rem 0.8rem;
+    font-size: clamp(1.45rem, 8vw, 2.6rem);
+  }
+
   .notae-archive-game-brief {
     left: 0.7rem;
     right: 0.7rem;
@@ -20709,6 +20806,319 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
   }
 
   .notae-archive-game-actions .notae-chip-button {
+    flex: 1 1 0;
+  }
+}
+
+@keyframes notae-archive-collect-cue {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+
+  55% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.14);
+  }
+}
+
+@keyframes notae-archive-hit-cue {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.18) rotate(-1deg);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02) rotate(1deg);
+  }
+
+  22% {
+    transform: translate(-50%, -50%) scale(1.06) rotate(-1deg);
+  }
+
+  52% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@keyframes notae-archive-collect-flash {
+  0% {
+    opacity: 0;
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes notae-archive-hit-flash {
+  0% {
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  26% {
+    opacity: 0.34;
+  }
+
+  42% {
+    opacity: 0.86;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.notae-content.notae-content-nota-maze {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: var(--notae-topbar-content-clearance) 0 0;
+}
+
+.notae-nota-maze {
+  position: relative;
+  min-height: calc(100dvh - var(--notae-topbar-content-clearance));
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #101615 0%, #141b1a 52%, #0d1211 100%);
+  color: #f2ead8;
+  outline: none;
+  isolation: isolate;
+}
+
+.notae-nota-maze::before,
+.notae-nota-maze::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.notae-nota-maze::before {
+  background:
+    linear-gradient(90deg, rgba(1, 6, 5, 0.72), transparent 20%, transparent 80%, rgba(1, 6, 5, 0.72)),
+    linear-gradient(180deg, rgba(130, 223, 189, 0.08), transparent 20%, transparent 78%, rgba(5, 9, 8, 0.76));
+  mix-blend-mode: screen;
+}
+
+.notae-nota-maze::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 246, 224, 0.035) 0 1px, transparent 1px 6px),
+    radial-gradient(ellipse at center, transparent 42%, rgba(0, 0, 0, 0.48));
+  opacity: 0.46;
+}
+
+.notae-nota-maze-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.notae-nota-maze-hud,
+.notae-nota-maze-brief,
+.notae-nota-maze-actions {
+  position: absolute;
+  z-index: 2;
+  border: 1px solid rgba(130, 223, 189, 0.22);
+  border-radius: 8px;
+  background: rgba(13, 20, 19, 0.82);
+  box-shadow: 0 18px 44px rgba(2, 7, 6, 0.38);
+  backdrop-filter: blur(18px);
+}
+
+.notae-nota-maze-hud {
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+}
+
+.notae-nota-maze-status {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.notae-nota-maze-kicker {
+  color: #82dfbd;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.notae-nota-maze-status strong {
+  color: #fff7e7;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.notae-nota-maze-meters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(4.7rem, auto));
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.notae-nota-maze-meters div {
+  min-height: 3.15rem;
+  display: grid;
+  align-content: center;
+  gap: 0.18rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(248, 211, 138, 0.18);
+  border-radius: 8px;
+  background: rgba(25, 38, 36, 0.7);
+}
+
+.notae-nota-maze-meters dt,
+.notae-nota-maze-meters dd {
+  margin: 0;
+}
+
+.notae-nota-maze-meters dt {
+  color: #c9c2a7;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.notae-nota-maze-meters dd {
+  color: #f8d38a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.notae-nota-maze-brief {
+  left: 1rem;
+  bottom: 1rem;
+  max-width: min(31rem, calc(100vw - 2rem));
+  padding: 0.82rem 0.9rem;
+  display: grid;
+  gap: 0.48rem;
+}
+
+.notae-nota-maze-brief p {
+  margin: 0;
+  color: rgba(248, 242, 224, 0.9);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.notae-nota-maze-brief kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  margin-right: 0.24rem;
+  border: 1px solid rgba(130, 223, 189, 0.36);
+  border-radius: 6px;
+  background: rgba(30, 70, 61, 0.54);
+  color: #bdf6df;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.notae-nota-maze-actions {
+  right: 1rem;
+  bottom: 7.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem;
+}
+
+.notae-nota-maze-actions .notae-chip-button {
+  border-color: rgba(248, 211, 138, 0.3);
+  background: rgba(31, 45, 42, 0.82);
+  color: #f7ead1;
+}
+
+.notae-nota-maze-actions .notae-chip-button:hover {
+  border-color: rgba(130, 223, 189, 0.58);
+  background: rgba(39, 66, 58, 0.92);
+}
+
+@media (max-width: 760px) {
+  .notae-content.notae-content-nota-maze {
+    padding-top: var(--notae-topbar-content-clearance);
+  }
+
+  .notae-nota-maze {
+    min-height: calc(100dvh - var(--notae-topbar-content-clearance));
+  }
+
+  .notae-nota-maze-hud {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    left: 0.7rem;
+    right: 0.7rem;
+  }
+
+  .notae-nota-maze-meters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .notae-nota-maze-meters div {
+    min-height: 2.85rem;
+    padding: 0.48rem;
+  }
+
+  .notae-nota-maze-brief {
+    left: 0.7rem;
+    right: 0.7rem;
+    bottom: calc(var(--notae-mobile-bottom-clearance) + 6.6rem);
+    max-width: none;
+  }
+
+  .notae-nota-maze-actions {
+    left: 0.7rem;
+    right: 4.9rem;
+    bottom: calc(var(--notae-mobile-bottom-clearance) + 1.2rem);
+    justify-content: stretch;
+  }
+
+  .notae-nota-maze-actions .notae-chip-button {
     flex: 1 1 0;
   }
 }

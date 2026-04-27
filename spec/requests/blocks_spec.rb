@@ -1055,6 +1055,27 @@ RSpec.describe "Blocks", type: :request do
     expect(block.reload.content_json["notae_color"]).to eq("blue")
   end
 
+  it "updates basic turn-into commands inline over turbo stream" do
+    owner = User.create!(email: "blocks-inline-turn-into-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Inline turn into blocks", slug: "inline-turn-into-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Inline turn into page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "todo_list" } },
+         as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="replace" target="page_flash_messages"')
+    expect(response.body).to include("Block updated.")
+    expect(response.body).to include(%(turbo-stream action="replace" target="block_#{block.id}"))
+    expect(block.reload.block_type).to eq("todo_list")
+  end
+
   it "preserves media blocks when applying a column layout turn-into option" do
     owner = User.create!(email: "blocks-media-columns-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Media columns", slug: "media-columns")

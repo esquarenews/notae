@@ -1,0 +1,62 @@
+<% content_for :title, "Nota Maze" %>
+<% content_for :content_class, "notae-content-wide notae-content-nota-maze" %>
+<% content_for :suppress_layout_flash, true %>
+<% content_for :topbar_page_icon, "N" %>
+<% content_for :topbar_privacy, "Hidden" %>
+<% content_for :topbar_meta, "Fragments clear the maze" %>
+
+<section class="notae-nota-maze"
+         data-controller="nota-maze-game"
+         data-nota-maze-game-exit-url-value="<%= workspace_path(@workspace.slug) %>"
+         tabindex="0"
+         aria-label="Nota Maze">
+  <canvas class="notae-nota-maze-canvas"
+          data-nota-maze-game-target="canvas"
+          aria-label="Notae maze game board"></canvas>
+
+  <div class="notae-nota-maze-hud" aria-live="polite">
+    <div class="notae-nota-maze-status">
+      <span class="notae-nota-maze-kicker">Nota Maze</span>
+      <strong data-nota-maze-game-target="status">Collect every fragment.</strong>
+    </div>
+    <dl class="notae-nota-maze-meters">
+      <div>
+        <dt>Level</dt>
+        <dd data-nota-maze-game-target="level">1</dd>
+      </div>
+      <div>
+        <dt>Fragments</dt>
+        <dd data-nota-maze-game-target="fragments">0</dd>
+      </div>
+      <div>
+        <dt>Sparks</dt>
+        <dd data-nota-maze-game-target="sparks">0</dd>
+      </div>
+      <div>
+        <dt>Integrity</dt>
+        <dd data-nota-maze-game-target="integrity">3</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="notae-nota-maze-brief">
+    <p>Collect document fragments. Gold AI sparks let you resolve bugs before they recover.</p>
+    <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys. Swipe or tap a direction on touch screens.</p>
+  </div>
+
+  <div class="notae-nota-maze-actions">
+    <button type="button"
+            class="notae-chip-button"
+            data-nota-maze-game-target="soundButton"
+            data-action="nota-maze-game#toggleSound"
+            aria-pressed="false">
+      Sound Off
+    </button>
+    <button type="button"
+            class="notae-chip-button"
+            data-action="nota-maze-game#restart">
+      Restart
+    </button>
+    <%= link_to "Leave", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+  </div>
+</section>

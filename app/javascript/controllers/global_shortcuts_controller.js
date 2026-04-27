@@ -2,6 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 
 const ARCHIVE_LONG_PRESS_MS = 850
 const ARCHIVE_LONG_PRESS_MOVE_TOLERANCE = 14
+const NOTA_MAZE_CLICK_COUNT = 5
+const NOTA_MAZE_CLICK_WINDOW_MS = 1600
 
 export default class extends Controller {
   static targets = ["quickSwitcher", "quickInput", "quickResults", "shortcutGuide"]
@@ -15,12 +17,14 @@ export default class extends Controller {
     this.archiveLongPressTimer = null
     this.archiveLongPressPointerId = null
     this.archiveLongPressStart = null
+    this.notaMazeClickTimes = []
 
     this.onWindowKeydown = (event) => this.handleWindowKeydown(event)
     this.onPointerDown = (event) => this.beginArchiveLongPress(event)
     this.onPointerMove = (event) => this.trackArchiveLongPressMove(event)
     this.onPointerUp = (event) => this.cancelArchiveLongPress(event)
     this.onContextMenu = (event) => this.handleArchiveLongPressContextMenu(event)
+    this.onClick = (event) => this.trackNotaMazeClickPattern(event)
 
     window.addEventListener("keydown", this.onWindowKeydown)
     this.element.addEventListener("pointerdown", this.onPointerDown, true)
@@ -28,6 +32,7 @@ export default class extends Controller {
     this.element.addEventListener("pointerup", this.onPointerUp, true)
     this.element.addEventListener("pointercancel", this.onPointerUp, true)
     this.element.addEventListener("contextmenu", this.onContextMenu, true)
+    this.element.addEventListener("click", this.onClick, true)
   }
 
   disconnect() {
@@ -37,6 +42,7 @@ export default class extends Controller {
     this.element.removeEventListener("pointerup", this.onPointerUp, true)
     this.element.removeEventListener("pointercancel", this.onPointerUp, true)
     this.element.removeEventListener("contextmenu", this.onContextMenu, true)
+    this.element.removeEventListener("click", this.onClick, true)
     if (this.easterEggSequenceTimer) {
       window.clearTimeout(this.easterEggSequenceTimer)
     }
@@ -150,10 +156,16 @@ export default class extends Controller {
     }
 
     if (!metaOrCtrl && !event.altKey && !event.shiftKey && key.length === 1 && !this.interactiveElement(event.target)) {
-      this.trackArchiveSequence(key)
-      if (this.easterEggSequence === "archive") {
+      this.trackHiddenGameSequence(key)
+      if (this.easterEggSequence.endsWith("archive")) {
         event.preventDefault()
         this.openArchiveGame()
+        return
+      }
+
+      if (this.easterEggSequence.endsWith("notamaze") || this.easterEggSequence.endsWith("maze")) {
+        event.preventDefault()
+        this.openNotaMazeGame()
         return
       }
     }
@@ -164,10 +176,10 @@ export default class extends Controller {
     }
   }
 
-  trackArchiveSequence(key) {
+  trackHiddenGameSequence(key) {
     if (!this.currentWorkspaceSlug()) return
 
-    this.easterEggSequence = `${this.easterEggSequence}${key}`.slice(-7)
+    this.easterEggSequence = `${this.easterEggSequence}${key}`.slice(-8)
     if (this.easterEggSequenceTimer) {
       window.clearTimeout(this.easterEggSequenceTimer)
     }
@@ -224,11 +236,37 @@ export default class extends Controller {
     }
   }
 
+  trackNotaMazeClickPattern(event) {
+    if (!this.notaMazeClickTarget(event.target) || !this.currentWorkspaceSlug()) return
+
+    const now = Date.now()
+    this.notaMazeClickTimes = [...this.notaMazeClickTimes, now]
+      .filter((timestamp) => now - timestamp <= NOTA_MAZE_CLICK_WINDOW_MS)
+
+    if (this.notaMazeClickTimes.length >= NOTA_MAZE_CLICK_COUNT) {
+      this.notaMazeClickTimes = []
+      event.preventDefault()
+      this.openNotaMazeGame()
+    }
+  }
+
   openArchiveGame() {
     const workspaceSlug = this.currentWorkspaceSlug()
     if (!workspaceSlug) return
 
     const path = this.archiveGamePath(workspaceSlug)
+    if (window.Turbo?.visit) {
+      window.Turbo.visit(path)
+    } else {
+      window.location.assign(path)
+    }
+  }
+
+  openNotaMazeGame() {
+    const workspaceSlug = this.currentWorkspaceSlug()
+    if (!workspaceSlug) return
+
+    const path = this.notaMazeGamePath(workspaceSlug)
     if (window.Turbo?.visit) {
       window.Turbo.visit(path)
     } else {
@@ -253,6 +291,10 @@ export default class extends Controller {
     return `/w/${encodeURIComponent(workspaceSlug)}/_archive`
   }
 
+  notaMazeGamePath(workspaceSlug) {
+    return `/w/${encodeURIComponent(workspaceSlug)}/_nota_maze`
+  }
+
   currentWorkspaceSlug() {
     const bodySlug = document.body.dataset.aiRailWorkspaceSlugValue?.toString().trim()
     if (bodySlug) return bodySlug
@@ -271,6 +313,12 @@ export default class extends Controller {
     if (this.interactiveElement(target)) return false
 
     return Boolean(target?.closest?.(".notae-topbar-title, .notae-topbar-page-icon"))
+  }
+
+  notaMazeClickTarget(target) {
+    if (this.interactiveElement(target)) return false
+
+    return Boolean(target?.closest?.("[data-nota-maze-trigger], .notae-topbar-page-icon"))
   }
 
   coarsePointer() {

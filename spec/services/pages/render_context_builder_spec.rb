@@ -34,4 +34,28 @@ RSpec.describe Pages::RenderContextBuilder, type: :service do
 
     expect(queries).to be_empty
   end
+
+  it "builds lookup and index data for inline block rerenders" do
+    owner = User.create!(email: "page-render-context-lookup-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Render context lookup", slug: "render-context-lookup")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Lookup page")
+    first_block = page.blocks.create!(workspace: workspace, created_by: owner, block_type: "paragraph", position: 1)
+    second_block = page.blocks.create!(workspace: workspace, created_by: owner, block_type: "paragraph", position: 2)
+
+    result = described_class.new(
+      page: page,
+      block_scope: Block.all
+    ).call
+
+    expect(result.block_lookup).to include(
+      first_block.id => have_attributes(id: first_block.id),
+      second_block.id => have_attributes(id: second_block.id)
+    )
+    expect(result.indexes).to include(
+      first_block.id => 0,
+      second_block.id => 1
+    )
+  end
 end

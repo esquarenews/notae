@@ -21,7 +21,9 @@ RSpec.describe "Global shortcuts controller JavaScript syntax" do
 
     expect(source).to include("ARCHIVE_LONG_PRESS_MS = 850")
     expect(source).to include("ARCHIVE_LONG_PRESS_MOVE_TOLERANCE = 14")
-    expect(source).to include('this.easterEggSequence === "archive"')
+    expect(source).to include("NOTA_MAZE_CLICK_COUNT = 5")
+    expect(source).to include('this.easterEggSequence.endsWith("archive")')
+    expect(source).to include('this.easterEggSequence.endsWith("maze")')
     expect(source).to include("this.archiveGameMatchesQuery(query)")
     expect(source).to include('"archive".startsWith(query)')
     expect(source).to include('query.length < 3')
@@ -34,5 +36,9 @@ RSpec.describe "Global shortcuts controller JavaScript syntax" do
     expect(source).to include("trackArchiveLongPressMove(event)")
     expect(source).to include("cancelArchiveLongPress()")
     expect(source).to include(".notae-topbar-title, .notae-topbar-page-icon")
+    expect(source).to include("trackNotaMazeClickPattern(event)")
+    expect(source).to include("openNotaMazeGame()")
+    expect(source).to include('/w/${encodeURIComponent(workspaceSlug)}/_nota_maze')
+    expect(source).to include("[data-nota-maze-trigger], .notae-topbar-page-icon")
   end
 end

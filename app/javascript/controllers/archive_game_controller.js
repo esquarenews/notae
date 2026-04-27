@@ -23,7 +23,17 @@ const PLAY_BOUNDS = Object.freeze({
 const PLAYER_START = Object.freeze({ x: 0, y: 0.82, z: -1.5 })
 
 export default class extends Controller {
-  static targets = ["canvas", "status", "level", "fragments", "integrity", "depth", "soundButton"]
+  static targets = [
+    "canvas",
+    "status",
+    "level",
+    "fragments",
+    "integrity",
+    "depth",
+    "soundButton",
+    "screenFlash",
+    "eventCue"
+  ]
   static values = {
     exitUrl: String
   }
@@ -48,6 +58,8 @@ export default class extends Controller {
     this.masterGain = null
     this.musicTimer = null
     this.musicStep = 0
+    this.feedbackEffects = []
+    this.eventCueTimer = null
 
     this.boundKeydown = (event) => this.handleKeydown(event)
     this.boundKeyup = (event) => this.handleKeyup(event)
@@ -87,6 +99,8 @@ export default class extends Controller {
     this.audioContext?.close?.()
     this.audioContext = null
     this.masterGain = null
+    this.clearEventCue()
+    this.clearFeedbackEffects()
     this.disposeScene()
   }
 
@@ -110,6 +124,8 @@ export default class extends Controller {
     this.gameOver = false
     this.won = false
     this.running = true
+    this.clearEventCue()
+    this.clearFeedbackEffects()
 
     this.resetSceneObjects()
     this.randomizeFragments()
@@ -147,7 +163,8 @@ export default class extends Controller {
     this.archiveGroup = new THREE.Group()
     this.fragmentGroup = new THREE.Group()
     this.sentinelGroup = new THREE.Group()
-    this.scene.add(this.archiveGroup, this.fragmentGroup, this.sentinelGroup)
+    this.feedbackGroup = new THREE.Group()
+    this.scene.add(this.archiveGroup, this.fragmentGroup, this.sentinelGroup, this.feedbackGroup)
 
     this.buildLights()
     this.buildRoom()
@@ -693,6 +710,7 @@ export default class extends Controller {
       this.updatePlayerEffects(delta, elapsed)
     }
 
+    this.updateFeedbackEffects(delta)
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -740,10 +758,13 @@ export default class extends Controller {
       }
 
       if (fragment.position.distanceTo(this.player.position) < FRAGMENT_RADIUS) {
+        const feedbackPosition = fragment.position.clone()
         fragment.userData.collected = true
         fragment.visible = false
         this.fragmentsCollected += 1
         this.playSound("fragment")
+        this.showEventCue("collect", "DOCUMENT SECURED")
+        this.createWorldFeedback(feedbackPosition, "collect")
         const remaining = FRAGMENT_COUNT - this.fragmentsCollected
         this.updateHud(remaining === 0 ? "The Index is open." : `${remaining} fragments remain.`)
       }
@@ -810,6 +831,143 @@ export default class extends Controller {
     body.material.emissiveIntensity = body.userData.baseEmissiveIntensity + pulse * 0.18 + this.hitFlash * 1.25
     ring.material.opacity = ring.userData.baseOpacity + pulse * 0.14 + this.hitFlash * 0.12
     beacon.intensity = 1.05 + pulse * 0.45 + this.hitFlash * 1.8
+  }
+
+  createWorldFeedback(position, kind) {
+    if (!this.feedbackGroup) return
+
+    const collect = kind === "collect"
+    const ringColor = collect ? 0xf8d38a : 0xff6f57
+    const glowColor = collect ? 0x82dfbd : 0xffa05f
+    const coreColor = collect ? 0xf8f0d8 : 0xffded2
+    const group = new THREE.Group()
+    group.position.copy(position)
+    group.position.y = 0.08
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.82, 1.16, 72),
+      new THREE.MeshBasicMaterial({
+        color: ringColor,
+        transparent: true,
+        opacity: collect ? 0.84 : 0.92,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    )
+    ring.rotation.x = -Math.PI / 2
+
+    const pulse = new THREE.Mesh(
+      new THREE.CircleGeometry(0.58, 48),
+      new THREE.MeshBasicMaterial({
+        color: coreColor,
+        transparent: true,
+        opacity: collect ? 0.26 : 0.32,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    )
+    pulse.rotation.x = -Math.PI / 2
+    pulse.position.y = 0.02
+
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(collect ? 0.22 : 0.36, collect ? 0.72 : 0.95, collect ? 4.8 : 3.7, 32, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: glowColor,
+        transparent: true,
+        opacity: collect ? 0.2 : 0.16,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    )
+    beam.position.y = collect ? 2.35 : 1.8
+
+    ;[ring, pulse, beam].forEach((mesh) => {
+      mesh.userData.baseOpacity = mesh.material.opacity
+    })
+
+    group.add(ring, pulse, beam)
+    this.feedbackGroup.add(group)
+    this.feedbackEffects.push({
+      group,
+      age: 0,
+      duration: collect ? 0.9 : 0.78,
+      kind
+    })
+  }
+
+  updateFeedbackEffects(delta) {
+    if (!this.feedbackEffects?.length) return
+
+    this.feedbackEffects = this.feedbackEffects.filter((effect) => {
+      effect.age += delta
+      const progress = Math.min(effect.age / effect.duration, 1)
+      const easeOut = 1 - Math.pow(1 - progress, 3)
+      const collect = effect.kind === "collect"
+      const scale = collect ? 0.82 + easeOut * 2.35 : 0.95 + easeOut * 3.05
+      const fade = Math.max(0, 1 - progress)
+      const flicker = collect ? 0.82 + Math.sin(effect.age * 28) * 0.18 : 1
+
+      effect.group.scale.set(scale, 1, scale)
+      effect.group.rotation.y += delta * (collect ? 0.8 : -1.6)
+      effect.group.children.forEach((child, index) => {
+        if (!child.material || child.userData.baseOpacity == null) return
+
+        const beamBias = index === 2 ? Math.max(0, 1 - progress * 1.25) : fade
+        child.material.opacity = child.userData.baseOpacity * beamBias * flicker
+      })
+
+      if (progress < 1) return true
+
+      this.feedbackGroup?.remove(effect.group)
+      this.disposeObject(effect.group)
+      return false
+    })
+  }
+
+  showEventCue(kind, text) {
+    this.clearEventCueTimer()
+
+    if (this.hasEventCueTarget) {
+      this.eventCueTarget.textContent = text
+      this.eventCueTarget.dataset.kind = kind
+      this.eventCueTarget.hidden = false
+      this.eventCueTarget.setAttribute("aria-hidden", "false")
+      this.eventCueTarget.classList.remove("is-visible")
+      void this.eventCueTarget.offsetWidth
+      this.eventCueTarget.classList.add("is-visible")
+    }
+
+    if (this.hasScreenFlashTarget) {
+      this.screenFlashTarget.dataset.kind = kind
+      this.screenFlashTarget.hidden = false
+      this.screenFlashTarget.classList.remove("is-visible")
+      void this.screenFlashTarget.offsetWidth
+      this.screenFlashTarget.classList.add("is-visible")
+    }
+
+    this.eventCueTimer = window.setTimeout(() => this.clearEventCue(), 920)
+  }
+
+  clearEventCueTimer() {
+    if (!this.eventCueTimer) return
+
+    window.clearTimeout(this.eventCueTimer)
+    this.eventCueTimer = null
+  }
+
+  clearEventCue() {
+    this.clearEventCueTimer()
+
+    if (this.hasEventCueTarget) {
+      this.eventCueTarget.classList.remove("is-visible")
+      this.eventCueTarget.setAttribute("aria-hidden", "true")
+      this.eventCueTarget.hidden = true
+    }
+
+    if (this.hasScreenFlashTarget) {
+      this.screenFlashTarget.classList.remove("is-visible")
+      this.screenFlashTarget.hidden = true
+    }
   }
 
   updateCamera(delta) {
@@ -966,6 +1124,8 @@ export default class extends Controller {
     this.hitFlash = 1
     this.integrity = Math.max(0, this.integrity - SENTINEL_HIT_DAMAGE)
     this.playSound("hit")
+    this.showEventCue("hit", "INTEGRITY HIT")
+    this.createWorldFeedback(this.player.position.clone(), "hit")
 
     const knockback = this.player.position.clone().sub(sentinel.position)
     knockback.y = 0
@@ -1153,6 +1313,31 @@ export default class extends Controller {
     this.renderer.setSize(width, height, false)
     this.camera.aspect = width / height
     this.camera.updateProjectionMatrix()
+  }
+
+  clearFeedbackEffects() {
+    if (!this.feedbackEffects?.length) return
+
+    this.feedbackEffects.forEach((effect) => {
+      this.feedbackGroup?.remove(effect.group)
+      this.disposeObject(effect.group)
+    })
+    this.feedbackEffects = []
+  }
+
+  disposeObject(object) {
+    object.traverse((child) => {
+      if (child.geometry) child.geometry.dispose()
+      if (!child.material) return
+
+      const materials = Array.isArray(child.material) ? child.material : [child.material]
+      materials.forEach((material) => {
+        Object.values(material).forEach((value) => {
+          if (value?.isTexture) value.dispose()
+        })
+        material.dispose()
+      })
+    })
   }
 
   disposeScene() {
