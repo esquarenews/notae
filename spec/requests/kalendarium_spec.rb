@@ -576,6 +576,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-kalendarium-event-modal")
     expect(stylesheet).to include(".notae-shell.is-mobile-viewport .notae-kalendarium-event-edit-actions")
     expect(stylesheet).to include("-webkit-line-clamp: 2;")
+    expect(stylesheet).to include(".notae-kalendarium-event-time-line {\n  display: block;\n  min-width: 0;\n  max-width: 100%;")
+    expect(stylesheet).to include("  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}")
 
     get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
     expect(response).to have_http_status(:ok)

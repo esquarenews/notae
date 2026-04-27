@@ -15476,10 +15476,16 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 }
 
 .notae-kalendarium-event-time-line {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   font-size: 0.72rem;
   line-height: 1.2;
   color: var(--notae-text-muted, #44403c);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .notae-kalendarium-event-card.is-compact .notae-kalendarium-event-links {
@@ -15502,6 +15508,7 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   gap: 0.08rem;
   font-size: 0.8rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .notae-kalendarium-event-card header strong {
