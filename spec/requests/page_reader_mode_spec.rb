@@ -17,6 +17,7 @@ RSpec.describe "Page reader mode", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
     expect(response.body).to include("is-reader-mode")
     expect(response.body).not_to include("notae-doc-handle")
+    expect(response.body).not_to include("data-controller=\"block-editor\"")
     expect(response.body).not_to include("+ Add block")
     expect(response.body).to include("Reader mode")
     expect(response.body).to include("This page is intentionally view-only here.")
@@ -38,6 +39,7 @@ RSpec.describe "Page reader mode", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
     expect(response.body).to include("notae-actions-panel is-page-locked")
     expect(response.body).to include("is-reader-mode")
+    expect(response.body).not_to include("data-controller=\"block-editor\"")
     expect(response.body).to include("Locked page")
     expect(response.body).to include("This page is view-only right now.")
 

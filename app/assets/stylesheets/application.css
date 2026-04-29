@@ -11334,6 +11334,14 @@ body.notae-theme-dark .notae-menu-color-dot {
   caret-color: currentColor;
 }
 
+.notae-doc-editor .notae-doc-static-content {
+  cursor: inherit;
+}
+
+.notae-doc-editor .notae-doc-static-content[tabindex] {
+  cursor: text;
+}
+
 .notae-doc-editor .ProseMirror a,
 .notae-doc-editor .ProseMirror a:visited {
   color: inherit;

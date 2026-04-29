@@ -10,11 +10,13 @@
 <% layout_columns_count = block.layout_columns_count %>
 <% block_route_params = { workspace_slug: workspace.slug, page_id: page.id, id: block.id }.merge(embedded_page_params) %>
 <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
+<% editor_classes = "notae-doc-editor is-#{block.block_type.to_s.tr('_', '-')} #{("is-color-#{block_color}" if block_color.present?)} #{("is-highlight-#{block_highlight}" if block_highlight.present?)}" %>
+<% interactive_editor = !reader_mode %>
 
 <article id="block_<%= block.id %>"
          class="notae-doc-block is-type-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-highlight-#{block_highlight}" if block_highlight.present? %> <%= "is-columns" if block.block_type.start_with?("columns_") %> <%= "is-layout-columns-#{layout_columns_count}" if layout_columns_count.present? %>"
          data-block-list-target="item"
-         data-action="dragenter->block-list#handleDragEnter dragleave->block-list#handleDragLeave dragover->block-list#handleDragOver drop->block-list#handleDrop"
+         data-action="dragenter->block-list#handleDragEnter dragleave->block-list#handleDragLeave dragover->block-list#handleDragOver drop->block-list#handleDrop notae:block-reparent->block-tools#handleReparentRequest"
          data-block-id="<%= block.id %>"
          data-block-index="<%= index %>"
          data-controller="block-tools"
@@ -88,16 +90,24 @@
                  embedded_page_params: embedded_page_params
                } %>
   <% else %>
-    <div data-controller="block-editor"
-         data-block-editor-url-value="<%= page_block_path(block_route_params) %>"
-         data-block-editor-create-url-value="<%= page_blocks_path(page_blocks_route_params) %>"
-         data-block-editor-initial-json-value="<%= block.content_json.to_json %>"
-         data-block-editor-block-type-value="<%= block.block_type %>"
-         data-block-editor-block-id-value="<%= block.id %>">
-      <div data-block-editor-target="editor"
-           class="notae-doc-editor is-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-highlight-#{block_highlight}" if block_highlight.present? %>">
+    <% if interactive_editor %>
+      <div data-controller="block-editor"
+           data-block-editor-url-value="<%= page_block_path(block_route_params) %>"
+           data-block-editor-content-url-value="<%= content_page_block_path(block_route_params) %>"
+           data-block-editor-create-url-value="<%= page_blocks_path(page_blocks_route_params) %>"
+           data-block-editor-block-type-value="<%= block.block_type %>"
+           data-block-editor-block-id-value="<%= block.id %>">
+        <div data-block-editor-target="editor"
+             data-action="pointerdown->block-editor#activateAndFocus focusin->block-editor#activateAndFocus keydown->block-editor#activateFromKeyboard"
+             class="<%= editor_classes.squish %>">
+          <%= render_block_static_content(block, interactive: true) %>
+        </div>
       </div>
-    </div>
+    <% else %>
+      <div class="<%= editor_classes.squish %>">
+        <%= render_block_static_content(block) %>
+      </div>
+    <% end %>
   <% end %>
 
   <div class="notae-doc-children">

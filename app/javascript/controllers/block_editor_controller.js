@@ -8,6 +8,26 @@ import TaskItem from "@tiptap/extension-task-item"
 const DEBOUNCE_MS = 300
 const EDITING_IDLE_MS = 3000
 const BLOCK_DRAG_MIME = "application/x-notae-block-id"
+const EDITOR_LAZY_ROOT_MARGIN = "700px 0px"
+
+const lazyEditorControllers = new WeakMap()
+let lazyEditorObserver = null
+
+function sharedLazyEditorObserver() {
+  if (typeof window === "undefined" || !("IntersectionObserver" in window)) return null
+
+  if (!lazyEditorObserver) {
+    lazyEditorObserver = new window.IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return
+
+        lazyEditorControllers.get(entry.target)?.hydrate()
+      })
+    }, { rootMargin: EDITOR_LAZY_ROOT_MARGIN })
+  }
+
+  return lazyEditorObserver
+}
 
 const SLASH_COMMANDS = [
   {
@@ -138,6 +158,7 @@ export default class extends Controller {
   static targets = ["editor"]
   static values = {
     url: String,
+    contentUrl: String,
     createUrl: String,
     initialJson: String,
     blockType: String,
@@ -157,14 +178,124 @@ export default class extends Controller {
     this.slashContext = null
     this.filteredSlashCommands = []
     this.selectedSlashIndex = 0
+    this.editor = null
+    this.hydrationPromise = null
+    this.globalHandlersInstalled = false
     this.slashMenuMouseDownHandler = (event) => this.handleSlashMenuMouseDown(event)
     this.remoteUpdateHandler = (event) => this.applyRemoteUpdate(event.detail)
     this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
     this.flushSaveHandler = (event) => this.handleFlushSaveRequest(event)
-    window.addEventListener("notae:block-remote-update", this.remoteUpdateHandler)
-    window.addEventListener("notae:ai-insert", this.aiInsertHandler)
-    window.addEventListener("notae:block-flush-save", this.flushSaveHandler)
-    const initialContent = this.parseContent()
+    this.startLazyHydration()
+  }
+
+  disconnect() {
+    clearTimeout(this.saveTimeout)
+    clearTimeout(this.editingIdleTimeout)
+    this.stopLazyHydration()
+    this.hideSlashMenu()
+    this.setBlockFocused(false)
+    this.removeGlobalHandlers()
+    if (this.editor) this.markEditingInactive()
+    this.clearCapturedInsertionPoint()
+
+    if (this.editor) {
+      this.editor.destroy()
+    }
+  }
+
+  activateAndFocus(event) {
+    if (this.editor) return
+    if (this.staticLinkActivation(event)) return
+
+    event?.preventDefault()
+    this.hydrate({ focus: true })
+  }
+
+  activateFromKeyboard(event) {
+    if (this.editor) return
+    if (event.key === "Tab" || event.metaKey || event.ctrlKey || event.altKey) return
+
+    const printableKey = event.key.length === 1
+    event.preventDefault()
+    this.hydrate({ focus: true }).then(() => {
+      if (!printableKey || !this.editor) return
+
+      this.editor.chain().focus().insertContent(event.key).run()
+    })
+  }
+
+  staticLinkActivation(event) {
+    return event?.target?.closest?.("a[href]") instanceof HTMLAnchorElement
+  }
+
+  startLazyHydration() {
+    const observer = sharedLazyEditorObserver()
+    if (!observer) return
+
+    lazyEditorControllers.set(this.element, this)
+    observer.observe(this.element)
+  }
+
+  stopLazyHydration() {
+    lazyEditorControllers.delete(this.element)
+    if (lazyEditorObserver) lazyEditorObserver.unobserve(this.element)
+  }
+
+  hydrate({ focus = false } = {}) {
+    if (this.editor) {
+      if (focus) this.focusEditor()
+      return Promise.resolve(true)
+    }
+
+    if (this.hydrationPromise) {
+      return this.hydrationPromise.then((result) => {
+        if (focus) this.focusEditor()
+        return result
+      })
+    }
+
+    this.stopLazyHydration()
+    this.hydrationPromise = (async () => {
+      const initialContent = await this.loadInitialContent()
+      this.mountEditor(initialContent)
+      if (focus) this.focusEditor()
+      return true
+    })().finally(() => {
+      this.hydrationPromise = null
+    })
+
+    return this.hydrationPromise
+  }
+
+  async loadInitialContent() {
+    if (this.hasInitialJsonValue && this.initialJsonValue) return this.parseContent()
+    if (!this.hasContentUrlValue || !this.contentUrlValue) return this.parseContent()
+
+    try {
+      const response = await fetch(this.contentUrlValue, {
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin"
+      })
+      if (!response.ok) return this.parseContent()
+
+      const payload = await response.json()
+      const block = payload?.data || payload?.block || payload
+      this.currentBlockType = block.block_type || this.currentBlockType
+      const incomingUpdatedAtMs = Date.parse(block.updated_at || "")
+      if (Number.isFinite(incomingUpdatedAtMs)) this.lastKnownUpdatedAtMs = incomingUpdatedAtMs
+      this.syncStoredBlockState(block.content_json, this.currentBlockType)
+      return this.parseContent()
+    } catch (_error) {
+      return this.parseContent()
+    }
+  }
+
+  mountEditor(initialContent) {
+    this.editorTarget.innerHTML = ""
+    this.installGlobalHandlers()
     this.syncStoredBlockState(initialContent, this.currentBlockType)
 
     this.editor = new Editor({
@@ -218,20 +349,26 @@ export default class extends Controller {
     })
   }
 
-  disconnect() {
-    clearTimeout(this.saveTimeout)
-    clearTimeout(this.editingIdleTimeout)
-    this.hideSlashMenu()
-    this.setBlockFocused(false)
+  installGlobalHandlers() {
+    if (this.globalHandlersInstalled) return
+
+    window.addEventListener("notae:block-remote-update", this.remoteUpdateHandler)
+    window.addEventListener("notae:ai-insert", this.aiInsertHandler)
+    window.addEventListener("notae:block-flush-save", this.flushSaveHandler)
+    this.globalHandlersInstalled = true
+  }
+
+  removeGlobalHandlers() {
+    if (!this.globalHandlersInstalled) return
+
     window.removeEventListener("notae:block-remote-update", this.remoteUpdateHandler)
     window.removeEventListener("notae:ai-insert", this.aiInsertHandler)
     window.removeEventListener("notae:block-flush-save", this.flushSaveHandler)
-    this.markEditingInactive()
-    this.clearCapturedInsertionPoint()
+    this.globalHandlersInstalled = false
+  }
 
-    if (this.editor) {
-      this.editor.destroy()
-    }
+  focusEditor() {
+    requestAnimationFrame(() => this.editor?.commands.focus("end"))
   }
 
   parseContent() {
@@ -343,7 +480,9 @@ export default class extends Controller {
       this.supportsBlockReparentShortcut()
     ) {
       event.preventDefault()
-      window.dispatchEvent(new CustomEvent("notae:block-reparent", {
+      const blockElement = this.element.closest("[data-block-id]")
+      blockElement?.dispatchEvent(new CustomEvent("notae:block-reparent", {
+        bubbles: true,
         detail: {
           blockId: this.blockIdValue,
           direction: event.shiftKey ? "outdent" : "indent",
@@ -1037,6 +1176,7 @@ export default class extends Controller {
 
   async save() {
     if (this.pendingSavePromise) return this.pendingSavePromise
+    if (!this.editor) return true
     if (!this.hasPendingChanges) return true
 
     const payload = {

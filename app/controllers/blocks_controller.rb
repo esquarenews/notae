@@ -2,7 +2,7 @@ class BlocksController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_page
-  before_action :set_block, only: %i[update attach download export_markdown panel reorder archive restore command]
+  before_action :set_block, only: %i[update attach content download export_markdown panel reorder archive restore command]
 
   def create
     @block = @page.blocks.new(block_params)
@@ -87,6 +87,12 @@ class BlocksController < ApplicationController
         format.html { redirect_to page_redirect_path, alert: "Please choose a file." }
       end
     end
+  end
+
+  def content
+    authorize @block, :show?
+
+    render json: serialized_block(@block), status: :ok
   end
 
   def download

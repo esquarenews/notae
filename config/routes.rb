@@ -221,6 +221,7 @@ Rails.application.routes.draw do
 
         member do
           patch :attach
+          get :content
           get :download
           get :export_markdown
           get :panel

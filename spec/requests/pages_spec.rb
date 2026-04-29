@@ -141,6 +141,41 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-doc-editor.is-heading-4 .ProseMirror {\n  font-size: 1.08rem;\n  font-weight: 700;\n  color: rgba(68, 64, 60, 0.8);\n}")
   end
 
+  it "renders static block content first and defers editor JSON to the content endpoint" do
+    owner = User.create!(email: "pages-lazy-editor-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Lazy editor page", slug: "lazy-editor-page")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Lazy editor")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Static opening text" } ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    editor = document.at_css(%([data-block-editor-block-id-value="#{block.id}"]))
+    static_content = document.at_css("#block_#{block.id} .notae-doc-static-content")
+
+    expect(editor).to be_present
+    expect(editor["data-block-editor-content-url-value"]).to eq(content_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id))
+    expect(editor["data-block-editor-initial-json-value"]).to be_nil
+    expect(static_content&.text).to include("Static opening text")
+  end
+
   it "restores the collapsed ai rail before turbo swaps the next shell into place" do
     application_js = Rails.root.join("app/javascript/application.js").read
 

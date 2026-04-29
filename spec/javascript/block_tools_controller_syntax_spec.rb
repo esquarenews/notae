@@ -26,11 +26,14 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     expect(source).to include("--notae-menu-max-height")
   end
 
-  it "adds explicit dismissal handlers for viewport-anchored menus" do
+  it "adds explicit dismissal handlers for viewport-anchored menus only when a menu opens" do
     source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
 
     expect(source).to include("document.addEventListener(\"pointerdown\", this.windowPointerDownHandler, true)")
     expect(source).to include("document.addEventListener(\"keydown\", this.documentKeydownHandler)")
+    expect(source).to include("installViewportHandlers()")
+    expect(source).to include("removeViewportHandlers")
+    expect(source).not_to include("window.addEventListener(\"notae:block-reparent\"")
     expect(source).to include("if (event.key !== \"Escape\") return")
     expect(source).to include("panel.contains(target)")
     expect(source).to include("trigger.contains(target)")

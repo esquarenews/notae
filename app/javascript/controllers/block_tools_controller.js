@@ -14,19 +14,18 @@ export default class extends Controller {
     this.repositionOpenMenuHandler = (event) => this.repositionOpenMenu(event)
     this.windowPointerDownHandler = (event) => this.handleWindowPointerDown(event)
     this.documentKeydownHandler = (event) => this.handleDocumentKeydown(event)
-    this.reparentRequestHandler = (event) => this.handleReparentRequest(event)
-    window.addEventListener("resize", this.repositionOpenMenuHandler)
-    window.addEventListener("scroll", this.repositionOpenMenuHandler, true)
-    window.addEventListener("notae:block-reparent", this.reparentRequestHandler)
+    this.viewportHandlersInstalled = false
     this.syncShellScrollLock()
   }
 
   disconnect() {
-    window.removeEventListener("resize", this.repositionOpenMenuHandler)
-    window.removeEventListener("scroll", this.repositionOpenMenuHandler, true)
-    window.removeEventListener("notae:block-reparent", this.reparentRequestHandler)
     const details = this.currentOpenMenu()
-    if (details) this.setMenuOpenState(details, false)
+    if (details) {
+      details.open = false
+      this.setMenuOpenState(details, false)
+      this.resetPanelPosition(details)
+    }
+    this.removeViewportHandlers({ force: true })
     this.removeDismissHandlers()
     this.syncShellScrollLock()
   }
@@ -131,6 +130,7 @@ export default class extends Controller {
     }
 
     this.setMenuOpenState(details, true)
+    this.installViewportHandlers()
     this.installDismissHandlers()
     this.applyPanelPosition(details)
   }
@@ -201,6 +201,24 @@ export default class extends Controller {
     this.setMenuOpenState(details, false)
     this.resetPanelPosition(details)
     this.removeDismissHandlers()
+    this.removeViewportHandlers()
+  }
+
+  installViewportHandlers() {
+    if (this.viewportHandlersInstalled) return
+
+    window.addEventListener("resize", this.repositionOpenMenuHandler)
+    window.addEventListener("scroll", this.repositionOpenMenuHandler, true)
+    this.viewportHandlersInstalled = true
+  }
+
+  removeViewportHandlers({ force = false } = {}) {
+    if (!this.viewportHandlersInstalled) return
+    if (!force && this.currentOpenMenu()) return
+
+    window.removeEventListener("resize", this.repositionOpenMenuHandler)
+    window.removeEventListener("scroll", this.repositionOpenMenuHandler, true)
+    this.viewportHandlersInstalled = false
   }
 
   closeInlinePickers(exceptForm = null) {

@@ -31,6 +31,38 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["page_updated_at"]).to be_present
   end
 
+  it "serves block editor content separately for lazy editor hydration" do
+    owner = User.create!(email: "blocks-content-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Block content", slug: "block-content")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Lazy editor")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Loaded after focus" } ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    get content_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+        headers: { "Accept" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+    payload = JSON.parse(response.body)
+    expect(payload["id"]).to eq(block.id)
+    expect(payload["block_type"]).to eq("paragraph")
+    expect(payload.dig("content_json", "content", 0, "content", 0, "text")).to eq("Loaded after focus")
+  end
+
   it "broadcasts synced block updates to every touched page while skipping only the edited block for the same tab" do
     owner = User.create!(email: "blocks-synced-broadcast-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Synced broadcasts", slug: "synced-broadcasts")
