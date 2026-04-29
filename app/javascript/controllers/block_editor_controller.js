@@ -257,6 +257,8 @@ export default class extends Controller {
     this.stopLazyHydration()
     this.hydrationPromise = (async () => {
       const initialContent = await this.loadInitialContent()
+      if (!initialContent) return false
+
       this.mountEditor(initialContent)
       if (focus) this.focusEditor()
       return true
@@ -269,7 +271,7 @@ export default class extends Controller {
 
   async loadInitialContent() {
     if (this.hasInitialJsonValue && this.initialJsonValue) return this.parseContent()
-    if (!this.hasContentUrlValue || !this.contentUrlValue) return this.parseContent()
+    if (!this.hasContentUrlValue || !this.contentUrlValue) return this.fallbackInitialContent()
 
     try {
       const response = await fetch(this.contentUrlValue, {
@@ -279,18 +281,26 @@ export default class extends Controller {
         },
         credentials: "same-origin"
       })
-      if (!response.ok) return this.parseContent()
+      if (!response.ok) return this.fallbackInitialContent()
 
       const payload = await response.json()
       const block = payload?.data || payload?.block || payload
+      if (!block?.content_json) return this.fallbackInitialContent()
+
       this.currentBlockType = block.block_type || this.currentBlockType
       const incomingUpdatedAtMs = Date.parse(block.updated_at || "")
       if (Number.isFinite(incomingUpdatedAtMs)) this.lastKnownUpdatedAtMs = incomingUpdatedAtMs
       this.syncStoredBlockState(block.content_json, this.currentBlockType)
       return this.parseContent()
     } catch (_error) {
-      return this.parseContent()
+      return this.fallbackInitialContent()
     }
+  }
+
+  fallbackInitialContent() {
+    if (!this.hasInitialJsonValue || !this.initialJsonValue) return null
+
+    return this.parseContent()
   }
 
   mountEditor(initialContent) {

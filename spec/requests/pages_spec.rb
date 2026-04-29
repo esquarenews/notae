@@ -172,7 +172,8 @@ RSpec.describe "Pages", type: :request do
 
     expect(editor).to be_present
     expect(editor["data-block-editor-content-url-value"]).to eq(content_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id))
-    expect(editor["data-block-editor-initial-json-value"]).to be_nil
+    initial_json = JSON.parse(editor["data-block-editor-initial-json-value"])
+    expect(initial_json.dig("content", 0, "content", 0, "text")).to eq("Static opening text")
     expect(static_content&.text).to include("Static opening text")
   end
 

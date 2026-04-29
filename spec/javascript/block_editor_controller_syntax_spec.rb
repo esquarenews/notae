@@ -67,6 +67,14 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("installGlobalHandlers()")
   end
 
+  it "fails closed when deferred editor content cannot be loaded" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("if (!initialContent) return false")
+    expect(source).to include("fallbackInitialContent()")
+    expect(source).to include("if (!block?.content_json) return this.fallbackInitialContent()")
+  end
+
   it "loads the Tiptap link extension for block-linked split previews" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
