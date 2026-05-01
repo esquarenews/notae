@@ -75,6 +75,8 @@ bundle exec rails runner 'user = User.find_by!(email: "you@example.com"); token 
 - `create_page_from_markdown`
 - `append_markdown_to_page`
 - `list_task_lists`
+- `delete_grid_row`
+- `set_grid_row_nota_link`
 - `list_calendars`
 - `create_calendar_event`
 - `send_codex_completion_push`
@@ -86,6 +88,8 @@ Successful Notae write tools also auto-send a completion push for the authentica
 
 - `create_page_from_markdown`
 - `append_markdown_to_page`
+- `delete_grid_row`
+- `set_grid_row_nota_link`
 - `create_calendar_event`
 - `create_agent_action`
 - `approve_agent_action`

@@ -272,7 +272,13 @@ Rails.application.routes.draw do
             post :reverse
           end
         end
-        resources :databases, only: %i[index show create update]
+        resources :databases, only: %i[index show create update] do
+          resources :rows, only: :destroy, controller: "database_rows" do
+            member do
+              patch :linked_page
+            end
+          end
+        end
         namespace :kalendarium do
           resources :calendars, only: :index
           resources :events, only: %i[index create]

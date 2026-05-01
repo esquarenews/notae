@@ -9,6 +9,24 @@ const AUTO_PUSH_TOOL_MESSAGES = {
     path: ({ workspaceSlug, result }) => `/w/${workspaceSlug}/pages/${result?.page?.id || ""}`,
     body: ({ result }) => result?.page?.title ? `Updated page: ${result.page.title}` : "Appended Markdown to a page."
   },
+  delete_grid_row: {
+    title: "Grid row archived",
+    path: ({ workspaceSlug, result }) => `/w/${workspaceSlug}/databases/${result?.row?.database_id || ""}`,
+    body: ({ result }) => result?.row?.title ? `Archived row: ${result.row.title}` : "Archived a grid row."
+  },
+  set_grid_row_nota_link: {
+    title: "Grid row Nota link updated",
+    path: ({ workspaceSlug, result }) => (
+      result?.row?.linked_page_id
+        ? `/w/${workspaceSlug}/pages/${result.row.linked_page_id}`
+        : `/w/${workspaceSlug}/databases/${result?.row?.database_id || ""}`
+    ),
+    body: ({ result }) => {
+      if (!result?.row) return "Updated a grid row Nota link.";
+      if (!result.row.linked_page_id) return `Cleared linked Nota for row: ${result.row.title}`;
+      return `Linked row "${result.row.title}" to ${result.row.linked_page?.title || "a Nota"}.`;
+    }
+  },
   create_calendar_event: {
     title: "Calendar event created",
     path: ({ result }) => result?.url || undefined,

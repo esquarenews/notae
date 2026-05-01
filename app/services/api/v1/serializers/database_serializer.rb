@@ -42,28 +42,7 @@ module Api
         end
 
         def self.serialize_rows(rows, cells)
-          cells_by_row = cells.group_by(&:db_row_id)
-
-          rows.map do |row|
-            {
-              id: row.id,
-              title: row.title,
-              position: row.position,
-              archived_at: row.archived_at&.iso8601(6),
-              data_json: row.data_json,
-              created_at: row.created_at&.iso8601(6),
-              updated_at: row.updated_at&.iso8601(6),
-              cells: Array(cells_by_row[row.id]).map do |cell|
-                {
-                  id: cell.id,
-                  db_property_id: cell.db_property_id,
-                  value_text: cell.value_text,
-                  created_at: cell.created_at&.iso8601(6),
-                  updated_at: cell.updated_at&.iso8601(6)
-                }
-              end
-            }
-          end
+          DatabaseRowSerializer.render_collection(rows, cells: cells)
         end
       end
     end

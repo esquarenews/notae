@@ -651,6 +651,7 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).not_to include('class="notae-menu-item-label">Page in</span>')
     expect(response.body).to include("Add block above")
     expect(response.body).to include("Add block below")
+    expect(response.body).to include("Turn this block into whiteboard")
 
     actions_section = response.body.match(/<section class="notae-block-menu-section">\s*<h4>Actions<\/h4>(.*?)<\/section>/m)
     expect(actions_section).to be_present
@@ -659,6 +660,7 @@ RSpec.describe "Blocks", type: :request do
     expect(action_markup.index("Add block above")).to be < action_markup.index("Add block below")
     expect(action_markup.index("Add block below")).to be < action_markup.index("Indent")
     expect(action_markup.index("Indent")).to be < action_markup.index("Outdent")
+    expect(action_markup.index("Duplicate")).to be < action_markup.index("Turn this block into whiteboard")
   end
 
   it "keeps page flash notices fixed to the visible viewport" do
@@ -1106,6 +1108,40 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("Block updated.")
     expect(response.body).to include(%(turbo-stream action="replace" target="block_#{block.id}"))
     expect(block.reload.block_type).to eq("todo_list")
+  end
+
+  it "turns a block into a whiteboard from the block menu and renders the whiteboard editor" do
+    owner = User.create!(email: "blocks-whiteboard-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Whiteboard blocks", slug: "whiteboard-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Whiteboard page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "whiteboard" } },
+         as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(%(turbo-stream action="replace" target="block_#{block.id}"))
+    expect(response.body).to include("data-controller=\"whiteboard\"")
+    expect(response.body).to include("Open whiteboard")
+    expect(response.body).to include("Back to nota")
+    expect(response.body).to include("Pencil")
+    expect(response.body).to include("Marker")
+    expect(response.body).to include("Eraser")
+    expect(response.body).to include("Clear all")
+
+    block.reload
+    expect(block.block_type).to eq("whiteboard")
+    expect(block.content_json).to include(
+      "type" => "whiteboard",
+      "version" => 1,
+      "strokes" => [],
+      "whiteboard_autofocus" => true
+    )
+    expect(block.content_json.dig("board", "width")).to eq(1600)
+    expect(block.content_json.dig("board", "height")).to eq(1000)
   end
 
   it "preserves media blocks when applying a column layout turn-into option" do

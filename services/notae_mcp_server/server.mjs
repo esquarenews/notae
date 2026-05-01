@@ -15,6 +15,30 @@ const client = new NotaeApiClient({
   token: process.env.NOTAE_API_TOKEN
 });
 
+const gridRowSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string().optional(),
+  database_id: z.string().optional(),
+  linked_page_id: z.string().nullable().optional(),
+  linked_page: z.object({
+    id: z.string(),
+    title: z.string()
+  }).nullable().optional(),
+  title: z.string(),
+  position: z.number().optional(),
+  archived_at: z.string().nullable().optional(),
+  data_json: z.record(z.any()).optional(),
+  created_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+  cells: z.array(z.object({
+    id: z.string(),
+    db_property_id: z.string(),
+    value_text: z.string().nullable().optional(),
+    created_at: z.string().nullable().optional(),
+    updated_at: z.string().nullable().optional()
+  })).optional()
+});
+
 const pageResourceTemplate = new ResourceTemplate("notae://workspace/{workspaceSlug}/pages/{pageId}.md", { list: undefined });
 
 server.registerResource(
@@ -214,6 +238,62 @@ server.registerTool(
     return successResult({
       text: renderTaskLists(taskLists),
       data: { task_lists: taskLists }
+    });
+  })
+);
+
+server.registerTool(
+  "delete_grid_row",
+  {
+    title: "Delete Notae Grid Row",
+    description: "Archive a row from a Notae grid. This matches the app's delete behavior and does not hard-delete row data.",
+    inputSchema: {
+      workspace_slug: z.string(),
+      database_id: z.string(),
+      row_id: z.string()
+    },
+    outputSchema: {
+      row: gridRowSchema
+    }
+  },
+  async ({ workspace_slug: workspaceSlug, database_id: databaseId, row_id: rowId }) => runTool("delete_grid_row", workspaceSlug, async () => {
+    const row = await client.deleteGridRow({ workspaceSlug, databaseId, rowId });
+    return successResult({
+      text: `Archived grid row "${row.title}" (${row.id}).`,
+      data: { row }
+    });
+  })
+);
+
+server.registerTool(
+  "set_grid_row_nota_link",
+  {
+    title: "Set Notae Grid Row Nota Link",
+    description: "Set, clear, or create the native linked Nota for a Notae grid row.",
+    inputSchema: {
+      workspace_slug: z.string(),
+      database_id: z.string(),
+      row_id: z.string(),
+      page_id: z.string().optional(),
+      clear: z.boolean().optional(),
+      create_page: z.boolean().optional()
+    },
+    outputSchema: {
+      row: gridRowSchema
+    }
+  },
+  async ({ workspace_slug: workspaceSlug, database_id: databaseId, row_id: rowId, page_id: pageId, clear, create_page: createPage }) => runTool("set_grid_row_nota_link", workspaceSlug, async () => {
+    if (clear && (pageId || createPage)) {
+      throw new Error("Use either clear, page_id, or create_page for the row Nota link.");
+    }
+    if (!clear && !createPage && !pageId) {
+      throw new Error("page_id is required unless clear or create_page is true.");
+    }
+
+    const row = await client.setGridRowNotaLink({ workspaceSlug, databaseId, rowId, pageId, clear, createPage });
+    return successResult({
+      text: renderGridRowNotaLink(row),
+      data: { row }
     });
   })
 );
@@ -495,6 +575,14 @@ function renderPages(pages) {
 function renderTaskLists(taskLists) {
   if (!taskLists.length) return "No task lists found.";
   return taskLists.map((taskList) => `- ${taskList.name} (${taskList.id}) rows=${taskList.row_count ?? 0}`).join("\n");
+}
+
+function renderGridRowNotaLink(row) {
+  if (!row) return "Updated grid row Nota link.";
+  if (!row.linked_page_id) return `Cleared linked Nota for grid row "${row.title}" (${row.id}).`;
+
+  const linkedTitle = row.linked_page?.title || "linked Nota";
+  return `Linked grid row "${row.title}" (${row.id}) to ${linkedTitle} (${row.linked_page_id}).`;
 }
 
 function renderCalendars(calendars) {

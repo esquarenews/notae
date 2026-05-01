@@ -21,7 +21,7 @@ module Api
         authorize @database, :show?
 
         properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
-        rows = policy_scope(DbRow).for_database(@database).active.ordered.to_a
+        rows = policy_scope(DbRow).for_database(@database).active.ordered.includes(:linked_page).to_a
         cells = policy_scope(DbCell).for_database(@database)
                                  .where(db_row_id: rows.map(&:id), db_property_id: properties.map(&:id))
                                  .to_a

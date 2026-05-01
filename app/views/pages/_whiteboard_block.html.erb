@@ -1,0 +1,82 @@
+<% whiteboard_content = block.content_json.is_a?(Hash) ? block.content_json : {} %>
+<% board_title = "#{page.title} whiteboard" %>
+<% readonly = reader_mode || page.locked? || page.remove_blocks? %>
+
+<section class="notae-whiteboard <%= "is-readonly" if readonly %>"
+         data-controller="whiteboard"
+         data-whiteboard-url-value="<%= page_block_path(block_route_params) %>"
+         data-whiteboard-initial-json-value="<%= whiteboard_content.to_json %>"
+         data-whiteboard-title-value="<%= board_title %>"
+         data-whiteboard-readonly-value="<%= readonly %>">
+  <header class="notae-whiteboard-titlebar">
+    <div class="notae-whiteboard-title-copy">
+      <span class="notae-whiteboard-kicker">Whiteboard</span>
+      <strong><%= board_title %></strong>
+      <span class="notae-whiteboard-save-state" data-whiteboard-target="status">Saved</span>
+    </div>
+    <div class="notae-whiteboard-title-actions">
+      <button type="button"
+              class="notae-chip-button"
+              data-whiteboard-target="openButton"
+              data-action="whiteboard#enterFullscreen">
+        Open whiteboard
+      </button>
+      <button type="button"
+              class="notae-chip-button notae-whiteboard-collapse-button"
+              data-whiteboard-target="collapseButton"
+              data-action="whiteboard#exitFullscreen"
+              hidden>
+        Back to nota
+      </button>
+    </div>
+  </header>
+
+  <div class="notae-whiteboard-workspace">
+    <% unless readonly %>
+      <aside class="notae-whiteboard-toolbar" aria-label="Whiteboard tools">
+        <button type="button"
+                class="notae-whiteboard-tool is-active"
+                data-whiteboard-target="toolButton"
+                data-whiteboard-tool-param="pencil"
+                data-action="whiteboard#selectTool">
+          Pencil
+        </button>
+        <button type="button"
+                class="notae-whiteboard-tool"
+                data-whiteboard-target="toolButton"
+                data-whiteboard-tool-param="marker"
+                data-action="whiteboard#selectTool">
+          Marker
+        </button>
+        <button type="button"
+                class="notae-whiteboard-tool"
+                data-whiteboard-target="toolButton"
+                data-whiteboard-tool-param="eraser"
+                data-action="whiteboard#selectTool">
+          Eraser
+        </button>
+        <div class="notae-whiteboard-color-grid" aria-label="Whiteboard colours">
+          <% [["#111827", "Black"], ["#1d4ed8", "Blue"], ["#047857", "Green"], ["#b91c1c", "Red"], ["#a16207", "Yellow"], ["#7e22ce", "Purple"]].each_with_index do |(color, label), color_index| %>
+            <button type="button"
+                    class="notae-whiteboard-color <%= "is-active" if color_index.zero? %>"
+                    style="--notae-whiteboard-color: <%= color %>;"
+                    aria-label="<%= label %>"
+                    data-whiteboard-target="colorButton"
+                    data-whiteboard-color-param="<%= color %>"
+                    data-action="whiteboard#selectColor"></button>
+          <% end %>
+        </div>
+        <button type="button"
+                class="notae-whiteboard-tool is-danger"
+                data-whiteboard-target="clearButton"
+                data-action="whiteboard#clearAll">
+          Clear all
+        </button>
+      </aside>
+    <% end %>
+    <canvas class="notae-whiteboard-canvas"
+            data-whiteboard-target="canvas"
+            aria-label="<%= board_title %>"
+            role="img"></canvas>
+  </div>
+</section>

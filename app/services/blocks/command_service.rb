@@ -17,6 +17,7 @@ module Blocks
       "toggle_heading_1" => "toggle_heading_1",
       "toggle_heading_2" => "toggle_heading_2",
       "toggle_heading_3" => "toggle_heading_3",
+      "whiteboard" => "whiteboard",
       "columns_2" => "columns_2",
       "columns_3" => "columns_3",
       "columns_4" => "columns_4",
@@ -136,7 +137,7 @@ module Blocks
 
         mapped_type = "paragraph" if mapped_type == block.block_type
 
-        payload = build_content_payload_for(mapped_type)
+        payload = mapped_type == "whiteboard" ? build_whiteboard_payload : build_content_payload_for(mapped_type)
         block.update!(block_type: mapped_type, content_json: payload)
         @notice = "Block updated."
         @synced_source_block = synced_root_for(block)
@@ -419,6 +420,19 @@ module Blocks
       end
 
       payload.merge(metadata)
+    end
+
+    def build_whiteboard_payload
+      {
+        "type" => "whiteboard",
+        "version" => 1,
+        "board" => {
+          "width" => 1600,
+          "height" => 1000
+        },
+        "strokes" => [],
+        "whiteboard_autofocus" => true
+      }
     end
 
     def build_primary_node(mapped_type, lines)

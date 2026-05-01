@@ -20,10 +20,20 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
 
     expect(source).to include("computeViewportPlacement")
+    expect(source).to include("visibleViewportBounds")
     expect(source).to include("is-viewport-positioned")
     expect(source).to include("--notae-menu-left")
     expect(source).to include("--notae-menu-top")
     expect(source).to include("--notae-menu-max-height")
+  end
+
+  it "keeps viewport menus below the visible nota content top in standalone PWA layouts" do
+    source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
+
+    expect(source).to include("window.visualViewport")
+    expect(source).to include("querySelector(\".notae-content-scroll\")")
+    expect(source).to include("const safeTop = Number.isFinite(shellScrollTop) ? Math.max(viewportTop, shellScrollTop) : viewportTop")
+    expect(source).to include("top: safeTop + MENU_VIEWPORT_MARGIN")
   end
 
   it "adds explicit dismissal handlers for viewport-anchored menus only when a menu opens" do

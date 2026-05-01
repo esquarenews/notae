@@ -11793,6 +11793,256 @@ body.notae-theme-dark .notae-doc-editor.is-highlight-rose .ProseMirror { backgro
   width: 100%;
 }
 
+.notae-whiteboard-open {
+  overflow: hidden;
+}
+
+.notae-whiteboard {
+  display: grid;
+  grid-template-rows: auto minmax(340px, 56vh);
+  width: 100%;
+  min-height: 390px;
+  overflow: hidden;
+  border: 1px solid #d6e1ea;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.notae-whiteboard.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 0;
+  border-radius: 0;
+}
+
+.notae-whiteboard-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #d6e1ea;
+  background: #ffffff;
+}
+
+.notae-whiteboard-title-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.notae-whiteboard-title-copy strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notae-whiteboard-kicker,
+.notae-whiteboard-save-state {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.notae-whiteboard-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+
+.notae-whiteboard-workspace {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.notae-whiteboard.is-readonly .notae-whiteboard-workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.notae-whiteboard-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: stretch;
+  padding: 0.5rem;
+  border-right: 1px solid #d6e1ea;
+  background: #eef5f8;
+}
+
+.notae-whiteboard-tool {
+  min-height: 34px;
+  padding: 0.35rem 0.25rem;
+  border: 1px solid #c4d3df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.notae-whiteboard-tool:hover,
+.notae-whiteboard-tool:focus-visible,
+.notae-whiteboard-tool.is-active {
+  border-color: #0f766e;
+  background: #e6fffb;
+  color: #0f4f49;
+}
+
+.notae-whiteboard-tool.is-danger {
+  margin-top: auto;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.notae-whiteboard-color-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.2rem 0;
+}
+
+.notae-whiteboard-color {
+  aspect-ratio: 1;
+  min-height: 26px;
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  background: var(--notae-whiteboard-color);
+  box-shadow: 0 0 0 1px #c4d3df;
+}
+
+.notae-whiteboard-color.is-active,
+.notae-whiteboard-color:hover,
+.notae-whiteboard-color:focus-visible {
+  box-shadow: 0 0 0 2px #0f766e;
+}
+
+.notae-whiteboard-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 340px;
+  background: #ffffff;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.notae-whiteboard.is-fullscreen .notae-whiteboard-canvas {
+  min-height: 0;
+}
+
+body.notae-theme-dark .notae-whiteboard-titlebar,
+body.notae-theme-dark .notae-whiteboard {
+  border-color: #334155;
+}
+
+body.notae-theme-dark .notae-whiteboard {
+  background: #111827;
+}
+
+body.notae-theme-dark .notae-whiteboard-titlebar {
+  background: #1f2937;
+}
+
+body.notae-theme-dark .notae-whiteboard-title-copy strong {
+  color: #f8fafc;
+}
+
+body.notae-theme-dark .notae-whiteboard-toolbar {
+  border-color: #334155;
+  background: #172033;
+}
+
+body.notae-theme-dark .notae-whiteboard-tool {
+  border-color: #475569;
+  background: #263244;
+  color: #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-whiteboard-titlebar,
+  body.notae-theme-system .notae-whiteboard {
+    border-color: #334155;
+  }
+
+  body.notae-theme-system .notae-whiteboard {
+    background: #111827;
+  }
+
+  body.notae-theme-system .notae-whiteboard-titlebar {
+    background: #1f2937;
+  }
+
+  body.notae-theme-system .notae-whiteboard-title-copy strong {
+    color: #f8fafc;
+  }
+
+  body.notae-theme-system .notae-whiteboard-toolbar {
+    border-color: #334155;
+    background: #172033;
+  }
+
+  body.notae-theme-system .notae-whiteboard-tool {
+    border-color: #475569;
+    background: #263244;
+    color: #e5e7eb;
+  }
+}
+
+@media (max-width: 720px) {
+  .notae-whiteboard {
+    grid-template-rows: auto minmax(320px, 62vh);
+    min-height: 370px;
+  }
+
+  .notae-whiteboard-titlebar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .notae-whiteboard-title-actions {
+    width: 100%;
+  }
+
+  .notae-whiteboard-title-actions .notae-chip-button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .notae-whiteboard-workspace {
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+
+  .notae-whiteboard-toolbar {
+    padding: 0.35rem;
+  }
+
+  .notae-whiteboard-tool {
+    min-height: 32px;
+    font-size: 0.66rem;
+  }
+
+  .notae-whiteboard-color-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .notae-doc-inline-actions {
   display: flex;
   align-items: center;

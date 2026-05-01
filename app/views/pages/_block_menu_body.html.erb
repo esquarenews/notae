@@ -118,6 +118,16 @@
       <span class="notae-menu-item-icon">+</span>
       <span class="notae-menu-item-label">Duplicate</span>
     <% end %>
+    <% unless block.block_type == "whiteboard" %>
+      <%= button_to command_page_block_path(block_route_params),
+                    method: :post,
+                    params: { block_command: { command: "turn_into", target: "whiteboard" } },
+                    form: { class: "notae-block-menu-inline-form", data: { turbo_stream: true } },
+                    class: "notae-block-menu-item" do %>
+        <span class="notae-menu-item-icon">WB</span>
+        <span class="notae-menu-item-label">Turn this block into whiteboard</span>
+      <% end %>
+    <% end %>
     <%= form_with url: command_page_block_path(block_route_params),
                   method: :post,
                   class: "notae-block-menu-picker-form notae-block-menu-picker-form-full-width",

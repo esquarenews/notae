@@ -78,6 +78,31 @@ export class NotaeApiClient {
     return databases.filter((database) => database.name?.toLowerCase().includes(pattern));
   }
 
+  async deleteGridRow({ workspaceSlug, databaseId, rowId }) {
+    const payload = await this.request(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/databases/${encodeURIComponent(databaseId)}/rows/${encodeURIComponent(rowId)}`,
+      { method: "DELETE" }
+    );
+    return payload.data;
+  }
+
+  async setGridRowNotaLink({ workspaceSlug, databaseId, rowId, pageId, clear = false, createPage = false }) {
+    const linkAction = createPage ? "create_page" : clear ? "clear" : undefined;
+    const payload = await this.request(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/databases/${encodeURIComponent(databaseId)}/rows/${encodeURIComponent(rowId)}/linked_page`,
+      {
+        method: "PATCH",
+        body: {
+          db_row: compactObject({
+            linked_page_id: pageId,
+            link_action: linkAction
+          })
+        }
+      }
+    );
+    return payload.data;
+  }
+
   async listCalendars({ workspaceSlug, writable = true } = {}) {
     const payload = await this.request(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/kalendarium/calendars`, {
       query: compactQuery({ writable: writable ? "1" : undefined })

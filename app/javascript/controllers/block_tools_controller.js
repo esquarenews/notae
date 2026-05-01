@@ -260,10 +260,11 @@ export default class extends Controller {
     const trigger = details.querySelector(".notae-block-menu-trigger")
     if (!panel || !trigger) return
 
+    const bounds = this.visibleViewportBounds()
     panel.classList.add("is-viewport-positioned")
-    panel.style.setProperty("--notae-menu-left", `${MENU_VIEWPORT_MARGIN}px`)
-    panel.style.setProperty("--notae-menu-top", `${MENU_VIEWPORT_MARGIN}px`)
-    panel.style.setProperty("--notae-menu-max-height", `${Math.max(160, window.innerHeight - MENU_VIEWPORT_MARGIN * 2)}px`)
+    panel.style.setProperty("--notae-menu-left", `${bounds.left}px`)
+    panel.style.setProperty("--notae-menu-top", `${bounds.top}px`)
+    panel.style.setProperty("--notae-menu-max-height", `${Math.max(160, bounds.bottom - bounds.top)}px`)
     panel.style.visibility = "hidden"
 
     const placement = this.computeViewportPlacement(trigger.getBoundingClientRect(), panel.getBoundingClientRect())
@@ -274,24 +275,42 @@ export default class extends Controller {
   }
 
   computeViewportPlacement(triggerRect, panelRect) {
-    const viewportWidth = Math.max(window.innerWidth || 0, 0)
-    const viewportHeight = Math.max(window.innerHeight || 0, 0)
-    const maxHeight = Math.max(160, viewportHeight - MENU_VIEWPORT_MARGIN * 2)
-    const panelWidth = Math.min(Math.max(panelRect.width || 0, 0), Math.max(0, viewportWidth - MENU_VIEWPORT_MARGIN * 2))
+    const bounds = this.visibleViewportBounds()
+    const viewportWidth = Math.max(bounds.right - bounds.left, 0)
+    const viewportHeight = Math.max(bounds.bottom - bounds.top, 0)
+    const maxHeight = Math.max(160, viewportHeight)
+    const panelWidth = Math.min(Math.max(panelRect.width || 0, 0), viewportWidth)
     const panelHeight = Math.min(Math.max(panelRect.height || 0, 0), maxHeight)
 
     let left = triggerRect.right - panelWidth
-    left = Math.min(left, viewportWidth - MENU_VIEWPORT_MARGIN - panelWidth)
-    left = Math.max(MENU_VIEWPORT_MARGIN, left)
+    left = Math.min(left, bounds.right - panelWidth)
+    left = Math.max(bounds.left, left)
 
     let top = triggerRect.bottom + MENU_TRIGGER_GAP
-    if (top + panelHeight > viewportHeight - MENU_VIEWPORT_MARGIN) {
+    if (top + panelHeight > bounds.bottom) {
       top = triggerRect.top - MENU_TRIGGER_GAP - panelHeight
     }
-    top = Math.min(top, viewportHeight - MENU_VIEWPORT_MARGIN - panelHeight)
-    top = Math.max(MENU_VIEWPORT_MARGIN, top)
+    top = Math.min(top, bounds.bottom - panelHeight)
+    top = Math.max(bounds.top, top)
 
     return { left, top, maxHeight }
+  }
+
+  visibleViewportBounds() {
+    const visualViewport = window.visualViewport
+    const viewportLeft = Math.max(visualViewport?.offsetLeft || 0, 0)
+    const viewportTop = Math.max(visualViewport?.offsetTop || 0, 0)
+    const viewportWidth = Math.max(visualViewport?.width || window.innerWidth || 0, 0)
+    const viewportHeight = Math.max(visualViewport?.height || window.innerHeight || 0, 0)
+    const shellScrollTop = this.element.closest(".notae-shell")?.querySelector(".notae-content-scroll")?.getBoundingClientRect()?.top
+    const safeTop = Number.isFinite(shellScrollTop) ? Math.max(viewportTop, shellScrollTop) : viewportTop
+
+    return {
+      left: viewportLeft + MENU_VIEWPORT_MARGIN,
+      top: safeTop + MENU_VIEWPORT_MARGIN,
+      right: viewportLeft + viewportWidth - MENU_VIEWPORT_MARGIN,
+      bottom: viewportTop + viewportHeight - MENU_VIEWPORT_MARGIN
+    }
   }
 
   resetPanelPosition(details) {

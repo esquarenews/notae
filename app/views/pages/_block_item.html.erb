@@ -4,6 +4,7 @@
 <% is_embed_block = block.block_type == "embed" %>
 <% is_gantt_embed_block = block.block_type == "gantt_embed" %>
 <% is_graph_embed_block = block.block_type == "graph_embed" %>
+<% is_whiteboard_block = block.block_type == "whiteboard" %>
 <% is_media_block = %w[image video file].include?(block.block_type) %>
 <% block_color = block.color.to_s %>
 <% block_highlight = block.highlight_color.to_s %>
@@ -44,7 +45,16 @@
     </div>
   <% end %>
 
-  <% if is_embed_block %>
+  <% if is_whiteboard_block %>
+    <%= render partial: "pages/whiteboard_block",
+               locals: {
+                 workspace: workspace,
+                 page: page,
+                 block: block,
+                 block_route_params: block_route_params,
+                 reader_mode: reader_mode
+               } %>
+  <% elsif is_embed_block %>
     <div class="notae-doc-embed">
       <%= form_with model: block,
                     url: page_block_path(block_route_params),

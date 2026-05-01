@@ -33,6 +33,7 @@ module PagesHelper
     "quote" => "blockquote",
     "callout" => "callout",
     "block_equation" => "equation",
+    "whiteboard" => "whiteboard",
     "columns_2" => "columns_2",
     "columns_3" => "columns_3",
     "columns_4" => "columns_4",
@@ -194,7 +195,7 @@ module PagesHelper
     return raw if raw.start_with?("/") && !raw.start_with?("//")
 
     uri = URI.parse(raw)
-    return raw if %w[http https mailto].include?(uri.scheme)
+    raw if %w[http https mailto].include?(uri.scheme)
   rescue URI::InvalidURIError
     nil
   end

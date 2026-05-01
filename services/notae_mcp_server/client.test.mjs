@@ -92,6 +92,114 @@ test("listTaskLists filters client-side when q is provided", async () => {
   assert.deepEqual(taskLists, [ { id: "1", name: "Task Inbox" } ]);
 });
 
+test("deleteGridRow archives a grid row through the database row endpoint", async () => {
+  let receivedRequest = null;
+  const client = new NotaeApiClient({
+    baseUrl: "https://notae.example.com",
+    token: "secret-token",
+    fetchImpl: async (url, options) => {
+      receivedRequest = { url: url.toString(), options };
+      return new Response(JSON.stringify({
+        data: {
+          id: "row-1",
+          database_id: "database-1",
+          title: "Archive me",
+          archived_at: "2026-04-29T01:00:00.000000Z"
+        }
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  const row = await client.deleteGridRow({
+    workspaceSlug: "test-space",
+    databaseId: "database-1",
+    rowId: "row-1"
+  });
+
+  assert.equal(receivedRequest.url, "https://notae.example.com/api/v1/workspaces/test-space/databases/database-1/rows/row-1");
+  assert.equal(receivedRequest.options.method, "DELETE");
+  assert.equal(row.archived_at, "2026-04-29T01:00:00.000000Z");
+});
+
+test("setGridRowNotaLink patches row linked page payloads", async () => {
+  let receivedRequest = null;
+  const client = new NotaeApiClient({
+    baseUrl: "https://notae.example.com",
+    token: "secret-token",
+    fetchImpl: async (url, options) => {
+      receivedRequest = { url: url.toString(), options };
+      return new Response(JSON.stringify({
+        data: {
+          id: "row-1",
+          database_id: "database-1",
+          linked_page_id: "page-1",
+          linked_page: { id: "page-1", title: "Proposal notes" },
+          title: "Create proposal"
+        }
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  const row = await client.setGridRowNotaLink({
+    workspaceSlug: "test-space",
+    databaseId: "database-1",
+    rowId: "row-1",
+    pageId: "page-1"
+  });
+
+  assert.equal(receivedRequest.url, "https://notae.example.com/api/v1/workspaces/test-space/databases/database-1/rows/row-1/linked_page");
+  assert.equal(receivedRequest.options.method, "PATCH");
+  assert.deepEqual(JSON.parse(receivedRequest.options.body), {
+    db_row: {
+      linked_page_id: "page-1"
+    }
+  });
+  assert.equal(row.linked_page.title, "Proposal notes");
+});
+
+test("setGridRowNotaLink can request clearing a row link", async () => {
+  let receivedRequest = null;
+  const client = new NotaeApiClient({
+    baseUrl: "https://notae.example.com",
+    token: "secret-token",
+    fetchImpl: async (url, options) => {
+      receivedRequest = { url: url.toString(), options };
+      return new Response(JSON.stringify({
+        data: {
+          id: "row-1",
+          database_id: "database-1",
+          linked_page_id: null,
+          linked_page: null,
+          title: "Create proposal"
+        }
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  const row = await client.setGridRowNotaLink({
+    workspaceSlug: "test-space",
+    databaseId: "database-1",
+    rowId: "row-1",
+    clear: true
+  });
+
+  assert.deepEqual(JSON.parse(receivedRequest.options.body), {
+    db_row: {
+      link_action: "clear"
+    }
+  });
+  assert.equal(row.linked_page_id, null);
+});
+
 test("createCalendarEvent posts structured event data", async () => {
   let receivedRequest = null;
   const client = new NotaeApiClient({
