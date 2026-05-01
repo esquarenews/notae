@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 const MENU_VIEWPORT_MARGIN = 12
 const MENU_TRIGGER_GAP = 6
+const MENU_MIN_BELOW_SPACE = 220
 
 export default class extends Controller {
   static values = {
@@ -277,19 +278,21 @@ export default class extends Controller {
   computeViewportPlacement(triggerRect, panelRect) {
     const bounds = this.visibleViewportBounds()
     const viewportWidth = Math.max(bounds.right - bounds.left, 0)
-    const viewportHeight = Math.max(bounds.bottom - bounds.top, 0)
-    const maxHeight = Math.max(160, viewportHeight)
     const panelWidth = Math.min(Math.max(panelRect.width || 0, 0), viewportWidth)
-    const panelHeight = Math.min(Math.max(panelRect.height || 0, 0), maxHeight)
 
     let left = triggerRect.right - panelWidth
     left = Math.min(left, bounds.right - panelWidth)
     left = Math.max(bounds.left, left)
 
-    let top = triggerRect.bottom + MENU_TRIGGER_GAP
-    if (top + panelHeight > bounds.bottom) {
-      top = triggerRect.top - MENU_TRIGGER_GAP - panelHeight
-    }
+    const belowTop = triggerRect.bottom + MENU_TRIGGER_GAP
+    const aboveBottom = triggerRect.top - MENU_TRIGGER_GAP
+    const spaceBelow = Math.max(0, bounds.bottom - Math.max(bounds.top, belowTop))
+    const spaceAbove = Math.max(0, Math.min(bounds.bottom, aboveBottom) - bounds.top)
+    const placeAbove = spaceBelow < MENU_MIN_BELOW_SPACE && spaceAbove > spaceBelow
+    const maxHeight = Math.max(1, placeAbove ? spaceAbove : spaceBelow)
+    const panelHeight = Math.min(Math.max(panelRect.height || 0, 0), maxHeight)
+
+    let top = placeAbove ? aboveBottom - panelHeight : belowTop
     top = Math.min(top, bounds.bottom - panelHeight)
     top = Math.max(bounds.top, top)
 

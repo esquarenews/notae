@@ -36,24 +36,40 @@
       <aside class="notae-whiteboard-toolbar" aria-label="Whiteboard tools">
         <button type="button"
                 class="notae-whiteboard-tool is-active"
+                aria-label="Pencil"
+                title="Pencil"
                 data-whiteboard-target="toolButton"
                 data-whiteboard-tool-param="pencil"
                 data-action="whiteboard#selectTool">
-          Pencil
+          <svg class="notae-whiteboard-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 20l4.5-1 10-10-3.5-3.5-10 10L4 20z"></path>
+            <path d="M13.8 6.7l3.5 3.5"></path>
+          </svg>
         </button>
         <button type="button"
                 class="notae-whiteboard-tool"
+                aria-label="Marker"
+                title="Marker"
                 data-whiteboard-target="toolButton"
                 data-whiteboard-tool-param="marker"
                 data-action="whiteboard#selectTool">
-          Marker
+          <svg class="notae-whiteboard-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 19h14"></path>
+            <path d="M7 16l7.8-7.8 3 3L10 19H7v-3z"></path>
+            <path d="M13.6 9.4l3 3"></path>
+          </svg>
         </button>
         <button type="button"
                 class="notae-whiteboard-tool"
+                aria-label="Block eraser"
+                title="Block eraser"
                 data-whiteboard-target="toolButton"
                 data-whiteboard-tool-param="eraser"
                 data-action="whiteboard#selectTool">
-          Eraser
+          <svg class="notae-whiteboard-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 15l7-7 7 7-5 5H9l-5-5z"></path>
+            <path d="M9 20h11"></path>
+          </svg>
         </button>
         <div class="notae-whiteboard-color-grid" aria-label="Whiteboard colours">
           <% [["#111827", "Black"], ["#1d4ed8", "Blue"], ["#047857", "Green"], ["#b91c1c", "Red"], ["#a16207", "Yellow"], ["#7e22ce", "Purple"]].each_with_index do |(color, label), color_index| %>
@@ -66,11 +82,41 @@
                     data-action="whiteboard#selectColor"></button>
           <% end %>
         </div>
+        <label class="notae-whiteboard-color-picker" aria-label="Choose any colour" title="Choose any colour">
+          <input type="color"
+                 value="#111827"
+                 data-whiteboard-target="colorInput"
+                 data-action="input->whiteboard#selectCustomColor change->whiteboard#selectCustomColor">
+          <span class="notae-whiteboard-color-picker-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 4a8 8 0 0 0-8 8 6 6 0 0 0 6 6h1.2a1.6 1.6 0 0 0 1.3-2.5 1.6 1.6 0 0 1 1.3-2.5H16a4 4 0 0 0 4-4c0-2.8-3.6-5-8-5z"></path>
+              <path d="M7.5 11.5h.1"></path>
+              <path d="M10 8.5h.1"></path>
+              <path d="M14 8.5h.1"></path>
+            </svg>
+          </span>
+        </label>
+        <label class="notae-whiteboard-diameter" aria-label="Tool diameter">
+          <span class="notae-whiteboard-diameter-value" data-whiteboard-target="diameterValue">3px</span>
+          <input type="range"
+                 min="1"
+                 max="10"
+                 step="1"
+                 value="3"
+                 data-whiteboard-target="diameterInput"
+                 data-action="input->whiteboard#selectDiameter change->whiteboard#selectDiameter">
+        </label>
         <button type="button"
                 class="notae-whiteboard-tool is-danger"
+                aria-label="Clear all"
+                title="Clear all"
                 data-whiteboard-target="clearButton"
                 data-action="whiteboard#clearAll">
-          Clear all
+          <svg class="notae-whiteboard-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 7h14"></path>
+            <path d="M9 7V5h6v2"></path>
+            <path d="M8 10l1 9h6l1-9"></path>
+          </svg>
         </button>
       </aside>
     <% end %>

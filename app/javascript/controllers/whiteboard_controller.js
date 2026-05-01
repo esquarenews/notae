@@ -2,16 +2,14 @@ import { Controller } from "@hotwired/stimulus"
 
 const DEFAULT_BOARD = { width: 1600, height: 1000 }
 const DEFAULT_COLOR = "#111827"
-const TOOL_WIDTHS = {
-  pencil: 5,
-  marker: 18,
-  eraser: 58
-}
+const DEFAULT_DIAMETER = 3
+const MIN_DIAMETER = 1
+const MAX_DIAMETER = 10
 const SAVE_DELAY_MS = 500
-const MIN_POINT_DISTANCE = 3
+const MIN_POINT_DISTANCE = 0.5
 
 export default class extends Controller {
-  static targets = [ "canvas", "status", "toolButton", "colorButton", "openButton", "collapseButton" ]
+  static targets = [ "canvas", "status", "toolButton", "colorButton", "colorInput", "diameterInput", "diameterValue", "openButton", "collapseButton" ]
 
   static values = {
     url: String,
@@ -27,6 +25,7 @@ export default class extends Controller {
     this.strokes = this.state.strokes
     this.tool = "pencil"
     this.color = DEFAULT_COLOR
+    this.diameter = DEFAULT_DIAMETER
     this.activeStroke = null
     this.activePointerId = null
     this.saveTimer = null
@@ -52,7 +51,9 @@ export default class extends Controller {
 
     this.resizeCanvas()
     this.updateToolButtons()
+    this.updateColorInput()
     this.updateColorButtons()
+    this.updateDiameterControls()
     this.setStatus(this.readonlyValue ? "Read only" : "Saved")
 
     if (this.state.whiteboard_autofocus) {
@@ -69,12 +70,14 @@ export default class extends Controller {
     window.removeEventListener("resize", this.resizeHandler)
     window.clearTimeout(this.saveTimer)
     this.releasePointer()
+    document.documentElement.classList.remove("notae-whiteboard-open")
     document.body.classList.remove("notae-whiteboard-open")
   }
 
   enterFullscreen(event) {
     event?.preventDefault()
     this.element.classList.add("is-fullscreen")
+    document.documentElement.classList.add("notae-whiteboard-open")
     document.body.classList.add("notae-whiteboard-open")
     this.openButtonTarget.hidden = true
     this.collapseButtonTarget.hidden = false
@@ -84,6 +87,7 @@ export default class extends Controller {
   exitFullscreen(event) {
     event?.preventDefault()
     this.element.classList.remove("is-fullscreen")
+    document.documentElement.classList.remove("notae-whiteboard-open")
     document.body.classList.remove("notae-whiteboard-open")
     this.openButtonTarget.hidden = false
     this.collapseButtonTarget.hidden = true
@@ -101,7 +105,18 @@ export default class extends Controller {
   selectColor(event) {
     event.preventDefault()
     this.color = event.params.color || DEFAULT_COLOR
+    this.updateColorInput()
     this.updateColorButtons()
+  }
+
+  selectCustomColor(event) {
+    this.color = event.currentTarget.value || DEFAULT_COLOR
+    this.updateColorButtons()
+  }
+
+  selectDiameter(event) {
+    this.diameter = this.clampedDiameter(event.currentTarget.value)
+    this.updateDiameterControls()
   }
 
   clearAll(event) {
@@ -118,6 +133,11 @@ export default class extends Controller {
     if (this.readonlyValue) return
 
     event.preventDefault()
+    if (!this.fullscreenActive()) {
+      this.enterFullscreen()
+      return
+    }
+
     this.capturePointer(event.pointerId)
     const point = this.pointFromEvent(event)
     this.activePointerId = event.pointerId
@@ -132,38 +152,49 @@ export default class extends Controller {
       id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
       tool: this.tool,
       color: this.color,
-      width: TOOL_WIDTHS[this.tool] || TOOL_WIDTHS.pencil,
+      width: this.diameter,
       points: [ point ]
     }
     this.strokes.push(this.activeStroke)
-    this.draw()
+    this.drawStrokeSegment(this.activeStroke, point, point)
   }
 
   handlePointerMove(event) {
     if (event.pointerId !== this.activePointerId) return
 
     event.preventDefault()
-    const point = this.pointFromEvent(event)
+    const coalescedEvents = event.getCoalescedEvents?.()
+    const pointerEvents = coalescedEvents?.length ? coalescedEvents : [ event ]
 
     if (this.tool === "eraser") {
-      this.eraseAt(point)
-      this.draw()
+      let erased = false
+      for (const pointerEvent of pointerEvents) {
+        erased = this.eraseAt(this.pointFromEvent(pointerEvent)) || erased
+      }
+      if (erased) this.draw()
       return
     }
 
     if (!this.activeStroke) return
 
+    for (const pointerEvent of pointerEvents) {
+      this.extendActiveStroke(this.pointFromEvent(pointerEvent))
+    }
+  }
+
+  extendActiveStroke(point) {
     const previous = this.activeStroke.points[this.activeStroke.points.length - 1]
     if (this.distance(previous, point) < MIN_POINT_DISTANCE) return
 
     this.activeStroke.points.push(point)
-    this.draw()
+    this.drawStrokeSegment(this.activeStroke, previous, point)
   }
 
   handlePointerUp(event) {
     if (event.pointerId !== this.activePointerId) return
 
     event.preventDefault()
+    if (this.activeStroke) this.draw()
     this.activeStroke = null
     this.activePointerId = null
     this.releasePointer(event.pointerId)
@@ -200,12 +231,7 @@ export default class extends Controller {
       if (!points.length) continue
 
       context.save()
-      context.lineCap = "round"
-      context.lineJoin = "round"
-      context.strokeStyle = stroke.color || DEFAULT_COLOR
-      context.fillStyle = stroke.color || DEFAULT_COLOR
-      context.globalAlpha = stroke.tool === "marker" ? 0.42 : 1
-      context.lineWidth = this.scaledWidth(stroke.width || TOOL_WIDTHS.pencil, width, height)
+      this.applyStrokeStyle(context, stroke)
 
       const first = this.scalePoint(points[0], width, height)
       if (points.length === 1) {
@@ -222,6 +248,45 @@ export default class extends Controller {
         context.stroke()
       }
       context.restore()
+    }
+  }
+
+  drawStrokeSegment(stroke, startPoint, endPoint, size = this.currentCanvasSize()) {
+    const { width, height } = size
+    const context = this.context
+    const start = this.scalePoint(startPoint, width, height)
+    const end = this.scalePoint(endPoint, width, height)
+
+    context.save()
+    this.applyStrokeStyle(context, stroke)
+    if (startPoint === endPoint || (start.x === end.x && start.y === end.y)) {
+      context.beginPath()
+      context.arc(end.x, end.y, context.lineWidth / 2, 0, Math.PI * 2)
+      context.fill()
+    } else {
+      context.beginPath()
+      context.moveTo(start.x, start.y)
+      context.lineTo(end.x, end.y)
+      context.stroke()
+    }
+    context.restore()
+  }
+
+  applyStrokeStyle(context, stroke) {
+    const color = this.normalizedColor(stroke.color)
+    const lineWidth = this.clampedDiameter(stroke.width)
+    context.lineCap = "round"
+    context.lineJoin = "round"
+    context.strokeStyle = color
+    context.fillStyle = color
+    context.lineWidth = lineWidth
+    if (stroke.tool === "marker") {
+      context.globalAlpha = 0.38
+      context.shadowColor = color
+      context.shadowBlur = Math.max(1.5, lineWidth * 0.7)
+    } else {
+      context.globalAlpha = 1
+      context.shadowBlur = 0
     }
   }
 
@@ -249,25 +314,28 @@ export default class extends Controller {
   }
 
   eraseAt(point) {
-    const radius = TOOL_WIDTHS.eraser
+    const radius = this.boardUnitsForPixels(this.diameter / 2)
     const originalLength = this.strokes.length
     this.strokes = this.strokes.filter((stroke) => !this.strokeTouchesPoint(stroke, point, radius))
     this.state.strokes = this.strokes
     if (this.strokes.length !== originalLength) {
       this.setStatus("Unsaved")
+      return true
     }
+    return false
   }
 
   strokeTouchesPoint(stroke, point, radius) {
     const points = Array.isArray(stroke.points) ? stroke.points : []
     if (!points.length) return false
 
-    if (points.length === 1) {
-      return this.distance(points[0], point) <= radius
-    }
+    const strokeRadius = this.boardUnitsForPixels(this.clampedDiameter(stroke.width) / 2)
+    const hitRadius = radius + strokeRadius
+
+    if (points.length === 1) return this.distance(points[0], point) <= hitRadius
 
     return points.slice(1).some((candidate, index) => (
-      this.distanceToSegment(point, points[index], candidate) <= radius
+      this.distanceToSegment(point, points[index], candidate) <= hitRadius
     ))
   }
 
@@ -344,7 +412,7 @@ export default class extends Controller {
       id: stroke.id?.toString() || `${Date.now()}-${Math.random()}`,
       tool: [ "pencil", "marker" ].includes(stroke.tool) ? stroke.tool : "pencil",
       color: stroke.color?.toString() || DEFAULT_COLOR,
-      width: this.positiveNumber(stroke.width, TOOL_WIDTHS.pencil),
+      width: this.clampedDiameter(stroke.width),
       points: Array.isArray(stroke.points) ? stroke.points.map((point) => ({
         x: this.positiveNumber(point.x, 0),
         y: this.positiveNumber(point.y, 0)
@@ -369,11 +437,6 @@ export default class extends Controller {
     }
   }
 
-  scaledWidth(width, canvasWidth, canvasHeight) {
-    const scale = Math.max(canvasWidth / this.board.width, canvasHeight / this.board.height)
-    return Math.max(width * scale, 1)
-  }
-
   currentCanvasSize() {
     const rect = this.canvasTarget.getBoundingClientRect()
     return {
@@ -390,8 +453,38 @@ export default class extends Controller {
 
   updateColorButtons() {
     for (const button of this.colorButtonTargets) {
-      button.classList.toggle("is-active", button.dataset.whiteboardColorParam === this.color)
+      button.classList.toggle("is-active", this.normalizedColor(button.dataset.whiteboardColorParam) === this.normalizedColor(this.color))
     }
+  }
+
+  updateColorInput() {
+    if (this.hasColorInputTarget) this.colorInputTarget.value = this.normalizedColor(this.color)
+  }
+
+  updateDiameterControls() {
+    if (this.hasDiameterInputTarget) this.diameterInputTarget.value = this.diameter
+    if (this.hasDiameterValueTarget) this.diameterValueTarget.textContent = `${this.diameter}px`
+  }
+
+  normalizedColor(color) {
+    const candidate = color?.toString().trim()
+    return /^#[0-9a-f]{6}$/i.test(candidate) ? candidate.toLowerCase() : DEFAULT_COLOR
+  }
+
+  clampedDiameter(value) {
+    const number = Number(value)
+    if (!Number.isFinite(number)) return DEFAULT_DIAMETER
+    return Math.min(Math.max(Math.round(number), MIN_DIAMETER), MAX_DIAMETER)
+  }
+
+  boardUnitsForPixels(pixels) {
+    const { width, height } = this.currentCanvasSize()
+    const scale = Math.max(this.board.width / width, this.board.height / height)
+    return Math.max(pixels * scale, 0)
+  }
+
+  fullscreenActive() {
+    return this.element.classList.contains("is-fullscreen")
   }
 
   setStatus(text) {

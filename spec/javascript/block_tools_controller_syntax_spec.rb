@@ -36,6 +36,16 @@ RSpec.describe "BlockToolsController JavaScript syntax" do
     expect(source).to include("top: safeTop + MENU_VIEWPORT_MARGIN")
   end
 
+  it "prefers opening tall block menus below the trigger instead of pinning them to the top" do
+    source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
+
+    expect(source).to include("MENU_MIN_BELOW_SPACE")
+    expect(source).to include("const belowTop = triggerRect.bottom + MENU_TRIGGER_GAP")
+    expect(source).to include("const spaceBelow = Math.max(0, bounds.bottom - Math.max(bounds.top, belowTop))")
+    expect(source).to include("const placeAbove = spaceBelow < MENU_MIN_BELOW_SPACE && spaceAbove > spaceBelow")
+    expect(source).to include("let top = placeAbove ? aboveBottom - panelHeight : belowTop")
+  end
+
   it "adds explicit dismissal handlers for viewport-anchored menus only when a menu opens" do
     source = Rails.root.join("app/javascript/controllers/block_tools_controller.js").read
 

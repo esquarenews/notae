@@ -1127,10 +1127,16 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("data-controller=\"whiteboard\"")
     expect(response.body).to include("Open whiteboard")
     expect(response.body).to include("Back to nota")
-    expect(response.body).to include("Pencil")
-    expect(response.body).to include("Marker")
-    expect(response.body).to include("Eraser")
-    expect(response.body).to include("Clear all")
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css(".notae-whiteboard-tool[aria-label='Pencil'] svg.notae-whiteboard-tool-icon")).to be_present
+    expect(document.at_css(".notae-whiteboard-tool[aria-label='Marker'] svg.notae-whiteboard-tool-icon")).to be_present
+    expect(document.at_css(".notae-whiteboard-tool[aria-label='Block eraser'] svg.notae-whiteboard-tool-icon")).to be_present
+    expect(document.at_css(".notae-whiteboard-tool[aria-label='Clear all'] svg.notae-whiteboard-tool-icon")).to be_present
+    expect(document.at_css(".notae-whiteboard-color-picker input[type='color'][data-whiteboard-target='colorInput']")).to be_present
+    diameter_slider = document.at_css(".notae-whiteboard-diameter input[type='range'][data-whiteboard-target='diameterInput']")
+    expect(diameter_slider).to be_present
+    expect(diameter_slider["min"]).to eq("1")
+    expect(diameter_slider["max"]).to eq("10")
 
     block.reload
     expect(block.block_type).to eq("whiteboard")
