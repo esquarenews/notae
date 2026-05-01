@@ -9,7 +9,7 @@ const SAVE_DELAY_MS = 500
 const MIN_POINT_DISTANCE = 0.5
 
 export default class extends Controller {
-  static targets = [ "canvas", "status", "toolButton", "colorButton", "colorInput", "diameterInput", "diameterValue", "openButton", "collapseButton" ]
+  static targets = [ "canvas", "status", "toolButton", "colorInput", "diameterInput", "diameterValue", "openButton", "collapseButton" ]
 
   static values = {
     url: String,
@@ -19,7 +19,7 @@ export default class extends Controller {
   }
 
   connect() {
-    this.context = this.canvasTarget.getContext("2d")
+    this.canvasContext = this.canvasTarget.getContext("2d")
     this.state = this.normalizedState(this.initialJsonValue || {})
     this.board = this.state.board
     this.strokes = this.state.strokes
@@ -29,6 +29,8 @@ export default class extends Controller {
     this.activeStroke = null
     this.activePointerId = null
     this.saveTimer = null
+    this.fullscreenPlaceholder = this.element.notaeWhiteboardPlaceholder || null
+    this.fullscreenAnimation = null
     this.resizeHandler = () => this.resizeCanvas()
 
     this.pointerDownHandler = (event) => this.handlePointerDown(event)
@@ -52,9 +54,11 @@ export default class extends Controller {
     this.resizeCanvas()
     this.updateToolButtons()
     this.updateColorInput()
-    this.updateColorButtons()
     this.updateDiameterControls()
+    this.updateFullscreenControls()
     this.setStatus(this.readonlyValue ? "Read only" : "Saved")
+
+    if (this.fullscreenActive()) this.queueCanvasResize()
 
     if (this.state.whiteboard_autofocus) {
       window.requestAnimationFrame(() => this.enterFullscreen())
@@ -70,20 +74,28 @@ export default class extends Controller {
     window.removeEventListener("resize", this.resizeHandler)
     window.clearTimeout(this.saveTimer)
     this.releasePointer()
-    document.documentElement.classList.remove("notae-whiteboard-open")
-    document.body.classList.remove("notae-whiteboard-open")
+
+    if (!this.element.isConnected) {
+      this.restoreInlinePosition()
+      document.documentElement.classList.remove("notae-whiteboard-open")
+      document.body.classList.remove("notae-whiteboard-open")
+    }
   }
 
   enterFullscreen(event) {
     event?.preventDefault()
     event?.stopPropagation()
+    if (this.fullscreenActive()) return
+
+    const inlineRect = this.element.getBoundingClientRect()
+    this.rememberInlinePosition()
     this.element.classList.add("is-fullscreen")
     document.documentElement.classList.add("notae-whiteboard-open")
     document.body.classList.add("notae-whiteboard-open")
-    this.openButtonTarget.hidden = true
-    this.collapseButtonTarget.hidden = false
-    window.requestAnimationFrame(() => {
-      this.resizeCanvas()
+    this.updateFullscreenControls()
+    const fullscreenRect = this.element.getBoundingClientRect()
+    this.animateFromRect(inlineRect, fullscreenRect)
+    this.queueCanvasResize(() => {
       this.canvasTarget.focus({ preventScroll: true })
     })
   }
@@ -91,14 +103,19 @@ export default class extends Controller {
   exitFullscreen(event) {
     event?.preventDefault()
     event?.stopPropagation()
+    if (!this.fullscreenActive()) return
+
+    const fullscreenRect = this.element.getBoundingClientRect()
+    this.restoreInlinePosition()
     this.element.classList.remove("is-fullscreen")
     document.documentElement.classList.remove("notae-whiteboard-open")
     document.body.classList.remove("notae-whiteboard-open")
-    this.openButtonTarget.hidden = false
-    this.collapseButtonTarget.hidden = true
+    this.updateFullscreenControls()
+    const inlineRect = this.element.getBoundingClientRect()
+    this.animateFromRect(fullscreenRect, inlineRect)
     delete this.state.whiteboard_autofocus
     this.queueSave({ immediate: true })
-    window.requestAnimationFrame(() => this.resizeCanvas())
+    this.queueCanvasResize()
   }
 
   selectTool(event) {
@@ -107,17 +124,9 @@ export default class extends Controller {
     this.updateToolButtons()
   }
 
-  selectColor(event) {
-    event.preventDefault()
-    this.color = event.params.color || DEFAULT_COLOR
-    this.updateColorInput()
-    this.updateColorButtons()
-  }
-
   selectCustomColor(event) {
     this.color = event.currentTarget.value || DEFAULT_COLOR
     this.updateColorInput()
-    this.updateColorButtons()
   }
 
   selectDiameter(event) {
@@ -208,6 +217,8 @@ export default class extends Controller {
   }
 
   resizeCanvas() {
+    this.canvasTarget.style.removeProperty("width")
+    this.canvasTarget.style.removeProperty("height")
     const rect = this.canvasTarget.getBoundingClientRect()
     const width = Math.max(Math.floor(rect.width), 1)
     const height = Math.max(Math.floor(rect.height), 1)
@@ -220,15 +231,23 @@ export default class extends Controller {
       this.canvasTarget.height = Math.floor(height * pixelRatio)
     }
 
-    this.canvasTarget.style.width = `${width}px`
-    this.canvasTarget.style.height = `${height}px`
-    this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+    this.canvasContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
     this.draw({ width, height })
+  }
+
+  queueCanvasResize(callback) {
+    window.requestAnimationFrame(() => {
+      this.resizeCanvas()
+      window.requestAnimationFrame(() => {
+        this.resizeCanvas()
+        callback?.()
+      })
+    })
   }
 
   draw(size = this.currentCanvasSize()) {
     const { width, height } = size
-    const context = this.context
+    const context = this.canvasContext
     context.clearRect(0, 0, width, height)
     this.drawBackground(context, width, height)
 
@@ -259,7 +278,7 @@ export default class extends Controller {
 
   drawStrokeSegment(stroke, startPoint, endPoint, size = this.currentCanvasSize()) {
     const { width, height } = size
-    const context = this.context
+    const context = this.canvasContext
     const start = this.scalePoint(startPoint, width, height)
     const end = this.scalePoint(endPoint, width, height)
 
@@ -457,12 +476,6 @@ export default class extends Controller {
     }
   }
 
-  updateColorButtons() {
-    for (const button of this.colorButtonTargets) {
-      button.classList.toggle("is-active", this.normalizedColor(button.dataset.whiteboardColorParam) === this.normalizedColor(this.color))
-    }
-  }
-
   updateColorInput() {
     const color = this.normalizedColor(this.color)
     this.color = color
@@ -476,6 +489,52 @@ export default class extends Controller {
     this.element.style.setProperty("--notae-whiteboard-diameter-progress", `${progress}%`)
     if (this.hasDiameterInputTarget) this.diameterInputTarget.value = this.diameter
     if (this.hasDiameterValueTarget) this.diameterValueTarget.textContent = `${this.diameter}px`
+  }
+
+  updateFullscreenControls() {
+    const isFullscreen = this.fullscreenActive()
+    document.documentElement.classList.toggle("notae-whiteboard-open", isFullscreen)
+    document.body.classList.toggle("notae-whiteboard-open", isFullscreen)
+    if (this.hasOpenButtonTarget) this.openButtonTarget.hidden = isFullscreen
+    if (this.hasCollapseButtonTarget) this.collapseButtonTarget.hidden = !isFullscreen
+  }
+
+  rememberInlinePosition() {
+    if (this.fullscreenPlaceholder) return
+
+    this.fullscreenPlaceholder = document.createComment("notae-whiteboard-inline-position")
+    this.element.notaeWhiteboardPlaceholder = this.fullscreenPlaceholder
+    this.element.parentNode?.insertBefore(this.fullscreenPlaceholder, this.element)
+    document.body.appendChild(this.element)
+  }
+
+  restoreInlinePosition() {
+    this.fullscreenPlaceholder ||= this.element.notaeWhiteboardPlaceholder
+    if (!this.fullscreenPlaceholder) return
+
+    this.fullscreenPlaceholder.parentNode?.insertBefore(this.element, this.fullscreenPlaceholder)
+    this.fullscreenPlaceholder.remove()
+    this.fullscreenPlaceholder = null
+    delete this.element.notaeWhiteboardPlaceholder
+  }
+
+  animateFromRect(fromRect, toRect) {
+    if (!fromRect || !toRect || toRect.width <= 0 || toRect.height <= 0) return
+
+    this.fullscreenAnimation?.cancel()
+    const deltaX = fromRect.left - toRect.left
+    const deltaY = fromRect.top - toRect.top
+    const scaleX = fromRect.width / toRect.width
+    const scaleY = fromRect.height / toRect.height
+
+    this.fullscreenAnimation = this.element.animate([
+      { transform: `translate(${deltaX}px, ${deltaY}px) scale(${scaleX}, ${scaleY})`, transformOrigin: "top left" },
+      { transform: "translate(0, 0) scale(1, 1)", transformOrigin: "top left" }
+    ], {
+      duration: 180,
+      easing: "cubic-bezier(0.2, 0, 0, 1)"
+    })
+    this.fullscreenAnimation.finished.then(() => this.resizeCanvas()).catch(() => {})
   }
 
   normalizedColor(color) {

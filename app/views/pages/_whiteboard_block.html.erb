@@ -71,17 +71,6 @@
             <path d="M9 20h11"></path>
           </svg>
         </button>
-        <div class="notae-whiteboard-color-grid" aria-label="Whiteboard colours">
-          <% [["#111827", "Black"], ["#1d4ed8", "Blue"], ["#047857", "Green"], ["#b91c1c", "Red"], ["#a16207", "Yellow"], ["#7e22ce", "Purple"]].each_with_index do |(color, label), color_index| %>
-            <button type="button"
-                    class="notae-whiteboard-color <%= "is-active" if color_index.zero? %>"
-                    style="--notae-whiteboard-color: <%= color %>;"
-                    aria-label="<%= label %>"
-                    data-whiteboard-target="colorButton"
-                    data-whiteboard-color-param="<%= color %>"
-                    data-action="whiteboard#selectColor"></button>
-          <% end %>
-        </div>
         <label class="notae-whiteboard-color-picker" aria-label="Choose any colour" title="Choose any colour">
           <input type="color"
                  value="#111827"
@@ -102,6 +91,7 @@
                  min="1"
                  max="10"
                  step="1"
+                 orient="vertical"
                  value="3"
                  data-whiteboard-target="diameterInput"
                  data-action="input->whiteboard#selectDiameter change->whiteboard#selectDiameter">

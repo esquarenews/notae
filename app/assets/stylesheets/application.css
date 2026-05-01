@@ -11853,6 +11853,10 @@ body.notae-whiteboard-open {
   background: #f8fafc;
 }
 
+.notae-whiteboard [hidden] {
+  display: none !important;
+}
+
 .notae-whiteboard.is-fullscreen {
   position: fixed;
   inset: 0;
@@ -11971,30 +11975,6 @@ body.notae-whiteboard-open {
   color: #b91c1c;
 }
 
-.notae-whiteboard-color-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.28rem;
-  padding: 0.2rem 0;
-  width: 100%;
-}
-
-.notae-whiteboard-color {
-  aspect-ratio: 1;
-  min-height: 22px;
-  border: 2px solid #ffffff;
-  border-radius: 8px;
-  background: var(--notae-whiteboard-color);
-  cursor: pointer;
-  box-shadow: 0 0 0 1px #c4d3df;
-}
-
-.notae-whiteboard-color.is-active,
-.notae-whiteboard-color:hover,
-.notae-whiteboard-color:focus-visible {
-  box-shadow: 0 0 0 2px #0f766e;
-}
-
 .notae-whiteboard-color-picker {
   position: relative;
   width: 38px;
@@ -12052,7 +12032,9 @@ body.notae-whiteboard-open {
 
 .notae-whiteboard-diameter {
   width: 38px;
+  min-height: 118px;
   display: grid;
+  grid-template-rows: auto 1fr;
   justify-items: center;
   gap: 0.35rem;
   padding: 0.28rem 0;
@@ -12066,7 +12048,8 @@ body.notae-whiteboard-open {
 }
 
 .notae-whiteboard-diameter input[type="range"] {
-  width: 38px;
+  align-self: center;
+  width: 86px;
   height: 6px;
   border-radius: 999px;
   background: linear-gradient(to right, #0f766e var(--notae-whiteboard-diameter-progress), #c4d3df 0);
@@ -12076,6 +12059,7 @@ body.notae-whiteboard-open {
   cursor: pointer;
   direction: ltr;
   writing-mode: horizontal-tb;
+  transform: rotate(-90deg);
 }
 
 .notae-whiteboard-diameter input[type="range"]::-webkit-slider-thumb {
@@ -12217,14 +12201,11 @@ body.notae-theme-dark .notae-whiteboard-diameter-value {
 
   .notae-whiteboard-diameter {
     width: 34px;
+    min-height: 104px;
   }
 
   .notae-whiteboard-diameter input[type="range"] {
-    width: 34px;
-  }
-
-  .notae-whiteboard-color-grid {
-    grid-template-columns: 1fr;
+    width: 74px;
   }
 }
 

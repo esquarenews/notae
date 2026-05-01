@@ -3,20 +3,40 @@ require "rails_helper"
 RSpec.describe "whiteboard controller syntax" do
   it "keeps pointer drawing, fullscreen collapse and autosave wired" do
     source = Rails.root.join("app/javascript/controllers/whiteboard_controller.js").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
 
-    expect(source).to include('static targets = [ "canvas", "status", "toolButton", "colorButton", "colorInput", "diameterInput", "diameterValue", "openButton", "collapseButton" ]')
+    expect(source).to include("this.canvasContext = this.canvasTarget.getContext(\"2d\")")
+    expect(source).not_to include("this.context = this.canvasTarget.getContext")
+    expect(source).to include('static targets = [ "canvas", "status", "toolButton", "colorInput", "diameterInput", "diameterValue", "openButton", "collapseButton" ]')
+    expect(source).to include("this.fullscreenPlaceholder = this.element.notaeWhiteboardPlaceholder || null")
     expect(source).to include('this.canvasTarget.addEventListener("pointerdown", this.pointerDownHandler)')
     expect(source).to include('this.canvasTarget.addEventListener("pointermove", this.pointerMoveHandler)')
     expect(source).to include('this.canvasTarget.addEventListener("pointerup", this.pointerUpHandler)')
     expect(source).to include("const coalescedEvents = event.getCoalescedEvents?.()")
     expect(source).to include("const pointerEvents = coalescedEvents?.length ? coalescedEvents : [ event ]")
+    expect(source).to include("queueCanvasResize(callback)")
+    expect(source).to include("if (this.fullscreenActive()) this.queueCanvasResize()")
+    expect(source).to include('this.canvasTarget.style.removeProperty("width")')
+    expect(source).to include('this.canvasTarget.style.removeProperty("height")')
+    expect(source).not_to include('this.canvasTarget.style.width = `${width}px`')
+    expect(source).not_to include('this.canvasTarget.style.height = `${height}px`')
     expect(source).to include("this.drawStrokeSegment(this.activeStroke, previous, point)")
     expect(source).to include("applyStrokeStyle(context, stroke)")
     expect(source).to include("context.shadowBlur = Math.max")
     expect(source).to include('this.element.classList.add("is-fullscreen")')
+    expect(source).to include("this.rememberInlinePosition()")
+    expect(source).to include("this.element.notaeWhiteboardPlaceholder = this.fullscreenPlaceholder")
+    expect(source).to include("document.body.appendChild(this.element)")
     expect(source).to include('document.documentElement.classList.add("notae-whiteboard-open")')
+    expect(source).to include("this.animateFromRect(inlineRect, fullscreenRect)")
     expect(source).to include("this.canvasTarget.focus({ preventScroll: true })")
+    expect(source).to include("this.restoreInlinePosition()")
+    expect(source).to include("this.fullscreenPlaceholder ||= this.element.notaeWhiteboardPlaceholder")
+    expect(source).to include("delete this.element.notaeWhiteboardPlaceholder")
     expect(source).to include('this.element.classList.remove("is-fullscreen")')
+    expect(source).to include("this.animateFromRect(fullscreenRect, inlineRect)")
+    expect(source).to include("this.fullscreenAnimation.finished.then(() => this.resizeCanvas()).catch(() => {})")
+    expect(source).to include("updateFullscreenControls()")
     expect(source).to include("event?.stopPropagation()")
     expect(source).to include('selectCustomColor(event)')
     expect(source).to include("selectDiameter(event)")
@@ -30,5 +50,6 @@ RSpec.describe "whiteboard controller syntax" do
     expect(source).to include('JSON.stringify({ block: { content_json: content } })')
     expect(source).to include('delete content.whiteboard_autofocus')
     expect(source).to include('this.strokeTouchesPoint(stroke, point, radius)')
+    expect(stylesheet).to include(".notae-whiteboard [hidden] {\n  display: none !important;\n}")
   end
 end
