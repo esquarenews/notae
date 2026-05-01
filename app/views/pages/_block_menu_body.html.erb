@@ -242,10 +242,13 @@
     <%= button_to command_page_block_path(block_route_params),
                   method: :post,
                   params: { block_command: { command: "delete" } },
-                  form_class: "notae-block-menu-inline-form",
+                  form: {
+                    class: "notae-block-menu-inline-form",
+                    data: { turbo_confirm: "Delete this block? This cannot be undone." }
+                  },
                   class: "notae-block-menu-item is-danger" do %>
-      <span class="notae-menu-item-icon">x</span>
-      <span class="notae-menu-item-label">Delete</span>
+      <span class="notae-menu-item-icon">Del</span>
+      <span class="notae-menu-item-label">Delete block</span>
     <% end %>
     <button type="button" class="notae-block-menu-item" data-action="block-tools#suggestEdits">
       <span class="notae-menu-item-icon">~</span>

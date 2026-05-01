@@ -20,6 +20,8 @@ RSpec.describe "Application JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/index.js").read
     importmap = Rails.root.join("config/importmap.rb").read
 
+    expect(source).to include('import WhiteboardController from "controllers/whiteboard_controller"')
+    expect(source).to include('application.register("whiteboard", WhiteboardController)')
     expect(source).to include("lazyLoadControllersFrom")
     expect(source).to include('lazyLoadControllersFrom("controllers", application)')
     expect(source).not_to include("eagerLoadControllersFrom")

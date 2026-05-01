@@ -76,16 +76,21 @@ export default class extends Controller {
 
   enterFullscreen(event) {
     event?.preventDefault()
+    event?.stopPropagation()
     this.element.classList.add("is-fullscreen")
     document.documentElement.classList.add("notae-whiteboard-open")
     document.body.classList.add("notae-whiteboard-open")
     this.openButtonTarget.hidden = true
     this.collapseButtonTarget.hidden = false
-    window.requestAnimationFrame(() => this.resizeCanvas())
+    window.requestAnimationFrame(() => {
+      this.resizeCanvas()
+      this.canvasTarget.focus({ preventScroll: true })
+    })
   }
 
   exitFullscreen(event) {
     event?.preventDefault()
+    event?.stopPropagation()
     this.element.classList.remove("is-fullscreen")
     document.documentElement.classList.remove("notae-whiteboard-open")
     document.body.classList.remove("notae-whiteboard-open")
@@ -111,6 +116,7 @@ export default class extends Controller {
 
   selectCustomColor(event) {
     this.color = event.currentTarget.value || DEFAULT_COLOR
+    this.updateColorInput()
     this.updateColorButtons()
   }
 
@@ -458,10 +464,16 @@ export default class extends Controller {
   }
 
   updateColorInput() {
-    if (this.hasColorInputTarget) this.colorInputTarget.value = this.normalizedColor(this.color)
+    const color = this.normalizedColor(this.color)
+    this.color = color
+    this.element.style.setProperty("--notae-whiteboard-active-color", color)
+    if (this.hasColorInputTarget) this.colorInputTarget.value = color
   }
 
   updateDiameterControls() {
+    this.diameter = this.clampedDiameter(this.diameter)
+    const progress = ((this.diameter - MIN_DIAMETER) / (MAX_DIAMETER - MIN_DIAMETER)) * 100
+    this.element.style.setProperty("--notae-whiteboard-diameter-progress", `${progress}%`)
     if (this.hasDiameterInputTarget) this.diameterInputTarget.value = this.diameter
     if (this.hasDiameterValueTarget) this.diameterValueTarget.textContent = `${this.diameter}px`
   }

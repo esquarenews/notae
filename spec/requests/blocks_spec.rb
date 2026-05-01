@@ -652,6 +652,12 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("Add block above")
     expect(response.body).to include("Add block below")
     expect(response.body).to include("Turn this block into whiteboard")
+    expect(response.body).to include("Delete block")
+
+    document = Nokogiri::HTML(response.body)
+    delete_form = document.at_css("form[data-turbo-confirm='Delete this block? This cannot be undone.']")
+    expect(delete_form).to be_present
+    expect(delete_form.at_css(".notae-block-menu-item.is-danger").text.squish).to include("Delete block")
 
     actions_section = response.body.match(/<section class="notae-block-menu-section">\s*<h4>Actions<\/h4>(.*?)<\/section>/m)
     expect(actions_section).to be_present
@@ -661,6 +667,7 @@ RSpec.describe "Blocks", type: :request do
     expect(action_markup.index("Add block below")).to be < action_markup.index("Indent")
     expect(action_markup.index("Indent")).to be < action_markup.index("Outdent")
     expect(action_markup.index("Duplicate")).to be < action_markup.index("Turn this block into whiteboard")
+    expect(action_markup.index("Turn this block into whiteboard")).to be < action_markup.index("Delete block")
   end
 
   it "keeps page flash notices fixed to the visible viewport" do
@@ -1133,6 +1140,7 @@ RSpec.describe "Blocks", type: :request do
     expect(document.at_css(".notae-whiteboard-tool[aria-label='Block eraser'] svg.notae-whiteboard-tool-icon")).to be_present
     expect(document.at_css(".notae-whiteboard-tool[aria-label='Clear all'] svg.notae-whiteboard-tool-icon")).to be_present
     expect(document.at_css(".notae-whiteboard-color-picker input[type='color'][data-whiteboard-target='colorInput']")).to be_present
+    expect(document.at_css(".notae-whiteboard-canvas[tabindex='0']")).to be_present
     diameter_slider = document.at_css(".notae-whiteboard-diameter input[type='range'][data-whiteboard-target='diameterInput']")
     expect(diameter_slider).to be_present
     expect(diameter_slider["min"]).to eq("1")
