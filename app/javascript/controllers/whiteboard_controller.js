@@ -75,10 +75,9 @@ export default class extends Controller {
     window.clearTimeout(this.saveTimer)
     this.releasePointer()
 
-    if (!this.element.isConnected) {
+    if (!this.element.isConnected && !this.element.notaeWhiteboardPortaling) {
       this.restoreInlinePosition()
-      document.documentElement.classList.remove("notae-whiteboard-open")
-      document.body.classList.remove("notae-whiteboard-open")
+      this.updateDocumentFullscreenState(false)
     }
   }
 
@@ -90,8 +89,6 @@ export default class extends Controller {
     const inlineRect = this.element.getBoundingClientRect()
     this.rememberInlinePosition()
     this.element.classList.add("is-fullscreen")
-    document.documentElement.classList.add("notae-whiteboard-open")
-    document.body.classList.add("notae-whiteboard-open")
     this.updateFullscreenControls()
     const fullscreenRect = this.element.getBoundingClientRect()
     this.animateFromRect(inlineRect, fullscreenRect)
@@ -108,8 +105,6 @@ export default class extends Controller {
     const fullscreenRect = this.element.getBoundingClientRect()
     this.restoreInlinePosition()
     this.element.classList.remove("is-fullscreen")
-    document.documentElement.classList.remove("notae-whiteboard-open")
-    document.body.classList.remove("notae-whiteboard-open")
     this.updateFullscreenControls()
     const inlineRect = this.element.getBoundingClientRect()
     this.animateFromRect(fullscreenRect, inlineRect)
@@ -149,7 +144,6 @@ export default class extends Controller {
 
     event.preventDefault()
     if (!this.fullscreenActive()) {
-      this.enterFullscreen()
       return
     }
 
@@ -493,29 +487,44 @@ export default class extends Controller {
 
   updateFullscreenControls() {
     const isFullscreen = this.fullscreenActive()
-    document.documentElement.classList.toggle("notae-whiteboard-open", isFullscreen)
-    document.body.classList.toggle("notae-whiteboard-open", isFullscreen)
+    this.updateDocumentFullscreenState(isFullscreen)
     if (this.hasOpenButtonTarget) this.openButtonTarget.hidden = isFullscreen
     if (this.hasCollapseButtonTarget) this.collapseButtonTarget.hidden = !isFullscreen
   }
 
-  rememberInlinePosition() {
-    if (this.fullscreenPlaceholder) return
+  updateDocumentFullscreenState(isFullscreen) {
+    document.documentElement.classList.toggle("notae-whiteboard-open", isFullscreen)
+    document.body.classList.toggle("notae-whiteboard-open", isFullscreen)
+  }
 
-    this.fullscreenPlaceholder = document.createComment("notae-whiteboard-inline-position")
-    this.element.notaeWhiteboardPlaceholder = this.fullscreenPlaceholder
-    this.element.parentNode?.insertBefore(this.fullscreenPlaceholder, this.element)
+  rememberInlinePosition() {
+    if (this.fullscreenPlaceholder?.isConnected) return
+
+    const placeholder = document.createElement("span")
+    placeholder.hidden = true
+    placeholder.dataset.notaeWhiteboardPlaceholder = "true"
+    this.fullscreenPlaceholder = placeholder
+    this.element.notaeWhiteboardPlaceholder = placeholder
+    this.element.notaeWhiteboardReturnParent = this.element.parentNode
+    this.element.parentNode?.insertBefore(placeholder, this.element)
+    this.element.notaeWhiteboardPortaling = true
     document.body.appendChild(this.element)
+    window.requestAnimationFrame(() => {
+      this.element.notaeWhiteboardPortaling = false
+    })
   }
 
   restoreInlinePosition() {
     this.fullscreenPlaceholder ||= this.element.notaeWhiteboardPlaceholder
-    if (!this.fullscreenPlaceholder) return
+    const returnParent = this.fullscreenPlaceholder?.parentNode || this.element.notaeWhiteboardReturnParent
+    if (!returnParent) return
 
-    this.fullscreenPlaceholder.parentNode?.insertBefore(this.element, this.fullscreenPlaceholder)
-    this.fullscreenPlaceholder.remove()
+    returnParent.insertBefore(this.element, this.fullscreenPlaceholder || null)
+    this.fullscreenPlaceholder?.remove()
     this.fullscreenPlaceholder = null
     delete this.element.notaeWhiteboardPlaceholder
+    delete this.element.notaeWhiteboardReturnParent
+    this.element.notaeWhiteboardPortaling = false
   }
 
   animateFromRect(fromRect, toRect) {

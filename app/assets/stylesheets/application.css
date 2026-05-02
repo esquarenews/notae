@@ -11860,7 +11860,7 @@ body.notae-whiteboard-open {
 .notae-whiteboard.is-fullscreen {
   position: fixed;
   inset: 0;
-  z-index: 3000;
+  z-index: 100000;
   width: 100dvw;
   max-width: none !important;
   height: 100dvh;
@@ -11923,6 +11923,10 @@ body.notae-whiteboard-open {
   min-height: 0;
 }
 
+.notae-whiteboard:not(.is-fullscreen) .notae-whiteboard-workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .notae-whiteboard.is-readonly .notae-whiteboard-workspace {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -11935,6 +11939,10 @@ body.notae-whiteboard-open {
   padding: 0.5rem 0.4rem;
   border-right: 1px solid #d6e1ea;
   background: #eef5f8;
+}
+
+.notae-whiteboard:not(.is-fullscreen) .notae-whiteboard-toolbar {
+  display: none;
 }
 
 .notae-whiteboard-tool {
@@ -12049,17 +12057,17 @@ body.notae-whiteboard-open {
 
 .notae-whiteboard-diameter input[type="range"] {
   align-self: center;
-  width: 86px;
-  height: 6px;
+  justify-self: center;
+  width: 6px;
+  height: 86px;
   border-radius: 999px;
-  background: linear-gradient(to right, #0f766e var(--notae-whiteboard-diameter-progress), #c4d3df 0);
+  background: linear-gradient(to top, #0f766e var(--notae-whiteboard-diameter-progress), #c4d3df 0);
   accent-color: #0f766e;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
-  direction: ltr;
-  writing-mode: horizontal-tb;
-  transform: rotate(-90deg);
+  direction: rtl;
+  writing-mode: vertical-lr;
 }
 
 .notae-whiteboard-diameter input[type="range"]::-webkit-slider-thumb {
@@ -12092,7 +12100,7 @@ body.notae-whiteboard-open {
 }
 
 .notae-whiteboard:not(.is-fullscreen) .notae-whiteboard-canvas {
-  cursor: zoom-in;
+  cursor: default;
 }
 
 .notae-whiteboard.is-fullscreen .notae-whiteboard-canvas {
@@ -12205,7 +12213,7 @@ body.notae-theme-dark .notae-whiteboard-diameter-value {
   }
 
   .notae-whiteboard-diameter input[type="range"] {
-    width: 74px;
+    height: 74px;
   }
 }
 
