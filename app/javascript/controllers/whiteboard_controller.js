@@ -151,12 +151,6 @@ export default class extends Controller {
     const point = this.pointFromEvent(event)
     this.activePointerId = event.pointerId
 
-    if (this.tool === "eraser") {
-      this.eraseAt(point)
-      this.draw()
-      return
-    }
-
     this.activeStroke = {
       id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
       tool: this.tool,
@@ -165,30 +159,26 @@ export default class extends Controller {
       points: [ point ]
     }
     this.strokes.push(this.activeStroke)
-    this.drawStrokeSegment(this.activeStroke, point, point)
+    if (this.tool === "eraser") {
+      this.draw()
+    } else {
+      this.drawStrokeSegment(this.activeStroke, point, point)
+    }
   }
 
   handlePointerMove(event) {
     if (event.pointerId !== this.activePointerId) return
 
     event.preventDefault()
-    const coalescedEvents = event.getCoalescedEvents?.()
-    const pointerEvents = coalescedEvents?.length ? coalescedEvents : [ event ]
-
-    if (this.tool === "eraser") {
-      let erased = false
-      for (const pointerEvent of pointerEvents) {
-        erased = this.eraseAt(this.pointFromEvent(pointerEvent)) || erased
-      }
-      if (erased) this.draw()
-      return
-    }
+    const pointerEvents = this.pointerEventsFor(event)
 
     if (!this.activeStroke) return
 
     for (const pointerEvent of pointerEvents) {
       this.extendActiveStroke(this.pointFromEvent(pointerEvent))
     }
+
+    if (this.tool === "eraser") this.draw()
   }
 
   extendActiveStroke(point) {
@@ -196,6 +186,8 @@ export default class extends Controller {
     if (this.distance(previous, point) < MIN_POINT_DISTANCE) return
 
     this.activeStroke.points.push(point)
+    if (this.activeStroke.tool === "eraser") return
+
     this.drawStrokeSegment(this.activeStroke, previous, point)
   }
 
@@ -203,7 +195,12 @@ export default class extends Controller {
     if (event.pointerId !== this.activePointerId) return
 
     event.preventDefault()
-    if (this.activeStroke) this.draw()
+    if (this.activeStroke) {
+      for (const pointerEvent of this.pointerEventsFor(event)) {
+        this.extendActiveStroke(this.pointFromEvent(pointerEvent))
+      }
+      this.draw()
+    }
     this.activeStroke = null
     this.activePointerId = null
     this.releasePointer(event.pointerId)
@@ -244,30 +241,44 @@ export default class extends Controller {
     const context = this.canvasContext
     context.clearRect(0, 0, width, height)
     this.drawBackground(context, width, height)
+    this.drawInkLayer(context, width, height)
+  }
+
+  drawInkLayer(context, width, height) {
+    const inkCanvas = document.createElement("canvas")
+    inkCanvas.width = width
+    inkCanvas.height = height
+    const inkContext = inkCanvas.getContext("2d")
 
     for (const stroke of this.strokes) {
       const points = Array.isArray(stroke.points) ? stroke.points : []
       if (!points.length) continue
 
-      context.save()
-      this.applyStrokeStyle(context, stroke)
-
-      const first = this.scalePoint(points[0], width, height)
-      if (points.length === 1) {
-        context.beginPath()
-        context.arc(first.x, first.y, context.lineWidth / 2, 0, Math.PI * 2)
-        context.fill()
-      } else {
-        context.beginPath()
-        context.moveTo(first.x, first.y)
-        for (const point of points.slice(1)) {
-          const scaled = this.scalePoint(point, width, height)
-          context.lineTo(scaled.x, scaled.y)
-        }
-        context.stroke()
-      }
-      context.restore()
+      this.drawStrokePath(inkContext, stroke, points, width, height)
     }
+
+    context.drawImage(inkCanvas, 0, 0, width, height)
+  }
+
+  drawStrokePath(context, stroke, points, width, height) {
+    context.save()
+    this.applyStrokeStyle(context, stroke)
+
+    const first = this.scalePoint(points[0], width, height)
+    if (points.length === 1) {
+      context.beginPath()
+      context.arc(first.x, first.y, context.lineWidth / 2, 0, Math.PI * 2)
+      context.fill()
+    } else {
+      context.beginPath()
+      context.moveTo(first.x, first.y)
+      for (const point of points.slice(1)) {
+        const scaled = this.scalePoint(point, width, height)
+        context.lineTo(scaled.x, scaled.y)
+      }
+      context.stroke()
+    }
+    context.restore()
   }
 
   drawStrokeSegment(stroke, startPoint, endPoint, size = this.currentCanvasSize()) {
@@ -299,7 +310,11 @@ export default class extends Controller {
     context.strokeStyle = color
     context.fillStyle = color
     context.lineWidth = lineWidth
-    if (stroke.tool === "marker") {
+    if (stroke.tool === "eraser") {
+      context.globalCompositeOperation = "destination-out"
+      context.globalAlpha = 1
+      context.shadowBlur = 0
+    } else if (stroke.tool === "marker") {
       context.globalAlpha = 0.38
       context.shadowColor = color
       context.shadowBlur = Math.max(1.5, lineWidth * 0.7)
@@ -330,32 +345,6 @@ export default class extends Controller {
       context.stroke()
     }
     context.restore()
-  }
-
-  eraseAt(point) {
-    const radius = this.boardUnitsForPixels(this.diameter / 2)
-    const originalLength = this.strokes.length
-    this.strokes = this.strokes.filter((stroke) => !this.strokeTouchesPoint(stroke, point, radius))
-    this.state.strokes = this.strokes
-    if (this.strokes.length !== originalLength) {
-      this.setStatus("Unsaved")
-      return true
-    }
-    return false
-  }
-
-  strokeTouchesPoint(stroke, point, radius) {
-    const points = Array.isArray(stroke.points) ? stroke.points : []
-    if (!points.length) return false
-
-    const strokeRadius = this.boardUnitsForPixels(this.clampedDiameter(stroke.width) / 2)
-    const hitRadius = radius + strokeRadius
-
-    if (points.length === 1) return this.distance(points[0], point) <= hitRadius
-
-    return points.slice(1).some((candidate, index) => (
-      this.distanceToSegment(point, points[index], candidate) <= hitRadius
-    ))
   }
 
   queueSave({ immediate = false } = {}) {
@@ -429,7 +418,7 @@ export default class extends Controller {
 
     return strokes.map((stroke) => ({
       id: stroke.id?.toString() || `${Date.now()}-${Math.random()}`,
-      tool: [ "pencil", "marker" ].includes(stroke.tool) ? stroke.tool : "pencil",
+      tool: [ "pencil", "marker", "eraser" ].includes(stroke.tool) ? stroke.tool : "pencil",
       color: stroke.color?.toString() || DEFAULT_COLOR,
       width: this.clampedDiameter(stroke.width),
       points: Array.isArray(stroke.points) ? stroke.points.map((point) => ({
@@ -557,12 +546,6 @@ export default class extends Controller {
     return Math.min(Math.max(Math.round(number), MIN_DIAMETER), MAX_DIAMETER)
   }
 
-  boardUnitsForPixels(pixels) {
-    const { width, height } = this.currentCanvasSize()
-    const scale = Math.max(this.board.width / width, this.board.height / height)
-    return Math.max(pixels * scale, 0)
-  }
-
   fullscreenActive() {
     return this.element.classList.contains("is-fullscreen")
   }
@@ -589,20 +572,20 @@ export default class extends Controller {
     }
   }
 
-  distance(first, second) {
-    return Math.hypot(first.x - second.x, first.y - second.y)
+  pointerEventsFor(event) {
+    const coalescedEvents = event.getCoalescedEvents?.() || []
+    const pointerEvents = coalescedEvents.length ? [ ...coalescedEvents ] : []
+    const lastEvent = pointerEvents[pointerEvents.length - 1]
+
+    if (!lastEvent || lastEvent.clientX !== event.clientX || lastEvent.clientY !== event.clientY) {
+      pointerEvents.push(event)
+    }
+
+    return pointerEvents
   }
 
-  distanceToSegment(point, start, end) {
-    const dx = end.x - start.x
-    const dy = end.y - start.y
-    if (dx === 0 && dy === 0) return this.distance(point, start)
-
-    const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)))
-    return this.distance(point, {
-      x: start.x + t * dx,
-      y: start.y + t * dy
-    })
+  distance(first, second) {
+    return Math.hypot(first.x - second.x, first.y - second.y)
   }
 
   positiveNumber(value, fallback) {
