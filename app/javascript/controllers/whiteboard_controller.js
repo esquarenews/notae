@@ -6,7 +6,6 @@ const DEFAULT_DIAMETER = 3
 const MIN_DIAMETER = 1
 const MAX_DIAMETER = 10
 const SAVE_DELAY_MS = 500
-const MIN_POINT_DISTANCE = 0.5
 
 export default class extends Controller {
   static targets = [ "canvas", "status", "toolButton", "colorInput", "diameterInput", "diameterValue", "openButton", "collapseButton" ]
@@ -40,6 +39,7 @@ export default class extends Controller {
     if (!this.readonlyValue) {
       this.canvasTarget.addEventListener("pointerdown", this.pointerDownHandler)
       this.canvasTarget.addEventListener("pointermove", this.pointerMoveHandler)
+      this.canvasTarget.addEventListener("pointerrawupdate", this.pointerMoveHandler)
       this.canvasTarget.addEventListener("pointerup", this.pointerUpHandler)
       this.canvasTarget.addEventListener("pointercancel", this.pointerUpHandler)
     }
@@ -68,6 +68,7 @@ export default class extends Controller {
   disconnect() {
     this.canvasTarget.removeEventListener("pointerdown", this.pointerDownHandler)
     this.canvasTarget.removeEventListener("pointermove", this.pointerMoveHandler)
+    this.canvasTarget.removeEventListener("pointerrawupdate", this.pointerMoveHandler)
     this.canvasTarget.removeEventListener("pointerup", this.pointerUpHandler)
     this.canvasTarget.removeEventListener("pointercancel", this.pointerUpHandler)
     this.resizeObserver?.disconnect()
@@ -183,7 +184,7 @@ export default class extends Controller {
 
   extendActiveStroke(point) {
     const previous = this.activeStroke.points[this.activeStroke.points.length - 1]
-    if (this.distance(previous, point) < MIN_POINT_DISTANCE) return
+    if (previous.x === point.x && previous.y === point.y) return
 
     this.activeStroke.points.push(point)
     if (this.activeStroke.tool === "eraser") return
@@ -582,10 +583,6 @@ export default class extends Controller {
     }
 
     return pointerEvents
-  }
-
-  distance(first, second) {
-    return Math.hypot(first.x - second.x, first.y - second.y)
   }
 
   positiveNumber(value, fallback) {
