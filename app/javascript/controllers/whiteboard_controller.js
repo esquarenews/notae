@@ -575,6 +575,7 @@ export default class extends Controller {
 
   pointerEventsFor(event) {
     const coalescedEvents = event.getCoalescedEvents?.() || []
+    const predictedEvents = event.getPredictedEvents?.() || []
     const pointerEvents = coalescedEvents.length ? [ ...coalescedEvents ] : []
     const lastEvent = pointerEvents[pointerEvents.length - 1]
 
@@ -582,6 +583,7 @@ export default class extends Controller {
       pointerEvents.push(event)
     }
 
+    pointerEvents.push(...predictedEvents)
     return pointerEvents
   }
 

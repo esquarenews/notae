@@ -16,7 +16,9 @@ RSpec.describe "whiteboard controller syntax" do
     expect(source).to include('this.canvasTarget.removeEventListener("pointerrawupdate", this.pointerMoveHandler)')
     expect(source).to include("pointerEventsFor(event)")
     expect(source).to include("const coalescedEvents = event.getCoalescedEvents?.() || []")
+    expect(source).to include("const predictedEvents = event.getPredictedEvents?.() || []")
     expect(source).to include("pointerEvents.push(event)")
+    expect(source).to include("pointerEvents.push(...predictedEvents)")
     expect(source.scan("this.pointerEventsFor(event)").length).to be >= 2
     expect(source).to include("queueCanvasResize(callback)")
     expect(source).to include("if (this.fullscreenActive()) this.queueCanvasResize()")
@@ -58,6 +60,8 @@ RSpec.describe "whiteboard controller syntax" do
     expect(source).to include('if (!this.fullscreenActive())')
     expect(source).to include('JSON.stringify({ block: { content_json: content } })')
     expect(source).to include('delete content.whiteboard_autofocus')
+    expect(stylesheet).to include(".notae-doc-block.is-type-whiteboard > .notae-whiteboard:not(.is-fullscreen) {\n  margin-top: 0.7rem;\n}")
+    expect(stylesheet).to include(".notae-whiteboard:not(.is-fullscreen) .notae-whiteboard-titlebar {\n  padding-right: 2.6rem;\n}")
     expect(stylesheet).to include(".notae-whiteboard:not(.is-fullscreen) .notae-whiteboard-toolbar {\n  display: none;\n}")
     expect(stylesheet).to include(".notae-whiteboard [hidden] {\n  display: none !important;\n}")
     expect(stylesheet).to include("writing-mode: vertical-lr;")

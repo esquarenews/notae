@@ -11853,6 +11853,10 @@ body.notae-whiteboard-open {
   background: #f8fafc;
 }
 
+.notae-doc-block.is-type-whiteboard > .notae-whiteboard:not(.is-fullscreen) {
+  margin-top: 0.7rem;
+}
+
 .notae-whiteboard [hidden] {
   display: none !important;
 }
@@ -11882,6 +11886,10 @@ body.notae-whiteboard-open {
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid #d6e1ea;
   background: #ffffff;
+}
+
+.notae-whiteboard:not(.is-fullscreen) .notae-whiteboard-titlebar {
+  padding-right: 2.6rem;
 }
 
 .notae-whiteboard-title-copy {
