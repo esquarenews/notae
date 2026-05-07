@@ -1,7 +1,7 @@
 class PagesController < ApplicationController
   include RequestPerformanceInstrumentation
 
-  track_request_performance_for :show
+  track_request_performance_for :show, :update
 
   before_action :authenticate_user!
   before_action :set_workspace
@@ -112,6 +112,12 @@ class PagesController < ApplicationController
             id: @page.id,
             title: @page.title,
             icon: @page.icon,
+            font_style: @page.font_style,
+            small_text: @page.small_text?,
+            full_width: @page.full_width?,
+            remove_blocks: @page.remove_blocks?,
+            locked: @page.locked?,
+            suggest_edits: @page.suggest_edits?,
             updated_at: @page.updated_at&.iso8601(6)
           }, status: :ok
         end
@@ -457,11 +463,10 @@ class PagesController < ApplicationController
     @move_target_pages = policy_scope(Page)
                            .for_workspace(@workspace)
                            .active
-                           .includes(:linked_database)
                            .order(:created_at)
                            .reject { |candidate| candidate.id == @page.id }
-    active_blocks = policy_scope(Block).for_page(@page).active.ordered.to_a
-    @page_plain_text = active_blocks.filter_map { |block| block.search_text.to_s.strip.presence }.join("\n")
+    block_search_texts = policy_scope(Block).for_page(@page).active.ordered.pluck(:search_text)
+    @page_plain_text = block_search_texts.filter_map { |search_text| search_text.to_s.strip.presence }.join("\n")
     @page_word_count = @page_plain_text.scan(/\b[\p{L}\p{N}'-]+\b/u).size
     @recent_audit_events = policy_scope(AuditEvent)
                              .where(workspace_id: @workspace.id, auditable: @page)

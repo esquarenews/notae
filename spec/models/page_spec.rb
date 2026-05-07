@@ -58,6 +58,20 @@ RSpec.describe Page, type: :model do
     expect(page.reload.title).to eq("Updated")
   end
 
+  it "does not reindex search chunks for layout-only presentation changes" do
+    owner = User.create!(email: "page-layout-index-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Layout index", slug: "layout-index")
+    page = described_class.create!(workspace: workspace, created_by: owner, title: "Original")
+
+    allow(Search::IndexPageJob).to receive(:perform_later)
+
+    page.update!(full_width: true, small_text: true, remove_blocks: true)
+    expect(Search::IndexPageJob).not_to have_received(:perform_later)
+
+    page.update!(title: "Updated")
+    expect(Search::IndexPageJob).to have_received(:perform_later).with(page.id)
+  end
+
   it "supports explicit page kinds and meeting-note scope" do
     owner = User.create!(email: "page-kind-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Page kind", slug: "page-kind")

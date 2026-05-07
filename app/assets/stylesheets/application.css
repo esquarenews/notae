@@ -9557,6 +9557,15 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   background: #f5f5f4;
 }
 
+.notae-actions-row-button.is-working {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.notae-actions-row-button.is-error {
+  color: #b91c1c;
+}
+
 .notae-actions-row.is-danger .notae-actions-row-button,
 .notae-actions-row-button.is-danger {
   color: #b91c1c;

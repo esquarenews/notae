@@ -162,7 +162,12 @@
         <%= form_with model: page,
                       url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
                       method: :patch,
-                      class: "notae-actions-inline-form" do |form| %>
+                      class: "notae-actions-inline-form",
+                      data: {
+                        controller: "page-appearance-toggle",
+                        action: "submit->page-appearance-toggle#submit",
+                        page_appearance_toggle_class_value: "is-small-text"
+                      } do |form| %>
           <%= form.hidden_field :small_text, value: (!page.small_text?).to_s %>
           <button type="submit" class="notae-actions-row-button">
             <span class="notae-actions-row-icon">A</span>
@@ -176,7 +181,12 @@
         <%= form_with model: page,
                       url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
                       method: :patch,
-                      class: "notae-actions-inline-form" do |form| %>
+                      class: "notae-actions-inline-form",
+                      data: {
+                        controller: "page-appearance-toggle",
+                        action: "submit->page-appearance-toggle#submit",
+                        page_appearance_toggle_class_value: "is-full-width"
+                      } do |form| %>
           <%= form.hidden_field :full_width, value: (!page.full_width?).to_s %>
           <button type="submit" class="notae-actions-row-button">
             <span class="notae-actions-row-icon">↔</span>
@@ -190,7 +200,12 @@
         <%= form_with model: page,
                       url: page_path(workspace_slug: workspace.slug, id: page.id, actions_menu: "open"),
                       method: :patch,
-                      class: "notae-actions-inline-form" do |form| %>
+                      class: "notae-actions-inline-form",
+                      data: {
+                        controller: "page-appearance-toggle",
+                        action: "submit->page-appearance-toggle#submit",
+                        page_appearance_toggle_class_value: "is-reader-mode"
+                      } do |form| %>
           <%= form.hidden_field :remove_blocks, value: (!page.remove_blocks?).to_s %>
           <button type="submit" class="notae-actions-row-button">
             <span class="notae-actions-row-icon">◫</span>

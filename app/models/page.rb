@@ -162,7 +162,8 @@ class Page < ApplicationRecord
   before_validation :set_workspace_from_parent, if: -> { workspace_id.nil? && parent_page.present? }
   before_validation :normalize_root_tab_title
   before_validation :normalize_icon
-  after_commit :enqueue_search_chunk_reindex, on: %i[create update]
+  after_commit :enqueue_search_chunk_reindex, on: :create
+  after_commit :enqueue_search_chunk_reindex, on: :update, if: :search_chunk_reindex_required?
   after_commit :remove_search_chunks, on: :destroy
 
   def archive!
@@ -265,6 +266,12 @@ class Page < ApplicationRecord
 
     Rails.logger.warn("Search index queue unavailable for page=#{id}: #{error.class}: #{error.message}")
     Search::ChunkIndexingService.index_page!(page: self)
+  end
+
+  def search_chunk_reindex_required?
+    previous_changes.key?("title") ||
+      previous_changes.key?("archived_at") ||
+      previous_changes.key?("workspace_id")
   end
 
   def remove_search_chunks

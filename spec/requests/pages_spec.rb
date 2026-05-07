@@ -1208,6 +1208,26 @@ RSpec.describe "Pages", type: :request do
     expect(duplicated_page.blocks.active.count).to eq(1)
   end
 
+  it "updates page appearance toggles as JSON without redirecting through the full page render path" do
+    owner = User.create!(email: "page-actions-json-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Actions JSON", slug: "actions-json")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Fast action page")
+    sign_in owner
+
+    patch page_path(workspace_slug: workspace.slug, id: page.id),
+          params: { page: { full_width: "true" } },
+          as: :json
+
+    payload = JSON.parse(response.body)
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("PagesController#update")
+    expect(payload["full_width"]).to eq(true)
+    expect(payload["small_text"]).to eq(false)
+    expect(page.reload.full_width).to be(true)
+  end
+
   it "keeps actions and options menus open when requested and renders options icon" do
     owner = User.create!(email: "page-menu-open-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Menu Open", slug: "menu-open")
@@ -1247,6 +1267,8 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("into Nota")
     expect(response.body).to include("Current block as MD")
     expect(response.body).to include("Version history")
+    expect(response.body).to include('data-controller="page-appearance-toggle"')
+    expect(response.body).to include('data-page-appearance-toggle-class-value="is-full-width"')
 
     get panel_page_path(workspace_slug: workspace.slug, id: page.id, panel: "options")
     expect(response).to have_http_status(:ok)
