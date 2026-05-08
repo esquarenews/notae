@@ -84,6 +84,7 @@
               <%= form_with model: row,
                             url: row_update_path,
                             method: :patch,
+                            authenticity_token: false,
                             class: "notae-db-title-form notae-db-title-form-inline",
                             data: {
                               controller: "auto-submit",
@@ -123,6 +124,7 @@
             <%= form_with model: row,
                           url: row_update_path,
                           method: :patch,
+                          authenticity_token: false,
                           class: "notae-db-title-form notae-db-title-form-inline",
                           data: {
                             controller: "auto-submit",
@@ -150,6 +152,7 @@
             <%= form_with model: row,
                           url: row_update_path,
                           method: :patch,
+                          authenticity_token: false,
                           class: "notae-db-row-link-create-form" do |form| %>
               <%= form.hidden_field :link_action, value: "create_page" %>
               <%= form.button "+",
@@ -164,6 +167,7 @@
                 <%= form_with model: row,
                               url: row_update_path,
                               method: :patch,
+                              authenticity_token: false,
                               class: "notae-db-inline-form",
                               data: {
                                 controller: "document-picker",
@@ -207,6 +211,7 @@
                         }.merge(row_params)).merge(db_property.progress? ? { progress_inline_update: "1" } : {})
                       ),
                       method: :patch,
+                      authenticity_token: false,
                       data: (
                         db_property.progress? ?
                           {

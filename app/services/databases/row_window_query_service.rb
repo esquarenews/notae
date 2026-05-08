@@ -1,6 +1,6 @@
 module Databases
   class RowWindowQueryService
-    DEFAULT_PER_PAGE = 50
+    DEFAULT_PER_PAGE = ENV.fetch("NOTAE_DATABASE_ROWS_PER_PAGE", 25).to_i.clamp(10, 100)
 
     Result = Struct.new(:rows, :total_count, :page, :per_page, :total_pages, :paginated?, keyword_init: true)
 

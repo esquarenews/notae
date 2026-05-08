@@ -2489,8 +2489,8 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
     rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
-    expect(rendered_row_ids.length).to eq(50)
-    expect(response.body).to include("Page 1 of 2")
+    expect(rendered_row_ids.length).to eq(25)
+    expect(response.body).to include("Page 1 of 3")
     expect(document.at_css("#database_row_count")&.text).to include("65 rows")
     expect(response.body).to include("Row 01")
     expect(response.body).not_to include("Row 65")
@@ -2500,9 +2500,42 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
     rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
+    expect(rendered_row_ids.length).to eq(25)
+    expect(response.body).to include("Page 2 of 3")
+    expect(response.body).to include("Row 26")
+    expect(response.body).not_to include("Row 65")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, rows_page: 3)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
     expect(rendered_row_ids.length).to eq(15)
-    expect(response.body).to include("Page 2 of 2")
+    expect(response.body).to include("Page 3 of 3")
     expect(response.body).to include("Row 65")
+  end
+
+  it "keeps inline grid edit forms lightweight for initial table rendering" do
+    owner = User.create!(email: "database-lightweight-grid-forms-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Lightweight grid forms", slug: "lightweight-grid-forms")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Lean grid")
+    property = DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Lean row")
+    cell = DbCell.create!(workspace: workspace, db_row: row, db_property: property, value_text: "Keep payload small")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    title_form = document.at_css("#row_#{row.id} form.notae-db-title-form-inline")
+    cell_form = document.css("form").find { |form| form["action"].to_s.include?(cell.id) }
+
+    expect(title_form).to be_present
+    expect(cell_form).to be_present
+    expect(title_form.at_css("input[name='authenticity_token']")).to be_nil
+    expect(cell_form.at_css("input[name='authenticity_token']")).to be_nil
   end
 
   it "creates a new row with turbo streams instead of redirecting the full grid for the simple table path" do

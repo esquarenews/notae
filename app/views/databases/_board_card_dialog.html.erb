@@ -49,6 +49,7 @@
           <%= form_with model: row,
                         url: row_update_path,
                         method: :patch,
+                        authenticity_token: false,
                         class: "notae-db-board-card-modal-title-form",
                         data: {
                           controller: "auto-submit",
@@ -78,6 +79,7 @@
                 <%= form_with model: db_cell,
                               url: database_db_cell_path({ workspace_slug: workspace.slug, database_id: database.id, id: db_cell.id }.merge(row_params)),
                               method: :patch,
+                              authenticity_token: false,
                               data: (
                                 db_property.progress? ?
                                   {
