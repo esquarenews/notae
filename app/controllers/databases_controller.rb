@@ -151,6 +151,31 @@ class DatabasesController < ApplicationController
                can_edit_database: policy(@database).update? && !@database.locked?,
                can_update_view: policy(@current_view).update? && !@database.locked?
              }
+    when "row_menu"
+      return head :forbidden if @database.locked?
+
+      prepare_database_row_menu_panel!
+      render partial: "databases/row_context_menu_body",
+             locals: {
+               workspace: @workspace,
+               database: @database,
+               row: @row,
+               row_update_path: database_db_row_path(
+                 database_row_menu_params.merge(
+                   workspace_slug: @workspace.slug,
+                   database_id: @database.id,
+                   id: @row.id
+                 )
+               ),
+               row_params: database_row_menu_params,
+               row_color_options: row_color_options,
+               row_can_destroy: policy(@row).destroy? && !@database.locked?,
+               linked_page: @row.linked_page,
+               row_is_bold: @row.row_bold?,
+               row_is_italic: @row.row_italic?,
+               row_text_color: @row.row_text_color,
+               row_background_color: @row.row_background_color
+             }
     else
       head :not_found
     end
@@ -1137,6 +1162,32 @@ class DatabasesController < ApplicationController
     )
   end
 
+  def database_row_menu_params
+    database_panel_view_params.except(
+      :workspace_slug,
+      :id,
+      :view_settings,
+      :view_settings_section,
+      :actions_menu,
+      :options_menu
+    )
+  end
+
+  def row_color_options
+    [
+      [ "Default", "default" ],
+      [ "Gray", "gray" ],
+      [ "Brown", "brown" ],
+      [ "Orange", "orange" ],
+      [ "Yellow", "yellow" ],
+      [ "Green", "green" ],
+      [ "Blue", "blue" ],
+      [ "Purple", "purple" ],
+      [ "Pink", "pink" ],
+      [ "Red", "red" ]
+    ]
+  end
+
   def resolve_tasks_project_for_split
     existing_project =
       policy_scope(KalendariumProject).for_workspace(@workspace).find_by(slug: Kalendarium::TasksProjectEnsurer::PROJECT_SLUG) ||
@@ -1264,6 +1315,11 @@ class DatabasesController < ApplicationController
 
   def prepare_database_view_settings_panel!
     prepare_database_view_context!
+  end
+
+  def prepare_database_row_menu_panel!
+    @row = policy_scope(DbRow).for_database(@database).active.includes(:linked_page).find(params[:row_id])
+    authorize @row, :update?
   end
 
   def prepare_database_view_context!

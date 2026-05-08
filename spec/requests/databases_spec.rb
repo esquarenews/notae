@@ -1012,17 +1012,28 @@ RSpec.describe "Databases", type: :request do
     html = Nokogiri::HTML(response.body)
     row_menu = html.at_css("#row_#{row.id} .notae-db-row-more-menu")
     expect(row_menu).to be_present
+    expect(row_menu["data-row-menu-url-value"]).to include("panels/row_menu")
+    expect(row_menu["data-row-menu-url-value"]).to include("row_id=#{row.id}")
+    expect(row_menu.css("form")).to be_empty
+    expect(response.body).not_to include("Duplicate row")
 
-    bold_form = row_menu.css("form").find do |form|
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "row_menu", row_id: row.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    panel_html = Nokogiri::HTML.fragment(response.body)
+
+    bold_form = panel_html.css("form").find do |form|
       form.at_css("input[name='db_row[style_action]'][value='toggle_bold']").present?
     end
-    italic_form = row_menu.css("form").find do |form|
+    italic_form = panel_html.css("form").find do |form|
       form.at_css("input[name='db_row[style_action]'][value='toggle_italic']").present?
     end
-    background_form = row_menu.css("form").find do |form|
+    background_form = panel_html.css("form").find do |form|
       form.at_css("input[name='db_row[style_action]'][value='set_background_color']").present?
     end
 
+    expect(response.body).to include("Duplicate row")
+    expect(response.body).to include("Delete row")
     expect(bold_form).to be_present
     expect(italic_form).to be_present
     expect(background_form).to be_present
@@ -1632,7 +1643,11 @@ RSpec.describe "Databases", type: :request do
     expect(dialog.at_css("input#board_row_title_#{row.id}[name='db_row[title]']")).to be_present
     expect(dialog.at_css("form.notae-db-board-card-modal-title-form")["data-action"]).to include("turbo:submit-end->database-drag#refreshBoardOnSubmit")
     expect(labels).to include("Title", "Status", "Due date", "Estimate", "Blocked", "Notes")
-    expect(dialog.at_css("[data-controller='row-menu']")).to be_present
+    row_menu = dialog.at_css("[data-controller='row-menu']")
+    expect(row_menu).to be_present
+    expect(row_menu["data-row-menu-url-value"]).to include("panels/row_menu")
+    expect(row_menu["data-row-menu-url-value"]).to include("row_id=#{row.id}")
+    expect(row_menu.css("form")).to be_empty
     status_select = dialog.at_css("select[name='db_cell[value_text]']")
     due_date_input = dialog.at_css("input[type='date'][name='db_cell[value_text]']")
     estimate_input = dialog.at_css("input[type='number'][name='db_cell[value_text]']")
@@ -1645,7 +1660,11 @@ RSpec.describe "Databases", type: :request do
     expect(blocked_input).to be_present
     expect(notes_input).to be_present
     expect(status_select.ancestors("form").first["data-action"]).to include("turbo:submit-end->database-drag#refreshBoardOnSubmit")
-    expect(dialog.at_css("form[action='#{duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)}']")).to be_present
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "row_menu", row_id: row.id, view_id: board_view.id)
+    expect(response).to have_http_status(:ok)
+    row_menu_body = Nokogiri::HTML.fragment(response.body)
+    expect(row_menu_body.at_css("form[action='#{duplicate_database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)}']")).to be_present
   end
 
   it "updates a row title over json for inline board edits" do
@@ -2525,7 +2544,15 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     html = Nokogiri::HTML(response.body)
-    delete_form = html.css("form[action='#{database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)}']").find do |form|
+    row_menu = html.at_css("#row_#{row.id} .notae-db-row-more-menu")
+    expect(row_menu).to be_present
+    expect(row_menu["data-row-menu-url-value"]).to include("panels/row_menu")
+    expect(html.css("#row_#{row.id} .notae-db-row-more-menu form")).to be_empty
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "row_menu", row_id: row.id)
+    expect(response).to have_http_status(:ok)
+    row_menu_body = Nokogiri::HTML.fragment(response.body)
+    delete_form = row_menu_body.css("form[action='#{database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id)}']").find do |form|
       form.at_css("input[name='_method'][value='delete']").present?
     end
     expect(delete_form).to be_present
@@ -3115,9 +3142,18 @@ RSpec.describe "Databases", type: :request do
 
     tasks_project = workspace.kalendarium_projects.find_by!(slug: "tasks")
     expect(tasks_project.kalendarium_calendar).to be_present
-    expect(response.body).to include("Find space in my calendar")
+    expect(response.body).not_to include("Find space in my calendar")
 
     html = Nokogiri::HTML(response.body)
+    row = database.db_rows.find_by!(title: "Review roadmap")
+    row_menu = html.at_css("#row_#{row.id} .notae-db-row-more-menu")
+    expect(row_menu).to be_present
+    expect(row_menu["data-row-menu-url-value"]).to include("panels/row_menu")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "row_menu", row_id: row.id, split_panel: "kalendarium")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Find space in my calendar")
+
     split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
     expect(split_iframe).to be_present
     expect(split_iframe["src"]).to include("/w/#{workspace.slug}/kalendarium")

@@ -1,14 +1,19 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["button", "panel"]
+  static targets = ["button", "panel", "content"]
   static values = {
     gap: Number,
-    margin: Number
+    margin: Number,
+    url: String,
+    loaded: Boolean,
+    loadingText: { type: String, default: "Loading…" },
+    errorText: { type: String, default: "Could not load this menu." }
   }
 
   connect() {
     this.isOpen = false
+    this.pendingRequest = null
     this.controlsElement = this.element.closest(".notae-db-row-hover-controls, .notae-db-column-hover-controls")
     this.placeholder = null
     this.portalRoot = null
@@ -25,6 +30,10 @@ export default class extends Controller {
     this.panelElement.setAttribute("aria-hidden", "true")
 
     document.addEventListener("turbo:before-cache", this.boundBeforeCache)
+
+    if (this.hasContentTarget && !this.loadedValue) {
+      this.contentTarget.innerHTML = ""
+    }
   }
 
   disconnect() {
@@ -54,7 +63,53 @@ export default class extends Controller {
 
     this.setupListeners()
     this.reposition()
+    this.ensureLoaded().then(() => this.reposition())
     window.requestAnimationFrame(() => this.reposition())
+  }
+
+  async ensureLoaded() {
+    if (!this.hasContentTarget || this.loadedValue) return true
+    if (!this.hasUrlValue || this.urlValue.length === 0) return false
+    if (this.pendingRequest) return this.pendingRequest
+
+    this.renderStatus("loading")
+
+    this.pendingRequest = fetch(this.urlValue, {
+      credentials: "same-origin",
+      headers: {
+        Accept: "text/html",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Failed to load row menu: ${response.status}`)
+
+        this.contentTarget.innerHTML = await response.text()
+        this.loadedValue = true
+        return true
+      })
+      .catch(() => {
+        this.renderStatus("error")
+        return false
+      })
+      .finally(() => {
+        this.pendingRequest = null
+      })
+
+    return this.pendingRequest
+  }
+
+  renderStatus(state) {
+    if (!this.hasContentTarget || this.loadedValue) return
+
+    const text = state === "error" ? this.errorTextValue : this.loadingTextValue
+    const spinner = state === "loading" ? '<span class="notae-lazy-panel-spinner" aria-hidden="true"></span>' : ""
+    this.contentTarget.innerHTML = `
+      <div class="notae-lazy-panel-status is-${state}" role="status" aria-live="polite">
+        ${spinner}
+        <span>${text}</span>
+      </div>
+    `
   }
 
   close({ focusButton = false } = {}) {
