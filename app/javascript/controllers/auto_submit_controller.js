@@ -25,11 +25,12 @@ export default class extends Controller {
   }
 
   static STATUS_CLASSES = Object.values(this.STATUS_CLASS_BY_VALUE)
+  static activeControllerCount = 0
+  static pendingFocusSelector = ""
+  static pendingFocusCapturedAt = 0
+  static documentPointerDownHandler = null
 
   connect() {
-    this.handlePointerDown = (event) => {
-      this.capturePendingFocusTarget(event)
-    }
     this.handleSubmitStart = (event) => {
       const form = this.eventForm(event)
       this.markSubmitting(form)
@@ -47,18 +48,35 @@ export default class extends Controller {
     this.element.addEventListener("turbo:submit-start", this.handleSubmitStart)
     this.element.addEventListener("turbo:submit-end", this.handleSubmitEnd)
 
-    if (this.focusOnConnectValue) {
+    if (this.focusOnConnectValue || this.hasPendingConnectFocusTarget()) {
       this.focusPrimaryInput()
     }
 
-    document.addEventListener("pointerdown", this.handlePointerDown, true)
+    this.constructor.installDocumentPointerListener()
     this.restoreViewState()
   }
 
   disconnect() {
-    document.removeEventListener("pointerdown", this.handlePointerDown, true)
+    this.constructor.removeDocumentPointerListener()
     this.element.removeEventListener("turbo:submit-start", this.handleSubmitStart)
     this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd)
+  }
+
+  static installDocumentPointerListener() {
+    this.activeControllerCount += 1
+    if (this.documentPointerDownHandler) return
+
+    this.documentPointerDownHandler = (event) => this.capturePendingFocusTarget(event)
+    document.addEventListener("pointerdown", this.documentPointerDownHandler, true)
+  }
+
+  static removeDocumentPointerListener() {
+    this.activeControllerCount = Math.max(this.activeControllerCount - 1, 0)
+    if (this.activeControllerCount > 0 || !this.documentPointerDownHandler) return
+
+    document.removeEventListener("pointerdown", this.documentPointerDownHandler, true)
+    this.documentPointerDownHandler = null
+    this.clearPendingFocusTarget()
   }
 
   formFor(event) {
@@ -173,8 +191,8 @@ export default class extends Controller {
       scrollY: window.scrollY,
       capturedAt: Date.now(),
       formAction: form?.action || "",
-      pendingFocusSelector: this.pendingFocusSelector,
-      pendingFocusCapturedAt: this.pendingFocusCapturedAt
+      pendingFocusSelector: this.constructor.pendingFocusSelector,
+      pendingFocusCapturedAt: this.constructor.pendingFocusCapturedAt
     }
 
     window.sessionStorage.setItem(this.constructor.VIEW_STATE_KEY, JSON.stringify(payload))
@@ -228,6 +246,10 @@ export default class extends Controller {
   }
 
   focusSelectorFor(target) {
+    return this.constructor.focusSelectorFor(target)
+  }
+
+  static focusSelectorFor(target) {
     if (!(target instanceof HTMLElement)) return ""
 
     if (target.id) return `#${CSS.escape(target.id)}`
@@ -238,11 +260,15 @@ export default class extends Controller {
     return ""
   }
 
-  escapeAttribute(value) {
+  static escapeAttribute(value) {
     return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
   }
 
-  capturePendingFocusTarget(event) {
+  escapeAttribute(value) {
+    return this.constructor.escapeAttribute(value)
+  }
+
+  static capturePendingFocusTarget(event) {
     const target = event?.target
     if (!(target instanceof HTMLElement)) return
 
@@ -253,9 +279,13 @@ export default class extends Controller {
     this.pendingFocusCapturedAt = Date.now()
   }
 
-  clearPendingFocusTarget() {
+  static clearPendingFocusTarget() {
     this.pendingFocusSelector = ""
     this.pendingFocusCapturedAt = 0
+  }
+
+  clearPendingFocusTarget() {
+    this.constructor.clearPendingFocusTarget()
   }
 
   markSubmitting(form = this.element) {
@@ -270,8 +300,13 @@ export default class extends Controller {
     delete form.dataset.autoSubmitPending
   }
 
+  hasPendingConnectFocusTarget() {
+    return Boolean(this.element?.querySelector?.('form[data-auto-submit-focus-on-connect-value="true"]'))
+  }
+
   focusPrimaryInput() {
-    const input = this.element?.querySelector?.('input[type="text"], input:not([type]), textarea')
+    const focusRoot = this.element?.querySelector?.('form[data-auto-submit-focus-on-connect-value="true"]') || this.element
+    const input = focusRoot?.querySelector?.('input[type="text"], input:not([type]), textarea')
     if (!(input instanceof HTMLElement)) return
 
     requestAnimationFrame(() => {

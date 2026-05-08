@@ -92,7 +92,6 @@
                     accept-charset="UTF-8"
                     method="post"
                     class="notae-db-title-form notae-db-title-form-inline"
-                    data-controller="auto-submit"
                     data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
                     data-preserve-database-scroll="true">
                 <input type="hidden" name="_method" value="patch" autocomplete="off">
@@ -128,7 +127,6 @@
                   accept-charset="UTF-8"
                   method="post"
                   class="notae-db-title-form notae-db-title-form-inline"
-                  data-controller="auto-submit"
                   data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
                   data-preserve-database-scroll="true">
               <input type="hidden" name="_method" value="patch" autocomplete="off">
@@ -224,7 +222,6 @@
           <form action="<%= cell_update_path %>"
                 accept-charset="UTF-8"
                 method="post"
-                data-controller="auto-submit"
                 data-turbo-stream="true"
                 data-preserve-database-scroll="true">
             <input type="hidden" name="_method" value="patch" autocomplete="off">

@@ -36,6 +36,8 @@ RSpec.describe "Application JavaScript syntax" do
     ].each do |package_name|
       expect(importmap).to match(/pin "#{Regexp.escape(package_name)}".*preload: false/)
     end
+    expect(importmap).not_to match(/pin "@tiptap\/[^"]+".*\?bundle/)
+    expect(importmap).not_to match(/pin "@tiptap\/[^"]+".*deps=@tiptap/)
   end
 
   it "recovers ai rail frame-missing responses instead of showing Turbo's placeholder" do

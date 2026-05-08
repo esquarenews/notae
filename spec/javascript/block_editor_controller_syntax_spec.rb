@@ -67,8 +67,24 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("activateAndFocus(event)")
     expect(source).to include("activateFromKeyboard(event)")
     expect(source).to include("this.hydrate({ focus: true })")
-    expect(source).to include("mountEditor(initialContent)")
+    expect(source).to include("await this.mountEditor(initialContent)")
     expect(source).to include("installGlobalHandlers()")
+    expect(source).to include("static loadEditorModules()")
+    expect(source).to include("static scheduleEditorModuleWarmup()")
+    expect(source).to include("requestIdleCallback")
+    expect(source).to include("this.constructor.scheduleEditorModuleWarmup()")
+    expect(source).to include('import("@tiptap/core")')
+    expect(source).not_to include('from "@tiptap/core"')
+    expect(source).not_to include('from "@tiptap/starter-kit"')
+  end
+
+  it "focuses the mounted contenteditable editor after lazy hydration" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("focusEditor()")
+    expect(source).to include('this.editor.commands.focus("end")')
+    expect(source).to include("this.editor.view?.dom")
+    expect(source).to include("editorElement.focus({ preventScroll: true })")
   end
 
   it "fails closed when deferred editor content cannot be loaded" do
@@ -82,7 +98,7 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
   it "loads the Tiptap link extension for block-linked split previews" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
-    expect(source).to include('import Link from "@tiptap/extension-link"')
+    expect(source).to include('import("@tiptap/extension-link")')
     expect(source).to include("Link.configure({")
     expect(source).to include("openOnClick: false")
   end

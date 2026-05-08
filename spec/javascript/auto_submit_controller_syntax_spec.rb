@@ -50,11 +50,19 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
   it "restores the next clicked cell instead of stealing focus back to the submitted cell" do
     source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
 
-    expect(source).to include("document.addEventListener(\"pointerdown\", this.handlePointerDown, true)")
-    expect(source).to include("document.removeEventListener(\"pointerdown\", this.handlePointerDown, true)")
+    expect(source).to include("installDocumentPointerListener")
+    expect(source).to include("removeDocumentPointerListener")
+    expect(source).to include("activeControllerCount")
+    expect(source).to include("documentPointerDownHandler")
+    expect(source).to include("document.addEventListener(\"pointerdown\", this.documentPointerDownHandler, true)")
+    expect(source).to include("document.removeEventListener(\"pointerdown\", this.documentPointerDownHandler, true)")
     expect(source).to include("capturePendingFocusTarget(event)")
     expect(source).to include("pendingFocusSelector")
     expect(source).to include("pendingFocusCapturedAt")
+    expect(source).to include("this.constructor.pendingFocusSelector")
+    expect(source).to include("this.constructor.pendingFocusCapturedAt")
+    expect(source).to include("hasPendingConnectFocusTarget")
+    expect(source).to include('form[data-auto-submit-focus-on-connect-value="true"]')
     expect(source).to include("preferredFocusSelector(payload)")
     expect(source).to include("payload?.pendingFocusSelector && pendingCapturedAt >= submittedAt")
     expect(source).to include("target.closest(\"input, textarea, select, [contenteditable='true']\")")

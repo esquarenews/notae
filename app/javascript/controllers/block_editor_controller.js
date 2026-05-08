@@ -1,9 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import { Editor } from "@tiptap/core"
-import StarterKit from "@tiptap/starter-kit"
-import Link from "@tiptap/extension-link"
-import TaskList from "@tiptap/extension-task-list"
-import TaskItem from "@tiptap/extension-task-item"
 
 const DEBOUNCE_MS = 300
 const EDITING_IDLE_MS = 3000
@@ -144,8 +139,11 @@ export default class extends Controller {
     blockType: String,
     blockId: String
   }
+  static editorModulesPromise = null
+  static editorModuleWarmupScheduled = false
 
   connect() {
+    this.connected = true
     this.currentBlockType = this.blockTypeValue || "paragraph"
     this.clientSessionId = this.resolveClientSessionId()
     this.saveTimeout = null
@@ -165,9 +163,11 @@ export default class extends Controller {
     this.remoteUpdateHandler = (event) => this.applyRemoteUpdate(event.detail)
     this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
     this.flushSaveHandler = (event) => this.handleFlushSaveRequest(event)
+    this.constructor.scheduleEditorModuleWarmup()
   }
 
   disconnect() {
+    this.connected = false
     clearTimeout(this.saveTimeout)
     clearTimeout(this.editingIdleTimeout)
     this.hideSlashMenu()
@@ -223,7 +223,8 @@ export default class extends Controller {
       const initialContent = await this.loadInitialContent()
       if (!initialContent) return false
 
-      this.mountEditor(initialContent)
+      const mounted = await this.mountEditor(initialContent)
+      if (!mounted) return false
       if (focus) this.focusEditor()
       return true
     })().finally(() => {
@@ -231,6 +232,48 @@ export default class extends Controller {
     })
 
     return this.hydrationPromise
+  }
+
+  static loadEditorModules() {
+    if (!this.editorModulesPromise) {
+      this.editorModulesPromise = Promise.all([
+        import("@tiptap/core"),
+        import("@tiptap/starter-kit"),
+        import("@tiptap/extension-link"),
+        import("@tiptap/extension-task-list"),
+        import("@tiptap/extension-task-item")
+      ]).then(([core, starterKit, link, taskList, taskItem]) => ({
+        Editor: core.Editor,
+        StarterKit: starterKit.default,
+        Link: link.default,
+        TaskList: taskList.default,
+        TaskItem: taskItem.default
+      }))
+    }
+
+    return this.editorModulesPromise
+  }
+
+  static scheduleEditorModuleWarmup() {
+    if (this.editorModuleWarmupScheduled || this.editorModulesPromise) return
+
+    this.editorModuleWarmupScheduled = true
+    window.setTimeout(() => {
+      const warmup = () => this.loadEditorModules().catch(() => {
+        this.editorModuleWarmupScheduled = false
+        this.editorModulesPromise = null
+      })
+
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(warmup, { timeout: 1500 })
+      } else {
+        warmup()
+      }
+    }, 500)
+  }
+
+  loadEditorModules() {
+    return this.constructor.loadEditorModules()
   }
 
   async loadInitialContent() {
@@ -267,7 +310,10 @@ export default class extends Controller {
     return this.parseContent()
   }
 
-  mountEditor(initialContent) {
+  async mountEditor(initialContent) {
+    const { Editor, StarterKit, Link, TaskList, TaskItem } = await this.loadEditorModules()
+    if (!this.connected || !this.hasEditorTarget) return false
+
     this.editorTarget.innerHTML = ""
     this.installGlobalHandlers()
     this.syncStoredBlockState(initialContent, this.currentBlockType)
@@ -321,6 +367,8 @@ export default class extends Controller {
         this.hideSlashMenu()
       }
     })
+
+    return true
   }
 
   installGlobalHandlers() {
@@ -342,7 +390,16 @@ export default class extends Controller {
   }
 
   focusEditor() {
-    requestAnimationFrame(() => this.editor?.commands.focus("end"))
+    requestAnimationFrame(() => {
+      if (!this.editor) return
+
+      this.editor.commands.focus("end")
+      const editorElement = this.editor.view?.dom
+      if (editorElement instanceof HTMLElement && document.activeElement !== editorElement) {
+        editorElement.focus({ preventScroll: true })
+        this.editor.commands.focus("end")
+      }
+    })
   }
 
   parseContent() {

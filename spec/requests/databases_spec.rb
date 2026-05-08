@@ -2529,10 +2529,13 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
+    table_body = document.at_css("#database_table_rows")
     title_form = document.at_css("#row_#{row.id} form.notae-db-title-form-inline")
     cell_form = document.css("form").find { |form| form["action"].to_s.include?(cell.id) }
     insert_row_form = document.at_css("#row_#{row.id} form.notae-db-row-hover-control-form")
 
+    expect(table_body).to be_present
+    expect(table_body["data-controller"].split).to include("db-table-reorder", "auto-submit")
     expect(title_form).to be_present
     expect(cell_form).to be_present
     expect(insert_row_form).to be_present
@@ -2542,7 +2545,9 @@ RSpec.describe "Databases", type: :request do
     expect(title_form.at_css("input[name='_method'][value='patch']")).to be_present
     expect(cell_form.at_css("input[name='_method'][value='patch']")).to be_present
     expect(insert_row_form.at_css("input[name='db_row[title]'][value='Untitled row']")).to be_present
-    expect(cell_form["data-controller"]).to eq("auto-submit")
+    expect(title_form["data-controller"]).to be_nil
+    expect(cell_form["data-controller"]).to be_nil
+    expect(document.css("[data-controller~='auto-submit']").size).to eq(1)
   end
 
   it "creates a new row with turbo streams instead of redirecting the full grid for the simple table path" do
@@ -3065,7 +3070,8 @@ RSpec.describe "Databases", type: :request do
 
     title_form = row_node.at_css("form.notae-db-title-form-inline")
     expect(title_form).to be_present
-    expect(title_form["data-controller"]).to eq("auto-submit")
+    expect(html.at_css("#database_table_rows")["data-controller"].split).to include("auto-submit")
+    expect(title_form["data-controller"]).to be_nil
     expect(title_form["data-turbo"]).to be_nil
     title_input = title_form.at_css("input[name='db_row[title]']")
     expect(title_input).to be_present
