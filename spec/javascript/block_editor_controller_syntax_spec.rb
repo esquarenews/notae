@@ -55,15 +55,14 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include('const storageKey = "notae-client-session-id"')
   end
 
-  it "defers Tiptap mounting while allowing viewport lazy hydration" do
+  it "defers Tiptap mounting until the user interacts with a block" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
     connect_body = source[/connect\(\) \{(?<body>.*?)\n  \}/m, :body]
-    expect(connect_body).to include("this.startLazyHydration()")
+    expect(connect_body).not_to include("this.hydrate(")
     expect(connect_body).not_to include("new Editor(")
-    expect(source).to include("IntersectionObserver")
-    expect(source).to include("EDITOR_LAZY_ROOT_MARGIN")
-    expect(source).to include("stopLazyHydration()")
+    expect(source).not_to include("IntersectionObserver")
+    expect(source).not_to include("EDITOR_LAZY_ROOT_MARGIN")
     expect(source).to include("contentUrl: String")
     expect(source).to include("activateAndFocus(event)")
     expect(source).to include("activateFromKeyboard(event)")
