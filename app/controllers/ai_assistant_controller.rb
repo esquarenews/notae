@@ -1,4 +1,8 @@
 class AiAssistantController < ApplicationController
+  include RequestPerformanceInstrumentation
+
+  track_request_performance_for :panel, :updates
+
   before_action :authenticate_user!
   before_action :set_workspace
 

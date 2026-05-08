@@ -85,6 +85,7 @@ RSpec.describe "AI Assistant", type: :request do
     get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug, current_page_id: page.id)
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("AiAssistantController#panel")
     expect(response.media_type).to eq("text/html")
     expect(response.body).to include('<turbo-frame id="ai_rail_panel">')
     expect(response.body).to include("notae-ai-prompt-input")
@@ -572,6 +573,7 @@ RSpec.describe "AI Assistant", type: :request do
         headers: { "ACCEPT" => "application/json" }
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("AiAssistantController#updates")
 
     payload = JSON.parse(response.body)
     expect(payload.dig("data", "count")).to eq(2)

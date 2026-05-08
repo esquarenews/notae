@@ -166,14 +166,14 @@ RSpec.describe "Pages", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("PagesController#show")
     document = Nokogiri::HTML(response.body)
     editor = document.at_css(%([data-block-editor-block-id-value="#{block.id}"]))
     static_content = document.at_css("#block_#{block.id} .notae-doc-static-content")
 
     expect(editor).to be_present
     expect(editor["data-block-editor-content-url-value"]).to eq(content_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id))
-    initial_json = JSON.parse(editor["data-block-editor-initial-json-value"])
-    expect(initial_json.dig("content", 0, "content", 0, "text")).to eq("Static opening text")
+    expect(editor["data-block-editor-initial-json-value"]).to be_nil
     expect(static_content&.text).to include("Static opening text")
   end
 

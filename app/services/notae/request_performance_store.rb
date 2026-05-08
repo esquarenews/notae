@@ -18,6 +18,26 @@ module Notae
         sql_ms: 140.0,
         sql_queries: 35
       },
+      "PagesController#show" => {
+        total_ms: 900.0,
+        sql_ms: 260.0,
+        sql_queries: 80
+      },
+      "WorkspaceNotificationBarsController#show" => {
+        total_ms: 350.0,
+        sql_ms: 120.0,
+        sql_queries: 25
+      },
+      "AiAssistantController#panel" => {
+        total_ms: 500.0,
+        sql_ms: 160.0,
+        sql_queries: 35
+      },
+      "AiAssistantController#updates" => {
+        total_ms: 350.0,
+        sql_ms: 120.0,
+        sql_queries: 25
+      },
       "KalendariumController#show" => {
         total_ms: 900.0,
         sql_ms: 300.0,

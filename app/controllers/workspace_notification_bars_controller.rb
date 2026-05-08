@@ -1,4 +1,8 @@
 class WorkspaceNotificationBarsController < ApplicationController
+  include RequestPerformanceInstrumentation
+
+  track_request_performance_for :show
+
   before_action :authenticate_user!
   before_action :set_workspace
 

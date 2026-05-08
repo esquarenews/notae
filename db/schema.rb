@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_23_130500) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_08_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -108,6 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_23_130500) do
     t.index ["target_system", "draft_type"], name: "idx_agent_actions_on_system_and_type"
     t.index ["user_id", "created_at"], name: "idx_agent_actions_on_user_created_at"
     t.index ["user_id"], name: "index_agent_actions_on_user_id"
+    t.index ["workspace_id", "proposed_by", "updated_at"], name: "idx_agent_actions_workspace_proposed_updated", order: { updated_at: :desc }
     t.index ["workspace_id", "status", "created_at"], name: "idx_agent_actions_on_workspace_status_created_at"
     t.index ["workspace_id"], name: "index_agent_actions_on_workspace_id"
   end
@@ -497,6 +498,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_23_130500) do
     t.boolean "unread", default: false, null: false
     t.datetime "updated_at", null: false
     t.uuid "workspace_id", null: false
+    t.index "workspace_id, COALESCE(received_at, created_at) DESC", name: "idx_epistularium_unread_inbox_workspace_recent", where: "(((mailbox)::text = 'inbox'::text) AND (unread = true))"
     t.index ["epistularium_account_id", "provider_message_id"], name: "index_epistularium_messages_on_account_and_provider_id", unique: true
     t.index ["epistularium_account_id", "received_at", "created_at"], name: "index_epistularium_messages_on_account_inbox_recency", order: { received_at: :desc, created_at: :desc }, where: "((mailbox)::text = 'inbox'::text)"
     t.index ["epistularium_account_id", "sent_at", "created_at"], name: "index_epistularium_messages_on_account_sent_recency", order: { sent_at: :desc, created_at: :desc }, where: "((mailbox)::text = 'sent'::text)"
@@ -697,6 +699,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_23_130500) do
     t.index ["user_id", "workspace_id", "kind", "generated_for_date"], name: "idx_knowledge_suggestions_daily_unique", unique: true, where: "((kind)::text = 'daily_summary'::text)"
     t.index ["user_id", "workspace_id", "status", "generated_at"], name: "idx_knowledge_suggestions_active_lookup"
     t.index ["user_id"], name: "index_knowledge_suggestions_on_user_id"
+    t.index ["workspace_id", "status", "kind", "generated_at", "created_at"], name: "idx_knowledge_suggestions_workspace_active_recent", order: { generated_at: :desc, created_at: :desc }
     t.index ["workspace_id"], name: "index_knowledge_suggestions_on_workspace_id"
   end
 
@@ -799,6 +802,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_23_130500) do
     t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable_lookup"
     t.index ["recipient_id", "created_at"], name: "index_notifications_on_recipient_id_and_created_at"
     t.index ["recipient_id"], name: "index_notifications_on_recipient_id"
+    t.index ["workspace_id", "recipient_id", "created_at"], name: "idx_notifications_unread_recent_workspace_user", order: { created_at: :desc }, where: "(read_at IS NULL)"
     t.index ["workspace_id", "recipient_id", "read_at"], name: "index_notifications_unread_lookup"
     t.index ["workspace_id"], name: "index_notifications_on_workspace_id"
   end
@@ -1133,6 +1137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_23_130500) do
     t.index ["user_id"], name: "index_workflow_runs_on_user_id"
     t.index ["workflow_kind", "status"], name: "idx_workflow_runs_on_kind_status"
     t.index ["workspace_id", "status", "created_at"], name: "idx_workflow_runs_on_workspace_status_created_at"
+    t.index ["workspace_id", "trigger_source", "updated_at"], name: "idx_workflow_runs_workspace_trigger_updated", order: { updated_at: :desc }
     t.index ["workspace_id"], name: "index_workflow_runs_on_workspace_id"
   end
 

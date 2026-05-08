@@ -64,6 +64,21 @@ RSpec.describe Notae::RequestPerformanceStore do
       sql_ms: 140.0,
       sql_queries: 35
     )
+    expect(described_class.budget_for(action: "PagesController#show")).to include(
+      total_ms: 900.0,
+      sql_ms: 260.0,
+      sql_queries: 80
+    )
+    expect(described_class.budget_for(action: "WorkspaceNotificationBarsController#show")).to include(
+      total_ms: 350.0,
+      sql_ms: 120.0,
+      sql_queries: 25
+    )
+    expect(described_class.budget_for(action: "AiAssistantController#updates")).to include(
+      total_ms: 350.0,
+      sql_ms: 120.0,
+      sql_queries: 25
+    )
     expect(described_class.budget_status(healthy_sample)).to eq(:healthy)
     expect(described_class.budget_breaches(healthy_sample)).to eq([])
 

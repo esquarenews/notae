@@ -33,6 +33,8 @@ RSpec.describe "Workspace notification bar", type: :request do
     get workspace_notification_bar_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceNotificationBarsController#show")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
 
     payload = JSON.parse(response.body)
     expect(payload.dig("data", "has_alerts")).to eq(true)
@@ -63,6 +65,7 @@ RSpec.describe "Workspace notification bar", type: :request do
     get workspace_notification_bar_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceNotificationBarsController#show")
 
     payload = JSON.parse(response.body)
     expect(payload.dig("data", "has_alerts")).to eq(true)

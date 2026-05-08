@@ -8,26 +8,6 @@ import TaskItem from "@tiptap/extension-task-item"
 const DEBOUNCE_MS = 300
 const EDITING_IDLE_MS = 3000
 const BLOCK_DRAG_MIME = "application/x-notae-block-id"
-const EDITOR_LAZY_ROOT_MARGIN = "700px 0px"
-
-const lazyEditorControllers = new WeakMap()
-let lazyEditorObserver = null
-
-function sharedLazyEditorObserver() {
-  if (typeof window === "undefined" || !("IntersectionObserver" in window)) return null
-
-  if (!lazyEditorObserver) {
-    lazyEditorObserver = new window.IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return
-
-        lazyEditorControllers.get(entry.target)?.hydrate()
-      })
-    }, { rootMargin: EDITOR_LAZY_ROOT_MARGIN })
-  }
-
-  return lazyEditorObserver
-}
 
 const SLASH_COMMANDS = [
   {
@@ -185,13 +165,11 @@ export default class extends Controller {
     this.remoteUpdateHandler = (event) => this.applyRemoteUpdate(event.detail)
     this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
     this.flushSaveHandler = (event) => this.handleFlushSaveRequest(event)
-    this.startLazyHydration()
   }
 
   disconnect() {
     clearTimeout(this.saveTimeout)
     clearTimeout(this.editingIdleTimeout)
-    this.stopLazyHydration()
     this.hideSlashMenu()
     this.setBlockFocused(false)
     this.removeGlobalHandlers()
@@ -228,19 +206,6 @@ export default class extends Controller {
     return event?.target?.closest?.("a[href]") instanceof HTMLAnchorElement
   }
 
-  startLazyHydration() {
-    const observer = sharedLazyEditorObserver()
-    if (!observer) return
-
-    lazyEditorControllers.set(this.element, this)
-    observer.observe(this.element)
-  }
-
-  stopLazyHydration() {
-    lazyEditorControllers.delete(this.element)
-    if (lazyEditorObserver) lazyEditorObserver.unobserve(this.element)
-  }
-
   hydrate({ focus = false } = {}) {
     if (this.editor) {
       if (focus) this.focusEditor()
@@ -254,7 +219,6 @@ export default class extends Controller {
       })
     }
 
-    this.stopLazyHydration()
     this.hydrationPromise = (async () => {
       const initialContent = await this.loadInitialContent()
       if (!initialContent) return false
