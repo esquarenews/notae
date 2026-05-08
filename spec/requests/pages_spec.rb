@@ -141,7 +141,7 @@ RSpec.describe "Pages", type: :request do
     expect(stylesheet).to include(".notae-doc-editor.is-heading-4 .ProseMirror {\n  font-size: 1.08rem;\n  font-weight: 700;\n  color: rgba(68, 64, 60, 0.8);\n}")
   end
 
-  it "renders static block content first and defers editor JSON to the content endpoint" do
+  it "renders static block content first and keeps editor JSON local for lazy hydration" do
     owner = User.create!(email: "pages-lazy-editor-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Lazy editor page", slug: "lazy-editor-page")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
@@ -173,7 +173,7 @@ RSpec.describe "Pages", type: :request do
 
     expect(editor).to be_present
     expect(editor["data-block-editor-content-url-value"]).to eq(content_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id))
-    expect(editor["data-block-editor-initial-json-value"]).to be_nil
+    expect(JSON.parse(editor["data-block-editor-initial-json-value"])).to eq(block.content_json)
     expect(static_content&.text).to include("Static opening text")
   end
 
