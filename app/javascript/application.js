@@ -8,6 +8,8 @@ const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"
 const PRESERVED_SAVE_SCROLL_KEY = "notae-preserved-save-scroll"
 const PRESERVED_SAVE_SCROLL_MAX_AGE_MS = 30_000
 const PRESERVED_SAVE_SCROLL_RESTORE_DELAYS_MS = [ 60, 180, 360, 720, 1200, 1800 ]
+const SIDEBAR_SECTIONS_FRAME_ID = "notae_sidebar_sections"
+const SIDEBAR_SECTIONS_REFRESH_DELAY_MS = 250
 const PERSISTED_SHELL_STATE_CLASSES = [
   "is-sidebar-collapsed",
   "is-mobile-viewport",
@@ -298,6 +300,33 @@ function syncPersistedShellState(root = document) {
   })
 }
 
+function sidebarSectionsFrame() {
+  return document.getElementById(SIDEBAR_SECTIONS_FRAME_ID)
+}
+
+function refreshSidebarSectionsFrame() {
+  const frame = sidebarSectionsFrame()
+  if (!(frame instanceof HTMLElement)) return
+
+  if (typeof frame.reload === "function") {
+    frame.reload()
+    return
+  }
+
+  const src = frame.getAttribute("src")
+  if (src) frame.setAttribute("src", src)
+}
+
+function shouldRefreshSidebarSectionsAfterSubmit(event) {
+  const form = event.target
+  if (!(form instanceof HTMLFormElement)) return false
+  if (!event.detail?.success) return false
+  if (!form.closest(".notae-sidebar")) return false
+
+  const action = form.getAttribute("action") || ""
+  return action.includes("/pages") || action.includes("/databases")
+}
+
 syncAiRailCollapsedState(document)
 syncPreservedAiRailContext(document)
 syncPersistedShellState(document)
@@ -325,6 +354,16 @@ document.addEventListener("turbo:submit-end", (event) => {
 
   restoreStoredSaveScroll()
 }, true)
+
+document.addEventListener("turbo:submit-end", (event) => {
+  if (!shouldRefreshSidebarSectionsAfterSubmit(event)) return
+
+  window.setTimeout(refreshSidebarSectionsFrame, SIDEBAR_SECTIONS_REFRESH_DELAY_MS)
+}, true)
+
+window.addEventListener("notae:sidebar-sections-refresh", () => {
+  refreshSidebarSectionsFrame()
+})
 
 document.addEventListener("turbo:load", () => {
   restoreStoredSaveScroll()

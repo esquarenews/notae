@@ -86,6 +86,17 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include("document.querySelectorAll(selector).length !== 1")
   end
 
+  it "keeps persistent shell panels from refetching on every same-workspace navigation" do
+    source = Rails.root.join("app/javascript/application.js").read
+
+    expect(source).to include('const SIDEBAR_SECTIONS_FRAME_ID = "notae_sidebar_sections"')
+    expect(source).to include("function refreshSidebarSectionsFrame()")
+    expect(source).to include("frame.reload()")
+    expect(source).to include("function shouldRefreshSidebarSectionsAfterSubmit(event)")
+    expect(source).to include('form.closest(".notae-sidebar")')
+    expect(source).to include('window.addEventListener("notae:sidebar-sections-refresh"')
+  end
+
   it "keeps a preserved ai rail in sync with turbo page changes without replacing the rail" do
     source = Rails.root.join("app/javascript/application.js").read
 

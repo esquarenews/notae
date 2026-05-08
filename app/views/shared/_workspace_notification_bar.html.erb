@@ -1,13 +1,19 @@
 <% defer_alerts = local_assigns.fetch(:defer_alerts, false) %>
+<% notification_bar_key = workspace.slug.to_s.gsub(/[^a-zA-Z0-9_-]/, "_") %>
+<% calendar_widget_path = if presenter.show_clock?
+  kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: presenter.calendar_widget_date, tz: [presenter.time_zone_name])
+end %>
 
 <aside class="notae-shell-status-bar"
+       id="notae_notification_bar_<%= notification_bar_key %>"
        aria-label="Workspace notification bar"
+       data-turbo-permanent
        data-controller="notification-bar"
        data-notification-bar-time-zone-value="<%= presenter.time_zone_name %>"
        data-notification-bar-workspace-key-value="<%= workspace.slug %>"
-       data-notification-bar-refresh-path-value="<%= workspace_notification_bar_path(workspace_slug: workspace.slug) %>">
+       data-notification-bar-refresh-path-value="<%= workspace_notification_bar_path(workspace_slug: workspace.slug) %>"
+       <% if calendar_widget_path.present? %>data-notification-bar-calendar-src-value="<%= calendar_widget_path %>"<% end %>>
   <% if presenter.show_clock? %>
-    <% calendar_widget_path = kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: presenter.calendar_widget_date, tz: [presenter.time_zone_name]) %>
     <button type="button"
             class="notae-shell-status-bar-clock-button"
             aria-label="Open compact Kalendārium"
@@ -20,10 +26,10 @@
     <section class="notae-shell-status-bar-calendar"
              hidden
              data-notification-bar-target="calendarPanel">
-      <iframe src="<%= calendar_widget_path %>"
-              title="Kalendārium quick calendar"
+      <iframe title="Kalendārium quick calendar"
               class="notae-shell-status-bar-calendar-frame"
               data-notification-bar-target="calendarFrame"
+              data-notification-bar-calendar-src="<%= calendar_widget_path %>"
               loading="lazy"></iframe>
     </section>
   <% end %>

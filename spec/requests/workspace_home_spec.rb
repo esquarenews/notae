@@ -222,11 +222,15 @@ RSpec.describe "Workspace home", type: :request do
       calendar_frame = document.at_css(".notae-shell-status-bar-calendar-frame")
       alerts = document.at_css("[data-notification-bar-target='alerts']")
       controls = document.css(".notae-shell-status-bar-control")
+      calendar_widget_path = kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: "2026-04-11", tz: [ "Australia/Melbourne" ])
 
       expect(bar).to be_present
+      expect(bar["id"]).to eq("notae_notification_bar_#{workspace.slug}")
+      expect(bar["data-turbo-permanent"]).to eq("")
       expect(bar["data-controller"]).to include("notification-bar")
       expect(bar["data-notification-bar-time-zone-value"]).to eq("Australia/Melbourne")
       expect(bar["data-notification-bar-workspace-key-value"]).to eq(workspace.slug)
+      expect(bar["data-notification-bar-calendar-src-value"]).to eq(calendar_widget_path)
       expect(clock_button).to be_present
       expect(clock_button["data-action"]).to include("pointerdown->notification-bar#startDrag")
       expect(clock_button["data-action"]).to include("dblclick->notification-bar#toggleCalendar")
@@ -235,7 +239,8 @@ RSpec.describe "Workspace home", type: :request do
       expect(calendar_panel.attribute("hidden")).to be_present
       expect(calendar_frame).to be_present
       expect(calendar_frame["data-notification-bar-target"]).to eq("calendarFrame")
-      expect(calendar_frame["src"]).to eq(kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: "2026-04-11", tz: [ "Australia/Melbourne" ]))
+      expect(calendar_frame["src"]).to be_nil
+      expect(calendar_frame["data-notification-bar-calendar-src"]).to eq(calendar_widget_path)
       expect(alerts).to be_present
       expect(alerts.element_children).to be_empty
       expect(document.text).not_to include("Client review")

@@ -6,9 +6,11 @@ const DRAG_THRESHOLD_PX = 4
 
 export default class extends Controller {
   static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel", "calendarFrame"]
-  static values = { timeZone: String, workspaceKey: String, refreshPath: String }
+  static values = { timeZone: String, workspaceKey: String, refreshPath: String, calendarSrc: String }
 
   connect() {
+    const shouldPollImmediately = this.element.dataset.notificationBarAlertsBootstrapped !== "true"
+
     this.renderClock()
     this.startClock()
     this.applyStoredAlertState()
@@ -36,7 +38,8 @@ export default class extends Controller {
     }
     this.applyStoredBarPosition()
     this.syncCalendarState()
-    this.syncAlertPolling({ immediate: true })
+    this.element.dataset.notificationBarAlertsBootstrapped = "true"
+    this.syncAlertPolling({ immediate: shouldPollImmediately })
   }
 
   disconnect() {
@@ -139,6 +142,7 @@ export default class extends Controller {
   openCalendar() {
     if (!this.hasCalendarPanelTarget) return
 
+    this.ensureCalendarFrameLoaded()
     this.calendarPanelTarget.hidden = false
     this.syncCalendarState()
     window.requestAnimationFrame(() => this.requestCalendarRecenter({ retries: 6 }))
@@ -246,8 +250,17 @@ export default class extends Controller {
     }
   }
 
+  ensureCalendarFrameLoaded() {
+    if (!this.hasCalendarFrameTarget) return
+    if (this.calendarFrameTarget.getAttribute("src")) return
+
+    const src = this.calendarFrameTarget.dataset.notificationBarCalendarSrc || this.calendarSrcValue
+    if (src) this.calendarFrameTarget.setAttribute("src", src)
+  }
+
   requestCalendarRecenter({ retries = 0 } = {}) {
     if (!this.hasCalendarFrameTarget) return
+    if (!this.calendarFrameTarget.getAttribute("src")) return
 
     const frameWindow = this.calendarFrameTarget.contentWindow
     if (!frameWindow) {

@@ -16,7 +16,11 @@ RSpec.describe "Workspace sidebar sections", type: :request do
     expect(response).to have_http_status(:ok)
 
     shell_document = Nokogiri::HTML(response.body)
+    sidebar_shell = shell_document.at_css("#notae_sidebar_sections_shell_#{workspace.slug}")
     sidebar_frame = shell_document.at_css("turbo-frame#notae_sidebar_sections")
+    expect(sidebar_shell).to be_present
+    expect(sidebar_shell["data-turbo-permanent"]).to eq("")
+    expect(sidebar_shell["data-notae-sidebar-sections-workspace-slug"]).to eq(workspace.slug)
     expect(sidebar_frame).to be_present
     expect(sidebar_frame["src"]).to eq(workspace_sidebar_sections_path(workspace_slug: workspace.slug))
     expect(sidebar_frame.text).to include("Loading Notarum")

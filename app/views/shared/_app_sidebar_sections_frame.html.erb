@@ -2,21 +2,44 @@
   workspace = local_assigns[:workspace] || (defined?(@workspace) ? @workspace : nil)
   lazy = local_assigns.fetch(:lazy, false)
   workspace_slug = workspace&.slug.to_s.presence
+  workspace_key = workspace_slug&.gsub(/[^a-zA-Z0-9_-]/, "_")
   sections_src = workspace_slug ? workspace_sidebar_sections_path(workspace_slug: workspace_slug) : nil
 %>
 
-<% if lazy && sections_src.present? %>
-  <%= turbo_frame_tag "notae_sidebar_sections",
-                      src: sections_src,
-                      loading: :lazy do %>
-    <%= render "shared/app_sidebar_sections",
-               workspace: workspace,
-               loading: true %>
-  <% end %>
+<% if workspace_key.present? %>
+  <div id="notae_sidebar_sections_shell_<%= workspace_key %>"
+       data-turbo-permanent
+       data-notae-sidebar-sections-workspace-slug="<%= workspace_slug %>">
+    <% if lazy && sections_src.present? %>
+      <%= turbo_frame_tag "notae_sidebar_sections",
+                          src: sections_src,
+                          loading: :lazy do %>
+        <%= render "shared/app_sidebar_sections",
+                   workspace: workspace,
+                   loading: true %>
+      <% end %>
+    <% else %>
+      <%= turbo_frame_tag "notae_sidebar_sections" do %>
+        <%= render "shared/app_sidebar_sections",
+                   workspace: workspace,
+                   loading: false %>
+      <% end %>
+    <% end %>
+  </div>
 <% else %>
-  <%= turbo_frame_tag "notae_sidebar_sections" do %>
-    <%= render "shared/app_sidebar_sections",
-               workspace: workspace,
-               loading: false %>
+  <% if lazy && sections_src.present? %>
+    <%= turbo_frame_tag "notae_sidebar_sections",
+                        src: sections_src,
+                        loading: :lazy do %>
+      <%= render "shared/app_sidebar_sections",
+                 workspace: workspace,
+                 loading: true %>
+    <% end %>
+  <% else %>
+    <%= turbo_frame_tag "notae_sidebar_sections" do %>
+      <%= render "shared/app_sidebar_sections",
+                 workspace: workspace,
+                 loading: false %>
+    <% end %>
   <% end %>
 <% end %>
