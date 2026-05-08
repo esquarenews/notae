@@ -1,7 +1,12 @@
-<aside class="notae-sidebar">
-  <% workspace = ui_current_workspace %>
-  <% nav_workspace = workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
-  <% nav_workspace_slug = nav_workspace&.slug.to_s.presence %>
+<% workspace = ui_current_workspace %>
+<% nav_workspace = workspace || ui_sidebar_recent_workspaces(limit: 1).first %>
+<% nav_workspace_slug = nav_workspace&.slug.to_s.presence %>
+<% sidebar_shell_key = nav_workspace_slug.present? ? notae_dom_key(nav_workspace_slug) : nil %>
+
+<aside class="notae-sidebar"
+       <% if sidebar_shell_key.present? %>id="notae_sidebar_shell_<%= sidebar_shell_key %>"
+       data-turbo-permanent
+       data-notae-sidebar-workspace-slug="<%= nav_workspace_slug %>"<% end %>>
   <% current_database_id = (controller_name == "databases" && action_name == "show") ? params[:id].presence : nil %>
   <% can_create_workspace = policy(Workspace.new).create? %>
   <% can_create_page = workspace && policy(Page.new(workspace: workspace)).create? %>

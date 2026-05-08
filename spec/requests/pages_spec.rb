@@ -615,6 +615,72 @@ RSpec.describe "Pages", type: :request do
     )
   end
 
+  it "reuses permanent workspace chrome instead of rendering heavy shell panels on same-workspace turbo visits" do
+    owner = User.create!(email: "page-shell-reuse-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Page shell reuse", slug: "page-shell-reuse")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    previous_page = Page.create!(workspace: workspace, created_by: owner, title: "Previous page")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Target page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id),
+        headers: {
+          "HTTP_REFERER" => page_url(workspace_slug: workspace.slug, id: previous_page.id),
+          "X-Turbo-Request-Id" => "same-workspace-navigation"
+        }
+
+    expect(response).to have_http_status(:ok)
+
+    html = Nokogiri::HTML(response.body)
+    sidebar_shell = html.at_css("#notae_sidebar_shell_#{workspace.slug}")
+    notification_shell = html.at_css("#notae_notification_bar_#{workspace.slug}")
+    ai_rail_shell = html.at_css("#notae_ai_rail_shell_#{workspace.slug}")
+
+    expect(html.text).to include("Target page")
+    expect(sidebar_shell).to be_present
+    expect(sidebar_shell["data-turbo-permanent"]).to eq("")
+    expect(sidebar_shell["data-notae-shell-placeholder"]).to eq("sidebar")
+    expect(sidebar_shell.at_css(".notae-sidebar-scroll")).to be_nil
+    expect(notification_shell).to be_present
+    expect(notification_shell["data-turbo-permanent"]).to eq("")
+    expect(notification_shell["data-notae-shell-placeholder"]).to eq("notification-bar")
+    expect(notification_shell.element_children).to be_empty
+    expect(ai_rail_shell).to be_present
+    expect(ai_rail_shell["data-turbo-permanent"]).to eq("")
+    expect(ai_rail_shell["data-notae-shell-placeholder"]).to eq("ai-rail")
+    expect(ai_rail_shell.element_children).to be_empty
+  end
+
+  it "renders the full shell on turbo visits that cross workspaces" do
+    owner = User.create!(email: "page-cross-workspace-shell-owner@example.com", password: "password123")
+    source_workspace = Workspace.create!(name: "Source shell", slug: "source-shell")
+    target_workspace = Workspace.create!(name: "Target shell", slug: "target-shell")
+    Membership.create!(workspace: source_workspace, user: owner, role: :owner)
+    Membership.create!(workspace: target_workspace, user: owner, role: :owner)
+    source_page = Page.create!(workspace: source_workspace, created_by: owner, title: "Source page")
+    target_page = Page.create!(workspace: target_workspace, created_by: owner, title: "Target page")
+    sign_in owner
+
+    get page_path(workspace_slug: target_workspace.slug, id: target_page.id),
+        headers: {
+          "HTTP_REFERER" => page_url(workspace_slug: source_workspace.slug, id: source_page.id),
+          "X-Turbo-Request-Id" => "cross-workspace-navigation"
+        }
+
+    expect(response).to have_http_status(:ok)
+
+    html = Nokogiri::HTML(response.body)
+    sidebar_shell = html.at_css("#notae_sidebar_shell_#{target_workspace.slug}")
+    ai_rail_shell = html.at_css("#notae_ai_rail_shell_#{target_workspace.slug}")
+
+    expect(sidebar_shell).to be_present
+    expect(sidebar_shell["data-notae-shell-placeholder"]).to be_nil
+    expect(sidebar_shell.at_css(".notae-sidebar-scroll")).to be_present
+    expect(ai_rail_shell).to be_present
+    expect(ai_rail_shell["data-notae-shell-placeholder"]).to be_nil
+    expect(ai_rail_shell.at_css("turbo-frame#ai_rail_panel")).to be_present
+  end
+
   it "renders mobile-ready page header action labels for icon-only controls" do
     owner = User.create!(email: "page-mobile-header-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Mobile page header", slug: "mobile-page-header")

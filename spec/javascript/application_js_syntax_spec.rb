@@ -95,6 +95,9 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include("function shouldRefreshSidebarSectionsAfterSubmit(event)")
     expect(source).to include('form.closest(".notae-sidebar")')
     expect(source).to include('window.addEventListener("notae:sidebar-sections-refresh"')
+    expect(source).to include("function syncSidebarActiveLinks()")
+    expect(source).to include("link.classList.toggle(\"active\", active)")
+    expect(source).to include("link.setAttribute(\"aria-current\", \"page\")")
   end
 
   it "keeps a preserved ai rail in sync with turbo page changes without replacing the rail" do

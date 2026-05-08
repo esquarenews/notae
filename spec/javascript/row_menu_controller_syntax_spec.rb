@@ -24,4 +24,12 @@ RSpec.describe "RowMenuController JavaScript syntax" do
     expect(source).to include("this.portalRoot = nextPortalRoot")
     expect(source).to include("this.portalRoot = null")
   end
+
+  it "caches lazy content before portaling the panel" do
+    source = Rails.root.join("app/javascript/controllers/row_menu_controller.js").read
+
+    expect(source).to include("this.contentElement = this.hasContentTarget ? this.contentTarget : null")
+    expect(source).to include("if (!this.contentElement || this.loadedValue) return true")
+    expect(source).to include("this.contentElement.innerHTML = await response.text()")
+  end
 end

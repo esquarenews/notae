@@ -60,6 +60,34 @@ RSpec.describe "Page header features", type: :request do
     expect(response).to have_http_status(:ok)
     html = Nokogiri::HTML(response.body)
     expect(html.at_css(".notae-page-icon-display.is-over-cover .notae-icon-renderer.is-custom img")).to be_present
+    icon_menu = html.css("details.notae-page-header-action").find do |details|
+      details.at_css("summary")&.text&.include?("Change icon")
+    end
+    expect(icon_menu).to be_present
+    expect(icon_menu["data-controller"]).to include("lazy-panel")
+    expect(icon_menu["data-lazy-panel-url-value"]).to eq(
+      workspace_icon_picker_path(
+        workspace_slug: workspace.slug,
+        target_type: "page",
+        page_id: page.id,
+        fallback: "📄",
+        return_to: page_path(workspace_slug: workspace.slug, id: page.id)
+      )
+    )
+    expect(html.at_css(".notae-page-header-icon-panel[data-lazy-panel-target='container']")).to be_present
+    expect(response.body).not_to include("notae-page-emoji-grid")
+    expect(response.body).not_to include("Smileys & Emotion")
+
+    get workspace_icon_picker_path(
+      workspace_slug: workspace.slug,
+      target_type: "page",
+      page_id: page.id,
+      fallback: "📄",
+      return_to: page_path(workspace_slug: workspace.slug, id: page.id)
+    )
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
     picker_labels = html.css(".notae-emoji-picker-section summary").map { |summary| summary.text.squish }
     expect(picker_labels).to include("Custom emoji")
     expect(picker_labels).to include("Smileys & Emotion")
@@ -72,6 +100,28 @@ RSpec.describe "Page header features", type: :request do
     expect(html.at_css(".notae-emoji-picker-remove")&.text&.squish).to eq("Remove icon")
     custom_button = html.at_css(".notae-page-emoji-button.is-custom")
     expect(custom_button["data-search-text"]).to include("Party avocado")
+  end
+
+  it "lazy-loads the database icon picker with database update params" do
+    owner = User.create!(email: "database-header-icon-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid Header Emoji", slug: "grid-header-emoji")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Header grid", icon: "📊")
+    sign_in owner
+
+    get workspace_icon_picker_path(
+      workspace_slug: workspace.slug,
+      target_type: "database",
+      database_id: database.id,
+      fallback: "🗃️"
+    )
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    form = html.at_css(".notae-page-header-panel-form")
+    expect(form["action"]).to eq(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(html.at_css("input[name='database[icon_action]']")["value"]).to eq("set")
+    expect(html.at_css("input[name='database[icon]']")["value"]).to eq("📊")
   end
 
   it "styles the remove icon action as a red destructive row near the top of the picker" do

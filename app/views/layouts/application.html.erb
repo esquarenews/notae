@@ -33,6 +33,7 @@
 </head>
 
   <% layout_workspace_slug = params[:workspace_slug].to_s.strip.presence %>
+  <% layout_reuse_workspace_shell = same_workspace_turbo_navigation?(layout_workspace_slug) %>
   <% layout_ai_rail_current_page_id = controller_name == "pages" && action_name == "show" ? params[:id].to_s.presence : nil %>
   <% layout_ai_rail_panel_src = if layout_workspace_slug.present?
                                   workspace_ai_assistant_panel_path(
@@ -56,7 +57,11 @@
            data-controller="<%= embedded_shell ? "shell" : "shell global-shortcuts" %>">
         <% unless embedded_shell %>
           <button type="button" class="notae-mobile-overlay" data-action="click->shell#close" aria-label="Close sidebar"></button>
-          <%= render "shared/app_sidebar" %>
+          <% if layout_reuse_workspace_shell %>
+            <%= render "shared/app_sidebar_shell_placeholder", workspace_slug: layout_workspace_slug %>
+          <% else %>
+            <%= render "shared/app_sidebar" %>
+          <% end %>
         <% end %>
 
         <div class="notae-main">
@@ -89,19 +94,25 @@
         </div>
 
         <% unless embedded_shell %>
-          <% if (notification_bar = workspace_notification_bar_presenter)&.shell_enabled? %>
+          <% if layout_reuse_workspace_shell %>
+            <%= render "shared/workspace_notification_bar_placeholder", workspace_slug: layout_workspace_slug %>
+          <% elsif (notification_bar = workspace_notification_bar_presenter)&.shell_enabled? %>
             <%= render "shared/workspace_notification_bar", presenter: notification_bar, workspace: notification_bar.workspace, defer_alerts: true %>
           <% end %>
           <%= render "shared/app_mobile_tabbar" %>
           <% if layout_workspace_slug.present? %>
-            <div id="<%= layout_ai_rail_shell_id %>"
-                 data-turbo-permanent
-                 data-ai-rail-workspace-slug="<%= layout_workspace_slug %>">
-              <%= render "shared/app_ai_rail_panel",
-                         lazy: true,
-                         workspace_slug: layout_workspace_slug,
-                         current_page_id: layout_ai_rail_current_page_id %>
-            </div>
+            <% if layout_reuse_workspace_shell %>
+              <%= render "shared/app_ai_rail_shell_placeholder", workspace_slug: layout_workspace_slug %>
+            <% else %>
+              <div id="<%= layout_ai_rail_shell_id %>"
+                   data-turbo-permanent
+                   data-ai-rail-workspace-slug="<%= layout_workspace_slug %>">
+                <%= render "shared/app_ai_rail_panel",
+                           lazy: true,
+                           workspace_slug: layout_workspace_slug,
+                           current_page_id: layout_ai_rail_current_page_id %>
+              </div>
+            <% end %>
           <% else %>
             <%= render "shared/app_ai_rail_panel",
                        lazy: true,

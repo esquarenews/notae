@@ -19,6 +19,7 @@ export default class extends Controller {
     this.portalRoot = null
     this.buttonElement = this.buttonTarget
     this.panelElement = this.panelTarget
+    this.contentElement = this.hasContentTarget ? this.contentTarget : null
 
     this.boundDocumentClick = this.handleDocumentClick.bind(this)
     this.boundKeydown = this.handleKeydown.bind(this)
@@ -31,8 +32,8 @@ export default class extends Controller {
 
     document.addEventListener("turbo:before-cache", this.boundBeforeCache)
 
-    if (this.hasContentTarget && !this.loadedValue) {
-      this.contentTarget.innerHTML = ""
+    if (this.contentElement && !this.loadedValue) {
+      this.contentElement.innerHTML = ""
     }
   }
 
@@ -68,7 +69,7 @@ export default class extends Controller {
   }
 
   async ensureLoaded() {
-    if (!this.hasContentTarget || this.loadedValue) return true
+    if (!this.contentElement || this.loadedValue) return true
     if (!this.hasUrlValue || this.urlValue.length === 0) return false
     if (this.pendingRequest) return this.pendingRequest
 
@@ -84,7 +85,7 @@ export default class extends Controller {
       .then(async (response) => {
         if (!response.ok) throw new Error(`Failed to load row menu: ${response.status}`)
 
-        this.contentTarget.innerHTML = await response.text()
+        this.contentElement.innerHTML = await response.text()
         this.loadedValue = true
         return true
       })
@@ -100,11 +101,11 @@ export default class extends Controller {
   }
 
   renderStatus(state) {
-    if (!this.hasContentTarget || this.loadedValue) return
+    if (!this.contentElement || this.loadedValue) return
 
     const text = state === "error" ? this.errorTextValue : this.loadingTextValue
     const spinner = state === "loading" ? '<span class="notae-lazy-panel-spinner" aria-hidden="true"></span>' : ""
-    this.contentTarget.innerHTML = `
+    this.contentElement.innerHTML = `
       <div class="notae-lazy-panel-status is-${state}" role="status" aria-live="polite">
         ${spinner}
         <span>${text}</span>

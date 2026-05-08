@@ -326,6 +326,11 @@ RSpec.describe "Databases", type: :request do
     property_type_labels = document.css("select[name='db_property[property_type]'] option").map(&:text)
 
     expect(property_type_labels).to include("Dropdown")
+    expect(response.body).not_to include('data-turbo-confirm="Are you sure?"')
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "column_menu", property_id: property.id)
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("Add dropdown item")
     expect(response.body).to include("High")
     expect(response.body).to include('data-turbo-confirm="Are you sure?"')
@@ -833,7 +838,17 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     html = Nokogiri::HTML(response.body)
-    rename_form = html.at_css("form[action='#{database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: db_property.id, view_id: view.id)}']")
+    column_menu = html.at_css("th[data-column-key='property_#{db_property.id}'] .notae-db-column-hover-controls")
+    expect(column_menu).to be_present
+    expect(column_menu["data-row-menu-url-value"]).to include("panels/column_menu")
+    expect(column_menu["data-row-menu-url-value"]).to include("property_id=#{db_property.id}")
+    expect(response.body).not_to include("Rename Compnay column")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "column_menu", property_id: db_property.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
+    panel_html = Nokogiri::HTML.fragment(response.body)
+    rename_form = panel_html.at_css("form[action='#{database_db_property_path(workspace_slug: workspace.slug, database_id: database.id, id: db_property.id, view_id: view.id)}']")
     expect(rename_form).to be_present
     expect(rename_form.at_css("input[name='db_property[name]']")["value"]).to eq("Compnay")
     expect(response.body).to include("Rename Compnay column")
@@ -889,6 +904,17 @@ RSpec.describe "Databases", type: :request do
     expect(column_header.at_css(".notae-db-column-hover-controls")).to be_present
     expect(column_header.at_css("[aria-label='Column options for Priority']")).to be_present
     expect(column_header.at_css(".notae-db-grid-property-edit")).to be_nil
+    column_menu = column_header.at_css(".notae-db-column-hover-controls")
+    expect(column_menu["data-row-menu-url-value"]).to include("panels/column_menu")
+    expect(column_menu["data-row-menu-url-value"]).to include("property_id=#{db_property.id}")
+    expect(column_menu.css("form")).to be_empty
+    expect(response.body).not_to include("Rename Priority column")
+    expect(response.body).not_to include("Bold column")
+    expect(response.body).not_to include("Background colour")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "column_menu", property_id: db_property.id, view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("Rename Priority column")
     expect(response.body).to include("Bold column")
     expect(response.body).to include("Italic column")
@@ -951,6 +977,15 @@ RSpec.describe "Databases", type: :request do
     expect(name_header).to be_present
     expect(name_header.at_css(".notae-db-column-hover-controls")).to be_present
     expect(name_header.at_css("[aria-label='Column options for Name']")).to be_present
+    name_menu = name_header.at_css(".notae-db-column-hover-controls")
+    expect(name_menu["data-row-menu-url-value"]).to include("panels/name_column_menu")
+    expect(name_menu.css("form")).to be_empty
+    expect(response.body).not_to include("Bold column")
+    expect(response.body).not_to include("Background colour")
+
+    get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "name_column_menu", view_id: view.id)
+
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("Bold column")
     expect(response.body).to include("Italic column")
     expect(response.body).to include("Background colour")
@@ -1934,60 +1969,65 @@ RSpec.describe "Databases", type: :request do
     sign_in owner
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
+    page_body = response.body
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Aa")
-    expect(response.body).to include("Name")
-    expect(response.body).to include("+ Add property")
-    expect(response.body).to include("notae-db-new-row-trigger-form")
-    expect(response.body).to include("notae-db-grid-add-row-control")
-    expect(response.body).to include("+ New row")
-    expect(response.body).not_to include("notae-db-toolbar-new")
-    expect(response.body).not_to include("notae-db-grid-new-row")
-    expect(response.body).not_to include("Link &amp; add row")
-    expect(response.body).to include("Add icon")
-    expect(response.body).to include("Add cover")
-    expect(response.body).to include("Add description")
-    expect(response.body).to include('aria-label="Add icon"')
-    expect(response.body).to include('aria-label="Add cover"')
-    expect(response.body).to include('aria-label="Add description"')
-    expect(response.body).to include('class="notae-page-header-action-label"')
-    expect(response.body).to include("View settings")
-    expect(response.body).to include("Options")
-    expect(response.body).to include("notae-db-actions-menu")
-    expect(response.body).to include("panels/actions")
-    expect(response.body).to include("panels/options")
-    expect(response.body).to include("panels/view_settings")
-    expect(response.body).not_to include("Open linked page")
-    expect(response.body).to include("notae-page-header-cover-panel")
-    expect(response.body).to include("notae-cover-picker-panel is-embedded")
-    expect(response.body).to include("data-controller=\"cover-carousel\"")
-    expect(response.body).to include("Move up")
-    expect(response.body).to include("Move down")
-    expect(response.body).to include("notae-db-settings-menu")
-    expect(response.body).to include("🧠")
-    expect(response.body).to include("name=\"database[name]\"")
-    expect(response.body).to include("notae-page-title-input")
-    expect(response.body).not_to include("Property visibility")
-    expect(response.body).not_to include("Conditional color")
-    expect(response.body).not_to include("Public share links")
-    expect(response.body).not_to include("Archived rows")
-    expect(response.body).not_to include("Version history")
+    expect(page_body).to include("Aa")
+    expect(page_body).to include("Name")
+    expect(page_body).to include("+ Add property")
+    expect(page_body).to include("notae-db-new-row-trigger-form")
+    expect(page_body).to include("notae-db-grid-add-row-control")
+    expect(page_body).to include("+ New row")
+    expect(page_body).not_to include("notae-db-toolbar-new")
+    expect(page_body).not_to include("notae-db-grid-new-row")
+    expect(page_body).not_to include("Link &amp; add row")
+    expect(page_body).to include("Add icon")
+    expect(page_body).to include("Add cover")
+    expect(page_body).to include("Add description")
+    expect(page_body).to include('aria-label="Add icon"')
+    expect(page_body).to include('aria-label="Add cover"')
+    expect(page_body).to include('aria-label="Add description"')
+    expect(page_body).to include('class="notae-page-header-action-label"')
+    expect(page_body).to include("View settings")
+    expect(page_body).to include("Options")
+    expect(page_body).to include("notae-db-actions-menu")
+    expect(page_body).to include("panels/actions")
+    expect(page_body).to include("panels/options")
+    expect(page_body).to include("panels/view_settings")
+    expect(page_body).not_to include("Open linked page")
+    expect(page_body).to include("notae-page-header-cover-panel")
+    expect(page_body).to include("notae-cover-picker-panel is-embedded")
+    expect(page_body).to include("data-controller=\"cover-carousel\"")
+    expect(page_body).to include("Move up")
+    expect(page_body).to include("Move down")
+    expect(page_body).to include("notae-db-settings-menu")
+    expect(page_body).not_to include("notae-page-emoji-grid")
+    expect(page_body).to include("name=\"database[name]\"")
+    expect(page_body).to include("notae-page-title-input")
+    expect(page_body).not_to include("Property visibility")
+    expect(page_body).not_to include("Conditional color")
+    expect(page_body).not_to include("Public share links")
+    expect(page_body).not_to include("Archived rows")
+    expect(page_body).not_to include("Version history")
     expect(response.headers["X-Notae-Perf-Action"]).to eq("DatabasesController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
     expect(response.body).not_to include("db-edit-view-panel")
     expect(response.body).not_to include("notae-db-view-plus")
 
-    html = Nokogiri::HTML(response.body)
+    get workspace_icon_picker_path(workspace_slug: workspace.slug, target_type: "database", database_id: database.id, fallback: "🗃️")
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("🧠")
+
+    html = Nokogiri::HTML(page_body)
     title_field = html.at_css("textarea.notae-page-title-input[name='database[name]']")
     expect(title_field).to be_present
     expect(title_field["rows"]).to eq("1")
     expect(title_field["wrap"]).not_to eq("off")
     expect(html.at_css("#database-actions-menu[data-lazy-panel-url-value*='panels/actions']")).to be_present
     expect(html.at_css("#database-options-menu[data-lazy-panel-url-value*='panels/options']")).to be_present
-    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->actions-menu#refresh"')
-    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->options-menu#refresh"')
-    expect(response.body).to include('data-action="toggle->shell#syncTopbarMenus"')
+    expect(page_body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->actions-menu#refresh"')
+    expect(page_body).to include('data-action="toggle->shell#syncTopbarMenus lazy-panel:loaded->options-menu#refresh"')
+    expect(page_body).to include('data-action="toggle->shell#syncTopbarMenus"')
     expect(html.at_css(".notae-db-settings-menu[data-lazy-panel-url-value*='panels/view_settings']")).to be_present
     table_rows = html.css(".notae-db-grid tbody tr")
     expect(table_rows).not_to be_empty

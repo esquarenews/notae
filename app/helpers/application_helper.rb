@@ -181,6 +181,20 @@ module ApplicationHelper
     )
   end
 
+  def notae_dom_key(value)
+    value.to_s.gsub(/[^a-zA-Z0-9_-]/, "_")
+  end
+
+  def same_workspace_turbo_navigation?(workspace_slug = params[:workspace_slug])
+    return false unless request.headers["X-Turbo-Request-Id"].present?
+
+    current_slug = workspace_slug.to_s.strip
+    return false if current_slug.blank?
+
+    referer_slug = workspace_slug_from_referer
+    referer_slug.present? && referer_slug == current_slug
+  end
+
   def ui_sidebar_recent_favorites(limit: 6)
     workspace = ui_current_workspace
     return [] unless workspace
@@ -211,6 +225,17 @@ module ApplicationHelper
         end
         .first(limit)
     end
+  end
+
+  def workspace_slug_from_referer
+    referer = request.referer.to_s
+    return "" if referer.blank?
+
+    path = URI.parse(referer).path
+    match = path.match(%r{\A/w/([^/?#]+)})
+    match ? Rack::Utils.unescape(match[1].to_s) : ""
+  rescue URI::InvalidURIError
+    ""
   end
 
   def notae_sidebar_link_classes(path = nil, active: false)

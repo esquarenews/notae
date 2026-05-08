@@ -10,6 +10,7 @@ const PRESERVED_SAVE_SCROLL_MAX_AGE_MS = 30_000
 const PRESERVED_SAVE_SCROLL_RESTORE_DELAYS_MS = [ 60, 180, 360, 720, 1200, 1800 ]
 const SIDEBAR_SECTIONS_FRAME_ID = "notae_sidebar_sections"
 const SIDEBAR_SECTIONS_REFRESH_DELAY_MS = 250
+const SIDEBAR_ACTIVE_LINK_SELECTOR = ".notae-sidebar a[href], .notae-sidebar-dock-icons a[href]"
 const PERSISTED_SHELL_STATE_CLASSES = [
   "is-sidebar-collapsed",
   "is-mobile-viewport",
@@ -327,9 +328,33 @@ function shouldRefreshSidebarSectionsAfterSubmit(event) {
   return action.includes("/pages") || action.includes("/databases")
 }
 
+function syncSidebarActiveLinks() {
+  const currentPath = window.location.pathname
+
+  document.querySelectorAll(SIDEBAR_ACTIVE_LINK_SELECTOR).forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) return
+
+    let linkPath
+    try {
+      linkPath = new URL(link.href, window.location.origin).pathname
+    } catch (_error) {
+      return
+    }
+
+    const active = linkPath === currentPath
+    link.classList.toggle("active", active)
+    if (active) {
+      link.setAttribute("aria-current", "page")
+    } else {
+      link.removeAttribute("aria-current")
+    }
+  })
+}
+
 syncAiRailCollapsedState(document)
 syncPreservedAiRailContext(document)
 syncPersistedShellState(document)
+syncSidebarActiveLinks()
 restoreStoredSaveScroll()
 
 document.addEventListener("submit", (event) => {
@@ -370,6 +395,7 @@ document.addEventListener("turbo:load", () => {
   syncAiRailCollapsedState(document)
   syncPreservedAiRailContext(document)
   syncPersistedShellState(document)
+  syncSidebarActiveLinks()
   registerPwaServiceWorker()
 })
 
@@ -384,6 +410,7 @@ document.addEventListener("turbo:before-render", (event) => {
 
 document.addEventListener("turbo:render", () => {
   restoreStoredSaveScroll()
+  syncSidebarActiveLinks()
 })
 
 document.addEventListener("turbo:frame-missing", async (event) => {

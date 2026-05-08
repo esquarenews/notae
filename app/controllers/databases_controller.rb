@@ -176,6 +176,29 @@ class DatabasesController < ApplicationController
                row_text_color: @row.row_text_color,
                row_background_color: @row.row_background_color
              }
+    when "column_menu"
+      return head :forbidden if @database.locked?
+
+      prepare_database_column_menu_panel!
+      render partial: "databases/column_context_menu_body",
+             locals: {
+               workspace: @workspace,
+               database: @database,
+               db_property: @db_property,
+               row_params: database_row_menu_params,
+               row_color_options: row_color_options
+             }
+    when "name_column_menu"
+      return head :forbidden if @database.locked?
+
+      authorize @database, :update?
+      render partial: "databases/name_column_context_menu_body",
+             locals: {
+               workspace: @workspace,
+               database: @database,
+               row_params: database_row_menu_params,
+               row_color_options: row_color_options
+             }
     else
       head :not_found
     end
@@ -1320,6 +1343,11 @@ class DatabasesController < ApplicationController
   def prepare_database_row_menu_panel!
     @row = policy_scope(DbRow).for_database(@database).active.includes(:linked_page).find(params[:row_id])
     authorize @row, :update?
+  end
+
+  def prepare_database_column_menu_panel!
+    @db_property = policy_scope(DbProperty).for_database(@database).find(params[:property_id])
+    authorize @db_property, :update?
   end
 
   def prepare_database_view_context!

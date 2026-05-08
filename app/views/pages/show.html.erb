@@ -138,19 +138,17 @@
           <% if can_edit_shell_page || can_show_comment_action %>
             <div class="notae-page-header-tools">
               <% if can_edit_shell_page %>
-                <details class="notae-page-header-action">
+                <details class="notae-page-header-action"
+                         data-controller="lazy-panel"
+                         data-lazy-panel-url-value="<%= workspace_icon_picker_path(workspace_slug: @workspace.slug, target_type: "page", page_id: shell_page.id, fallback: "📄", return_to: current_path) %>"
+                         data-lazy-panel-loading-text-value="Loading emoji..."
+                         data-lazy-panel-error-text-value="Could not load emoji."
+                         data-lazy-panel-focus-selector-value="input[type='search']">
                   <summary aria-label="<%= shell_page.icon.present? ? "Change icon" : "Add icon" %>">
                     <span class="notae-page-header-action-icon">◌</span>
                     <span class="notae-page-header-action-label"><%= shell_page.icon.present? ? "Change icon" : "Add icon" %></span>
                   </summary>
-                  <%= render "shared/icon_picker_panel",
-                             update_url: page_path(shell_page_route_params),
-                             workspace: @workspace,
-                             param_key: :page,
-                             current_icon: shell_page.icon,
-                             placeholder: "Type an emoji",
-                             fallback: "📄",
-                             return_to: current_path %>
+                  <%= render "shared/icon_picker_panel" %>
                 </details>
 
                 <details class="notae-page-header-action">
