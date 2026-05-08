@@ -74,4 +74,22 @@ RSpec.describe "Workspace notification bar", type: :request do
     expect(payload.dig("data", "html")).to include("The shell polish is ready for review.")
     expect(payload.dig("data", "html")).to include("/w/#{workspace.slug}/library")
   end
+
+  it "does not persist healthy polling samples in production" do
+    user = User.create!(email: "workspace-bar-healthy-poll@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Workspace Bar Healthy Poll", slug: "workspace-bar-healthy-poll", shell_status_bar_mode: "all")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+    stub_const("Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS", 10_000.0)
+    allow(Notae::RequestPerformanceStore).to receive(:budget_status).and_return(:healthy)
+    allow(Notae::RequestPerformanceStore).to receive(:record!)
+
+    sign_in user
+    get workspace_notification_bar_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceNotificationBarsController#show")
+    expect(Notae::RequestPerformanceStore).not_to have_received(:record!)
+  end
 end

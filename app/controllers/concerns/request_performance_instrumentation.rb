@@ -63,21 +63,32 @@ module RequestPerformanceInstrumentation
     response.set_header("X-Notae-Perf-Sql-Ms", sql_duration_ms.to_s)
     response.set_header("Server-Timing", "app;dur=#{total_duration_ms}, sql;dur=#{sql_duration_ms}")
 
-    Notae::RequestPerformanceStore.record!(
-      workspace_id: workspace_id,
-      sample: {
-        action: action_label,
-        path: request.fullpath,
-        total_ms: total_duration_ms,
-        sql_queries: counters[:queries],
-        sql_ms: sql_duration_ms,
-        status: response.status,
-        recorded_at: Time.current
-      }
-    )
+    sample = {
+      action: action_label,
+      path: request.fullpath,
+      total_ms: total_duration_ms,
+      sql_queries: counters[:queries],
+      sql_ms: sql_duration_ms,
+      status: response.status,
+      recorded_at: Time.current
+    }
+    if store_request_performance_sample?(sample)
+      Notae::RequestPerformanceStore.record!(
+        workspace_id: workspace_id,
+        sample: sample
+      )
+    end
 
     Rails.logger.info(
       "[NOTAE PERF] action=#{action_label} total_ms=#{total_duration_ms} sql_queries=#{counters[:queries]} sql_ms=#{sql_duration_ms}"
     )
+  end
+
+  def store_request_performance_sample?(sample)
+    return true if Rails.env.development? || Rails.env.test?
+    return true if ActiveModel::Type::Boolean.new.cast(ENV["NOTAE_REQUEST_PERFORMANCE_STORE_ALL"])
+
+    sample[:total_ms].to_f >= Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS ||
+      Notae::RequestPerformanceStore.budget_status(sample) == :over_budget
   end
 end
