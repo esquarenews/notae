@@ -198,10 +198,41 @@ module Epistularium
       end
 
       def refresh_access_token!
-        client_id = account.oauth_client_id.to_s.presence || Epistularium::GoogleOauthService.resolved_client_id.to_s.presence
-        client_secret = account.oauth_client_secret.to_s.presence || Epistularium::GoogleOauthService.resolved_client_secret.to_s.presence
-        raise "Google token refresh failed (401): OAuth client was not found" if client_id.blank? || client_secret.blank?
+        credential_candidates = refresh_token_credential_candidates
+        raise "Google token refresh failed (401): OAuth client was not found" if credential_candidates.empty?
 
+        last_error_message = nil
+        credential_candidates.each do |candidate|
+          response = perform_token_refresh_request(
+            client_id: candidate.fetch(:client_id),
+            client_secret: candidate.fetch(:client_secret)
+          )
+          status = response.code.to_i
+          body = parse_json(response.body)
+          access_token = body["access_token"].to_s.strip
+
+          if (200..299).cover?(status) && access_token.present?
+            persist_refreshed_tokens!(body)
+            persist_oauth_client_credentials!(
+              client_id: candidate.fetch(:client_id),
+              client_secret: candidate.fetch(:client_secret)
+            )
+            return
+          end
+
+          message = extract_error_message(body)
+          last_error_message = "Google token refresh failed (#{status}): #{message}"
+          next if invalid_client_error?(status: status, message: message)
+
+          raise last_error_message
+        end
+
+        raise(last_error_message || "Google token refresh failed.")
+      rescue Timeout::Error, SocketError, Errno::ECONNREFUSED => error
+        raise "Google token refresh failed (401): #{error.message}"
+      end
+
+      def perform_token_refresh_request(client_id:, client_secret:)
         request = Net::HTTP::Post.new(TOKEN_ENDPOINT)
         request["Content-Type"] = "application/x-www-form-urlencoded"
         request.body = URI.encode_www_form(
@@ -211,7 +242,7 @@ module Epistularium
           grant_type: "refresh_token"
         )
 
-        response = Net::HTTP.start(
+        Net::HTTP.start(
           TOKEN_ENDPOINT.host,
           TOKEN_ENDPOINT.port,
           use_ssl: true,
@@ -220,29 +251,57 @@ module Epistularium
         ) do |http|
           http.request(request)
         end
+      end
 
-        body = parse_json(response.body)
-        access_token = body["access_token"].to_s.strip
-        unless response.is_a?(Net::HTTPSuccess) && access_token.present?
-          raise "Google token refresh failed (#{response.code}): #{extract_error_message(body)}"
+      def refresh_token_credential_candidates
+        candidates = []
+        if account.oauth_client_id.present? && account.oauth_client_secret.present?
+          candidates << {
+            client_id: account.oauth_client_id.to_s.strip,
+            client_secret: account.oauth_client_secret.to_s.strip
+          }
         end
 
-        account.access_token = access_token
-        refreshed_token = body["refresh_token"].to_s.strip
+        fallback_client_id = Epistularium::GoogleOauthService.resolved_client_id.to_s.strip.presence
+        fallback_client_secret = Epistularium::GoogleOauthService.resolved_client_secret.to_s.strip.presence
+        if fallback_client_id.present? && fallback_client_secret.present?
+          candidates << { client_id: fallback_client_id, client_secret: fallback_client_secret }
+        end
+
+        candidates.uniq
+      end
+
+      def invalid_client_error?(status:, message:)
+        return false unless [ 400, 401 ].include?(status)
+
+        lowered = message.to_s.downcase
+        lowered.include?("invalid_client") || lowered.include?("oauth client was not found")
+      end
+
+      def persist_refreshed_tokens!(token_body)
+        account.access_token = token_body["access_token"].to_s.strip.presence
+        refreshed_token = token_body["refresh_token"].to_s.strip
         account.refresh_token = refreshed_token if refreshed_token.present?
-        account.oauth_client_id = client_id
-        account.oauth_client_secret = client_secret
+
         settings = account.settings_json.to_h
         settings["google_access_token_expires_at"] =
-          if body["expires_in"].to_i.positive?
-            (Time.current + body["expires_in"].to_i.seconds).iso8601
+          if token_body["expires_in"].to_i.positive?
+            (Time.current + token_body["expires_in"].to_i.seconds).iso8601
           else
             nil
           end
         account.settings_json = settings.compact
         account.save!
-      rescue Timeout::Error, SocketError, Errno::ECONNREFUSED => error
-        raise "Google token refresh failed (401): #{error.message}"
+      end
+
+      def persist_oauth_client_credentials!(client_id:, client_secret:)
+        return if client_id.blank? || client_secret.blank?
+        return if account.oauth_client_id == client_id && account.oauth_client_secret == client_secret
+
+        account.update!(
+          oauth_client_id: client_id,
+          oauth_client_secret: client_secret
+        )
       end
 
       def parse_json(raw_body)

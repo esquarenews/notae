@@ -21,6 +21,10 @@ RSpec.describe Epistularium::Providers::GmailAdapter do
     Base64.urlsafe_encode64(value).delete("=")
   end
 
+  def google_response(code:, body:)
+    Struct.new(:code, :body).new(code.to_s, body.to_json)
+  end
+
   it "imports full Gmail messages from inbox and sent mailboxes" do
     _user, workspace, account = build_stack(suffix: "import")
     adapter = described_class.new(account: account)
@@ -164,5 +168,35 @@ RSpec.describe Epistularium::Providers::GmailAdapter do
     expected_query = "after:#{Epistularium::SyncConfig.backfill_cutoff_time.to_i}"
     expect(captured_queries).to eq([ expected_query, expected_query ])
     expect(account.reload.settings_json["full_backfill_completed_at"]).to be_present
+  end
+
+  it "falls back to current google oauth credentials when stored Gmail credentials are invalid" do
+    _user, _workspace, account = build_stack(suffix: "refresh-credential-fallback")
+    account.update!(
+      refresh_token: "gmail-refresh-token",
+      oauth_client_id: "stale-client-id",
+      oauth_client_secret: "stale-client-secret"
+    )
+    adapter = described_class.new(account: account)
+
+    allow(Epistularium::GoogleOauthService).to receive(:resolved_client_id).and_return("fresh-client-id")
+    allow(Epistularium::GoogleOauthService).to receive(:resolved_client_secret).and_return("fresh-client-secret")
+    seen_client_ids = []
+    allow(adapter).to receive(:perform_token_refresh_request) do |client_id:, client_secret:|
+      seen_client_ids << client_id
+      if client_id == "stale-client-id" && client_secret == "stale-client-secret"
+        google_response(code: 401, body: { "error" => "invalid_client", "error_description" => "OAuth client was not found" })
+      else
+        google_response(code: 200, body: { "access_token" => "fresh-access-token", "expires_in" => 3600 })
+      end
+    end
+
+    adapter.send(:refresh_access_token!)
+
+    expect(seen_client_ids).to eq([ "stale-client-id", "fresh-client-id" ])
+    expect(account.reload.access_token).to eq("fresh-access-token")
+    expect(account.oauth_client_id).to eq("fresh-client-id")
+    expect(account.oauth_client_secret).to eq("fresh-client-secret")
+    expect(account.settings_json["google_access_token_expires_at"]).to be_present
   end
 end

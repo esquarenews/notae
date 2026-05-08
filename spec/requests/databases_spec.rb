@@ -578,6 +578,57 @@ RSpec.describe "Databases", type: :request do
     expect(created_database.name).to eq("Untitled grid")
   end
 
+  it "preserves the parent grid title and cover when a new grid tab is converted to tasks" do
+    owner = User.create!(email: "database-task-tab-shell-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database task tab shell", slug: "database-task-tab-shell")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    root_database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Client rollout",
+      icon: "🚀",
+      cover_preset_key: Database::COVER_PRESET_KEYS.first,
+      cover_focal_y: 35
+    )
+    root_shell = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Client rollout",
+      icon: nil,
+      cover_preset_key: nil,
+      cover_focal_y: 50
+    )
+    root_database.update!(linked_page: root_shell)
+    sign_in owner
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: {
+           database: {
+             name: "Untitled grid",
+             parent_page_id: root_shell.id,
+             tab_title: "Tasks"
+           }
+         }
+
+    task_tab_database = workspace.databases.order(:created_at).last
+    post taskify_database_path(workspace_slug: workspace.slug, id: task_tab_database.id)
+
+    table_view = task_tab_database.reload.database_views.find_by!(view_type: :table)
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: task_tab_database.id, view_id: table_view.id))
+    expect(root_shell.reload.title).to eq("Client rollout")
+    expect(root_shell.icon).to eq("🚀")
+    expect(root_shell.cover_preset_key).to eq(root_database.cover_preset_key)
+    expect(task_tab_database.linked_page.title).to eq("Tasks")
+
+    get database_path(workspace_slug: workspace.slug, id: task_tab_database.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    expect(html.at_css(".notae-page-title-input")&.text&.strip).to eq("Client rollout")
+    expect(html.at_css(".notae-page-cover-preset")).to be_present
+    expect(html.css(".notae-page-tab-label").map(&:text).map(&:strip)).to include("Tasks")
+  end
+
   it "creates a new top-level grid tab without falling back home when the default name already exists" do
     owner = User.create!(email: "database-top-level-tab-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Database top level tabs", slug: "database-top-level-tabs")

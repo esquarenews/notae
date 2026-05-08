@@ -472,7 +472,10 @@ class DatabasesController < ApplicationController
     return nil if parent_page_id.blank?
 
     parent_page = policy_scope(Page).for_workspace(@workspace).active.find_by(id: parent_page_id)
-    return parent_page if parent_page.present?
+    if parent_page.present?
+      Databases::EnsureLinkedPageService.call(database: parent_page.linked_database, actor: current_user) if parent_page.linked_database.present?
+      return parent_page.reload
+    end
 
     @database.errors.add(:base, "The selected tab group could not be found.")
     raise ActiveRecord::RecordInvalid, @database
