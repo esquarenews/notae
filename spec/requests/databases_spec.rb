@@ -2531,11 +2531,18 @@ RSpec.describe "Databases", type: :request do
     document = Nokogiri::HTML(response.body)
     title_form = document.at_css("#row_#{row.id} form.notae-db-title-form-inline")
     cell_form = document.css("form").find { |form| form["action"].to_s.include?(cell.id) }
+    insert_row_form = document.at_css("#row_#{row.id} form.notae-db-row-hover-control-form")
 
     expect(title_form).to be_present
     expect(cell_form).to be_present
+    expect(insert_row_form).to be_present
     expect(title_form.at_css("input[name='authenticity_token']")).to be_nil
     expect(cell_form.at_css("input[name='authenticity_token']")).to be_nil
+    expect(insert_row_form.at_css("input[name='authenticity_token']")).to be_nil
+    expect(title_form.at_css("input[name='_method'][value='patch']")).to be_present
+    expect(cell_form.at_css("input[name='_method'][value='patch']")).to be_present
+    expect(insert_row_form.at_css("input[name='db_row[title]'][value='Untitled row']")).to be_present
+    expect(cell_form["data-controller"]).to eq("auto-submit")
   end
 
   it "creates a new row with turbo streams instead of redirecting the full grid for the simple table path" do

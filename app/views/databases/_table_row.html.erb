@@ -35,14 +35,21 @@
       <% if row_can_update %>
         <div class="notae-db-row-hover-controls">
           <% if can_create_rows %>
-            <%= button_to database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
-                          params: row_params.merge(insert_after_id: row.id, db_row: { title: "Untitled row" }),
-                          class: "notae-db-row-hover-control",
-                          form: { class: "notae-db-row-hover-control-form", data: { preserve_database_scroll: true } },
-                          title: "Insert row below",
-                          aria: { label: "Insert row below" } do %>
-              +
-            <% end %>
+            <form action="<%= database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id) %>"
+                  accept-charset="UTF-8"
+                  method="post"
+                  class="notae-db-row-hover-control-form"
+                  data-preserve-database-scroll="true">
+              <% row_params.each do |key, value| %>
+                <input type="hidden" name="<%= key %>" value="<%= value %>" autocomplete="off">
+              <% end %>
+              <input type="hidden" name="insert_after_id" value="<%= row.id %>" autocomplete="off">
+              <input type="hidden" name="db_row[title]" value="Untitled row" autocomplete="off">
+              <button type="submit"
+                      class="notae-db-row-hover-control"
+                      title="Insert row below"
+                      aria-label="Insert row below">+</button>
+            </form>
           <% end %>
           <button type="button"
                   class="notae-db-row-hover-control is-drag-handle"
@@ -81,34 +88,30 @@
               split_row_id: row.id
             ) %>
             <% if row_can_update %>
-              <%= form_with model: row,
-                            url: row_update_path,
-                            method: :patch,
-                            authenticity_token: false,
-                            class: "notae-db-title-form notae-db-title-form-inline",
-                            data: {
-                              controller: "auto-submit",
-                              auto_submit_focus_on_connect_value: autofocus_title,
-                              preserve_database_scroll: true
-                            } do |form| %>
-                <%= form.text_field :title,
-                                    value: row.title,
-                                    class: "notae-db-title-input",
-                                    placeholder: "Enter name",
-                                    data: {
-                                      action: "change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter",
-                                      auto_submit_create_next_row_on_enter: true
-                                    } %>
-                <%= hidden_field_tag "db_row[autosave_title]", "1" %>
-                <%= form.button "",
-                                type: "submit",
-                                class: "notae-db-enter-submitter",
-                                name: "db_row[create_next_row]",
-                                value: "1",
-                                style: "position:absolute;left:-9999px;width:1px;height:1px;padding:0;border:0;overflow:hidden;",
-                                tabindex: "-1",
-                                aria: { hidden: true } %>
-              <% end %>
+              <form action="<%= row_update_path %>"
+                    accept-charset="UTF-8"
+                    method="post"
+                    class="notae-db-title-form notae-db-title-form-inline"
+                    data-controller="auto-submit"
+                    data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
+                    data-preserve-database-scroll="true">
+                <input type="hidden" name="_method" value="patch" autocomplete="off">
+                <input type="text"
+                       name="db_row[title]"
+                       value="<%= row.title %>"
+                       class="notae-db-title-input"
+                       placeholder="Enter name"
+                       data-action="change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter"
+                       data-auto-submit-create-next-row-on-enter="true">
+                <input type="hidden" name="db_row[autosave_title]" value="1" autocomplete="off">
+                <button type="submit"
+                        class="notae-db-enter-submitter"
+                        name="db_row[create_next_row]"
+                        value="1"
+                        style="position:absolute;left:-9999px;width:1px;height:1px;padding:0;border:0;overflow:hidden;"
+                        tabindex="-1"
+                        aria-hidden="true"></button>
+              </form>
             <% else %>
               <span class="notae-db-title-text"><%= row.title.presence || linked_page.title %></span>
             <% end %>
@@ -121,73 +124,65 @@
               <% end %>
             </div>
           <% elsif row_can_update %>
-            <%= form_with model: row,
-                          url: row_update_path,
-                          method: :patch,
-                          authenticity_token: false,
-                          class: "notae-db-title-form notae-db-title-form-inline",
-                          data: {
-                            controller: "auto-submit",
-                            auto_submit_focus_on_connect_value: autofocus_title,
-                            preserve_database_scroll: true
-                          } do |form| %>
-              <%= form.text_field :title,
-                                  value: row.title,
-                                  class: "notae-db-title-input",
-                                  placeholder: "Enter name",
-                                  data: {
-                                    action: "change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter",
-                                    auto_submit_create_next_row_on_enter: true
-                                  } %>
-              <%= hidden_field_tag "db_row[autosave_title]", "1" %>
-              <%= form.button "",
-                              type: "submit",
-                              class: "notae-db-enter-submitter",
-                              name: "db_row[create_next_row]",
-                              value: "1",
-                              style: "position:absolute;left:-9999px;width:1px;height:1px;padding:0;border:0;overflow:hidden;",
-                              tabindex: "-1",
-                              aria: { hidden: true } %>
-            <% end %>
-            <%= form_with model: row,
-                          url: row_update_path,
-                          method: :patch,
-                          authenticity_token: false,
-                          class: "notae-db-row-link-create-form" do |form| %>
-              <%= form.hidden_field :link_action, value: "create_page" %>
-              <%= form.button "+",
-                              type: "submit",
-                              class: "notae-db-row-link-action is-create",
-                              title: "Create linked Nota",
-                              aria: { label: "Create linked Nota" } %>
-            <% end %>
+            <form action="<%= row_update_path %>"
+                  accept-charset="UTF-8"
+                  method="post"
+                  class="notae-db-title-form notae-db-title-form-inline"
+                  data-controller="auto-submit"
+                  data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
+                  data-preserve-database-scroll="true">
+              <input type="hidden" name="_method" value="patch" autocomplete="off">
+              <input type="text"
+                     name="db_row[title]"
+                     value="<%= row.title %>"
+                     class="notae-db-title-input"
+                     placeholder="Enter name"
+                     data-action="change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter"
+                     data-auto-submit-create-next-row-on-enter="true">
+              <input type="hidden" name="db_row[autosave_title]" value="1" autocomplete="off">
+              <button type="submit"
+                      class="notae-db-enter-submitter"
+                      name="db_row[create_next_row]"
+                      value="1"
+                      style="position:absolute;left:-9999px;width:1px;height:1px;padding:0;border:0;overflow:hidden;"
+                      tabindex="-1"
+                      aria-hidden="true"></button>
+            </form>
+            <form action="<%= row_update_path %>"
+                  accept-charset="UTF-8"
+                  method="post"
+                  class="notae-db-row-link-create-form">
+              <input type="hidden" name="_method" value="patch" autocomplete="off">
+              <input type="hidden" name="db_row[link_action]" value="create_page" autocomplete="off">
+              <button type="submit"
+                      class="notae-db-row-link-action is-create"
+                      title="Create linked Nota"
+                      aria-label="Create linked Nota">+</button>
+            </form>
             <details class="notae-db-inline-details notae-db-row-link-chooser">
               <summary class="notae-db-row-link-action is-choose" title="Choose linked Nota" aria-label="Choose linked Nota">🔗</summary>
               <div class="notae-db-inline-panel">
-                <%= form_with model: row,
-                              url: row_update_path,
-                              method: :patch,
-                              authenticity_token: false,
-                              class: "notae-db-inline-form",
-                              data: {
-                                controller: "document-picker",
-                                document_picker_search_url_value: page_search_url,
-                                document_picker_empty_text_value: "No matching notas."
-                              } do |form| %>
-                  <%= form.hidden_field :linked_page_id, value: linked_page&.id, data: { document_picker_target: "hiddenInput" } %>
-                  <%= search_field_tag "db_row_link_page_search_#{row.id}",
-                                       "",
-                                       placeholder: "Search notas",
-                                       autocomplete: "off",
-                                       class: "notae-options-input",
-                                       data: {
-                                         document_picker_target: "searchInput",
-                                         action: "focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch"
-                                       } %>
+                <form action="<%= row_update_path %>"
+                      accept-charset="UTF-8"
+                      method="post"
+                      class="notae-db-inline-form"
+                      data-controller="document-picker"
+                      data-document-picker-search-url-value="<%= page_search_url %>"
+                      data-document-picker-empty-text-value="No matching notas.">
+                  <input type="hidden" name="_method" value="patch" autocomplete="off">
+                  <input type="hidden" name="db_row[linked_page_id]" value="<%= linked_page&.id %>" data-document-picker-target="hiddenInput" autocomplete="off">
+                  <input type="search"
+                         name="db_row_link_page_search_<%= row.id %>"
+                         value=""
+                         placeholder="Search notas"
+                         autocomplete="off"
+                         class="notae-options-input"
+                         data-document-picker-target="searchInput"
+                         data-action="focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch">
                   <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching…</p>
                   <div class="notae-document-picker-results" data-document-picker-target="results"></div>
                   <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching notas.</p>
-                <% end %>
+                </form>
               </div>
             </details>
           <% else %>
@@ -202,76 +197,82 @@
     <% property_style_classes = local_assigns.fetch(:column_style_classes_by_property_id, {}).fetch(db_property.id) { column_style_classes_for(db_property) } %>
     <td class="<%= property_style_classes %>">
       <% if db_cell && cell_can_update %>
-        <%= form_with model: db_cell,
-                      url: database_db_cell_path(
-                        ({
-                          workspace_slug: workspace.slug,
-                          database_id: database.id,
-                          id: db_cell.id
-                        }.merge(row_params)).merge(db_property.progress? ? { progress_inline_update: "1" } : {})
-                      ),
-                      method: :patch,
-                      authenticity_token: false,
-                      data: (
-                        db_property.progress? ?
-                          {
-                            turbo_stream: true,
-                            preserve_database_scroll: true
-                          } :
-                          {
-                            controller: "auto-submit",
-                            turbo_stream: true,
-                            preserve_database_scroll: true
-                          }
-                      ) do |form| %>
-          <% field_classes = db_property.select? ? select_input_classes_for(db_property, db_cell.value_text) : "notae-db-cell-input" %>
-          <% if db_property.checkbox? %>
-            <label class="notae-db-checkbox-wrap">
-              <%= form.check_box :value_text,
-                                 {
-                                   checked: db_cell.value_text == "true",
-                                   class: "h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400",
-                                   data: { action: "change->auto-submit#submit" }
-                                 },
-                                 "true",
-                                 "false" %>
-            </label>
-          <% elsif db_property.select? %>
-            <% blank_label = db_property.name.to_s.strip.casecmp("status").zero? ? "Select status" : "Select option" %>
-            <%= form.select :value_text,
-                            options_for_select(select_options_for(db_property), db_cell.value_text),
-                            { include_blank: blank_label },
-                            class: field_classes,
-                            data: { action: "change->auto-submit#submit" } %>
-          <% elsif db_property.number? %>
-            <%= form.number_field :value_text,
-                                  value: db_cell.value_text,
-                                  id: "db_cell_#{db_cell.id}_value_text",
-                                  step: "any",
-                                  class: field_classes,
-                                  data: { action: "change->auto-submit#submit" } %>
-          <% elsif db_property.progress? %>
+        <% cell_update_path = database_db_cell_path(
+          ({
+            workspace_slug: workspace.slug,
+            database_id: database.id,
+            id: db_cell.id
+          }.merge(row_params)).merge(db_property.progress? ? { progress_inline_update: "1" } : {})
+        ) %>
+        <% field_id = "db_cell_#{db_cell.id}_value_text" %>
+        <% field_classes = db_property.select? ? select_input_classes_for(db_property, db_cell.value_text) : "notae-db-cell-input" %>
+        <% if db_property.progress? %>
+          <%= form_with model: db_cell,
+                        url: cell_update_path,
+                        method: :patch,
+                        authenticity_token: false,
+                        data: {
+                          turbo_stream: true,
+                          preserve_database_scroll: true
+                        } do |form| %>
             <%= render "databases/progress_cell",
                        form: form,
                        db_cell: db_cell,
-                       field_id: "db_cell_#{db_cell.id}_value_text" %>
-          <% elsif db_property.date? %>
-            <%= form.date_field :value_text,
-                                value: db_cell.value_text,
-                                id: "db_cell_#{db_cell.id}_value_text",
-                                class: field_classes,
-                                data: {
-                                  action: "change->auto-submit#submit",
-                                  gantt_grid_row_id: row.id,
-                                  gantt_grid_property_id: db_property.id
-                                } %>
-          <% else %>
-            <%= form.text_field :value_text,
-                                value: db_cell.value_text,
-                                id: "db_cell_#{db_cell.id}_value_text",
-                                class: field_classes,
-                                data: { action: "change->auto-submit#submit" } %>
+                       field_id: field_id %>
           <% end %>
+        <% else %>
+          <form action="<%= cell_update_path %>"
+                accept-charset="UTF-8"
+                method="post"
+                data-controller="auto-submit"
+                data-turbo-stream="true"
+                data-preserve-database-scroll="true">
+            <input type="hidden" name="_method" value="patch" autocomplete="off">
+            <% if db_property.checkbox? %>
+              <label class="notae-db-checkbox-wrap">
+                <input type="hidden" name="db_cell[value_text]" value="false" autocomplete="off">
+                <input type="checkbox"
+                       name="db_cell[value_text]"
+                       id="<%= field_id %>"
+                       value="true"
+                       class="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
+                       data-action="change->auto-submit#submit"
+                       <%= "checked" if db_cell.value_text == "true" %>>
+              </label>
+            <% elsif db_property.select? %>
+              <% blank_label = db_property.name.to_s.strip.casecmp("status").zero? ? "Select status" : "Select option" %>
+              <select name="db_cell[value_text]"
+                      id="<%= field_id %>"
+                      class="<%= field_classes %>"
+                      data-action="change->auto-submit#submit">
+                <%= options_for_select([[blank_label, ""]] + select_options_for(db_property).map { |option| [option, option] }, db_cell.value_text) %>
+              </select>
+            <% elsif db_property.number? %>
+              <input type="number"
+                     name="db_cell[value_text]"
+                     id="<%= field_id %>"
+                     value="<%= db_cell.value_text %>"
+                     step="any"
+                     class="<%= field_classes %>"
+                     data-action="change->auto-submit#submit">
+            <% elsif db_property.date? %>
+              <input type="date"
+                     name="db_cell[value_text]"
+                     id="<%= field_id %>"
+                     value="<%= db_cell.value_text %>"
+                     class="<%= field_classes %>"
+                     data-action="change->auto-submit#submit"
+                     data-gantt-grid-row-id="<%= row.id %>"
+                     data-gantt-grid-property-id="<%= db_property.id %>">
+            <% else %>
+              <input type="text"
+                     name="db_cell[value_text]"
+                     id="<%= field_id %>"
+                     value="<%= db_cell.value_text %>"
+                     class="<%= field_classes %>"
+                     data-action="change->auto-submit#submit">
+            <% end %>
+          </form>
         <% end %>
       <% else %>
         <span class="text-stone-400">-</span>
