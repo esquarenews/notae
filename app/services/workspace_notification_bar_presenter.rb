@@ -27,6 +27,10 @@ class WorkspaceNotificationBarPresenter
     show_clock? || has_alerts?
   end
 
+  def shell_enabled?
+    workspace.present? && workspace.slug.present? && mode != Workspace::SHELL_STATUS_BAR_MODE_OFF
+  end
+
   def show_clock?
     Workspace::SHELL_STATUS_BAR_MODES_WITH_CLOCK.include?(mode)
   end

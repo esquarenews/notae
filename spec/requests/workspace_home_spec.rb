@@ -142,7 +142,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(workspace_link.to_html).to include("--notae-workspace-color-swatch: #{workspace.workspace_color}")
   end
 
-  it "renders the bottom-right notification bar with recent-only mail and update alerts plus dismiss controls" do
+  it "renders the bottom-right notification bar shell and defers alert cards to the refresh endpoint" do
     travel_to Time.zone.parse("2026-04-11 10:00:00") do
       user = User.create!(email: "home-status-bar-owner@example.com", password: "password123", time_zone: "Australia/Melbourne")
       workspace = Workspace.create!(name: "Status home", slug: "status-home", shell_status_bar_mode: "all")
@@ -220,7 +220,7 @@ RSpec.describe "Workspace home", type: :request do
       clock_button = document.at_css(".notae-shell-status-bar-clock-button")
       calendar_panel = document.at_css(".notae-shell-status-bar-calendar")
       calendar_frame = document.at_css(".notae-shell-status-bar-calendar-frame")
-      links = document.css(".notae-shell-status-bar-link").map { |node| [ node.text.squish, node["href"] ] }
+      alerts = document.at_css("[data-notification-bar-target='alerts']")
       controls = document.css(".notae-shell-status-bar-control")
 
       expect(bar).to be_present
@@ -236,12 +236,28 @@ RSpec.describe "Workspace home", type: :request do
       expect(calendar_frame).to be_present
       expect(calendar_frame["data-notification-bar-target"]).to eq("calendarFrame")
       expect(calendar_frame["src"]).to eq(kalendarium_path(workspace_slug: workspace.slug, embedded: "1", widget: "1", view: "day", date: "2026-04-11", tz: [ "Australia/Melbourne" ]))
-      expect(document.text).to include("Client review")
-      expect(document.text).to include("Starts in 10 min")
-      expect(document.text).to include("1 email just came in")
-      expect(document.text).to include("1 new workspace update")
+      expect(alerts).to be_present
+      expect(alerts.element_children).to be_empty
+      expect(document.text).not_to include("Client review")
+      expect(document.text).not_to include("1 email just came in")
+      expect(document.text).not_to include("1 new workspace update")
       expect(document.text).not_to include("Unread inbox messages")
-      expect(controls.count).to eq(6)
+      expect(controls.count).to eq(0)
+
+      get workspace_notification_bar_path(workspace_slug: workspace.slug)
+      expect(response).to have_http_status(:ok)
+
+      payload = JSON.parse(response.body)
+      payload_document = Nokogiri::HTML.fragment(payload.dig("data", "html"))
+      links = payload_document.css(".notae-shell-status-bar-link").map { |node| [ node.text.squish, node["href"] ] }
+
+      expect(payload.dig("data", "has_alerts")).to eq(true)
+      expect(payload_document.text).to include("Client review")
+      expect(payload_document.text).to include("Starts in 10 min")
+      expect(payload_document.text).to include("1 email just came in")
+      expect(payload_document.text).to include("1 new workspace update")
+      expect(payload_document.text).not_to include("Unread inbox messages")
+      expect(payload_document.css(".notae-shell-status-bar-control").count).to eq(6)
       expect(links).to include([ a_string_including("Client review"), kalendarium_path(workspace_slug: workspace.slug) ])
       expect(links).to include([ a_string_including("1 email just came in"), workspace_epistularium_path(workspace_slug: workspace.slug) ])
       expect(links).to include([ a_string_including("1 new workspace update"), workspace_notifications_path(workspace_slug: workspace.slug) ])

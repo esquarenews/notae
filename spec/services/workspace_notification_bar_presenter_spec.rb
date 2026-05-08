@@ -241,9 +241,11 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     off_presenter = described_class.new(workspace: off_workspace, user: user, reference_time: Time.zone.now)
 
     expect(time_only_presenter.render?).to be(true)
+    expect(time_only_presenter.shell_enabled?).to be(true)
     expect(time_only_presenter.show_clock?).to be(true)
     expect(time_only_presenter.show_alerts?).to be(false)
     expect(off_presenter.render?).to be(false)
+    expect(off_presenter.shell_enabled?).to be(false)
   end
 
   it "does not render for alerts-only mode when nothing recent has arrived" do
@@ -253,6 +255,7 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
 
     expect(presenter.render?).to be(false)
+    expect(presenter.shell_enabled?).to be(true)
   end
 
   it "does not render for a workspace without a slug" do
@@ -262,5 +265,6 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.now)
 
     expect(presenter.render?).to be(false)
+    expect(presenter.shell_enabled?).to be(false)
   end
 end

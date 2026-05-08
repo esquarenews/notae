@@ -1,3 +1,5 @@
+<% defer_alerts = local_assigns.fetch(:defer_alerts, false) %>
+
 <aside class="notae-shell-status-bar"
        aria-label="Workspace notification bar"
        data-controller="notification-bar"
@@ -28,7 +30,9 @@
 
   <% if presenter.show_alerts? %>
     <div class="notae-shell-status-bar-alerts" data-notification-bar-target="alerts">
-      <%= render "shared/workspace_notification_bar_alerts", presenter: presenter, workspace: workspace %>
+      <% unless defer_alerts %>
+        <%= render "shared/workspace_notification_bar_alerts", presenter: presenter, workspace: workspace %>
+      <% end %>
     </div>
   <% end %>
 </aside>
