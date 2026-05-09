@@ -778,8 +778,8 @@ RSpec.describe "Databases", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("/db_cells/#{db_cell.id}")
-    expect(response.body).to include('data-turbo-stream="true"')
-    expect(response.body).to include('data-preserve-database-scroll="true"')
+    expect(response.body).to include('data-auto-submit-method="patch"')
+    expect(response.body).to include('data-auto-submit-param-name="db_cell[value_text]"')
 
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: db_cell.id),
           params: { db_cell: { value_text: "done" } },
@@ -1996,8 +1996,9 @@ RSpec.describe "Databases", type: :request do
     expect(page_body).to include("panels/view_settings")
     expect(page_body).not_to include("Open linked page")
     expect(page_body).to include("notae-page-header-cover-panel")
-    expect(page_body).to include("notae-cover-picker-panel is-embedded")
-    expect(page_body).to include("data-controller=\"cover-carousel\"")
+    expect(page_body).to include("cover-picker")
+    expect(page_body).not_to include("notae-cover-picker-grid")
+    expect(page_body).not_to include("data-controller=\"cover-carousel\"")
     expect(page_body).to include("Move up")
     expect(page_body).to include("Move down")
     expect(page_body).to include("notae-db-settings-menu")
@@ -2345,6 +2346,20 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("🚀")
     expect(response.body).to include("notae-page-cover")
+    expect(response.body).to include("data-controller=\"lazy-panel\"")
+    expect(response.body).not_to include("data-controller=\"cover-carousel\"")
+    expect(response.body).not_to include("notae-cover-picker-grid")
+    expect(response.body).not_to include("notae-cover-picker-upload-form")
+
+    get workspace_cover_picker_path(
+      workspace_slug: workspace.slug,
+      target_type: "database",
+      database_id: database.id,
+      embedded: true,
+      allow_remove: true,
+      remove_label: "Remove cover"
+    )
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("data-controller=\"cover-carousel\"")
     expect(response.body).to include("Browse Unsplash")
     expect(response.body).to include("Original")
@@ -2409,6 +2424,16 @@ RSpec.describe "Databases", type: :request do
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
     expect(response.body).to include("Photo by")
+
+    get workspace_cover_picker_path(
+      workspace_slug: workspace.slug,
+      target_type: "database",
+      database_id: database.id,
+      embedded: true,
+      allow_remove: true,
+      remove_label: "Remove cover"
+    )
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("Recent")
   end
 
@@ -2572,21 +2597,26 @@ RSpec.describe "Databases", type: :request do
     table_body = document.at_css("#database_table_rows")
     title_form = document.at_css("#row_#{row.id} form.notae-db-title-form-inline")
     cell_form = document.css("form").find { |form| form["action"].to_s.include?(cell.id) }
+    cell_input = document.at_css("#db_cell_#{cell.id}_value_text")
     insert_row_form = document.at_css("#row_#{row.id} form.notae-db-row-hover-control-form")
 
     expect(table_body).to be_present
     expect(table_body["data-controller"].split).to include("db-table-reorder", "auto-submit")
     expect(title_form).to be_present
-    expect(cell_form).to be_present
+    expect(cell_form).to be_nil
+    expect(cell_input).to be_present
+    expect(cell_input["data-action"]).to include("change->auto-submit#submit")
+    expect(cell_input["data-auto-submit-url"]).to eq(
+      database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: cell.id, view_id: database.database_views.first.id)
+    )
+    expect(cell_input["data-auto-submit-method"]).to eq("patch")
+    expect(cell_input["data-auto-submit-param-name"]).to eq("db_cell[value_text]")
     expect(insert_row_form).to be_present
     expect(title_form.at_css("input[name='authenticity_token']")).to be_nil
-    expect(cell_form.at_css("input[name='authenticity_token']")).to be_nil
     expect(insert_row_form.at_css("input[name='authenticity_token']")).to be_nil
     expect(title_form.at_css("input[name='_method'][value='patch']")).to be_present
-    expect(cell_form.at_css("input[name='_method'][value='patch']")).to be_present
     expect(insert_row_form.at_css("input[name='db_row[title]'][value='Untitled row']")).to be_present
     expect(title_form["data-controller"]).to be_nil
-    expect(cell_form["data-controller"]).to be_nil
     expect(document.css("[data-controller~='auto-submit']").size).to eq(1)
   end
 
@@ -3132,6 +3162,29 @@ RSpec.describe "Databases", type: :request do
     create_link_action_input = create_link_form.at_css("input[name='db_row[link_action]']")
     expect(create_link_action_input).to be_present
     expect(create_link_action_input["value"]).to eq("create_page")
+
+    link_chooser = row_node.at_css(".notae-db-row-link-chooser")
+    expect(link_chooser).to be_present
+    expect(link_chooser["data-controller"].split).to include("lazy-panel")
+    expect(link_chooser["data-lazy-panel-url-value"]).to include(
+      panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "row_link_chooser")
+    )
+    expect(link_chooser["data-lazy-panel-url-value"]).to include("row_id=#{row.id}")
+    expect(link_chooser.at_css("[data-lazy-panel-target='container']")).to be_present
+    expect(row_node.at_css("form[data-controller='document-picker']")).to be_nil
+    expect(row_node.to_html).not_to include("db_row_link_page_search_#{row.id}")
+
+    get link_chooser["data-lazy-panel-url-value"]
+
+    expect(response).to have_http_status(:ok)
+    panel_html = Nokogiri::HTML.fragment(response.body)
+    picker_form = panel_html.at_css("form.notae-db-inline-form[data-controller='document-picker']")
+    expect(picker_form).to be_present
+    expect(picker_form["action"]).to include(database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: row.id))
+    expect(picker_form["data-document-picker-search-url-value"]).to eq(
+      workspace_document_targets_path(workspace_slug: workspace.slug, kind: "page")
+    )
+    expect(picker_form.at_css("input[name='db_row_link_page_search_#{row.id}']")).to be_present
   end
 
   it "creates and links a row directly from row creation actions" do

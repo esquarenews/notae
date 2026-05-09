@@ -14,7 +14,6 @@
 <% row_style_classes << "is-row-italic" if row_is_italic %>
 <% row_style_classes << "is-row-color-#{row_text_color}" unless row_text_color == "default" %>
 <% row_style_classes << "is-row-bg-#{row_background_color}" unless row_background_color == "default" %>
-<% page_search_url = local_assigns.fetch(:page_search_url) { workspace_document_targets_path(workspace_slug: workspace.slug, kind: "page") } %>
 <% form_authenticity_token_value = local_assigns[:form_authenticity_token_value] || form_authenticity_token %>
 <tr id="row_<%= row.id %>"
     class="notae-db-grid-data-row <%= conditional_color_class_for_row(row) %> <%= row_style_classes.join(" ") %>"
@@ -157,31 +156,14 @@
                       title="Create linked Nota"
                       aria-label="Create linked Nota">+</button>
             </form>
-            <details class="notae-db-inline-details notae-db-row-link-chooser">
+            <details class="notae-db-inline-details notae-db-row-link-chooser"
+                     data-controller="lazy-panel"
+                     data-lazy-panel-url-value="<%= panel_database_path({ workspace_slug: workspace.slug, id: database.id, panel: "row_link_chooser", row_id: row.id }.merge(row_params)) %>"
+                     data-lazy-panel-loading-text-value="Loading Nota picker..."
+                     data-lazy-panel-error-text-value="Could not load Nota picker."
+                     data-lazy-panel-focus-selector-value="[data-document-picker-target='searchInput']">
               <summary class="notae-db-row-link-action is-choose" title="Choose linked Nota" aria-label="Choose linked Nota">🔗</summary>
-              <div class="notae-db-inline-panel">
-                <form action="<%= row_update_path %>"
-                      accept-charset="UTF-8"
-                      method="post"
-                      class="notae-db-inline-form"
-                      data-controller="document-picker"
-                      data-document-picker-search-url-value="<%= page_search_url %>"
-                      data-document-picker-empty-text-value="No matching notas.">
-                  <input type="hidden" name="_method" value="patch" autocomplete="off">
-                  <input type="hidden" name="db_row[linked_page_id]" value="<%= linked_page&.id %>" data-document-picker-target="hiddenInput" autocomplete="off">
-                  <input type="search"
-                         name="db_row_link_page_search_<%= row.id %>"
-                         value=""
-                         placeholder="Search notas"
-                         autocomplete="off"
-                         class="notae-options-input"
-                         data-document-picker-target="searchInput"
-                         data-action="focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch">
-                  <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching…</p>
-                  <div class="notae-document-picker-results" data-document-picker-target="results"></div>
-                  <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching notas.</p>
-                </form>
-              </div>
+              <div class="notae-db-inline-panel" data-lazy-panel-target="container"></div>
             </details>
           <% else %>
             <span class="notae-db-title-text"><%= row.title %></span>
@@ -219,57 +201,70 @@
                        field_id: field_id %>
           <% end %>
         <% else %>
-          <form action="<%= cell_update_path %>"
-                accept-charset="UTF-8"
-                method="post"
-                data-turbo-stream="true"
-                data-preserve-database-scroll="true">
-            <input type="hidden" name="_method" value="patch" autocomplete="off">
-            <% if db_property.checkbox? %>
-              <label class="notae-db-checkbox-wrap">
-                <input type="hidden" name="db_cell[value_text]" value="false" autocomplete="off">
-                <input type="checkbox"
-                       name="db_cell[value_text]"
-                       id="<%= field_id %>"
-                       value="true"
-                       class="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
-                       data-action="change->auto-submit#submit"
-                       <%= "checked" if db_cell.value_text == "true" %>>
-              </label>
-            <% elsif db_property.select? %>
-              <% blank_label = db_property.name.to_s.strip.casecmp("status").zero? ? "Select status" : "Select option" %>
-              <select name="db_cell[value_text]"
-                      id="<%= field_id %>"
-                      class="<%= field_classes %>"
-                      data-action="change->auto-submit#submit">
-                <%= options_for_select([[blank_label, ""]] + select_options_for(db_property).map { |option| [option, option] }, db_cell.value_text) %>
-              </select>
-            <% elsif db_property.number? %>
-              <input type="number"
+          <% cell_autosubmit_attributes = {
+            action: "change->auto-submit#submit",
+            auto_submit_url: cell_update_path,
+            auto_submit_method: "patch",
+            auto_submit_param_name: "db_cell[value_text]"
+          } %>
+          <% if db_property.checkbox? %>
+            <label class="notae-db-checkbox-wrap">
+              <input type="checkbox"
                      name="db_cell[value_text]"
                      id="<%= field_id %>"
-                     value="<%= db_cell.value_text %>"
-                     step="any"
-                     class="<%= field_classes %>"
-                     data-action="change->auto-submit#submit">
-            <% elsif db_property.date? %>
-              <input type="date"
-                     name="db_cell[value_text]"
-                     id="<%= field_id %>"
-                     value="<%= db_cell.value_text %>"
-                     class="<%= field_classes %>"
-                     data-action="change->auto-submit#submit"
-                     data-gantt-grid-row-id="<%= row.id %>"
-                     data-gantt-grid-property-id="<%= db_property.id %>">
-            <% else %>
-              <input type="text"
-                     name="db_cell[value_text]"
-                     id="<%= field_id %>"
-                     value="<%= db_cell.value_text %>"
-                     class="<%= field_classes %>"
-                     data-action="change->auto-submit#submit">
-            <% end %>
-          </form>
+                     value="true"
+                     class="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
+                     data-action="<%= cell_autosubmit_attributes[:action] %>"
+                     data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"
+                     data-auto-submit-method="<%= cell_autosubmit_attributes[:auto_submit_method] %>"
+                     data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>"
+                     <%= "checked" if db_cell.value_text == "true" %>>
+            </label>
+          <% elsif db_property.select? %>
+            <% blank_label = db_property.name.to_s.strip.casecmp("status").zero? ? "Select status" : "Select option" %>
+            <select name="db_cell[value_text]"
+                    id="<%= field_id %>"
+                    class="<%= field_classes %>"
+                    data-action="<%= cell_autosubmit_attributes[:action] %>"
+                    data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"
+                    data-auto-submit-method="<%= cell_autosubmit_attributes[:auto_submit_method] %>"
+                    data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>">
+              <%= options_for_select([[blank_label, ""]] + select_options_for(db_property).map { |option| [option, option] }, db_cell.value_text) %>
+            </select>
+          <% elsif db_property.number? %>
+            <input type="number"
+                   name="db_cell[value_text]"
+                   id="<%= field_id %>"
+                   value="<%= db_cell.value_text %>"
+                   step="any"
+                   class="<%= field_classes %>"
+                   data-action="<%= cell_autosubmit_attributes[:action] %>"
+                   data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"
+                   data-auto-submit-method="<%= cell_autosubmit_attributes[:auto_submit_method] %>"
+                   data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>">
+          <% elsif db_property.date? %>
+            <input type="date"
+                   name="db_cell[value_text]"
+                   id="<%= field_id %>"
+                   value="<%= db_cell.value_text %>"
+                   class="<%= field_classes %>"
+                   data-action="<%= cell_autosubmit_attributes[:action] %>"
+                   data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"
+                   data-auto-submit-method="<%= cell_autosubmit_attributes[:auto_submit_method] %>"
+                   data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>"
+                   data-gantt-grid-row-id="<%= row.id %>"
+                   data-gantt-grid-property-id="<%= db_property.id %>">
+          <% else %>
+            <input type="text"
+                   name="db_cell[value_text]"
+                   id="<%= field_id %>"
+                   value="<%= db_cell.value_text %>"
+                   class="<%= field_classes %>"
+                   data-action="<%= cell_autosubmit_attributes[:action] %>"
+                   data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"
+                   data-auto-submit-method="<%= cell_autosubmit_attributes[:auto_submit_method] %>"
+                   data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>">
+          <% end %>
         <% end %>
       <% else %>
         <span class="text-stone-400">-</span>

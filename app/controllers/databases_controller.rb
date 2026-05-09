@@ -176,6 +176,23 @@ class DatabasesController < ApplicationController
                row_text_color: @row.row_text_color,
                row_background_color: @row.row_background_color
              }
+    when "row_link_chooser"
+      return head :forbidden if @database.locked?
+
+      prepare_database_row_menu_panel!
+      render partial: "databases/row_link_chooser_panel",
+             locals: {
+               row: @row,
+               row_update_path: database_db_row_path(
+                 database_row_menu_params.merge(
+                   workspace_slug: @workspace.slug,
+                   database_id: @database.id,
+                   id: @row.id
+                 )
+               ),
+               linked_page: @row.linked_page,
+               page_search_url: workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page")
+             }
     when "column_menu"
       return head :forbidden if @database.locked?
 

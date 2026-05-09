@@ -1,0 +1,21 @@
+<form action="<%= row_update_path %>"
+      accept-charset="UTF-8"
+      method="post"
+      class="notae-db-inline-form"
+      data-controller="document-picker"
+      data-document-picker-search-url-value="<%= page_search_url %>"
+      data-document-picker-empty-text-value="No matching notas.">
+  <input type="hidden" name="_method" value="patch" autocomplete="off">
+  <input type="hidden" name="db_row[linked_page_id]" value="<%= linked_page&.id %>" data-document-picker-target="hiddenInput" autocomplete="off">
+  <input type="search"
+         name="db_row_link_page_search_<%= row.id %>"
+         value=""
+         placeholder="Search notas"
+         autocomplete="off"
+         class="notae-options-input"
+         data-document-picker-target="searchInput"
+         data-action="focus->document-picker#ensureLoaded input->document-picker#queueSearch search->document-picker#queueSearch">
+  <p class="notae-document-picker-loading" hidden data-document-picker-target="loading">Searching...</p>
+  <div class="notae-document-picker-results" data-document-picker-target="results"></div>
+  <p class="notae-options-empty" hidden data-document-picker-target="emptyState">No matching notas.</p>
+</form>

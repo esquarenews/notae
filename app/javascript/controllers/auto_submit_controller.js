@@ -94,7 +94,10 @@ export default class extends Controller {
     this.applyTaskStatusVisualState(event.target)
 
     const form = this.formFor(event)
-    if (!form) return
+    if (!form) {
+      this.submitDetachedInput(event.target)
+      return
+    }
 
     this.captureViewState(event.target, form)
     this.requestSubmitOnce(form)
@@ -178,6 +181,66 @@ export default class extends Controller {
     } else {
       form.requestSubmit()
     }
+  }
+
+  async submitDetachedInput(target) {
+    if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLSelectElement) && !(target instanceof HTMLTextAreaElement)) return
+    if (!target.dataset.autoSubmitUrl || !target.dataset.autoSubmitParamName) return
+    if (target.dataset.autoSubmitPending === "true") return
+
+    if (typeof target.checkValidity === "function" && !target.checkValidity()) {
+      if (typeof target.reportValidity === "function") target.reportValidity()
+      return
+    }
+
+    this.captureViewState(target, { action: target.dataset.autoSubmitUrl })
+    delete target.dataset.autoSubmitFailed
+    target.dataset.autoSubmitPending = "true"
+
+    const body = new FormData()
+    body.append(target.dataset.autoSubmitParamName, this.detachedInputValue(target))
+
+    try {
+      const response = await fetch(target.dataset.autoSubmitUrl, {
+        method: (target.dataset.autoSubmitMethod || "patch").toUpperCase(),
+        credentials: "same-origin",
+        headers: this.detachedInputHeaders(),
+        body
+      })
+      const responseBody = await response.text()
+      const contentType = response.headers.get("content-type") || ""
+
+      if (contentType.includes("turbo-stream") && window.Turbo?.renderStreamMessage) {
+        window.Turbo.renderStreamMessage(responseBody)
+      } else if (response.redirected) {
+        window.location.assign(response.url)
+      } else if (!response.ok) {
+        throw new Error(`Detached autosubmit failed: ${response.status}`)
+      }
+    } catch (_error) {
+      target.dataset.autoSubmitFailed = "true"
+    } finally {
+      delete target.dataset.autoSubmitPending
+    }
+  }
+
+  detachedInputValue(target) {
+    if (target instanceof HTMLInputElement && target.type === "checkbox") {
+      return target.checked ? (target.value || "true") : "false"
+    }
+
+    return target.value
+  }
+
+  detachedInputHeaders() {
+    const headers = {
+      Accept: "text/vnd.turbo-stream.html, text/html, application/xhtml+xml",
+      "X-Requested-With": "XMLHttpRequest"
+    }
+    const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken
+
+    return headers
   }
 
   captureViewState(target, form) {

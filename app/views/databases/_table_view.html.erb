@@ -53,7 +53,6 @@ end %>
   lookup[property.id] = column_style_classes_for(property)
 end %>
 <% grid_form_authenticity_token = form_authenticity_token %>
-<% page_search_url = workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page") %>
 
 <div class="notae-db-grid-wrap"
      data-controller="db-column-resize"
@@ -330,7 +329,6 @@ end %>
                    can_update_cells: can_edit_grid,
                    can_destroy_rows: can_destroy_rows,
                    row_color_options: row_color_options,
-                   page_search_url: page_search_url,
                    name_column_style_classes: name_column_style_classes,
                    column_style_classes_by_property_id: column_style_classes_by_property_id,
                    form_authenticity_token_value: grid_form_authenticity_token,

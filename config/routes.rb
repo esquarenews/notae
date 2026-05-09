@@ -81,6 +81,7 @@ Rails.application.routes.draw do
     get "notifications", to: "notifications#index", as: :workspace_notifications
     get "notification-bar", to: "workspace_notification_bars#show", as: :workspace_notification_bar
     get "icon-picker", to: "icon_pickers#show", as: :workspace_icon_picker
+    get "cover-picker", to: "cover_pickers#show", as: :workspace_cover_picker
     patch "notifications/:id/read", to: "notifications#mark_read", as: :read_workspace_notification
     post "invitations", to: "invitations#create", as: :workspace_invitations
     get "kalendarium", to: "kalendarium#show", as: :kalendarium

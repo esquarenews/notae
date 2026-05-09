@@ -86,7 +86,11 @@
 
       <% if can_edit_shell_page %>
         <div class="notae-page-cover-controls">
-          <details class="notae-cover-picker">
+          <details class="notae-cover-picker"
+                   data-controller="lazy-panel"
+                   data-lazy-panel-url-value="<%= workspace_cover_picker_path(workspace_slug: @workspace.slug, target_type: "page", page_id: shell_page.id, return_to: current_path) %>"
+                   data-lazy-panel-loading-text-value="Loading covers..."
+                   data-lazy-panel-error-text-value="Could not load covers.">
             <summary class="notae-chip-button notae-cover-chip">Change</summary>
             <%= render "shared/cover_picker_panel",
                        update_url: page_path(shell_page_route_params),
@@ -151,7 +155,11 @@
                   <%= render "shared/icon_picker_panel" %>
                 </details>
 
-                <details class="notae-page-header-action">
+                <details class="notae-page-header-action"
+                         data-controller="lazy-panel"
+                         data-lazy-panel-url-value="<%= workspace_cover_picker_path(workspace_slug: @workspace.slug, target_type: "page", page_id: shell_page.id, embedded: true, allow_remove: has_cover, remove_label: "Remove cover", return_to: current_path) %>"
+                         data-lazy-panel-loading-text-value="Loading covers..."
+                         data-lazy-panel-error-text-value="Could not load covers.">
                   <summary aria-label="<%= has_cover ? "Change cover" : "Add cover" %>">
                     <span class="notae-page-header-action-icon">▭</span>
                     <span class="notae-page-header-action-label"><%= has_cover ? "Change cover" : "Add cover" %></span>

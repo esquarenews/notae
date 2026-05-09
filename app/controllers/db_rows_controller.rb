@@ -1049,7 +1049,6 @@ class DbRowsController < ApplicationController
       can_update_cells: can_update_rows,
       can_destroy_rows: policy(@database).destroy? && !@database.locked?,
       row_color_options: row_color_options,
-      page_search_url: workspace_document_targets_path(workspace_slug: @workspace.slug, kind: "page"),
       name_column_style_classes: name_column_style_classes_for(@database),
       autofocus_title: autofocus_title,
       highlight_row_id: highlight_row_id

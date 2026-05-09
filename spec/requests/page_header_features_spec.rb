@@ -147,7 +147,7 @@ RSpec.describe "Page header features", type: :request do
 
   it "keeps Unsplash pagination on one centered line" do
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
-    template = Rails.root.join("app/views/shared/_cover_picker_panel.html.erb").read
+    template = Rails.root.join("app/views/shared/_cover_picker_panel_body.html.erb").read
 
     expect(stylesheet).to include(".notae-cover-unsplash-pagination {\n  display: grid;\n  grid-template-columns: fit-content(9.5rem) minmax(8.5rem, auto) fit-content(9.5rem);")
     expect(stylesheet).to include(".notae-cover-unsplash-page-label {\n  grid-column: 2;")
@@ -187,6 +187,27 @@ RSpec.describe "Page header features", type: :request do
     end
     expect(Page::COVER_PRESET_KEYS).to include(page.reload.cover_preset_key)
     get page_path(workspace_slug: workspace.slug, id: page.id)
+    html = Nokogiri::HTML(response.body)
+    cover_menu = html.css("details.notae-page-header-action").find do |details|
+      details.at_css("summary")&.text&.include?("Change cover")
+    end
+    expect(cover_menu).to be_present
+    expect(response.body).to include("data-controller=\"lazy-panel\"")
+    expect(cover_menu["data-lazy-panel-url-value"]).to eq(workspace_cover_picker_path(workspace_slug: workspace.slug, target_type: "page", page_id: page.id, embedded: true, allow_remove: true, remove_label: "Remove cover", return_to: page_path(workspace_slug: workspace.slug, id: page.id)))
+    expect(response.body).not_to include("notae-cover-picker-grid")
+    expect(response.body).not_to include("notae-cover-picker-upload-form")
+    expect(response.body).not_to include("notae-cover-unsplash-modal")
+
+    get workspace_cover_picker_path(
+      workspace_slug: workspace.slug,
+      target_type: "page",
+      page_id: page.id,
+      embedded: true,
+      allow_remove: true,
+      remove_label: "Remove cover",
+      return_to: page_path(workspace_slug: workspace.slug, id: page.id)
+    )
+    expect(response).to have_http_status(:ok)
     expect(response.body).to include("notae-cover-picker-grid")
     expect(response.body).to include("notae-cover-picker-quick-actions")
     expect(response.body).to include("notae-cover-picker-upload-form")
@@ -227,6 +248,17 @@ RSpec.describe "Page header features", type: :request do
     expect(workspace.cover_assets.where(created_by: owner, source_kind: "upload").count).to eq(1)
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
+    expect(response.body).not_to include("notae-cover-picker-grid-recent")
+
+    get workspace_cover_picker_path(
+      workspace_slug: workspace.slug,
+      target_type: "page",
+      page_id: page.id,
+      embedded: true,
+      allow_remove: true,
+      remove_label: "Remove cover",
+      return_to: page_path(workspace_slug: workspace.slug, id: page.id)
+    )
     expect(response.body).to include("Recent")
 
     patch page_path(workspace_slug: workspace.slug, id: page.id),
@@ -281,6 +313,17 @@ RSpec.describe "Page header features", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
     expect(response.body).to include("Photo by")
     expect(response.body).to include("Ava Artist")
+    expect(response.body).not_to include("notae-cover-picker-grid-recent")
+
+    get workspace_cover_picker_path(
+      workspace_slug: workspace.slug,
+      target_type: "page",
+      page_id: page.id,
+      embedded: true,
+      allow_remove: true,
+      remove_label: "Remove cover",
+      return_to: page_path(workspace_slug: workspace.slug, id: page.id)
+    )
     expect(response.body).to include("Recent")
   end
 
