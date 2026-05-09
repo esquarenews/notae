@@ -137,7 +137,8 @@ export default class extends Controller {
     createUrl: String,
     initialJson: String,
     blockType: String,
-    blockId: String
+    blockId: String,
+    touchTextEntry: Boolean
   }
   static editorModulesPromise = null
   static editorModuleWarmupScheduled = false
@@ -164,6 +165,7 @@ export default class extends Controller {
     this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
     this.flushSaveHandler = (event) => this.handleFlushSaveRequest(event)
     this.constructor.scheduleEditorModuleWarmup()
+    if (this.shouldPrepareTouchTextEntry()) this.hydrate({ focus: false })
   }
 
   disconnect() {
@@ -204,6 +206,22 @@ export default class extends Controller {
 
   staticLinkActivation(event) {
     return event?.target?.closest?.("a[href]") instanceof HTMLAnchorElement
+  }
+
+  shouldPrepareTouchTextEntry() {
+    return this.touchTextEntryValue && this.touchTextEntryViewport()
+  }
+
+  touchTextEntryViewport() {
+    const shell = this.element.closest(".notae-shell")
+    if (shell?.classList.contains("is-mobile-viewport")) return true
+    if (window.navigator?.standalone === true) return true
+
+    return this.mediaQueryMatches("(pointer: coarse)") || this.mediaQueryMatches("(display-mode: standalone)")
+  }
+
+  mediaQueryMatches(query) {
+    return Boolean(window.matchMedia?.(query)?.matches)
   }
 
   hydrate({ focus = false } = {}) {

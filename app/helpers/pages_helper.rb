@@ -93,6 +93,10 @@ module PagesHelper
     content_tag(:div, content, **options)
   end
 
+  def block_touch_text_entry_ready?(block)
+    block.block_type.to_s == "paragraph" && prosemirror_plain_text(block.content_json).blank?
+  end
+
   private
 
   def render_prosemirror_node(node)
@@ -184,6 +188,7 @@ module PagesHelper
   end
 
   def prosemirror_plain_text(node)
+    return "" unless node.is_a?(Hash)
     return node["text"].to_s if node["type"].to_s == "text"
 
     Array(node["content"]).map { |child| prosemirror_plain_text(child) }.join

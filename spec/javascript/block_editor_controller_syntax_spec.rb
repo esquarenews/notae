@@ -55,15 +55,21 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include('const storageKey = "notae-client-session-id"')
   end
 
-  it "defers Tiptap mounting until the user interacts with a block" do
+  it "defers Tiptap mounting for regular blocks while preparing empty touch text blocks" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
     connect_body = source[/connect\(\) \{(?<body>.*?)\n  \}/m, :body]
-    expect(connect_body).not_to include("this.hydrate(")
+    expect(connect_body).to include("if (this.shouldPrepareTouchTextEntry()) this.hydrate({ focus: false })")
     expect(connect_body).not_to include("new Editor(")
     expect(source).not_to include("IntersectionObserver")
     expect(source).not_to include("EDITOR_LAZY_ROOT_MARGIN")
     expect(source).to include("contentUrl: String")
+    expect(source).to include("touchTextEntry: Boolean")
+    expect(source).to include("shouldPrepareTouchTextEntry()")
+    expect(source).to include("touchTextEntryViewport()")
+    expect(source).to include('this.mediaQueryMatches("(pointer: coarse)")')
+    expect(source).to include('this.mediaQueryMatches("(display-mode: standalone)")')
+    expect(source).to include("window.matchMedia?.(query)?.matches")
     expect(source).to include("activateAndFocus(event)")
     expect(source).to include("activateFromKeyboard(event)")
     expect(source).to include("this.hydrate({ focus: true })")

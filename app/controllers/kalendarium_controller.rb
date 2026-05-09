@@ -29,7 +29,7 @@ class KalendariumController < ApplicationController
     @weekday_labels = ordered_weekday_labels
     @year_weekday_labels = @weekday_labels.map { |label| label.first }
     @projects = policy_scope(KalendariumProject).for_workspace(@workspace).active.order(:name).to_a
-    @archived_projects = policy_scope(KalendariumProject).for_workspace(@workspace).archived.order(archived_at: :desc, name: :asc).to_a
+    @archived_projects = []
     @scoped_project_id = scoped_project_id(@projects)
     @selected_project_id = selected_active_project_id
     @visible_project_ids = resolve_visible_project_ids(@projects)
@@ -65,19 +65,8 @@ class KalendariumController < ApplicationController
     end
     @events = (@events.to_a + cross_workspace_task_blockout_events(range_start:, range_end:)).uniq(&:id).sort_by(&:starts_at_utc)
 
-    @events_by_day = @events.group_by { |event| event.starts_at_utc.in_time_zone(current_user.time_zone).to_date }
-    @year_all_day_events_by_day = build_year_events_by_day(@events.select(&:all_day?))
-    @year_events_by_day = build_year_events_by_day(@events)
-    @year_month_event_counts = build_year_month_event_counts(@events)
-    @workspace_options = policy_scope(Workspace).order(:name).to_a
-    @week_days = build_week_days
-    @month_days = build_month_days
-    @year_months = (1..12).map { |month| Date.new(@selected_date.year, month, 1) }
-    @day_timeline = build_day_timeline(@selected_date)
-    @week_timelines = @week_days.index_with { |day| build_day_timeline(day) }
-    @day_all_day_offset = all_day_offset_for_rows(@day_timeline[:all_day_events].size)
-    @week_all_day_rows = @week_timelines.values.map { |timeline| timeline[:all_day_events].size }.max.to_i
-    @week_all_day_offset = all_day_offset_for_rows(@week_all_day_rows)
+    prepare_current_view_state!
+    @workspace_options = @widget_mode ? [] : policy_scope(Workspace).order(:name).to_a
     @pending_write_proposals = policy_scope(KalendariumWriteProposal)
                                  .for_workspace(@workspace)
                                  .pending
@@ -86,7 +75,7 @@ class KalendariumController < ApplicationController
                                  .limit(20)
                                  .to_a
     @new_event = KalendariumEvent.new
-    @new_project = KalendariumProject.new
+    @new_project = @widget_mode ? nil : KalendariumProject.new
   end
 
   def refresh
@@ -417,6 +406,52 @@ class KalendariumController < ApplicationController
       all_day_events: all_day_events,
       timed_events: layout_timed_events(timed_events)
     }
+  end
+
+  def prepare_current_view_state!
+    @events_by_day = {}
+    @year_all_day_events_by_day = {}
+    @year_events_by_day = {}
+    @year_month_event_counts = {}
+    @week_days = []
+    @month_days = []
+    @year_months = []
+    @day_timeline = { all_day_events: [], timed_events: [] }
+    @week_timelines = {}
+    @day_all_day_offset = 0
+    @week_all_day_rows = 0
+    @week_all_day_offset = 0
+
+    case @view
+    when "day"
+      @events_by_day = events_grouped_by_day
+      @day_timeline = build_day_timeline(@selected_date)
+      @day_all_day_offset = all_day_offset_for_rows(@day_timeline[:all_day_events].size)
+    when "week", "next_7_days"
+      @events_by_day = events_grouped_by_day
+      @week_days = build_week_days
+      @week_timelines = @week_days.index_with { |day| build_day_timeline(day) }
+      @week_all_day_rows = @week_timelines.values.map { |timeline| timeline[:all_day_events].size }.max.to_i
+      @week_all_day_offset = all_day_offset_for_rows(@week_all_day_rows)
+    when "year"
+      @year_months = (1..12).map { |month| Date.new(@selected_date.year, month, 1) }
+      @year_all_day_events_by_day = build_year_events_by_day(@events.select(&:all_day?))
+      @year_events_by_day = @show_year_daily_events ? build_year_events_by_day(@events) : @year_all_day_events_by_day
+      @year_month_event_counts = build_year_month_event_counts(@events)
+    when "project"
+      @archived_projects = policy_scope(KalendariumProject)
+                           .for_workspace(@workspace)
+                           .archived
+                           .order(archived_at: :desc, name: :asc)
+                           .to_a
+    else
+      @events_by_day = events_grouped_by_day
+      @month_days = build_month_days
+    end
+  end
+
+  def events_grouped_by_day
+    @events.group_by { |event| event.starts_at_utc.in_time_zone(current_user.time_zone).to_date }
   end
 
   def build_year_events_by_day(events)

@@ -161,6 +161,98 @@ RSpec.describe Search::KnowledgeSuggestionService do
     expect(response.context_snapshot.first.fetch("source_title")).to eq("New brief")
   end
 
+  it "checks context availability without hydrating source associations" do
+    user = User.create!(email: "knowledge-context-check@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge context check", slug: "knowledge-context-check")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Quick context")
+    SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "This should make context available.",
+      token_count: 6,
+      content_hash: "context-check-1",
+      source_content_hash: "context-source-check-1",
+      source_uri: "/w/#{workspace.slug}/pages/#{page.id}",
+      source_title: page.title,
+      metadata_json: {}
+    )
+
+    expect(SearchChunk).not_to receive(:context_preload_associations)
+
+    expect(described_class.new(user: user, workspace: workspace).context_available?).to eq(true)
+  end
+
+  it "uses cheap source hashes to decide delta context availability" do
+    user = User.create!(email: "knowledge-delta-check@example.com", password: "password123", openai_api_key: "sk-test")
+    workspace = Workspace.create!(name: "Knowledge delta check", slug: "knowledge-delta-check")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Stable brief")
+    chunk = SearchChunk.create!(
+      workspace: workspace,
+      source_type: SearchChunk::SOURCE_PAGE,
+      source_id: page.id,
+      page: page,
+      chunk_index: 0,
+      text: "Previously reported context.",
+      token_count: 4,
+      content_hash: "delta-check-1",
+      source_content_hash: "delta-source-check-1",
+      source_uri: "/w/#{workspace.slug}/pages/#{page.id}",
+      source_title: page.title,
+      metadata_json: {}
+    )
+    chunk.update_columns(updated_at: 30.minutes.ago)
+    previous_report = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Daily workspace brief",
+      summary: "Stable brief already covered. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      metadata_json: {
+        "context_snapshot" => [
+          {
+            "source_type" => SearchChunk::SOURCE_PAGE,
+            "source_id" => page.id,
+            "source_title" => page.title,
+            "source_content_hash" => "delta-source-check-1",
+            "updated_at" => 30.minutes.ago.iso8601
+          }
+        ]
+      },
+      generated_for_date: Date.current,
+      generated_at: 2.hours.ago
+    )
+
+    unchanged_service = described_class.new(
+      user: user,
+      workspace: workspace,
+      mode: described_class::MODE_DELTA,
+      since: 1.hour.ago,
+      previous_report: previous_report
+    )
+    expect(unchanged_service.context_available?).to eq(false)
+
+    chunk.update!(source_content_hash: "delta-source-check-2")
+
+    changed_service = described_class.new(
+      user: user,
+      workspace: workspace,
+      mode: described_class::MODE_DELTA,
+      since: 1.hour.ago,
+      previous_report: previous_report
+    )
+    expect(changed_service.context_available?).to eq(true)
+  end
+
   it "filters stale emails and rewrites the current user to second person" do
     user = User.create!(email: "errol.schmidt@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge freshness", slug: "knowledge-freshness")

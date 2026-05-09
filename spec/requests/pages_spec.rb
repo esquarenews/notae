@@ -175,6 +175,25 @@ RSpec.describe "Pages", type: :request do
     expect(editor["data-block-editor-content-url-value"]).to eq(content_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id))
     expect(JSON.parse(editor["data-block-editor-initial-json-value"])).to eq(block.content_json)
     expect(static_content&.text).to include("Static opening text")
+    expect(editor["data-block-editor-touch-text-entry-value"]).to eq("false")
+  end
+
+  it "marks empty paragraph blocks for touch text-entry preparation" do
+    owner = User.create!(email: "pages-touch-text-entry-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Touch text entry", slug: "touch-text-entry")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Touch text entry page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "paragraph")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    editor = document.at_css(%([data-block-editor-block-id-value="#{block.id}"]))
+
+    expect(editor).to be_present
+    expect(editor["data-block-editor-touch-text-entry-value"]).to eq("true")
   end
 
   it "restores the collapsed ai rail before turbo swaps the next shell into place" do

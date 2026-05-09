@@ -37,7 +37,9 @@ module Search
     end
 
     def context_available?
-      select_context_chunks.any?
+      return context_available_in_full_mode? unless delta_mode?
+
+      context_available_in_delta_mode?
     end
 
     def call
@@ -125,6 +127,26 @@ module Search
         meeting_ids: meeting_ids,
         message_ids: message_ids
       )
+    end
+
+    def context_available_in_full_mode?
+      accessible_chunks_scope.exists?
+    end
+
+    def context_available_in_delta_mode?
+      scope = accessible_chunks_scope
+      scope = scope.where(SearchChunk.arel_table[:updated_at].gteq(since)) if since.present?
+      snapshot_index = previous_snapshot_index
+      return scope.exists? if snapshot_index.empty?
+
+      scope
+        .order(updated_at: :desc)
+        .limit(CONTEXT_FETCH_LIMIT)
+        .pluck(:source_type, :source_id, :source_content_hash)
+        .any? do |source_type, source_id, source_content_hash|
+          previous_entry = snapshot_index[snapshot_key_for(source_type: source_type, source_id: source_id)]
+          previous_entry.blank? || previous_entry["source_content_hash"].to_s != source_content_hash.to_s
+        end
     end
 
     def prompt_for(context_chunks)

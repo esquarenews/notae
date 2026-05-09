@@ -34,13 +34,13 @@ class WorkspaceHomeController < ApplicationController
                         .order(updated_at: :desc)
                         .limit(3)
                         .to_a
-    @knowledge_task_databases = knowledge_task_databases_for(@workspace)
     @daily_knowledge_suggestion = resolve_daily_knowledge_suggestion
     @latest_daily_knowledge_suggestion = resolve_latest_daily_knowledge_suggestion
     @display_daily_knowledge_suggestion = @daily_knowledge_suggestion || @latest_daily_knowledge_suggestion
     @show_latest_daily_knowledge_suggestion = @display_daily_knowledge_suggestion.present? && @daily_knowledge_suggestion.blank?
     @next_daily_brief_at = next_daily_brief_at
     @active_proactive_knowledge_suggestion = resolve_active_proactive_knowledge_suggestion
+    @knowledge_task_databases = knowledge_task_databases_for_home
     @pending_agent_actions = resolve_pending_agent_actions
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
     @can_manage_memberships = @memberships.any? { |membership| policy(membership).update? }
@@ -193,5 +193,11 @@ class WorkspaceHomeController < ApplicationController
     with_optional_schema_fallback(default: 0, feature: "unread notifications") do
       policy_scope(Notification).unread.count
     end
+  end
+
+  def knowledge_task_databases_for_home
+    return [] if @display_daily_knowledge_suggestion.blank? && @active_proactive_knowledge_suggestion.blank?
+
+    knowledge_task_databases_for(@workspace)
   end
 end
