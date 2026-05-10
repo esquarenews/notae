@@ -142,6 +142,7 @@ export default class extends Controller {
 
   selectUnsplash(event) {
     event.preventDefault()
+    if (this.element.classList.contains("is-submitting")) return
 
     const photoId = event.currentTarget.dataset.photoId
     if (!photoId || !this.hasApplyFormTarget) return
@@ -330,14 +331,15 @@ export default class extends Controller {
       <article class="notae-cover-unsplash-card">
         <button type="button"
                 class="notae-cover-unsplash-tile"
-                title="Double-click to use this cover"
-                data-action="dblclick->cover-carousel#selectUnsplash"
+                title="Use this cover"
+                aria-label="Use this cover by ${artistName}"
+                data-action="cover-carousel#selectUnsplash"
                 data-photo-id="${photoId}">
           <img src="${imageUrl}" alt="${altText}" loading="lazy" decoding="async">
         </button>
         <div class="notae-cover-unsplash-meta">
           <strong>${artistName}</strong>
-          <span>Double-click to use</span>
+          <span>Tap to use</span>
           <p class="notae-cover-picker-credit">
             Photo by
             <a href="${artistUrl}" target="_blank" rel="noopener noreferrer">${artistName}</a>

@@ -46,4 +46,16 @@ RSpec.describe "CoverCarouselController JavaScript syntax" do
     expect(source).to include("this.uploadSubmitTarget.disabled = true")
     expect(source).to include("this.uploadSpinnerTarget.hidden = false")
   end
+
+  it "lets mobile users apply Unsplash covers with a single tap" do
+    source = Rails.root.join("app/javascript/controllers/cover_carousel_controller.js").read
+
+    expect(source).to include("selectUnsplash(event)")
+    expect(source).to include('data-action="cover-carousel#selectUnsplash"')
+    expect(source).to include('title="Use this cover"')
+    expect(source).to include("Tap to use")
+    expect(source).to include('this.element.classList.contains("is-submitting")')
+    expect(source).not_to include("dblclick->cover-carousel#selectUnsplash")
+    expect(source).not_to include("Double-click to use")
+  end
 end
