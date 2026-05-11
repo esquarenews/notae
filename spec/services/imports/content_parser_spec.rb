@@ -104,6 +104,29 @@ RSpec.describe Imports::ContentParser, type: :service do
     expect(result.skipped_files).to include("ignored.bin")
   end
 
+  it "rejects oversized top-level imports before parser-heavy processing" do
+    stub_const("Imports::ContentParser::MAX_IMPORT_BYTES", 4)
+
+    expect do
+      described_class.parse(filename: "large.pdf", io: make_io("12345"))
+    end.to raise_error(Imports::ContentParser::FileTooLargeError, /large.pdf exceeds/)
+  end
+
+  it "skips oversized zip entries without reading them into parser-specific importers" do
+    stub_const("Imports::ContentParser::MAX_ARCHIVE_ENTRY_BYTES", 4)
+
+    buffer = Zip::OutputStream.write_buffer do |zip|
+      zip.put_next_entry("large.md")
+      zip.write("12345")
+    end
+    buffer.rewind
+
+    result = described_class.parse(filename: "bundle.zip", io: make_io(buffer.string))
+
+    expect(result.documents).to be_empty
+    expect(result.skipped_files).to include("large.md (too large)")
+  end
+
   it "parses pdf pages through PDF::Reader" do
     fake_reader = instance_double(PDF::Reader, pages: [ instance_double(PDF::Reader::Page, text: "PDF paragraph") ])
     allow(PDF::Reader).to receive(:new).and_return(fake_reader)

@@ -10,6 +10,7 @@ class WorkspaceCoverAsset < ApplicationRecord
   validates :source_kind, inclusion: { in: SOURCE_KINDS }
   validates :label, presence: true
   validates :image, presence: true, if: :upload?
+  validate :uploaded_image_must_be_safe, if: :upload?
   validates :remote_image_url, presence: true, if: :unsplash?
   validates :artist_name, presence: true, if: :unsplash?
   validates :artist_url, presence: true, if: :unsplash?
@@ -36,5 +37,14 @@ class WorkspaceCoverAsset < ApplicationRecord
 
   def display_source_name
     source_name.presence || DEFAULT_SOURCE_NAME
+  end
+
+  private
+
+  def uploaded_image_must_be_safe
+    return unless image.attached?
+    return if Notae::UploadPolicy.safe_inline_image_content_type?(image.blob.content_type)
+
+    errors.add(:image, "must be a PNG, JPEG, GIF, or WebP")
   end
 end

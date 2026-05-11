@@ -32,9 +32,8 @@ class WorkspaceEmoji < ApplicationRecord
   def image_must_be_supported
     return unless image.attached?
 
-    allowed_types = %w[image/png image/jpeg image/gif image/webp image/svg+xml]
-    return if allowed_types.include?(image.blob.content_type)
+    return if Notae::UploadPolicy.safe_inline_image_content_type?(image.blob.content_type)
 
-    errors.add(:image, "must be a PNG, JPEG, GIF, WebP, or SVG")
+    errors.add(:image, "must be a PNG, JPEG, GIF, or WebP")
   end
 end

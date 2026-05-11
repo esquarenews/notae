@@ -23,6 +23,11 @@
         <%= form.email_field :email, autofocus: true, autocomplete: "email", class: "notae-auth-input" %>
       </div>
 
+      <div aria-hidden="true" style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;">
+        <%= form.label :website, "Website" %>
+        <%= form.text_field :website, tabindex: -1, autocomplete: "off" %>
+      </div>
+
       <div class="notae-auth-field">
         <%= form.label :password %>
         <%= form.password_field :password, autocomplete: "new-password", class: "notae-auth-input" %>

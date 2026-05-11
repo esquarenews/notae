@@ -25,6 +25,7 @@ class EpistulariumAccount < ApplicationRecord
   validates :owner_type, inclusion: { in: OWNER_TYPES }
   validate :provider_credentials_present
   validate :imap_host_is_not_an_smtp_endpoint
+  validate :imap_host_is_public
   validate :amazon_workmail_username_looks_like_email
 
   before_validation :normalize_account_fields
@@ -187,6 +188,14 @@ class EpistulariumAccount < ApplicationRecord
     return unless host.start_with?("smtp.") || host.include?(".smtp.") || host.include?("smtp.mail.")
 
     errors.add(:base, smtp_endpoint_message)
+  end
+
+  def imap_host_is_public
+    return unless %w[imap amazon_workmail].include?(provider)
+    return if imap_host.blank?
+    return if Notae::OutboundNetworkGuard.public_host?(imap_host)
+
+    errors.add(:base, "IMAP host must use a public host.")
   end
 
   def amazon_workmail_username_looks_like_email

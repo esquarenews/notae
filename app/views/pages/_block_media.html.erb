@@ -13,7 +13,7 @@
      else
        block.block_type
      end %>
-<% openable_media = block.asset.attached? && block.asset.content_type.to_s.start_with?("image/", "video/", "audio/") %>
+<% openable_media = block.asset.attached? && Notae::UploadPolicy.safe_inline_media_content_type?(block.asset.content_type) %>
 
 <% if block.asset.attached? %>
   <div class="notae-doc-media">
@@ -33,7 +33,7 @@
   <% end %>
 
   <% if block.asset.attached? %>
-    <% if block.asset.content_type.to_s.start_with?("image/") %>
+    <% if Notae::UploadPolicy.safe_inline_image_content_type?(block.asset.content_type) %>
       <%= image_tag url_for(block.asset),
                     class: "notae-doc-image",
                     loading: "lazy",

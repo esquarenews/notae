@@ -25,7 +25,11 @@ module ApplicationHelper
     return [] if workspace.blank?
 
     @workspace_custom_emojis ||= {}
-    @workspace_custom_emojis[workspace.id] ||= workspace.custom_emojis.ordered.with_attached_image.to_a
+    @workspace_custom_emojis[workspace.id] ||= workspace.custom_emojis.ordered.with_attached_image.select { |emoji| safe_workspace_emoji_image?(emoji) }
+  end
+
+  def safe_workspace_emoji_image?(emoji)
+    emoji&.image&.attached? && Notae::UploadPolicy.safe_inline_image_content_type?(emoji.image.blob.content_type)
   end
 
   def render_notae_icon(icon_value, workspace:, fallback:, css_class: nil, label: nil)

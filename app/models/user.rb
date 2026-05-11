@@ -196,9 +196,13 @@ class User < ApplicationRecord
   has_one_attached :avatar
 
   # Include default devise modules. Others available are:
-  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
-  devise :database_authenticatable, :registerable,
+  # :timeoutable, :trackable and :omniauthable
+  devise :database_authenticatable, :registerable, :confirmable, :lockable,
          :recoverable, :rememberable, :validatable
+
+  attr_accessor :self_service_registration_confirmation_required, :website
+
+  before_validation :skip_confirmation_for_internal_create, on: :create
 
   validates :theme_preference, inclusion: { in: THEME_OPTIONS.map(&:last) }
   validates :language_preference, inclusion: { in: LANGUAGE_OPTIONS.map(&:last) }
@@ -245,6 +249,7 @@ class User < ApplicationRecord
             allow_nil: true
   validates :smtp_authentication, inclusion: { in: SMTP_AUTHENTICATION_OPTIONS.map(&:last) }
   validate :smtp_settings_complete_if_any
+  validate :smtp_address_is_public
   validate :smtp_from_email_format
   validate :push_notification_preferences_supported
   validates :ai_search_daily_budget_usd, numericality: { greater_than_or_equal_to: 0 }
@@ -256,6 +261,21 @@ class User < ApplicationRecord
 
   def self.time_zone_options
     ActiveSupport::TimeZone.all.map { |zone| [ "(GMT#{zone.formatted_offset}) #{zone.name}", zone.name ] }
+  end
+
+  def self.platform_admin_email_allowlisted?(email_address)
+    platform_admin_email_allowlist.include?(email_address.to_s.downcase)
+  end
+
+  def self.platform_admin_email_allowlist
+    ENV.fetch("NOTAE_PLATFORM_ADMIN_EMAILS", "")
+       .split(",")
+       .map { |email_address| email_address.strip.downcase }
+       .reject(&:blank?)
+  end
+
+  def require_self_service_registration_confirmation!
+    self.self_service_registration_confirmation_required = true
   end
 
   def start_week_preference
@@ -415,6 +435,13 @@ class User < ApplicationRecord
 
   private
 
+  def skip_confirmation_for_internal_create
+    return unless respond_to?(:skip_confirmation!)
+    return if self_service_registration_confirmation_required
+
+    skip_confirmation!
+  end
+
   def time_zone_supported
     return if time_zone.blank?
     return if ActiveSupport::TimeZone[time_zone].present?
@@ -438,6 +465,13 @@ class User < ApplicationRecord
     return if smtp_from_email.match?(Devise.email_regexp)
 
     errors.add(:smtp_from_email, "is invalid")
+  end
+
+  def smtp_address_is_public
+    return if smtp_address.blank?
+    return if Notae::OutboundNetworkGuard.public_host?(smtp_address)
+
+    errors.add(:smtp_address, "must use a public host")
   end
 
   def smtp_settings_started?
@@ -484,12 +518,7 @@ class User < ApplicationRecord
   end
 
   def platform_admin_email_allowlisted?
-    allowlist = ENV.fetch("NOTAE_PLATFORM_ADMIN_EMAILS", "")
-                   .split(",")
-                   .map { |email_address| email_address.strip.downcase }
-                   .reject(&:blank?)
-
-    allowlist.include?(email.to_s.downcase)
+    self.class.platform_admin_email_allowlisted?(email)
   end
 
   def clock_string_to_minutes(raw_value)

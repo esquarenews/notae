@@ -1,11 +1,14 @@
 require "mail"
 require "net/imap"
+require "timeout"
 
 module Epistularium
   module Providers
     class ImapAdapter < BaseAdapter
       DEFAULT_SENT_MAILBOX = "Sent".freeze
       DEFAULT_FULL_BACKFILL_BATCH_SIZE = Epistularium::SyncConfig::IMAP_FULL_BACKFILL_BATCH_SIZE
+      CONNECTION_TIMEOUT_SECONDS = 10
+      SESSION_TIMEOUT_SECONDS = 120
 
       def sync!(full_backfill: nil, max_messages_per_mailbox: nil, update_cursor: true)
         use_full_backfill = full_backfill.nil? ? full_backfill_required? : full_backfill
@@ -86,9 +89,17 @@ module Epistularium
       private
 
       def with_imap
-        imap = Net::IMAP.new(account.imap_host, port: account.imap_port, ssl: account.imap_ssl?)
-        imap.login(account.provider_username.to_s, account.provider_password.to_s)
-        yield imap
+        imap = nil
+        Timeout.timeout(SESSION_TIMEOUT_SECONDS) do
+          imap = Net::IMAP.new(
+            account.imap_host,
+            port: account.imap_port,
+            ssl: account.imap_ssl?,
+            open_timeout: CONNECTION_TIMEOUT_SECONDS
+          )
+          imap.login(account.provider_username.to_s, account.provider_password.to_s)
+          yield imap
+        end
       ensure
         begin
           imap&.logout

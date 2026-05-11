@@ -23,6 +23,10 @@ RSpec.describe "Public pages", type: :request do
     expect(response.body).to include("Read-only share")
     expect(response.body).to include("This shared page is view-only here.")
     expect(response.body).not_to include("Add block")
+    expect(response.headers["Content-Security-Policy"]).to include("script-src 'none'")
+    expect(response.headers["Content-Security-Policy"]).to include("form-action 'none'")
+    expect(response.headers["X-Robots-Tag"]).to eq("noindex, nofollow")
+    expect(response.headers["Referrer-Policy"]).to eq("no-referrer")
     view_event = ShareLinkView.recent_first.first
     expect(view_event.share_link_id).to eq(share_link.id)
     expect(view_event.ip_address).to be_present

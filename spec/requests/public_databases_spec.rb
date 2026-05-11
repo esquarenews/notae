@@ -19,6 +19,10 @@ RSpec.describe "Public databases", type: :request do
     expect(response.body).to include("In progress")
     expect(response.body).to include("Read-only share")
     expect(response.body).to include("This shared grid is view-only here.")
+    expect(response.headers["Content-Security-Policy"]).to include("script-src 'none'")
+    expect(response.headers["Content-Security-Policy"]).to include("form-action 'none'")
+    expect(response.headers["X-Robots-Tag"]).to eq("noindex, nofollow")
+    expect(response.headers["Referrer-Policy"]).to eq("no-referrer")
     expect(share_link.reload.last_viewed_at).to be_present
   end
 

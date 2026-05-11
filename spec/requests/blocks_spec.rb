@@ -742,6 +742,11 @@ RSpec.describe "Blocks", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.headers["Content-Disposition"]).to include("attachment")
     expect(response.body).to eq("file content")
+
+    get download_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id, disposition: "inline")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers["Content-Disposition"]).to include("attachment")
   end
 
   it "exports the current block as markdown without including the rest of the page" do
@@ -812,6 +817,29 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["html"]).to include('rel="noopener noreferrer"')
     expect(payload["page_updated_at"]).to be_present
     expect(block.reload.asset).to be_attached
+  end
+
+  it "rejects SVG uploads for image blocks" do
+    owner = User.create!(email: "blocks-svg-upload-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "SVG blocks", slug: "svg-blocks")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "SVG images")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "image")
+    sign_in owner
+
+    Tempfile.create([ "block-upload", ".svg" ]) do |file|
+      file.write('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
+      file.rewind
+      uploaded_file = Rack::Test::UploadedFile.new(file.path, "image/svg+xml")
+
+      patch attach_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+            params: { block: { file: uploaded_file } },
+            headers: { "ACCEPT" => "application/json" }
+    end
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(JSON.parse(response.body)["errors"].join).to include("not supported")
+    expect(block.reload.asset).not_to be_attached
   end
 
   it "renders valid upload controller bindings for unattached media blocks" do

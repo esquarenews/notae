@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_08_093000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_11_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1013,6 +1013,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_08_093000) do
     t.boolean "auto_time_zone", default: true, null: false
     t.string "backup_email"
     t.jsonb "calendar_extra_time_zones", default: [], null: false
+    t.datetime "confirmation_sent_at"
+    t.string "confirmation_token"
+    t.datetime "confirmed_at"
     t.string "cookie_settings_preference", default: "customize", null: false
     t.datetime "created_at", null: false
     t.string "date_format_preference", default: "relative", null: false
@@ -1023,8 +1026,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_08_093000) do
     t.boolean "email_notify_page_updates", default: true, null: false
     t.boolean "email_notify_workspace_digest", default: true, null: false
     t.string "encrypted_password", default: "", null: false
+    t.integer "failed_attempts", default: 0, null: false
     t.string "full_name"
     t.string "language_preference", default: "en-US", null: false
+    t.datetime "locked_at"
     t.boolean "meeting_notify_join_transcribing", default: false, null: false
     t.boolean "meeting_notify_summarized", default: false, null: false
     t.boolean "meeting_notify_transcribed", default: true, null: false
@@ -1057,10 +1062,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_08_093000) do
     t.boolean "super_admin", default: false, null: false
     t.string "theme_preference", default: "light", null: false
     t.string "time_zone", default: "UTC", null: false
+    t.string "unconfirmed_email"
+    t.string "unlock_token"
     t.datetime "updated_at", null: false
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["super_admin"], name: "index_users_on_super_admin"
+    t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
   create_table "versions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

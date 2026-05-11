@@ -40,4 +40,17 @@ RSpec.describe WebPushSubscription, type: :model do
 
     expect(subscription.delivery_status).to eq(:healthy)
   end
+
+  it "rejects endpoints targeting local or private hosts" do
+    user = User.create!(email: "web-push-private@example.com", password: "password123")
+    subscription = described_class.new(
+      user: user,
+      endpoint: "https://127.0.0.1/push",
+      p256dh: "p256dh-token",
+      auth: "auth-token"
+    )
+
+    expect(subscription).not_to be_valid
+    expect(subscription.errors[:endpoint]).to include("must be a public HTTPS URL")
+  end
 end

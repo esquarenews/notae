@@ -17,7 +17,9 @@ module WebPush
         p256dh: subscription.p256dh,
         auth: subscription.auth,
         vapid: WebPush::Configuration.vapid_options,
-        ttl: 300
+        ttl: 300,
+        open_timeout: 5,
+        read_timeout: 10
       )
 
       record_attempt!(:delivered, delivered_at: Time.current)

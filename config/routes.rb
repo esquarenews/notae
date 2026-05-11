@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   mount ActionCable.server => "/cable"
 
   devise_for :users, controllers: {
+    registrations: "users/registrations",
     sessions: "users/sessions"
   }
   root "home#index"

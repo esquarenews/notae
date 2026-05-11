@@ -25,6 +25,7 @@ class KalendariumConnection < ApplicationRecord
   validates :owner_type, inclusion: { in: %w[User Workspace] }
   validate :provider_credentials_present
   validate :ics_url_format_for_feed_provider
+  validate :ics_url_public_for_feed_provider
   before_validation :normalize_connection_fields
 
   scope :active, -> { where(enabled: true) }
@@ -75,6 +76,15 @@ class KalendariumConnection < ApplicationRecord
     errors.add(:ics_url, "must be a valid HTTP(S) URL")
   rescue URI::InvalidURIError
     errors.add(:ics_url, "must be a valid HTTP(S) URL")
+  end
+
+  def ics_url_public_for_feed_provider
+    return unless provider == "ics"
+    return if ics_url.blank?
+    return unless errors[:ics_url].blank?
+    return if Notae::OutboundNetworkGuard.public_http_url?(ics_url)
+
+    errors.add(:ics_url, "must use a public host")
   end
 
   def normalize_connection_fields

@@ -247,6 +247,19 @@ RSpec.describe "Page header features", type: :request do
     expect(page.cover_preset_key).to be_nil
     expect(workspace.cover_assets.where(created_by: owner, source_kind: "upload").count).to eq(1)
 
+    Tempfile.create([ "page-cover-upload", ".svg" ]) do |file|
+      file.write("<svg></svg>")
+      file.rewind
+      uploaded_file = Rack::Test::UploadedFile.new(file.path, "image/svg+xml")
+
+      patch page_path(workspace_slug: workspace.slug, id: page.id),
+            params: { page: { cover_action: "upload", cover_image: uploaded_file } },
+            headers: { "ACCEPT" => "application/json" }
+    end
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(JSON.parse(response.body)["errors"].join).to include("Cover image type is not supported.")
+
     get page_path(workspace_slug: workspace.slug, id: page.id)
     expect(response.body).not_to include("notae-cover-picker-grid-recent")
 

@@ -21,6 +21,7 @@ class EmojiSettingsController < ApplicationController
     end
 
     @workspace_emoji = @workspace.custom_emojis.build(name: emoji_params[:name])
+    Notae::UploadPolicy.validate_emoji_image!(upload)
     @workspace_emoji.image.attach(upload)
 
     if @workspace_emoji.save
@@ -29,6 +30,9 @@ class EmojiSettingsController < ApplicationController
     else
       render_upload_error(@workspace_emoji.errors.full_messages.to_sentence)
     end
+  rescue Notae::UploadPolicy::InvalidUpload => error
+    @workspace_emoji ||= @workspace.custom_emojis.build(name: emoji_params[:name])
+    render_upload_error(error.message)
   end
 
   def destroy

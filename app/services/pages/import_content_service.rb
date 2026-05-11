@@ -127,6 +127,7 @@ module Pages
     end
 
     def import_media_file(uploaded_file)
+      Notae::UploadPolicy.validate_page_media_import!(uploaded_file)
       block = Pages::InsertBlocksService.call(
         page: page,
         workspace: workspace,

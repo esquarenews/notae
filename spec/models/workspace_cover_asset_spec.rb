@@ -43,4 +43,14 @@ RSpec.describe WorkspaceCoverAsset, type: :model do
 
     expect(workspace.cover_assets.for_picker(workspace, user)).to eq([ newer, older ])
   end
+
+  it "rejects SVG uploaded recent covers" do
+    user = User.create!(email: "cover-asset-svg@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Cover assets svg", slug: "cover-assets-svg")
+    asset = workspace.cover_assets.build(created_by: user, source_kind: "upload", label: "Unsafe cover")
+    asset.image.attach(io: StringIO.new("<svg></svg>"), filename: "unsafe.svg", content_type: "image/svg+xml")
+
+    expect(asset).not_to be_valid
+    expect(asset.errors[:image]).to include("must be a PNG, JPEG, GIF, or WebP")
+  end
 end

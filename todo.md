@@ -26,6 +26,7 @@
 - Admin: move operations controls into a dedicated admin panel
 - Teamspaces
 - Billing and subscription management
+- Security: hash API bearer tokens at rest, with a compatibility/rotation plan for existing encrypted tokens.
 
 ---
 

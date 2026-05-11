@@ -24,6 +24,21 @@ RSpec.describe User, type: :model do
     expect(user.errors[:smtp_from_email]).to include("can't be blank")
   end
 
+  it "rejects SMTP hosts targeting local or private networks" do
+    user = described_class.new(
+      email: "smtp-private-host@example.com",
+      password: "password123",
+      smtp_address: "localhost",
+      smtp_port: 587,
+      smtp_username: "smtp-user",
+      smtp_password: "smtp-password-123",
+      smtp_from_email: "noreply@example.com"
+    )
+
+    expect(user).not_to be_valid
+    expect(user.errors[:smtp_address]).to include("must use a public host")
+  end
+
   it "reports SMTP configuration and sender display values" do
     user = described_class.new(
       email: "smtp-ready@example.com",

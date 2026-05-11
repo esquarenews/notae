@@ -14,12 +14,12 @@
         <% elsif %w[image video file].include?(block.block_type) && block.asset.attached? %>
           <div class="space-y-2">
             <p class="text-xs font-medium uppercase tracking-wide text-stone-500"><%= block.block_type %></p>
-            <% if block.asset.content_type.to_s.start_with?("image/") %>
+            <% if Notae::UploadPolicy.safe_inline_image_content_type?(block.asset.content_type) %>
               <%= image_tag url_for(block.asset),
                             class: "max-h-96 w-auto rounded border border-stone-200",
                             loading: "lazy",
                             decoding: "async" %>
-            <% elsif block.asset.content_type.to_s.start_with?("video/") %>
+            <% elsif Notae::UploadPolicy::SAFE_VIDEO_TYPES.include?(block.asset.content_type.to_s) %>
               <%= video_tag url_for(block.asset), controls: true, preload: "metadata", class: "max-h-96 w-full rounded border border-stone-200 bg-black" %>
             <% else %>
               <%= link_to block.asset.filename.to_s,

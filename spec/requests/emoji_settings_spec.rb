@@ -77,4 +77,28 @@ RSpec.describe "Emoji settings", type: :request do
     expect(response.body).to include("Upload incomplete")
     expect(response.body).to include("Name can&#39;t be blank")
   end
+
+  it "rejects SVG custom emoji uploads" do
+    user = User.create!(email: "emoji-settings-svg@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Emoji SVG", slug: "emoji-settings-svg")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    Tempfile.create([ "workspace-emoji", ".svg" ]) do |file|
+      file.write("<svg></svg>")
+      file.rewind
+
+      post workspace_emoji_settings_path(workspace_slug: workspace.slug),
+           params: {
+             workspace_emoji: {
+               name: "Unsafe",
+               image: Rack::Test::UploadedFile.new(file.path, "image/svg+xml")
+             }
+           }
+    end
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Emoji image type is not supported.")
+    expect(workspace.custom_emojis.reload).to be_empty
+  end
 end

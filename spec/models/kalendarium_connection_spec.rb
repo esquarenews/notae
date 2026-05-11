@@ -59,6 +59,22 @@ RSpec.describe KalendariumConnection, type: :model do
     expect(connection.errors.full_messages.join).to include("Ics url must be a valid HTTP(S) URL")
   end
 
+  it "rejects ICS feed URLs targeting local or private hosts" do
+    user, workspace = build_owner_stack(suffix: "ics-private-url")
+
+    connection = described_class.new(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "ICS",
+      ics_url: "http://127.0.0.1:8080/feed.ics"
+    )
+
+    expect(connection).not_to be_valid
+    expect(connection.errors.full_messages.join).to include("Ics url must use a public host")
+  end
+
   it "rejects iCloud passwords that are too short to be app-specific passwords" do
     user, workspace = build_owner_stack(suffix: "icloud-short")
 

@@ -7,6 +7,7 @@ class WebPushSubscription < ApplicationRecord
   validates :endpoint, presence: true, uniqueness: true
   validates :p256dh, presence: true
   validates :auth, presence: true
+  validate :endpoint_must_be_public_https
 
   def endpoint_host
     URI.parse(endpoint).host.presence || endpoint
@@ -22,5 +23,18 @@ class WebPushSubscription < ApplicationRecord
     else
       :pending
     end
+  end
+
+  private
+
+  def endpoint_must_be_public_https
+    return if endpoint.blank?
+
+    uri = URI.parse(endpoint.to_s)
+    return if uri.is_a?(URI::HTTPS) && uri.host.present? && Notae::OutboundNetworkGuard.public_host?(uri.host)
+
+    errors.add(:endpoint, "must be a public HTTPS URL")
+  rescue URI::InvalidURIError
+    errors.add(:endpoint, "must be a public HTTPS URL")
   end
 end

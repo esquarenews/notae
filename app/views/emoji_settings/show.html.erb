@@ -67,7 +67,11 @@
               <% @custom_emojis.each do |emoji| %>
                 <div class="notae-emoji-settings-item <%= "is-highlighted" if emoji.id.to_s == @highlight_emoji_id.to_s %>">
                   <div class="notae-emoji-settings-item-preview">
-                    <%= image_tag emoji.image, alt: emoji.display_name, class: "notae-emoji-settings-item-image" %>
+                    <% if safe_workspace_emoji_image?(emoji) %>
+                      <%= image_tag emoji.image, alt: emoji.display_name, class: "notae-emoji-settings-item-image" %>
+                    <% else %>
+                      <span class="notae-page-subtle">Unsupported image</span>
+                    <% end %>
                   </div>
                   <div class="notae-emoji-settings-item-copy">
                     <strong><%= emoji.display_name %></strong>

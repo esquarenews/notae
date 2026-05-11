@@ -19,7 +19,8 @@ class DbCellPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      scope.where(workspace_id: accessible_workspace_ids)
+      accessible_row_ids = DbRowPolicy::Scope.new(user, DbRow).resolve.select(:id)
+      scope.where(db_row_id: accessible_row_ids)
     end
   end
 

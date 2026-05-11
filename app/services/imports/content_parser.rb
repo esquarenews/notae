@@ -5,11 +5,16 @@ module Imports
     Document = Struct.new(:title, :blocks, :target_type, :table_rows, keyword_init: true)
     ParseResult = Struct.new(:documents, :skipped_files, keyword_init: true)
     UnsupportedFormatError = Class.new(StandardError)
+    FileTooLargeError = Class.new(StandardError)
     TARGET_PAGE = "page".freeze
     TARGET_DATABASE = "database".freeze
 
     SUPPORTED_EXTENSIONS = %w[.txt .md .markdown .html .htm .csv .pdf .docx .zip .epub].freeze
     DOCX_NS = { "w" => "http://schemas.openxmlformats.org/wordprocessingml/2006/main" }.freeze
+    MAX_IMPORT_BYTES = 25 * 1024 * 1024
+    MAX_ARCHIVE_ENTRY_BYTES = 10 * 1024 * 1024
+    MAX_ARCHIVE_TOTAL_BYTES = 50 * 1024 * 1024
+    MAX_ARCHIVE_ENTRIES = 100
 
     class << self
       def parse(filename:, io:)
@@ -27,6 +32,8 @@ module Imports
     def parse_binary(filename:, data:)
       extension = File.extname(filename.to_s).downcase
       raise UnsupportedFormatError, "Unsupported format: #{filename}" unless SUPPORTED_EXTENSIONS.include?(extension)
+
+      ensure_data_size!(filename, data, max_bytes: MAX_IMPORT_BYTES)
 
       documents, skipped_files =
         case extension
@@ -246,6 +253,10 @@ module Imports
         entry = zip.find_entry("word/document.xml")
         return [ paragraph_block("DOCX file did not contain readable document content.") ] unless entry
 
+        if entry.size.to_i > MAX_ARCHIVE_ENTRY_BYTES
+          return [ paragraph_block("DOCX document body is too large to import.") ]
+        end
+
         xml = Nokogiri::XML(entry.get_input_stream.read)
         xml.xpath("//w:body/w:p", DOCX_NS).each do |paragraph_node|
           inline_nodes = inline_nodes_from_docx_paragraph(paragraph_node)
@@ -285,7 +296,19 @@ module Imports
           [ ".html", ".htm", ".xhtml" ].include?(ext)
         end
 
-        entries.sort_by(&:name).each do |entry|
+        total_entry_bytes = 0
+        entries.sort_by(&:name).first(MAX_ARCHIVE_ENTRIES).each do |entry|
+          if entry.size.to_i > MAX_ARCHIVE_ENTRY_BYTES
+            skipped << "#{entry.name} (too large)"
+            next
+          end
+
+          total_entry_bytes += entry.size.to_i
+          if total_entry_bytes > MAX_ARCHIVE_TOTAL_BYTES
+            skipped << "EPUB archive exceeds extracted size limit"
+            break
+          end
+
           html = entry.get_input_stream.read
           doc = Nokogiri::HTML(html)
           title = doc.at("title")&.text.to_s.strip.presence || title_from_filename(entry.name)
@@ -305,9 +328,17 @@ module Imports
 
       documents = []
       skipped = []
+      imported_entry_count = 0
+      total_entry_bytes = 0
       Zip::File.open_buffer(StringIO.new(data)) do |zip|
         zip.entries.each do |entry|
           next if entry.name_is_directory?
+
+          imported_entry_count += 1
+          if imported_entry_count > MAX_ARCHIVE_ENTRIES
+            skipped << "Archive contains more than #{MAX_ARCHIVE_ENTRIES} files"
+            break
+          end
 
           ext = File.extname(entry.name).downcase
           unless SUPPORTED_EXTENSIONS.include?(ext)
@@ -316,6 +347,17 @@ module Imports
           end
 
           next if ext == ".zip"
+
+          if entry.size.to_i > MAX_ARCHIVE_ENTRY_BYTES
+            skipped << "#{entry.name} (too large)"
+            next
+          end
+
+          total_entry_bytes += entry.size.to_i
+          if total_entry_bytes > MAX_ARCHIVE_TOTAL_BYTES
+            skipped << "Archive exceeds extracted size limit"
+            break
+          end
 
           entry_result = parse_binary(filename: entry.name, data: entry.get_input_stream.read)
           documents.concat(entry_result.documents.map do |doc|
@@ -598,6 +640,17 @@ module Imports
       data = io.read
       data = data.read if data.respond_to?(:read)
       data.to_s.b
+    end
+
+    def ensure_data_size!(filename, data, max_bytes:)
+      return if data.to_s.bytesize <= max_bytes
+
+      raise FileTooLargeError, "#{File.basename(filename.to_s)} exceeds the #{human_bytes(max_bytes)} import limit"
+    end
+
+    def human_bytes(bytes)
+      megabytes = bytes.to_f / (1024 * 1024)
+      "#{megabytes.to_i} MB"
     end
 
     def text_from_data(data)

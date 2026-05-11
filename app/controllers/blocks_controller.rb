@@ -59,6 +59,7 @@ class BlocksController < ApplicationController
     authorize @block, :attach?
     file = params.dig(:block, :file)
     if file.present?
+      Notae::UploadPolicy.validate_block_upload!(file, block_type: @block.block_type)
       @block.asset.attach(file)
       @block.touch
       touched_at = touch_pages_for_blocks!([ @block ])
@@ -82,11 +83,10 @@ class BlocksController < ApplicationController
         format.html { redirect_to page_redirect_path, notice: "File uploaded." }
       end
     else
-      respond_to do |format|
-        format.json { render json: { errors: [ "Please choose a file." ] }, status: :unprocessable_entity }
-        format.html { redirect_to page_redirect_path, alert: "Please choose a file." }
-      end
+      render_attach_error("Please choose a file.")
     end
+  rescue Notae::UploadPolicy::InvalidUpload => error
+    render_attach_error(error.message)
   end
 
   def content
@@ -102,7 +102,12 @@ class BlocksController < ApplicationController
       return
     end
 
-    disposition = params[:disposition] == "inline" ? "inline" : "attachment"
+    disposition =
+      if params[:disposition] == "inline" && Notae::UploadPolicy.safe_inline_media_content_type?(@block.asset.content_type)
+        "inline"
+      else
+        "attachment"
+      end
     send_data @block.asset.download,
               filename: @block.asset.filename.to_s,
               type: @block.asset.content_type,
@@ -266,6 +271,13 @@ class BlocksController < ApplicationController
 
   def set_block
     @block = policy_scope(Block).for_page(@page).find(params[:id])
+  end
+
+  def render_attach_error(message)
+    respond_to do |format|
+      format.json { render json: { errors: [ message ] }, status: :unprocessable_entity }
+      format.html { redirect_to page_redirect_path, alert: message }
+    end
   end
 
   def block_params

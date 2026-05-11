@@ -40,6 +40,104 @@ RSpec.describe "Authentication", type: :request do
     expect(response.body).to include("Invalid email or password.")
   end
 
+  it "blocks self-service signup for platform-admin allowlisted emails" do
+    allow(ENV).to receive(:fetch).and_call_original
+    allow(ENV).to receive(:fetch).with("NOTAE_PLATFORM_ADMIN_EMAILS", "").and_return("admin-allowlist@example.com")
+
+    expect do
+      post user_registration_path, params: {
+        user: {
+          email: "admin-allowlist@example.com",
+          password: "password123",
+          password_confirmation: "password123"
+        }
+      }
+    end.not_to change(User, :count)
+
+    expect(response.body).to include("is not available for self-service signup")
+  end
+
+  it "requires email confirmation for self-service signups" do
+    ActionMailer::Base.deliveries.clear
+
+    expect do
+      post user_registration_path, params: {
+        user: {
+          email: "new-confirmation-user@example.com",
+          password: "password123",
+          password_confirmation: "password123"
+        }
+      }
+    end.to change(User, :count).by(1)
+      .and change { ActionMailer::Base.deliveries.count }.by(1)
+
+    user = User.find_by!(email: "new-confirmation-user@example.com")
+    expect(user).not_to be_confirmed
+    expect(user.confirmation_token).to be_present
+  end
+
+  it "rejects signup submissions that fill the hidden honeypot" do
+    expect do
+      post user_registration_path, params: {
+        user: {
+          email: "honeypot-user@example.com",
+          password: "password123",
+          password_confirmation: "password123",
+          website: "https://spam.example"
+        }
+      }
+    end.not_to change(User, :count)
+
+    expect(response.body).to include("Unable to create this account.")
+  end
+
+  it "rate limits self-service signup bursts" do
+    allow(Notae::RequestRateLimiter).to receive(:consume!).and_return(false)
+
+    expect do
+      post user_registration_path, params: {
+        user: {
+          email: "registration-limited@example.com",
+          password: "password123",
+          password_confirmation: "password123"
+        }
+      }
+    end.not_to change(User, :count)
+
+    expect(response.body).to include("Too many account creation attempts. Try again later.")
+  end
+
+  it "locks an account after repeated failed sign-in attempts" do
+    user = User.create!(email: "auth-lockable@example.com", password: "password123")
+
+    Devise.maximum_attempts.times do
+      post user_session_path, params: {
+        user: {
+          email: user.email,
+          password: "wrong-password",
+          remember_me: "0"
+        }
+      }
+    end
+
+    expect(user.reload).to be_access_locked
+  end
+
+  it "rate limits password authentication attempts before hitting Devise" do
+    allow(Notae::RequestRateLimiter).to receive(:consume!).and_return(false)
+
+    post user_session_path, params: {
+      user: {
+        email: "rate-limited@example.com",
+        password: "wrong-password"
+      }
+    }
+
+    expect(response).to redirect_to(new_user_session_path)
+    follow_redirect!
+    expect(response.body).to include("Too many sign-in attempts. Try again later.")
+  end
+
   it "queues password reset instructions for an existing user" do
     user = User.create!(email: "auth-reset@example.com", password: "password123")
 

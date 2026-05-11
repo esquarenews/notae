@@ -15,7 +15,9 @@ class ApplicationMailer < ActionMailer::Base
       user_name: user.smtp_username,
       password: user.smtp_password,
       authentication: user.smtp_authentication.to_s.presence&.to_sym || :plain,
-      enable_starttls_auto: user.smtp_enable_starttls_auto?
+      enable_starttls_auto: user.smtp_enable_starttls_auto?,
+      open_timeout: 10,
+      read_timeout: 20
     }
   end
 

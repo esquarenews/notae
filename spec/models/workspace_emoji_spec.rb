@@ -20,4 +20,13 @@ RSpec.describe WorkspaceEmoji, type: :model do
     expect(emoji).not_to be_valid
     expect(emoji.errors[:name]).to include("can't be blank")
   end
+
+  it "rejects SVG emoji uploads" do
+    workspace = Workspace.create!(name: "Emoji workspace svg", slug: "emoji-workspace-svg")
+    emoji = workspace.custom_emojis.build(name: "Unsafe")
+    emoji.image.attach(io: StringIO.new("<svg></svg>"), filename: "unsafe.svg", content_type: "image/svg+xml")
+
+    expect(emoji).not_to be_valid
+    expect(emoji.errors[:image]).to include("must be a PNG, JPEG, GIF, or WebP")
+  end
 end

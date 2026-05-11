@@ -21,6 +21,9 @@ module CoverAssets
     rescue Unsplash::Client::Error => error
       record.errors.add(:base, error.message)
       record
+    rescue Notae::UploadPolicy::InvalidUpload => error
+      record.errors.add(:base, error.message)
+      record
     end
 
     private
@@ -61,6 +64,7 @@ module CoverAssets
     def apply_uploaded_cover!(upload)
       return if upload.blank?
 
+      Notae::UploadPolicy.validate_cover_image!(upload)
       record.cover_image.attach(upload)
       record.cover_preset_key = nil
       clear_remote_cover_fields!
@@ -160,6 +164,8 @@ module CoverAssets
       asset.save!
     rescue ActiveRecord::RecordInvalid => error
       Rails.logger.warn("Recent cover upload save failed for #{record.class.name} #{record.id}: #{error.record.errors.full_messages.to_sentence}")
+    rescue Notae::UploadPolicy::InvalidUpload => error
+      Rails.logger.warn("Recent cover upload rejected for #{record.class.name} #{record.id}: #{error.message}")
     end
 
     def persist_unsplash_recent_cover!(photo)
