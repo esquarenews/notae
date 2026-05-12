@@ -267,7 +267,7 @@ class User < ApplicationRecord
   end
 
   def platform_admin?
-    super_admin? || platform_admin_email_allowlisted?
+    super_admin?
   end
 
   def avatar_initials
