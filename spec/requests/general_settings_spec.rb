@@ -301,4 +301,22 @@ RSpec.describe "General settings", type: :request do
     expect(entries.fetch("epistularium/messages.csv")).to include("Quarterly update")
     expect(entries.fetch("epistularium/messages.csv")).to include("Important mail body")
   end
+
+  it "prevents non-admin members from creating or downloading workspace exports" do
+    owner = User.create!(email: "general-settings-backup-owner@example.com", password: "password123")
+    member = User.create!(email: "general-settings-backup-member@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Backup controls", slug: "general-settings-backup-controls")
+    Membership.create!(workspace:, user: owner, role: :owner)
+    Membership.create!(workspace:, user: member, role: :member)
+
+    workspace_export = WorkspaceExport.create!(workspace:, requested_by: owner)
+
+    sign_in member
+
+    post workspace_backup_exports_path(workspace_slug: workspace.slug)
+    expect(response).to have_http_status(:forbidden)
+
+    get workspace_backup_download_path(workspace_slug: workspace.slug, token: workspace_export.token)
+    expect(response).to have_http_status(:not_found)
+  end
 end
