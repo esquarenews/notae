@@ -138,6 +138,51 @@ RSpec.describe "API V1 Agent actions", type: :request do
     expect(payload.fetch("review_history").map { |entry| entry.fetch("event_type") }).to include("reversed")
   end
 
+
+  it "rejects reverse requests without agent action write scope" do
+    member = User.create!(email: "api-agent-actions-reverse-scope-member@example.com", password: "password123")
+    owner = User.create!(email: "api-agent-actions-reverse-scope-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Agent Actions Reverse Scope", slug: "api-agent-actions-reverse-scope")
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Task Inbox", created_by: owner)
+    task_action = AgentActions::DraftCreator.new(
+      workspace: workspace,
+      actor: member,
+      attributes: {
+        title: "Draft task",
+        proposed_by: "api",
+        target_system: "crm",
+        draft_type: "task_ticket",
+        payload_json: {
+          "project" => "Task Inbox",
+          "title" => "Follow up",
+          "body" => "Contact the customer."
+        }
+      }
+    ).call
+    AgentActions::ApprovalService.new(
+      agent_action: task_action,
+      actor: owner,
+      comment: "Approved.",
+      destination_database_id: database.id
+    ).call
+
+    token = ApiToken.create!(
+      user: owner,
+      name: "Agent reversal read token",
+      scopes_json: [ ApiToken::SCOPE_AGENT_ACTIONS_READ ]
+    )
+
+    post "/api/v1/workspaces/#{workspace.slug}/agent_actions/#{task_action.id}/reverse",
+         params: { decision_comment: "Ticket created in the wrong list." },
+         headers: auth_headers(token),
+         as: :json
+
+    expect(response).to have_http_status(:forbidden)
+    expect(json_body.dig("error", "code")).to eq("insufficient_scope")
+  end
+
   it "rejects approvals into calendars the approver cannot update over the API" do
     member = User.create!(email: "api-agent-actions-calendar-member@example.com", password: "password123")
     owner = User.create!(email: "api-agent-actions-calendar-owner@example.com", password: "password123")
