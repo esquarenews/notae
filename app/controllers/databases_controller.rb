@@ -5,7 +5,7 @@ class DatabasesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf export_graph_pdf gantt_embed graph_embed permissions taskify save_as_template apply_template kanbanize panel]
+  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf export_graph_pdf gantt_embed graph_embed permissions move_workspace taskify save_as_template apply_template kanbanize panel]
   before_action :set_archived_database, only: %i[restore destroy]
   track_request_performance_for :show, :update
 
@@ -116,7 +116,9 @@ class DatabasesController < ApplicationController
                view_link: database_panel_view_link,
                archived_rows: @archived_rows,
                can_create_database: policy(Database.new(workspace: @workspace, name: "Untitled grid")).create?,
-               share_links: @database_share_links
+               share_links: @database_share_links,
+               can_move_database: @can_move_database,
+               move_workspace_options: @move_workspace_options
              }
     when "actions"
       prepare_database_actions_panel!
@@ -388,6 +390,18 @@ class DatabasesController < ApplicationController
 
     redirect_to database_redirect_path, notice: "Grid permissions updated."
   rescue ActionController::ParameterMissing, ActiveRecord::RecordInvalid => error
+    redirect_to database_redirect_path, alert: error.message
+  end
+
+  def move_workspace
+    authorize @database, :move_workspace?
+    target_workspace = move_target_workspace!
+    authorize Database.new(workspace: target_workspace, name: @database.name), :create?
+
+    Documents::WorkspaceMoveService.call(record: @database, target_workspace:, actor: current_user)
+
+    redirect_to database_path(workspace_slug: target_workspace.slug, id: @database.id), notice: "Grid moved to #{target_workspace.name}."
+  rescue ActionController::ParameterMissing, ActiveRecord::RecordNotFound, Documents::WorkspaceMoveService::Error, ActiveRecord::RecordInvalid => error
     redirect_to database_redirect_path, alert: error.message
   end
 
@@ -1320,12 +1334,14 @@ class DatabasesController < ApplicationController
 
   def prepare_database_options_panel!
     can_manage_permissions = policy(@database).permissions?
+    @can_move_database = policy(@database).move_workspace?
     @memberships =
       if can_manage_permissions
         policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
       else
         []
       end
+    @move_workspace_options = @can_move_database ? move_workspace_options_for_database : []
     @archived_rows = policy_scope(DbRow).for_database(@database).where.not(archived_at: nil).ordered.to_a
     @database_share_links =
       if can_manage_permissions
@@ -1334,6 +1350,21 @@ class DatabasesController < ApplicationController
         []
       end
     @shared_user_ids = can_manage_permissions ? @database.database_shares.pluck(:user_id) : []
+  end
+
+  def move_target_workspace!
+    workspace_id = params.require(:target_workspace_id)
+    policy_scope(Workspace).where.not(id: @workspace.id).find(workspace_id)
+  end
+
+  def move_workspace_options_for_database
+    policy_scope(Workspace)
+      .where.not(id: @workspace.id)
+      .order(:name)
+      .select do |candidate_workspace|
+        probe_record = Database.new(workspace: candidate_workspace, name: @database.name)
+        policy(probe_record).create?
+      end
   end
 
   def prepare_database_actions_panel!

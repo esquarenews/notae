@@ -93,6 +93,27 @@
       </section>
     <% end %>
 
+    <% if can_move_page %>
+      <section class="notae-options-section"
+               data-options-menu-target="section"
+               data-options-menu-label="Move">
+        <h3>Move</h3>
+        <% if move_workspace_options.any? %>
+          <%= form_with url: move_workspace_page_path(workspace_slug: workspace.slug, id: page.id),
+                        method: :patch,
+                        class: "notae-options-form-inline" do %>
+            <%= select_tag :target_workspace_id,
+                           options_from_collection_for_select(move_workspace_options, :id, :name),
+                           class: "notae-options-input",
+                           aria: { label: "New workspace" } %>
+            <%= submit_tag "Move", class: "notae-chip-button" %>
+          <% end %>
+        <% else %>
+          <p class="notae-options-empty">No other editable workspaces.</p>
+        <% end %>
+      </section>
+    <% end %>
+
     <section class="notae-options-section"
              data-options-menu-target="section"
              data-options-menu-label="Export">

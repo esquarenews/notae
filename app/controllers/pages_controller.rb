@@ -5,7 +5,7 @@ class PagesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_page, only: %i[show update duplicate archive restore permissions destroy remove_tab import panel]
+  before_action :set_page, only: %i[show update duplicate archive restore permissions move_workspace destroy remove_tab import panel]
   COVER_SHIFT_STEP = 10
 
   def show
@@ -85,7 +85,9 @@ class PagesController < ApplicationController
                page_exports: @page_exports,
                new_page_template: @new_page_template,
                page_templates: @page_templates,
-               archived_blocks: @archived_blocks
+               archived_blocks: @archived_blocks,
+               can_move_page: @can_move_page,
+               move_workspace_options: @move_workspace_options
              }
     else
       head :not_found
@@ -285,6 +287,18 @@ class PagesController < ApplicationController
     redirect_to page_redirect_path, alert: error.message
   end
 
+  def move_workspace
+    authorize @page, :move_workspace?
+    target_workspace = move_target_workspace!
+    authorize Page.new(workspace: target_workspace, created_by: current_user, title: @page.title), :create?
+
+    Documents::WorkspaceMoveService.call(record: @page, target_workspace:, actor: current_user)
+
+    redirect_to page_path(workspace_slug: target_workspace.slug, id: @page.id), notice: "Nota moved to #{target_workspace.name}."
+  rescue ActionController::ParameterMissing, ActiveRecord::RecordNotFound, Documents::WorkspaceMoveService::Error, ActiveRecord::RecordInvalid => error
+    redirect_to page_redirect_path, alert: error.message
+  end
+
   private
 
   def set_workspace
@@ -478,12 +492,14 @@ class PagesController < ApplicationController
 
   def prepare_page_options_panel!
     @can_manage_permissions = policy(@page).permissions?
+    @can_move_page = policy(@page).move_workspace?
     @memberships =
       if @can_manage_permissions
         policy_scope(Membership).where(workspace_id: @workspace.id).includes(:user).order(:created_at)
       else
         []
       end
+    @move_workspace_options = @can_move_page ? move_workspace_options_for_page : []
     @shared_user_ids = @can_manage_permissions ? @page.page_shares.pluck(:user_id) : []
     @page_exports = policy_scope(PageExport).for_page(@page).recent_first.limit(10).to_a
     @page_templates = policy_scope(PageTemplate).for_workspace(@workspace).recent_first.limit(20).to_a
@@ -495,5 +511,20 @@ class PagesController < ApplicationController
         []
       end
     @archived_blocks = policy_scope(Block).for_page(@page).archived.ordered.to_a
+  end
+
+  def move_target_workspace!
+    workspace_id = params.require(:target_workspace_id)
+    policy_scope(Workspace).where.not(id: @workspace.id).find(workspace_id)
+  end
+
+  def move_workspace_options_for_page
+    policy_scope(Workspace)
+      .where.not(id: @workspace.id)
+      .order(:name)
+      .select do |candidate_workspace|
+        probe_record = Page.new(workspace: candidate_workspace, created_by: current_user, title: @page.title)
+        policy(probe_record).create?
+      end
   end
 end

@@ -158,6 +158,7 @@ Rails.application.routes.draw do
         patch :archive
         patch :restore
         patch :permissions
+        patch :move_workspace
         get :export_csv
         get "panels/:panel", action: :panel, as: :panel
       end
@@ -206,6 +207,7 @@ Rails.application.routes.draw do
         patch :archive
         patch :restore
         patch :permissions
+        patch :move_workspace
         patch :remove_tab
         get :export_markdown, to: "page_exports#markdown"
         get :export_pdf, to: "page_exports#pdf"

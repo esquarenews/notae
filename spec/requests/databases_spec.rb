@@ -118,6 +118,62 @@ RSpec.describe "Databases", type: :request do
     expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: created_database.id))
   end
 
+  it "offers editable target workspaces in the database options move form" do
+    owner = User.create!(email: "database-move-options-owner@example.com", password: "password123")
+    source = Workspace.create!(name: "Source move grids", slug: "source-move-grids")
+    target = Workspace.create!(name: "Target move grids", slug: "target-move-grids")
+    read_only = Workspace.create!(name: "Read only move grids", slug: "read-only-move-grids")
+    Membership.create!(workspace: source, user: owner, role: :owner)
+    Membership.create!(workspace: target, user: owner, role: :member)
+    Membership.create!(workspace: read_only, user: owner, role: :auditor)
+    database = Database.create!(workspace: source, created_by: owner, name: "Moveable grid")
+    sign_in owner
+
+    get panel_database_path(workspace_slug: source.slug, id: database.id, panel: "options")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Move")
+    expect(response.body).to include(target.name)
+    expect(response.body).not_to include(read_only.name)
+    expect(response.body).to include(move_workspace_database_path(workspace_slug: source.slug, id: database.id))
+  end
+
+  it "moves a grid and its direct content to another workspace" do
+    owner = User.create!(email: "database-move-owner@example.com", password: "password123")
+    source = Workspace.create!(name: "Source moved grid", slug: "source-moved-grid")
+    target = Workspace.create!(name: "Target moved grid", slug: "target-moved-grid")
+    Membership.create!(workspace: source, user: owner, role: :owner)
+    Membership.create!(workspace: target, user: owner, role: :owner)
+    linked_page = Page.create!(workspace: source, created_by: owner, title: "Grid shell")
+    external_page = Page.create!(workspace: source, created_by: owner, title: "External row note")
+    database = Database.create!(workspace: source, created_by: owner, name: "Move this grid", linked_page: linked_page)
+    property = DbProperty.create!(workspace: source, database: database, name: "Status", property_type: :text)
+    row = DbRow.create!(workspace: source, database: database, title: "Task", linked_page: external_page)
+    cell = DbCell.create!(workspace: source, db_row: row, db_property: property, value_text: "Started")
+    view = DatabaseView.create!(workspace: source, database: database, created_by: owner, name: "Table", view_type: :table)
+    comment = Comment.create!(workspace: source, commentable: database, author: owner, body: "Move this grid comment")
+    share_link = DatabaseShareLink.create!(workspace: source, database: database, created_by: owner)
+    favorite = Favorite.create!(workspace: source, user: owner, favoritable: database)
+    sign_in owner
+
+    patch move_workspace_database_path(workspace_slug: source.slug, id: database.id),
+          params: { target_workspace_id: target.id }
+
+    expect(response).to redirect_to(database_path(workspace_slug: target.slug, id: database.id))
+    expect(database.reload.workspace).to eq(target)
+    expect(linked_page.reload.workspace).to eq(target)
+    expect(external_page.reload.workspace).to eq(source)
+    expect(property.reload.workspace).to eq(target)
+    expect(row.reload.workspace).to eq(target)
+    expect(row.linked_page_id).to be_nil
+    expect(cell.reload.workspace).to eq(target)
+    expect(view.reload.workspace).to eq(target)
+    expect(comment.reload.workspace).to eq(target)
+    expect(share_link.reload.workspace).to eq(target)
+    expect(favorite.reload.workspace).to eq(target)
+    expect(AuditEvent.where(workspace: target, auditable: database, action: "move")).to exist
+  end
+
   it "creates a tasks template with task columns, default status, and dropdown options" do
     owner = User.create!(email: "database-template-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Template tables", slug: "template-tables")
@@ -4052,16 +4108,19 @@ RSpec.describe "Databases", type: :request do
       )
     )
 
-    get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "kalendarium", task_row_id: row.id)
+    current_view_id = nil
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      get database_path(workspace_slug: workspace.slug, id: database.id, split_panel: "kalendarium", task_row_id: row.id)
 
-    expect(response).to have_http_status(:ok)
-    current_view_id = database.reload.database_views.find_by(default: true)&.id || database.database_views.first&.id
-    html = Nokogiri::HTML(response.body)
-    split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
-    expect(split_iframe).to be_present
-    expect(split_iframe["src"]).to include("view=next_7_days")
-    expect(split_iframe["src"]).to include("window_start=#{Date.current}")
-    expect(split_iframe["src"]).to include("task_row_id=#{row.id}")
+      expect(response).to have_http_status(:ok)
+      current_view_id = database.reload.database_views.find_by(default: true)&.id || database.database_views.first&.id
+      html = Nokogiri::HTML(response.body)
+      split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
+      expect(split_iframe).to be_present
+      expect(split_iframe["src"]).to include("view=next_7_days")
+      expect(split_iframe["src"]).to include("window_start=#{Date.current}")
+      expect(split_iframe["src"]).to include("task_row_id=#{row.id}")
+    end
 
     travel_to Time.zone.parse("2026-04-12 08:10:00") do
       expect do
@@ -4225,27 +4284,29 @@ RSpec.describe "Databases", type: :request do
       )
     )
 
-    get database_path(
-      workspace_slug: workspace.slug,
-      id: database.id,
-      split_panel: "kalendarium",
-      kalendarium_window_start: "2026-04-20"
-    )
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      get database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        split_panel: "kalendarium",
+        kalendarium_window_start: "2026-04-20"
+      )
 
-    expect(response).to have_http_status(:ok)
-    html = Nokogiri::HTML(response.body)
-    split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
-    expect(split_iframe).to be_present
-    expect(split_iframe["src"]).to include("window_start=2026-04-20")
+      expect(response).to have_http_status(:ok)
+      html = Nokogiri::HTML(response.body)
+      split_iframe = html.at_css("iframe[title='Kalendārium side peek']")
+      expect(split_iframe).to be_present
+      expect(split_iframe["src"]).to include("window_start=2026-04-20")
 
-    open_full_link = html.css("a").find { |link| link.text.strip == "Open full" }
-    expect(open_full_link).to be_present
-    expect(open_full_link["href"]).to include("window_start=2026-04-20")
+      open_full_link = html.css("a").find { |link| link.text.strip == "Open full" }
+      expect(open_full_link).to be_present
+      expect(open_full_link["href"]).to include("window_start=2026-04-20")
 
-    get split_iframe["src"]
+      get split_iframe["src"]
 
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Review roadmap")
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Review roadmap")
+    end
   end
 
   it "makes the Tasks project visible in full Kalendarium after confirming a split-scheduled task" do
@@ -4267,15 +4328,17 @@ RSpec.describe "Databases", type: :request do
 
     tasks_project = workspace.kalendarium_projects.find_by!(slug: "tasks")
 
-    get kalendarium_path(
-      workspace_slug: workspace.slug,
-      view: "week",
-      date: "2026-04-13",
-      toggle_project_id: tasks_project.id,
-      project_visible: "0"
-    )
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Projects (0)")
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      get kalendarium_path(
+        workspace_slug: workspace.slug,
+        view: "week",
+        date: "2026-04-13",
+        toggle_project_id: tasks_project.id,
+        project_visible: "0"
+      )
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Projects (0)")
+    end
 
     travel_to Time.zone.parse("2026-04-12 08:10:00") do
       expect do
@@ -4290,11 +4353,13 @@ RSpec.describe "Databases", type: :request do
       end.to change(KalendariumEvent, :count).by(1)
     end
 
-    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-04-13")
+    travel_to Time.zone.parse("2026-04-12 08:10:00") do
+      get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-04-13")
 
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Projects (1)")
-    expect(response.body).to include("Review roadmap")
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Projects (1)")
+      expect(response.body).to include("Review roadmap")
+    end
   end
 
   it "shifts the split Kalendārium window to the first available suggested slot when the next seven days are full" do

@@ -220,6 +220,62 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).not_to include("Child Page")
   end
 
+  it "offers editable target workspaces in the page options move form" do
+    owner = User.create!(email: "page-move-options-owner@example.com", password: "password123")
+    source = Workspace.create!(name: "Source move pages", slug: "source-move-pages")
+    target = Workspace.create!(name: "Target move pages", slug: "target-move-pages")
+    read_only = Workspace.create!(name: "Read only move pages", slug: "read-only-move-pages")
+    Membership.create!(workspace: source, user: owner, role: :owner)
+    Membership.create!(workspace: target, user: owner, role: :member)
+    Membership.create!(workspace: read_only, user: owner, role: :auditor)
+    page = Page.create!(workspace: source, created_by: owner, title: "Moveable nota")
+    sign_in owner
+
+    get panel_page_path(workspace_slug: source.slug, id: page.id, panel: "options")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Move")
+    expect(response.body).to include(target.name)
+    expect(response.body).not_to include(read_only.name)
+    expect(response.body).to include(move_workspace_page_path(workspace_slug: source.slug, id: page.id))
+  end
+
+  it "moves a nota and its direct content to another workspace" do
+    owner = User.create!(email: "page-move-owner@example.com", password: "password123")
+    source = Workspace.create!(name: "Source moved nota", slug: "source-moved-nota")
+    target = Workspace.create!(name: "Target moved nota", slug: "target-moved-nota")
+    Membership.create!(workspace: source, user: owner, role: :owner)
+    Membership.create!(workspace: target, user: owner, role: :owner)
+    page = Page.create!(workspace: source, created_by: owner, title: "Move this nota")
+    child = Page.create!(workspace: source, created_by: owner, parent_page: page, title: "Child tab")
+    block = Block.create!(workspace: source, page: child, created_by: owner, block_type: "paragraph")
+    comment = Comment.create!(workspace: source, commentable: block, author: owner, body: "Move this comment")
+    share_link = ShareLink.create!(workspace: source, page: page, created_by: owner)
+    favorite = Favorite.create!(workspace: source, user: owner, favoritable: page)
+    page_template = PageTemplate.create!(
+      workspace: source,
+      page: page,
+      created_by: owner,
+      name: "Moved nota template",
+      snapshot_json: { "title" => page.title }
+    )
+    sign_in owner
+
+    patch move_workspace_page_path(workspace_slug: source.slug, id: page.id),
+          params: { target_workspace_id: target.id }
+
+    expect(response).to redirect_to(page_path(workspace_slug: target.slug, id: page.id))
+    expect(page.reload.workspace).to eq(target)
+    expect(child.reload.workspace).to eq(target)
+    expect(child.parent_page_id).to eq(page.id)
+    expect(block.reload.workspace).to eq(target)
+    expect(comment.reload.workspace).to eq(target)
+    expect(share_link.reload.workspace).to eq(target)
+    expect(favorite.reload.workspace).to eq(target)
+    expect(page_template.reload.workspace).to eq(target)
+    expect(AuditEvent.where(workspace: target, auditable: page, action: "move")).to exist
+  end
+
   it "shows a default tab for a top-level page before any child tabs exist" do
     owner = User.create!(email: "pages-default-tab-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Default tabs", slug: "default-tabs")

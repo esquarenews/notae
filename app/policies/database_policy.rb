@@ -45,6 +45,10 @@ class DatabasePolicy < ApplicationPolicy
     membership.admin_or_owner? || record.created_by_id == user.id
   end
 
+  def move_workspace?
+    update?
+  end
+
   class Scope < Scope
     def resolve
       return scope.none unless user
