@@ -1,17 +1,19 @@
 class WorkspaceExportPolicy < ApplicationPolicy
   def create?
-    workspace_policy.show?
+    workspace_policy.update?
   end
 
   def download?
-    create?
+    workspace_policy.update? || record.requested_by_id == user&.id
   end
 
   class Scope < Scope
     def resolve
       return scope.none unless user
 
-      scope.where(workspace_id: WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id))
+      scope
+        .where(workspace_id: WorkspacePolicy::Scope.new(user, Workspace).resolve.select(:id))
+        .where(requested_by_id: user.id)
     end
   end
 
