@@ -276,6 +276,35 @@ RSpec.describe "Pages", type: :request do
     expect(AuditEvent.where(workspace: target, auditable: page, action: "move")).to exist
   end
 
+  it "does not move hidden descendant tabs into another workspace" do
+    owner = User.create!(email: "page-move-hidden-owner@example.com", password: "password123")
+    member = User.create!(email: "page-move-hidden-member@example.com", password: "password123")
+    source = Workspace.create!(name: "Source hidden moved nota", slug: "source-hidden-moved-nota")
+    target = Workspace.create!(name: "Target hidden moved nota", slug: "target-hidden-moved-nota")
+    Membership.create!(workspace: source, user: owner, role: :owner)
+    Membership.create!(workspace: source, user: member, role: :member)
+    Membership.create!(workspace: target, user: member, role: :member)
+    page = Page.create!(workspace: source, created_by: owner, title: "Shared parent")
+    hidden_child = Page.create!(
+      workspace: source,
+      created_by: owner,
+      parent_page: page,
+      title: "Private child",
+      permission_mode: :private_page
+    )
+    hidden_block = Block.create!(workspace: source, page: hidden_child, created_by: owner, block_type: "paragraph")
+    sign_in member
+
+    expect do
+      patch move_workspace_page_path(workspace_slug: source.slug, id: page.id),
+            params: { target_workspace_id: target.id }
+    end.not_to change { [ page.reload.workspace_id, hidden_child.reload.workspace_id, hidden_block.reload.workspace_id ] }
+
+    expect(response).to redirect_to(page_path(workspace_slug: source.slug, id: page.id))
+    expect(flash[:alert]).to eq("Cannot move documents you do not have access to.")
+    expect(AuditEvent.where(workspace: target, auditable: page, action: "move")).not_to exist
+  end
+
   it "shows a default tab for a top-level page before any child tabs exist" do
     owner = User.create!(email: "pages-default-tab-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Default tabs", slug: "default-tabs")

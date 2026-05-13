@@ -174,6 +174,34 @@ RSpec.describe "Databases", type: :request do
     expect(AuditEvent.where(workspace: target, auditable: database, action: "move")).to exist
   end
 
+  it "does not move a grid when its linked nota is hidden from the actor" do
+    owner = User.create!(email: "database-move-hidden-owner@example.com", password: "password123")
+    member = User.create!(email: "database-move-hidden-member@example.com", password: "password123")
+    source = Workspace.create!(name: "Source hidden moved grid", slug: "source-hidden-moved-grid")
+    target = Workspace.create!(name: "Target hidden moved grid", slug: "target-hidden-moved-grid")
+    Membership.create!(workspace: source, user: owner, role: :owner)
+    Membership.create!(workspace: source, user: member, role: :member)
+    Membership.create!(workspace: target, user: member, role: :member)
+    hidden_linked_page = Page.create!(
+      workspace: source,
+      created_by: owner,
+      title: "Private grid shell",
+      permission_mode: :private_page
+    )
+    database = Database.create!(workspace: source, created_by: owner, name: "Shared grid", linked_page: hidden_linked_page)
+    row = DbRow.create!(workspace: source, database: database, title: "Task")
+    sign_in member
+
+    expect do
+      patch move_workspace_database_path(workspace_slug: source.slug, id: database.id),
+            params: { target_workspace_id: target.id }
+    end.not_to change { [ database.reload.workspace_id, hidden_linked_page.reload.workspace_id, row.reload.workspace_id ] }
+
+    expect(response).to redirect_to(database_path(workspace_slug: source.slug, id: database.id))
+    expect(flash[:alert]).to eq("Cannot move documents you do not have access to.")
+    expect(AuditEvent.where(workspace: target, auditable: database, action: "move")).not_to exist
+  end
+
   it "creates a tasks template with task columns, default status, and dropdown options" do
     owner = User.create!(email: "database-template-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Template tables", slug: "template-tables")

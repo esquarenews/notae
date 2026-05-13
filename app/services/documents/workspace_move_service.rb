@@ -22,6 +22,7 @@ module Documents
 
       ActiveRecord::Base.transaction do
         page_ids, database_ids = document_graph
+        validate_actor_access!(page_ids:, database_ids:)
         move_pages!(page_ids)
         move_databases!(database_ids, moved_page_ids: page_ids)
         log_move!(page_ids:, database_ids:)
@@ -53,17 +54,17 @@ module Documents
 
     def collect_document_graph(seed_page_ids:, seed_database_ids:)
       page_ids = collect_page_tree_ids(seed_page_ids)
-      database_ids = seed_database_ids.compact.map(&:to_s).uniq
+      database_ids = databases_in_source_workspace.where(id: seed_database_ids).pluck(:id).map(&:to_s).uniq
 
       loop do
         previous_page_count = page_ids.size
         previous_database_count = database_ids.size
 
         if page_ids.any?
-          database_ids |= Database.where(linked_page_id: page_ids).pluck(:id).map(&:to_s)
+          database_ids |= databases_in_source_workspace.where(linked_page_id: page_ids).pluck(:id).map(&:to_s)
         end
 
-        linked_page_ids = Database.where(id: database_ids).where.not(linked_page_id: nil).pluck(:linked_page_id)
+        linked_page_ids = databases_in_source_workspace.where(id: database_ids).where.not(linked_page_id: nil).pluck(:linked_page_id)
         page_ids |= collect_page_tree_ids(linked_page_ids)
 
         break if page_ids.size == previous_page_count && database_ids.size == previous_database_count
@@ -73,11 +74,11 @@ module Documents
     end
 
     def collect_page_tree_ids(seed_ids)
-      ids = seed_ids.compact.map(&:to_s).uniq
+      ids = pages_in_source_workspace.where(id: seed_ids).pluck(:id).map(&:to_s).uniq
       frontier = ids.dup
 
       until frontier.empty?
-        child_ids = Page.where(parent_page_id: frontier).pluck(:id).map(&:to_s)
+        child_ids = pages_in_source_workspace.where(parent_page_id: frontier).pluck(:id).map(&:to_s)
         new_ids = child_ids - ids
         ids |= new_ids
         frontier = new_ids
@@ -90,7 +91,7 @@ module Documents
       return if page_ids.empty?
 
       now = Time.current
-      page_scope = Page.where(id: page_ids)
+      page_scope = pages_in_source_workspace.where(id: page_ids)
       block_ids = Block.where(page_id: page_ids).pluck(:id)
       target_member_user_ids = target_workspace.memberships.select(:user_id)
 
@@ -124,8 +125,8 @@ module Documents
       return if database_ids.empty?
 
       now = Time.current
-      row_ids = DbRow.where(database_id: database_ids).pluck(:id)
-      property_ids = DbProperty.where(database_id: database_ids).pluck(:id)
+      row_ids = DbRow.where(workspace_id: source_workspace.id, database_id: database_ids).pluck(:id)
+      property_ids = DbProperty.where(workspace_id: source_workspace.id, database_id: database_ids).pluck(:id)
       target_member_user_ids = target_workspace.memberships.select(:user_id)
 
       DbRow.where(id: row_ids).where.not(linked_page_id: moved_page_ids).update_all(linked_page_id: nil, updated_at: now)
@@ -152,7 +153,7 @@ module Documents
     def move_database_records!(database_ids, now:)
       used_names = Database.where(workspace_id: target_workspace.id).where.not(id: database_ids).pluck(:name).map { |name| name.to_s.downcase }.to_set
 
-      Database.where(id: database_ids).find_each do |database|
+      databases_in_source_workspace.where(id: database_ids).find_each do |database|
         name = unique_database_name(database.name, used_names)
         used_names << name.downcase
         database_template_id = database.database_template&.workspace_id == target_workspace.id ? database.database_template_id : nil
@@ -182,6 +183,25 @@ module Documents
       PageTemplate.where(page_id: page_ids).find_each do |template|
         template.update!(workspace: target_workspace, name: unique_template_name(PageTemplate, template.name))
       end
+    end
+
+    def validate_actor_access!(page_ids:, database_ids:)
+      visible_page_ids = Pundit.policy_scope!(actor, Page).where(id: page_ids, workspace_id: source_workspace.id).pluck(:id).map(&:to_s)
+      visible_database_ids = Pundit.policy_scope!(actor, Database).where(id: database_ids, workspace_id: source_workspace.id).pluck(:id).map(&:to_s)
+
+      hidden_page_ids = page_ids - visible_page_ids
+      hidden_database_ids = database_ids - visible_database_ids
+      return if hidden_page_ids.empty? && hidden_database_ids.empty?
+
+      raise Error, "Cannot move documents you do not have access to."
+    end
+
+    def pages_in_source_workspace
+      Page.where(workspace_id: source_workspace.id)
+    end
+
+    def databases_in_source_workspace
+      Database.where(workspace_id: source_workspace.id)
     end
 
     def unique_database_name(name, used_names)
