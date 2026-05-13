@@ -84,4 +84,4 @@ group :test do
   gem "selenium-webdriver"
 end
 
-gem "prawn", "~> 2.4"
+gem "prawn", "~> 2.5"
