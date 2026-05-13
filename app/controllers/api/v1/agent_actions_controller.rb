@@ -5,7 +5,8 @@ module Api
         index: ApiToken::SCOPE_AGENT_ACTIONS_READ,
         show: ApiToken::SCOPE_AGENT_ACTIONS_READ,
         create: ApiToken::SCOPE_AGENT_ACTIONS_WRITE,
-        approve: ApiToken::SCOPE_AGENT_ACTIONS_WRITE
+        approve: ApiToken::SCOPE_AGENT_ACTIONS_WRITE,
+        reverse: ApiToken::SCOPE_AGENT_ACTIONS_WRITE
       )
 
       DEFAULT_LIMIT = 25
