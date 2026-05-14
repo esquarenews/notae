@@ -160,7 +160,9 @@ class MeetingSessionsController < ApplicationController
     event_id = meeting_session_params[:kalendarium_event_id].to_s.strip
     return nil if event_id.blank?
 
-    policy_scope(KalendariumEvent).for_workspace(@workspace).find(event_id)
+    event = policy_scope(KalendariumEvent).for_workspace(@workspace).find(event_id)
+    authorize event, :show?
+    event
   end
 
   def normalized_capture_mode
