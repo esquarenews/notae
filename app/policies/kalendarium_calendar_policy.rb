@@ -25,7 +25,18 @@ class KalendariumCalendarPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      scope.where(workspace_id: accessible_workspace_ids)
+      workspace_scope = scope.where(workspace_id: accessible_workspace_ids)
+      workspace_scope.left_outer_joins(:kalendarium_connection)
+                     .where(kalendarium_connections: { id: nil })
+                     .or(
+                       workspace_scope.left_outer_joins(:kalendarium_connection).where(
+                         kalendarium_connections: { shared: true }
+                       )
+                     ).or(
+                       workspace_scope.left_outer_joins(:kalendarium_connection).where(
+                         kalendarium_connections: { owner_id: user.id }
+                       )
+                     )
     end
   end
 

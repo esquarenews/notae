@@ -19,7 +19,8 @@ class KalendariumEventPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      scope.where(workspace_id: accessible_workspace_ids)
+      calendar_ids = KalendariumCalendarPolicy::Scope.new(user, KalendariumCalendar).resolve.select(:id)
+      scope.where(workspace_id: accessible_workspace_ids, kalendarium_calendar_id: calendar_ids)
     end
   end
 
