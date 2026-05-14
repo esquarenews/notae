@@ -29,6 +29,7 @@ module Kalendarium
 
     def create_event(payload)
       calendar = scoped_calendars.find(payload[:kalendarium_calendar_id] || payload[:calendar_id])
+      ensure_calendar_writable!(calendar)
       event = KalendariumEvent.new(
         workspace: workspace,
         kalendarium_calendar: calendar,
@@ -55,6 +56,7 @@ module Kalendarium
 
     def update_event(payload)
       event = scoped_events.find(payload[:id] || proposal.kalendarium_event_id)
+      ensure_event_writable!(event)
       event.assign_attributes(
         title: payload[:title].presence || event.title,
         description: payload.key?(:description) ? payload[:description] : event.description,
@@ -77,6 +79,7 @@ module Kalendarium
 
     def delete_event(payload)
       event = scoped_events.find(payload[:id] || proposal.kalendarium_event_id)
+      ensure_event_writable!(event)
       calendar_id = event.kalendarium_calendar_id
       event.destroy!
       Kalendarium::SyncCalendarJob.perform_later(calendar_id)
@@ -97,11 +100,21 @@ module Kalendarium
     end
 
     def scoped_events
-      KalendariumEvent.where(workspace_id: workspace.id)
+      Pundit.policy_scope!(actor, KalendariumEvent).where(workspace_id: workspace.id)
     end
 
     def scoped_calendars
-      KalendariumCalendar.where(workspace_id: workspace.id)
+      Pundit.policy_scope!(actor, KalendariumCalendar).where(workspace_id: workspace.id)
+    end
+
+    def ensure_calendar_writable!(calendar)
+      policy = KalendariumCalendarPolicy.new(actor, calendar)
+      raise Error, "Not authorized" unless policy.update?
+    end
+
+    def ensure_event_writable!(event)
+      policy = KalendariumEventPolicy.new(actor, event)
+      raise Error, "Not authorized" unless policy.update?
     end
   end
 end
