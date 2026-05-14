@@ -133,6 +133,37 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(connection.reload.enabled).to be(false)
   end
 
+
+  it "rejects copying a shared source connection without source update permission" do
+    owner, workspace = build_stack(suffix: "source-copy-owner")
+    member = User.create!(email: "kal-source-member-#{SecureRandom.hex(4)}@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    sign_in member
+
+    source_connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: workspace,
+      created_by: owner,
+      provider: "ics",
+      label: "Owner shared feed",
+      ics_url: "https://example.com/owner-shared.ics",
+      enabled: true,
+      status: "connected"
+    )
+
+    expect do
+      post kalendarium_connections_path(workspace_slug: workspace.slug), params: {
+        source_connection_id: source_connection.id,
+        owner_scope: "user",
+        workspace_scope: "this_workspace",
+        sync_now: "0"
+      }
+    end.not_to change(KalendariumConnection, :count)
+
+    expect(response).to redirect_to(root_path)
+    expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+  end
+
   it "creates per-workspace copies when adding a connection from another workspace" do
     user, workspace = build_stack(suffix: "source-copy-target")
     source_workspace = Workspace.create!(name: "Kal Settings source-copy", slug: "kal-settings-source-copy")
