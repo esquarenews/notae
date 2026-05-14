@@ -37,11 +37,28 @@ module Notifications
     end
 
     def event_scope
+      events = KalendariumEvent.arel_table
+      connections = KalendariumConnection.arel_table
+
       KalendariumEvent
         .for_workspace(workspace)
+        .joins(:kalendarium_calendar)
+        .left_joins(kalendarium_calendar: :kalendarium_connection)
         .where.not(status: "cancelled")
+        .where(authorized_connection_scope(events, connections))
         .for_range(local_day_start.utc, local_day_end.utc)
         .select(:id, :title, :starts_at_utc, :ends_at_utc, :all_day)
+    end
+
+    def authorized_connection_scope(events, connections)
+      connections[:id].eq(nil)
+        .or(connections[:owner_type].eq("Workspace"))
+        .or(
+          connections[:owner_type].eq("User")
+            .and(connections[:owner_id].eq(user&.id))
+        )
+        .and(events[:workspace_id].eq(workspace.id))
+        .and(connections[:workspace_id].eq(nil).or(connections[:workspace_id].eq(workspace.id)))
     end
 
     def serialize_event(event)
