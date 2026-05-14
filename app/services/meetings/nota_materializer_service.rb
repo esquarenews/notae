@@ -15,6 +15,7 @@ module Meetings
           new_page = workspace.pages.create!(
             title: default_title,
             page_kind: "meeting_note",
+            permission_mode: :private_page,
             created_by: actor
           )
           new_page.blocks.create!(workspace: workspace, created_by: actor, block_type: "paragraph")

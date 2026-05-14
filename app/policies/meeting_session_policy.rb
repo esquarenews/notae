@@ -1,6 +1,6 @@
 class MeetingSessionPolicy < ApplicationPolicy
   def show?
-    membership.present?
+    membership.present? && record.created_by_id == user.id
   end
 
   def create?
@@ -31,7 +31,7 @@ class MeetingSessionPolicy < ApplicationPolicy
     def resolve
       return scope.none unless user
 
-      scope.where(workspace_id: accessible_workspace_ids)
+      scope.where(workspace_id: accessible_workspace_ids, created_by_id: user.id)
     end
   end
 
