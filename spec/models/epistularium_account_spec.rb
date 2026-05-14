@@ -73,6 +73,37 @@ RSpec.describe EpistulariumAccount, type: :model do
     expect(account.errors.full_messages.join).to include("Use the Amazon WorkMail IMAP endpoint")
   end
 
+  it "rejects localhost and private IP endpoints for IMAP-backed accounts" do
+    user, workspace = build_workspace_stack(suffix: "private-host-validation")
+
+    localhost_account = described_class.new(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Localhost",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "localhost" }
+    )
+
+    private_ip_account = described_class.new(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Private IP",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "10.0.0.5" }
+    )
+
+    expect(localhost_account).not_to be_valid
+    expect(localhost_account.errors.full_messages.join).to include("public endpoint")
+    expect(private_ip_account).not_to be_valid
+    expect(private_ip_account.errors.full_messages.join).to include("public endpoint")
+  end
+
   it "requires Amazon WorkMail usernames to be full email addresses" do
     user, workspace = build_workspace_stack(suffix: "workmail-username-validation")
     account = described_class.new(

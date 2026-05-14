@@ -1,4 +1,6 @@
 require "json"
+require "ipaddr"
+require "resolv"
 
 class EpistulariumAccount < ApplicationRecord
   PROVIDERS = %w[gmail imap amazon_workmail].freeze
@@ -25,6 +27,7 @@ class EpistulariumAccount < ApplicationRecord
   validates :owner_type, inclusion: { in: OWNER_TYPES }
   validate :provider_credentials_present
   validate :imap_host_is_not_an_smtp_endpoint
+  validate :imap_host_is_public_endpoint
   validate :amazon_workmail_username_looks_like_email
 
   before_validation :normalize_account_fields
@@ -187,6 +190,45 @@ class EpistulariumAccount < ApplicationRecord
     return unless host.start_with?("smtp.") || host.include?(".smtp.") || host.include?("smtp.mail.")
 
     errors.add(:base, smtp_endpoint_message)
+  end
+
+  def imap_host_is_public_endpoint
+    return unless %w[imap amazon_workmail].include?(provider)
+
+    host = imap_host.to_s.strip
+    return if host.blank?
+
+    if host.casecmp("localhost").zero?
+      errors.add(:base, "IMAP host must be a public endpoint")
+      return
+    end
+
+    addresses = resolved_ip_addresses_for(host)
+    return if addresses.empty?
+    return unless addresses.any? { |address| private_or_local_ip?(address) }
+
+    errors.add(:base, "IMAP host must be a public endpoint")
+  end
+
+  def resolved_ip_addresses_for(host)
+    ip = IPAddr.new(host)
+    [ ip ]
+  rescue IPAddr::InvalidAddressError
+    Resolv.getaddresses(host).filter_map do |address|
+      IPAddr.new(address)
+    rescue IPAddr::InvalidAddressError
+      nil
+    end
+  rescue Resolv::ResolvError
+    []
+  end
+
+  def private_or_local_ip?(address)
+    address.private? ||
+      address.loopback? ||
+      address.link_local? ||
+      address.multicast? ||
+      address.unspecified?
   end
 
   def amazon_workmail_username_looks_like_email
