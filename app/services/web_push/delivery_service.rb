@@ -10,6 +10,7 @@ module WebPush
 
     def call
       return false unless WebPush::Configuration.configured?
+      return blocked_private_endpoint! unless endpoint_public_after_resolution?
 
       ::Webpush.payload_send(
         message: JSON.generate(payload),
@@ -38,6 +39,26 @@ module WebPush
     private
 
     attr_reader :subscription, :payload, :notification
+
+    def endpoint_public_after_resolution?
+      uri = URI.parse(subscription.endpoint.to_s)
+      uri.is_a?(URI::HTTPS) &&
+        uri.host.present? &&
+        Notae::OutboundNetworkGuard.public_resolved_host?(uri.host)
+    rescue URI::InvalidURIError
+      false
+    end
+
+    def blocked_private_endpoint!
+      error_message = "Web push endpoint host resolved to a blocked private or local address"
+      record_attempt!(:blocked_endpoint, error_message: error_message)
+      subscription.update_columns(
+        last_error_at: Time.current,
+        last_error_message: error_message,
+        updated_at: Time.current
+      )
+      false
+    end
 
     def handle_delivery_error(error)
       formatted_error = "#{error.class}: #{error.message}".truncate(500)

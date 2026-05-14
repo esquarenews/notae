@@ -91,6 +91,8 @@ module Epistularium
       def with_imap
         imap = nil
         Timeout.timeout(SESSION_TIMEOUT_SECONDS) do
+          raise "IMAP host must use a public host." unless Notae::OutboundNetworkGuard.public_resolved_host?(account.imap_host)
+
           imap = Net::IMAP.new(
             account.imap_host,
             port: account.imap_port,

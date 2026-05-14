@@ -1,4 +1,5 @@
 require "ipaddr"
+require "socket"
 require "uri"
 
 module Notae
@@ -65,6 +66,23 @@ module Notae
       return true if ip.blank?
 
       PRIVATE_IP_RANGES.none? { |range| range.include?(ip) }
+    end
+
+    def public_resolved_host?(raw_host)
+      return true if private_endpoints_allowed?
+
+      host = normalized_host(raw_host)
+      return false unless public_host?(host)
+
+      literal_ip = parse_ip(host)
+      return true if literal_ip.present?
+
+      resolved_ips = Addrinfo.getaddrinfo(host, nil).map { |addr| parse_ip(addr.ip_address) }.compact.uniq
+      return false if resolved_ips.empty?
+
+      resolved_ips.all? { |ip| PRIVATE_IP_RANGES.none? { |range| range.include?(ip) } }
+    rescue SocketError
+      false
     end
 
     def private_endpoints_allowed?

@@ -4,7 +4,7 @@ class WebPushDeliveryAttempt < ApplicationRecord
   belongs_to :subscription, class_name: "WebPushSubscription", optional: true
   belongs_to :notification, optional: true
 
-  enum :status, { delivered: 0, failed: 1, stale_subscription: 2 }, default: :delivered, scopes: false
+  enum :status, { delivered: 0, failed: 1, stale_subscription: 2, blocked_endpoint: 3 }, default: :delivered, scopes: false
 
   validates :endpoint_host, presence: true
   validates :status, presence: true
@@ -20,6 +20,7 @@ class WebPushDeliveryAttempt < ApplicationRecord
 
   def status_label
     return "Subscription expired" if stale_subscription?
+    return "Blocked endpoint" if blocked_endpoint?
 
     status.humanize
   end

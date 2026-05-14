@@ -1,6 +1,10 @@
 require "rails_helper"
 
 RSpec.describe WebPush::DeliveryService do
+  before do
+    allow(Notae::OutboundNetworkGuard).to receive(:public_resolved_host?).and_return(true)
+  end
+
   it "sends a push payload and records successful delivery state" do
     user = User.create!(email: "web-push-delivery@example.com", password: "password123")
     workspace = Workspace.create!(name: "Push delivery", slug: "web-push-delivery")
@@ -95,5 +99,28 @@ RSpec.describe WebPush::DeliveryService do
     attempt = WebPushDeliveryAttempt.order(:created_at).last
     expect(attempt.status).to eq("failed")
     expect(attempt.error_message).to include("temporary outage")
+  end
+
+  it "blocks delivery when the endpoint resolves to a private address" do
+    user = User.create!(email: "web-push-delivery-blocked@example.com", password: "password123")
+    subscription = WebPushSubscription.create!(
+      user: user,
+      endpoint: "https://push.example.test/subscriptions/blocked",
+      p256dh: "p256dh-blocked",
+      auth: "auth-blocked"
+    )
+
+    allow(WebPush::Configuration).to receive(:configured?).and_return(true)
+    allow(Notae::OutboundNetworkGuard).to receive(:public_resolved_host?).with("push.example.test").and_return(false)
+
+    expect(::Webpush).not_to receive(:payload_send)
+
+    result = described_class.new(subscription: subscription, payload: { title: "Notae" }).call
+
+    expect(result).to eq(false)
+    expect(subscription.reload.last_error_message).to include("blocked private or local address")
+    attempt = WebPushDeliveryAttempt.order(:created_at).last
+    expect(attempt.status).to eq("blocked_endpoint")
+    expect(attempt.endpoint_host).to eq("push.example.test")
   end
 end

@@ -1,6 +1,10 @@
 require "rails_helper"
 
 RSpec.describe Epistularium::Providers::ImapAdapter do
+  before do
+    allow(Notae::OutboundNetworkGuard).to receive(:public_resolved_host?).and_return(true)
+  end
+
   def build_stack(suffix:)
     user = User.create!(email: "epistularium-imap-#{suffix}@example.com", password: "password123")
     workspace = Workspace.create!(name: "Epistularium IMAP #{suffix}", slug: "epistularium-imap-#{suffix}")
@@ -17,6 +21,16 @@ RSpec.describe Epistularium::Providers::ImapAdapter do
     )
 
     [ user, workspace, account ]
+  end
+
+  it "blocks IMAP sync when the configured host resolves to a private address" do
+    _user, _workspace, account = build_stack(suffix: "private-resolved-host")
+    allow(Notae::OutboundNetworkGuard).to receive(:public_resolved_host?).with("imap.example.com").and_return(false)
+
+    expect(Net::IMAP).not_to receive(:new)
+
+    expect { described_class.new(account: account).sync! }
+      .to raise_error("IMAP host must use a public host.")
   end
 
   it "imports messages from inbox and sent folders via IMAP" do
