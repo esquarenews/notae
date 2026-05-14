@@ -43,7 +43,7 @@
     }
   }
 
-  function applyDetectedWorkspace(workspace, { preserveToken = true } = {}) {
+  function applyDetectedWorkspace(workspace, { preserveToken = false } = {}) {
     if (!workspace) return
 
     baseUrlInput.value = workspace.baseUrl || ""
@@ -85,7 +85,7 @@
     renderDetectedWorkspace(payload.detectedWorkspace)
 
     if (shouldAutoApplyDetectedWorkspace(payload.settings, payload.detectedWorkspace)) {
-      applyDetectedWorkspace(payload.detectedWorkspace)
+      applyDetectedWorkspace(payload.detectedWorkspace, { preserveToken: false })
       appliedDetectedWorkspace = true
     }
 
@@ -164,7 +164,7 @@
       return
     }
 
-    applyDetectedWorkspace(workspace)
+    applyDetectedWorkspace(workspace, { preserveToken: false })
     renderDetectedWorkspace(workspace)
     setStatus("Filled base URL and workspace from the detected Notae tab.", "is-success")
   })
