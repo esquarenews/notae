@@ -108,7 +108,7 @@ module Internal
 
     def failed
       metadata = @run.metadata_json.to_h
-      metadata.merge!(failed_params[:metadata].to_h) if failed_params[:metadata].present?
+      metadata.merge!(sanitized_failure_metadata) if failed_params[:metadata].present?
       @run.update!(
         status: "failed",
         error_message: failed_params[:error_message].to_s.truncate(500),
@@ -175,6 +175,10 @@ module Internal
 
     def failed_params
       params.permit(:error_message, metadata: {})
+    end
+
+    def sanitized_failure_metadata
+      failed_params[:metadata].to_h.except("page_body_excerpt")
     end
 
     def validate_upload_file(upload_file)

@@ -383,12 +383,8 @@ async function waitForMeetHydration(page) {
 }
 
 function logJoinStage(run, stage, metadata = {}) {
-  const summary = summarizeBodyText(metadata?.page_body_excerpt || "", 120)
-  if (summary) {
-    console.log(`[meeting-bot] run ${run.id}: stage=${stage} excerpt=${summary}`)
-  } else {
-    console.log(`[meeting-bot] run ${run.id}: stage=${stage}`)
-  }
+  void metadata
+  console.log(`[meeting-bot] run ${run.id}: stage=${stage}`)
 }
 
 async function grantMeetPermissions(context, joinUrl) {
