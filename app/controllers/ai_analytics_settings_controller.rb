@@ -12,6 +12,7 @@ class AiAnalyticsSettingsController < ApplicationController
 
   def update
     authorize @workspace, :update?
+    authorize_automation_control_update!
 
     enabled = ActiveModel::Type::Boolean.new.cast(params.dig(:automation_control, :enabled))
     if enabled
@@ -46,6 +47,10 @@ class AiAnalyticsSettingsController < ApplicationController
 
   def set_automation_control
     @automation_control = AutomationControl.current
+  end
+
+  def authorize_automation_control_update!
+    raise Pundit::NotAuthorizedError, "not allowed to update automation control" unless current_user&.platform_admin?
   end
 
   def refresh_analytics!

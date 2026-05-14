@@ -116,8 +116,8 @@ RSpec.describe "AI Analytics settings", type: :request do
     expect(response.body).to include("Inspect workflow")
   end
 
-  it "updates the automation kill switch" do
-    user = User.create!(email: "ai-analytics-kill-switch@example.com", password: "password123")
+  it "updates the automation kill switch for platform admins" do
+    user = User.create!(email: "ai-analytics-kill-switch@example.com", password: "password123", super_admin: true)
     workspace = Workspace.create!(name: "AI Analytics Kill Switch", slug: "ai-analytics-kill-switch")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     sign_in user
@@ -131,8 +131,22 @@ RSpec.describe "AI Analytics settings", type: :request do
     expect(control.pause_reason).to eq("Maintenance window")
   end
 
+  it "rejects automation kill switch updates for non-platform admins" do
+    user = User.create!(email: "ai-analytics-kill-switch-denied@example.com", password: "password123")
+    workspace = Workspace.create!(name: "AI Analytics Kill Switch Denied", slug: "ai-analytics-kill-switch-denied")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    sign_in user
+
+    patch workspace_ai_analytics_settings_path(workspace_slug: workspace.slug),
+          params: { automation_control: { enabled: "0", pause_reason: "Malicious pause" } }
+
+    expect(response).to redirect_to(root_path)
+    expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    expect(AutomationControl.current.enabled).to eq(true)
+  end
+
   it "returns turbo stream updates for automation safety changes" do
-    user = User.create!(email: "ai-analytics-turbo@example.com", password: "password123")
+    user = User.create!(email: "ai-analytics-turbo@example.com", password: "password123", super_admin: true)
     workspace = Workspace.create!(name: "AI Analytics Turbo", slug: "ai-analytics-turbo")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     sign_in user
