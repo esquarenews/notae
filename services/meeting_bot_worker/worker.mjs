@@ -109,7 +109,7 @@ async function handleRun(run) {
         get: () => undefined
       })
     })
-    await grantMeetPermissions(context, run.join_url)
+    await grantMeetPermissions(context, run.provider, run.join_url)
     page = await context.newPage()
 
     heartbeatTimer = setInterval(() => {
@@ -391,10 +391,14 @@ function logJoinStage(run, stage, metadata = {}) {
   }
 }
 
-async function grantMeetPermissions(context, joinUrl) {
+const TRUSTED_MEET_ORIGIN = "https://meet.google.com"
+
+async function grantMeetPermissions(context, provider, joinUrl) {
+  if (provider !== "google_meet") return
   try {
-    const origin = new URL(joinUrl).origin
-    await context.grantPermissions(["microphone", "camera"], { origin })
+    const parsed = new URL(joinUrl)
+    if (parsed.origin !== TRUSTED_MEET_ORIGIN) return
+    await context.grantPermissions(["microphone"], { origin: TRUSTED_MEET_ORIGIN })
   } catch {
     // Ignore invalid URLs or permission grant failures; the join flow will surface the real error.
   }
