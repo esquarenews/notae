@@ -7,7 +7,7 @@ RSpec.describe WebPush::DeliveryService do
     Membership.create!(workspace: workspace, user: user, role: :owner)
     subscription = WebPushSubscription.create!(
       user: user,
-      endpoint: "https://push.example.test/subscriptions/ok",
+      endpoint: "https://fcm.googleapis.com/subscriptions/ok",
       p256dh: "p256dh-ok",
       auth: "auth-ok"
     )
@@ -42,7 +42,7 @@ RSpec.describe WebPush::DeliveryService do
     expect(attempt.user).to eq(user)
     expect(attempt.workspace).to eq(workspace)
     expect(attempt.notification).to eq(notification)
-    expect(attempt.endpoint_host).to eq("push.example.test")
+    expect(attempt.endpoint_host).to eq("fcm.googleapis.com")
     expect(attempt.title).to eq("Notae")
     expect(attempt.body).to eq("Body")
     expect(attempt.delivered_at).to be_present
@@ -52,7 +52,7 @@ RSpec.describe WebPush::DeliveryService do
     user = User.create!(email: "web-push-delivery-stale@example.com", password: "password123")
     subscription = WebPushSubscription.create!(
       user: user,
-      endpoint: "https://push.example.test/subscriptions/stale",
+      endpoint: "https://fcm.googleapis.com/subscriptions/stale",
       p256dh: "p256dh-stale",
       auth: "auth-stale"
     )
@@ -68,7 +68,7 @@ RSpec.describe WebPush::DeliveryService do
     expect(WebPushSubscription.exists?(subscription.id)).to eq(false)
     attempt = WebPushDeliveryAttempt.order(:created_at).last
     expect(attempt.status).to eq("stale_subscription")
-    expect(attempt.endpoint_host).to eq("push.example.test")
+    expect(attempt.endpoint_host).to eq("fcm.googleapis.com")
     expect(attempt.error_message).to include("410 gone")
   end
 
@@ -76,7 +76,7 @@ RSpec.describe WebPush::DeliveryService do
     user = User.create!(email: "web-push-delivery-failed@example.com", password: "password123")
     subscription = WebPushSubscription.create!(
       user: user,
-      endpoint: "https://push.example.test/subscriptions/fail",
+      endpoint: "https://fcm.googleapis.com/subscriptions/fail",
       p256dh: "p256dh-fail",
       auth: "auth-fail"
     )

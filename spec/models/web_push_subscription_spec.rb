@@ -5,14 +5,14 @@ RSpec.describe WebPushSubscription, type: :model do
     user = User.create!(email: "web-push-subscription@example.com", password: "password123")
     described_class.create!(
       user: user,
-      endpoint: "https://push.example.test/subscriptions/1",
+      endpoint: "https://fcm.googleapis.com/subscriptions/1",
       p256dh: "p256dh-token",
       auth: "auth-token"
     )
 
     duplicate = described_class.new(
       user: user,
-      endpoint: "https://push.example.test/subscriptions/1",
+      endpoint: "https://fcm.googleapis.com/subscriptions/1",
       p256dh: "",
       auth: ""
     )
@@ -40,4 +40,29 @@ RSpec.describe WebPushSubscription, type: :model do
 
     expect(subscription.delivery_status).to eq(:healthy)
   end
+
+  it "rejects non-public or non-https endpoints" do
+    user = User.create!(email: "web-push-invalid-endpoint@example.com", password: "password123")
+
+    http_subscription = described_class.new(
+      user: user,
+      endpoint: "http://fcm.googleapis.com/subscriptions/1",
+      p256dh: "p256dh-token",
+      auth: "auth-token"
+    )
+
+    local_subscription = described_class.new(
+      user: user,
+      endpoint: "https://127.0.0.1/subscriptions/1",
+      p256dh: "p256dh-token",
+      auth: "auth-token"
+    )
+
+    expect(http_subscription).not_to be_valid
+    expect(http_subscription.errors[:endpoint]).to include("must be a valid public HTTPS URL")
+
+    expect(local_subscription).not_to be_valid
+    expect(local_subscription.errors[:endpoint]).to include("must be a valid public HTTPS URL")
+  end
+
 end

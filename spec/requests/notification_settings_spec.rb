@@ -172,12 +172,12 @@ RSpec.describe "Notification settings", type: :request do
     workspace = Workspace.create!(name: "Notification settings push", slug: "notification-settings-push")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     other_subscription = user.web_push_subscriptions.create!(
-      endpoint: "https://push.example.test/subscriptions/other-device",
+      endpoint: "https://fcm.googleapis.com/subscriptions/other-device",
       p256dh: "p256dh-other",
       auth: "auth-other"
     )
     current_subscription = user.web_push_subscriptions.create!(
-      endpoint: "https://push.example.test/subscriptions/test-device",
+      endpoint: "https://fcm.googleapis.com/subscriptions/test-device",
       p256dh: "p256dh-test",
       auth: "auth-test"
     )
@@ -240,12 +240,12 @@ RSpec.describe "Notification settings", type: :request do
     workspace = Workspace.create!(name: "Notification settings current only", slug: "notification-settings-current-only")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     other_subscription = user.web_push_subscriptions.create!(
-      endpoint: "https://push.example.test/subscriptions/other-device",
+      endpoint: "https://fcm.googleapis.com/subscriptions/other-device",
       p256dh: "p256dh-other",
       auth: "auth-other"
     )
     current_subscription = user.web_push_subscriptions.create!(
-      endpoint: "https://push.example.test/subscriptions/test-device",
+      endpoint: "https://fcm.googleapis.com/subscriptions/test-device",
       p256dh: "p256dh-test",
       auth: "auth-test"
     )
@@ -287,7 +287,7 @@ RSpec.describe "Notification settings", type: :request do
     workspace = Workspace.create!(name: "Notification settings stale push", slug: "notification-settings-stale-push")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     subscription = user.web_push_subscriptions.create!(
-      endpoint: "https://push.example.test/subscriptions/stale-device",
+      endpoint: "https://fcm.googleapis.com/subscriptions/stale-device",
       p256dh: "p256dh-stale",
       auth: "auth-stale"
     )
@@ -318,7 +318,7 @@ RSpec.describe "Notification settings", type: :request do
     workspace = Workspace.create!(name: "Notification settings current error", slug: "notification-settings-current-error")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     subscription = user.web_push_subscriptions.create!(
-      endpoint: "https://push.example.test/subscriptions/failing-device",
+      endpoint: "https://fcm.googleapis.com/subscriptions/failing-device",
       p256dh: "p256dh-failing",
       auth: "auth-failing"
     )

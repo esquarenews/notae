@@ -35,7 +35,7 @@ RSpec.describe Notification, type: :model do
     workspace = Workspace.create!(name: "Notifications Push", slug: "notifications-push")
     WebPushSubscription.create!(
       user: recipient,
-      endpoint: "https://push.example.test/subscriptions/1",
+      endpoint: "https://fcm.googleapis.com/subscriptions/1",
       p256dh: "p256dh-token",
       auth: "auth-token"
     )

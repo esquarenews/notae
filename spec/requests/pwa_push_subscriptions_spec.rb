@@ -8,7 +8,7 @@ RSpec.describe "PWA push subscriptions", type: :request do
     post pwa_push_subscription_path,
          params: {
            subscription: {
-             endpoint: "https://push.example.test/subscriptions/abc",
+             endpoint: "https://fcm.googleapis.com/subscriptions/abc",
              expiration_time: 1_800_000_000_000,
              keys: {
                p256dh: "p256dh-token",
@@ -19,7 +19,7 @@ RSpec.describe "PWA push subscriptions", type: :request do
          as: :json
 
     expect(response).to have_http_status(:ok)
-    subscription = user.web_push_subscriptions.find_by!(endpoint: "https://push.example.test/subscriptions/abc")
+    subscription = user.web_push_subscriptions.find_by!(endpoint: "https://fcm.googleapis.com/subscriptions/abc")
     expect(subscription.p256dh).to eq("p256dh-token")
     expect(subscription.auth).to eq("auth-token")
     expect(subscription.expiration_time).to be_present
@@ -28,7 +28,7 @@ RSpec.describe "PWA push subscriptions", type: :request do
   it "clears stale delivery errors when a device refreshes an existing subscription" do
     user = User.create!(email: "pwa-push-refresh@example.com", password: "password123")
     subscription = user.web_push_subscriptions.create!(
-      endpoint: "https://push.example.test/subscriptions/existing",
+      endpoint: "https://fcm.googleapis.com/subscriptions/existing",
       p256dh: "old-p256dh-token",
       auth: "old-auth-token",
       last_error_at: 5.minutes.ago,
@@ -60,7 +60,7 @@ RSpec.describe "PWA push subscriptions", type: :request do
     user = User.create!(email: "pwa-push-destroy@example.com", password: "password123")
     subscription = WebPushSubscription.create!(
       user: user,
-      endpoint: "https://push.example.test/subscriptions/remove",
+      endpoint: "https://fcm.googleapis.com/subscriptions/remove",
       p256dh: "p256dh-remove",
       auth: "auth-remove"
     )

@@ -14,13 +14,13 @@ RSpec.describe WebPush::DeliverNotificationJob do
     )
     first_subscription = WebPushSubscription.create!(
       user: recipient,
-      endpoint: "https://push.example.test/subscriptions/a",
+      endpoint: "https://fcm.googleapis.com/subscriptions/a",
       p256dh: "p256dh-a",
       auth: "auth-a"
     )
     second_subscription = WebPushSubscription.create!(
       user: recipient,
-      endpoint: "https://push.example.test/subscriptions/b",
+      endpoint: "https://fcm.googleapis.com/subscriptions/b",
       p256dh: "p256dh-b",
       auth: "auth-b"
     )
@@ -62,7 +62,7 @@ RSpec.describe WebPush::DeliverNotificationJob do
     )
     WebPushSubscription.create!(
       user: recipient,
-      endpoint: "https://push.example.test/subscriptions/disabled",
+      endpoint: "https://fcm.googleapis.com/subscriptions/disabled",
       p256dh: "p256dh-disabled",
       auth: "auth-disabled"
     )
@@ -104,7 +104,7 @@ RSpec.describe WebPush::DeliverNotificationJob do
     )
     subscription = WebPushSubscription.create!(
       user: recipient,
-      endpoint: "https://push.example.test/subscriptions/quiet-hours",
+      endpoint: "https://fcm.googleapis.com/subscriptions/quiet-hours",
       p256dh: "p256dh-quiet-hours",
       auth: "auth-quiet-hours"
     )
@@ -155,7 +155,7 @@ RSpec.describe WebPush::DeliverNotificationJob do
     )
     WebPushSubscription.create!(
       user: recipient,
-      endpoint: "https://push.example.test/subscriptions/workspace-override",
+      endpoint: "https://fcm.googleapis.com/subscriptions/workspace-override",
       p256dh: "p256dh-workspace-override",
       auth: "auth-workspace-override"
     )
