@@ -164,8 +164,8 @@ class KalendariumConnectionsController < ApplicationController
 
   def create_connections_from_source!
     source = policy_scope(KalendariumConnection).find(source_connection_id)
-    authorize source, :show?
-    owner_scope = explicit_owner_scope.presence || (source.shared_connection? ? "workspace" : "user")
+    authorize source, :update?
+    owner_scope = source.shared_connection? ? "workspace" : (explicit_owner_scope.presence || "user")
     metadata = {
       "workspace_scope" => requested_workspace_scope,
       "source_workspace_id" => source.workspace_id,
