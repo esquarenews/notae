@@ -166,7 +166,7 @@ RSpec.describe "Meetings", type: :request do
     expect(response.body).to include("Bot run")
     expect(response.body).to include("Join stage")
     expect(response.body).to include("Waiting room")
-    expect(response.body).to include("Someone in the call should let you in soon")
+    expect(response.body).not_to include("Someone in the call should let you in soon")
     expect(response.body).to include(">Stop<")
     expect(response.body).to include('data-meeting-sessions-poller-active-value="true"')
   end
