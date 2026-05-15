@@ -4431,6 +4431,10 @@ turbo-frame#notae_sidebar_sections {
   margin-bottom: 0.75rem;
 }
 
+.notae-db-stats-savebar {
+  margin-top: 0.85rem;
+}
+
 .notae-db-inline-details {
   position: relative;
 }

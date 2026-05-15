@@ -335,8 +335,11 @@ RSpec.describe "Databases", type: :request do
     setup_row = setup_html.at_css("#stats_definition_#{definition.id}")
     expect(setup_html.text).to include("Division", "Description")
     expect(setup_html.at_css("button[name='add_definition'][value='1']").text.squish).to eq("+ New row")
+    expect(setup_html.at_css(".notae-db-stats-savebar .notae-db-toolbar-new").text.squish).to eq("Save setup")
     expect(setup_html.at_css("#stats_setup_rows")["data-controller"]).to include("db-table-reorder")
     expect(setup_row.at_css(".notae-db-row-more-menu")).to be_present
+    expect(setup_row.at_css(".notae-db-row-more-menu")["data-row-menu-url-value"]).to be_blank
+    expect(setup_row.css(".notae-db-row-menu-section-label").map { |node| node.text.squish }).to include("Text colour", "Background colour")
     expect(setup_row.at_css(".is-drag-handle")).to be_present
     expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][title]']")["data-action"]).to include("keydown.enter->stats-setup#insertAfter")
 

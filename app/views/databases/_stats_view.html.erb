@@ -115,7 +115,8 @@
                                    row_is_bold: row_is_bold,
                                    row_is_italic: row_is_italic,
                                    row_text_color: row_text_color,
-                                   row_background_color: row_background_color %>
+                                   row_background_color: row_background_color,
+                                   defer_body: false %>
                       </div>
                     <% end %>
                   <%= text_field_tag "stats[definitions][#{definition.id}][title]",
@@ -189,7 +190,7 @@
           </tbody>
         </table>
       </div>
-      <div class="notae-db-toolbar">
+      <div class="notae-db-toolbar notae-db-stats-savebar">
         <%= button_tag "Save setup", type: "submit", class: "notae-db-toolbar-new", form: stats_setup_form_id, disabled: !can_edit_database %>
       </div>
     </div>
