@@ -278,6 +278,127 @@ RSpec.describe "Databases", type: :request do
     )
   end
 
+  it "turns a blank grid into a stats grid with setup rows and period entry rows" do
+    owner = User.create!(email: "database-stats-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Stats tables", slug: "stats-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Metrics")
+    sign_in owner
+
+    expect do
+      post statsify_database_path(workspace_slug: workspace.slug, id: database.id)
+    end.not_to change(Database, :count)
+
+    database.reload
+    table_view = database.database_views.find_by!(view_type: :table)
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id, view_id: table_view.id, stats_mode: "setup"))
+    expect(database.applied_template_name).to eq("Stats")
+    expect(database.db_properties.order(:position).pluck(:name, :property_type)).to eq(
+      [
+        [ "Frequency", "select" ],
+        [ "Assigned person", "text" ],
+        [ "Post", "text" ],
+        [ "Period start", "date" ],
+        [ "Period label", "text" ],
+        [ "Value", "number" ]
+      ]
+    )
+
+    patch stats_setup_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: {
+            stats_date: "2026-05-15",
+            stats: {
+              new_definition: {
+                title: "Subscriber count",
+                frequency: "weekly_thu_2pm",
+                assigned_person: "Errol",
+                post: "Publisher"
+              }
+            }
+          }
+
+    definition = database.db_rows.find_by!(title: "Subscriber count")
+    expect(definition.data_json[Databases::StatsTemplateService::ROW_TYPE_KEY]).to eq(Databases::StatsTemplateService::ROW_TYPE_DEFINITION)
+    expect(definition.data_json[Databases::StatsTemplateService::FREQUENCY_KEY]).to eq("weekly_thu_2pm")
+    expect(definition.db_cells.joins(:db_property).find_by!(db_properties: { name: "Assigned person" }).value_text).to eq("Errol")
+
+    patch stats_entries_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: {
+            stats_date: "2026-05-15",
+            stats: {
+              entries: {
+                definition.id => { value: "42" }
+              }
+            }
+          }
+
+    entry = database.db_rows.where("data_json ->> ? = ?", Databases::StatsTemplateService::ROW_TYPE_KEY, Databases::StatsTemplateService::ROW_TYPE_ENTRY).first
+    expect(entry).to be_present
+    expect(entry.data_json[Databases::StatsTemplateService::DEFINITION_ID_KEY]).to eq(definition.id)
+    expect(entry.data_json[Databases::StatsTemplateService::PERIOD_START_KEY]).to eq("2026-05-14")
+    expect(entry.db_cells.joins(:db_property).find_by!(db_properties: { name: "Value" }).value_text).to eq("42")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, stats_date: "2026-05-15")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Subscriber count")
+    expect(response.body).to include("14 May 2026 2pm - 21 May 2026 2pm")
+    expect(response.body).to include("value=\"42\"")
+    expect(response.body).to include("Show graph")
+  end
+
+  it "archives stats definitions without deleting historical stat reports" do
+    owner = User.create!(email: "database-stats-archive-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Stats archive", slug: "stats-archive")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Metrics")
+    sign_in owner
+
+    post statsify_database_path(workspace_slug: workspace.slug, id: database.id)
+    patch stats_setup_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: {
+            stats_date: "2026-05-15",
+            stats: {
+              new_definition: {
+                title: "Revenue",
+                frequency: "weekly_mon_sun",
+                assigned_person: "Ari",
+                post: "Ops"
+              }
+            }
+          }
+    definition = database.db_rows.find_by!(title: "Revenue")
+    patch stats_entries_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: {
+            stats_date: "2026-05-15",
+            stats: { entries: { definition.id => { value: "1200" } } }
+          }
+
+    expect do
+      patch stats_setup_database_path(workspace_slug: workspace.slug, id: database.id),
+            params: {
+              stats_date: "2026-05-15",
+              archive_stat_id: definition.id,
+              stats: {
+                definitions: {
+                  definition.id => {
+                    title: "Revenue",
+                    frequency: "weekly_mon_sun",
+                    assigned_person: "Ari",
+                    post: "Ops"
+                  }
+                }
+              }
+            }
+    end.not_to change { database.db_rows.count }
+
+    expect(definition.reload).to be_archived
+    get database_path(workspace_slug: workspace.slug, id: database.id, stats_date: "2026-05-15")
+
+    expect(response.body).to include("Revenue")
+    expect(response.body).to include("value=\"1200\"")
+  end
+
   it "upgrades a kanban starter grid into a tasks grid on the same database" do
     owner = User.create!(email: "database-taskify-kanban-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Taskify kanban tables", slug: "taskify-kanban-tables")

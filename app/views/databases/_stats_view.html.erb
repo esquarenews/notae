@@ -1,0 +1,168 @@
+<% stats_date = @stats_date || Time.zone.today %>
+<% stats_mode = @stats_mode || "report" %>
+<% stats_view_params = view_params.except(:workspace_slug, :id, :stats_date, :stats_mode).compact %>
+
+<div class="notae-db-stats-view">
+  <%= form_with url: database_path(workspace_slug: @workspace.slug, id: @database.id),
+                method: :get,
+                class: "notae-db-inline-form notae-db-stats-toolbar" do %>
+    <% stats_view_params.each do |key, value| %>
+      <%= hidden_field_tag key, value %>
+    <% end %>
+    <%= date_field_tag :stats_date,
+                       stats_date.iso8601,
+                       class: "notae-options-input",
+                       aria: { label: "Stats date" },
+                       onchange: "this.form.requestSubmit()" %>
+    <%= select_tag :stats_mode,
+                   options_for_select([ [ "Report", "report" ], [ "Set up", "setup" ] ], stats_mode),
+                   class: "notae-options-select",
+                   aria: { label: "Stats mode" },
+                   onchange: "this.form.requestSubmit()" %>
+    <%= button_tag "Open", type: "submit", class: "notae-chip-button" %>
+  <% end %>
+
+  <% if stats_mode == "setup" %>
+    <%= form_with url: stats_setup_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                  method: :patch,
+                  class: "notae-db-stats-form" do %>
+      <% stats_view_params.each do |key, value| %>
+        <%= hidden_field_tag key, value %>
+      <% end %>
+      <%= hidden_field_tag :stats_date, stats_date.iso8601 %>
+      <div class="notae-db-grid-wrap">
+        <table class="notae-db-grid">
+          <thead>
+            <tr>
+              <th class="notae-db-grid-name-col">Stat</th>
+              <th>Frequency</th>
+              <th>Assigned person</th>
+              <th>Post</th>
+              <th>Archive</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @stats_definitions.each do |definition| %>
+              <tr id="stats_definition_<%= definition.id %>">
+                <td class="notae-db-grid-name-col">
+                  <%= text_field_tag "stats[definitions][#{definition.id}][title]",
+                                     definition.title,
+                                     class: "notae-db-cell-input",
+                                     disabled: !can_edit_database %>
+                </td>
+                <td>
+                  <%= select_tag "stats[definitions][#{definition.id}][frequency]",
+                                 options_for_select(@stats_frequency_options, Databases::StatsTemplateService.frequency_for(definition)),
+                                 class: "notae-db-cell-select",
+                                 disabled: !can_edit_database %>
+                </td>
+                <td>
+                  <%= text_field_tag "stats[definitions][#{definition.id}][assigned_person]",
+                                     Databases::StatsTemplateService.cell_value(definition, "Assigned person"),
+                                     class: "notae-db-cell-input",
+                                     disabled: !can_edit_database %>
+                </td>
+                <td>
+                  <%= text_field_tag "stats[definitions][#{definition.id}][post]",
+                                     Databases::StatsTemplateService.cell_value(definition, "Post"),
+                                     class: "notae-db-cell-input",
+                                     disabled: !can_edit_database %>
+                </td>
+                <td>
+                  <%= button_tag "Archive",
+                                 type: "submit",
+                                 name: "archive_stat_id",
+                                 value: definition.id,
+                                 class: "notae-db-grid-add-link",
+                                 disabled: !can_edit_database %>
+                </td>
+              </tr>
+            <% end %>
+            <tr>
+              <td class="notae-db-grid-name-col">
+                <%= text_field_tag "stats[new_definition][title]",
+                                   "",
+                                   placeholder: "New stat",
+                                   class: "notae-db-cell-input",
+                                   disabled: !can_edit_database %>
+              </td>
+              <td>
+                <%= select_tag "stats[new_definition][frequency]",
+                               options_for_select(@stats_frequency_options, "weekly_mon_sun"),
+                               class: "notae-db-cell-select",
+                               disabled: !can_edit_database %>
+              </td>
+              <td>
+                <%= text_field_tag "stats[new_definition][assigned_person]",
+                                   "",
+                                   class: "notae-db-cell-input",
+                                   disabled: !can_edit_database %>
+              </td>
+              <td>
+                <%= text_field_tag "stats[new_definition][post]",
+                                   "",
+                                   class: "notae-db-cell-input",
+                                   disabled: !can_edit_database %>
+              </td>
+              <td>
+                <%= button_tag "Save setup", type: "submit", class: "notae-chip-button", disabled: !can_edit_database %>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  <% else %>
+    <%= form_with url: stats_entries_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                  method: :patch,
+                  class: "notae-db-stats-form" do %>
+      <% stats_view_params.each do |key, value| %>
+        <%= hidden_field_tag key, value %>
+      <% end %>
+      <%= hidden_field_tag :stats_date, stats_date.iso8601 %>
+      <div class="notae-db-grid-wrap">
+        <table class="notae-db-grid">
+          <thead>
+            <tr>
+              <th class="notae-db-grid-name-col">Stat</th>
+              <th>Period</th>
+              <th>Assigned person</th>
+              <th>Post</th>
+              <th>Value</th>
+              <th>Graph</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if @stats_report_rows.blank? %>
+              <tr>
+                <td colspan="6">No stats have been set up yet.</td>
+              </tr>
+            <% end %>
+            <% @stats_report_rows.each do |report_row| %>
+              <% definition = report_row.definition %>
+              <tr id="stats_report_<%= definition.id %>">
+                <td class="notae-db-grid-name-col"><%= definition.title %></td>
+                <td><%= report_row.period.label %></td>
+                <td><%= Databases::StatsTemplateService.cell_value(definition, "Assigned person") %></td>
+                <td><%= Databases::StatsTemplateService.cell_value(definition, "Post") %></td>
+                <td>
+                  <%= number_field_tag "stats[entries][#{definition.id}][value]",
+                                       Databases::StatsTemplateService.cell_value(report_row.entry, "Value"),
+                                       step: "any",
+                                       class: "notae-db-cell-input",
+                                       disabled: !can_edit_database %>
+                </td>
+                <td>
+                  <button type="button" class="notae-chip-button" disabled>Show graph</button>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="notae-db-toolbar">
+        <%= button_tag "Save stats", type: "submit", class: "notae-db-toolbar-new", disabled: !can_edit_database %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

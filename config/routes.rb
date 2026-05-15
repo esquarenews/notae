@@ -148,6 +148,9 @@ Rails.application.routes.draw do
       member do
         post :duplicate
         post :taskify
+        post :statsify
+        patch :stats_setup
+        patch :stats_entries
         post :save_as_template
         post :apply_template
         post :kanbanize

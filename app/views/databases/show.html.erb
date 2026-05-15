@@ -460,6 +460,18 @@
                              disabled: !can_edit_database || !@can_apply_tasks_template,
                              title: (!can_edit_database || @can_apply_tasks_template) ? nil : "Open a blank grid or new tab before using the Tasks template." %>
             <% end %>
+            <%= form_with url: statsify_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                          method: :post,
+                          class: "notae-db-split-view-form" do %>
+              <% toolbar_state_params.each do |key, value| %>
+                <%= hidden_field_tag key, value %>
+              <% end %>
+              <%= button_tag "Stats",
+                             type: "submit",
+                             class: [ "notae-db-split-view-option", ("is-active" if current_template_label == "Stats") ].compact.join(" "),
+                             disabled: !can_edit_database || !@can_apply_stats_template,
+                             title: (!can_edit_database || @can_apply_stats_template) ? nil : "Open a blank grid or new tab before using the Stats template." %>
+            <% end %>
             <% @database_templates.each do |template| %>
               <%= form_with url: apply_template_database_path(workspace_slug: @workspace.slug, id: @database.id),
                             method: :post,
@@ -632,7 +644,9 @@
   </div>
   <% end %>
 
-  <% if @view_type == "board" %>
+  <% if @stats_template_active %>
+    <%= render "databases/stats_view", can_edit_database: can_edit_database, view_params: view_params %>
+  <% elsif @view_type == "board" %>
     <%= render "databases/board_view", can_edit_database: can_edit_database %>
   <% elsif @view_type == "calendar" %>
     <%= render "databases/calendar_view" %>

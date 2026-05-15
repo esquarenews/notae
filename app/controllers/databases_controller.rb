@@ -5,7 +5,7 @@ class DatabasesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf export_graph_pdf gantt_embed graph_embed permissions move_workspace taskify save_as_template apply_template kanbanize panel]
+  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf export_graph_pdf gantt_embed graph_embed permissions move_workspace taskify statsify stats_setup stats_entries save_as_template apply_template kanbanize panel]
   before_action :set_archived_database, only: %i[restore destroy]
   track_request_performance_for :show, :update
 
@@ -37,7 +37,9 @@ class DatabasesController < ApplicationController
 
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @can_apply_tasks_template = tasks_template_convertible?(properties: @db_properties)
+    @can_apply_stats_template = stats_template_convertible?(properties: @db_properties)
     @tasks_template_ready = tasks_template_ready?(properties: @db_properties)
+    @stats_template_active = Databases::StatsTemplateService.stats_database?(@database)
     @database_templates = policy_scope(DatabaseTemplate).for_workspace(@workspace).recent_first.limit(20).to_a
     @current_database_template_label = current_database_template_label
     @database_views = policy_scope(DatabaseView).for_database(@database).ordered.to_a
@@ -46,6 +48,7 @@ class DatabasesController < ApplicationController
     @view_type = @current_view&.view_type || "table"
     @view_config = @current_view&.config_json.to_h || {}
     resolve_filter_and_sort_settings!
+    prepare_stats_template_data! if @stats_template_active
     row_query = resolve_row_query
     @rows = row_query.rows
     @row_count = row_query.total_count
@@ -280,6 +283,79 @@ class DatabasesController < ApplicationController
                 notice: "Switched to Tasks view."
   rescue ActiveRecord::RecordInvalid => error
     redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
+                alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def statsify
+    authorize @database, :update?
+
+    if @database.locked?
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: "Grid is locked. Unlock to make changes."
+      return
+    end
+
+    unless stats_template_convertible?
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
+                  alert: "This grid already has custom fields. Open a blank grid or new tab before using the Stats template."
+      return
+    end
+
+    table_view = nil
+
+    ActiveRecord::Base.transaction do
+      table_view = resolve_or_create_table_view!
+      Databases::StatsTemplateService.apply!(database: @database, table_view:)
+      log_database_audit_event!(action: "update", kind: "database_stats_template_applied")
+    end
+
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: table_view.id, stats_mode: "setup"),
+                notice: "Switched to Stats view."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
+                alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def stats_setup
+    authorize @database, :update?
+
+    if @database.locked?
+      redirect_to database_redirect_path, alert: "Grid is locked. Unlock to make changes."
+      return
+    end
+
+    Databases::StatsTemplateService.save_setup!(
+      database: @database,
+      definition_params: stats_setup_params.fetch("definitions", {}),
+      new_definition_params: stats_setup_params.fetch("new_definition", {}),
+      archive_definition_id: params[:archive_stat_id]
+    )
+
+    redirect_to database_path(database_panel_view_params.merge(stats_mode: "setup", stats_date: params[:stats_date].presence)),
+                notice: "Stats setup saved."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_path(database_panel_view_params.merge(stats_mode: "setup", stats_date: params[:stats_date].presence)),
+                alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def stats_entries
+    authorize @database, :update?
+
+    if @database.locked?
+      redirect_to database_redirect_path, alert: "Grid is locked. Unlock to make changes."
+      return
+    end
+
+    selected_date = Databases::StatsTemplateService.selected_date(params[:stats_date], today: Time.zone.today)
+    Databases::StatsTemplateService.save_entries!(
+      database: @database,
+      date: selected_date,
+      entry_params: stats_entries_params.fetch("entries", {})
+    )
+
+    redirect_to database_path(database_panel_view_params.merge(stats_date: selected_date.iso8601, stats_mode: "report")),
+                notice: "Stats saved."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_path(database_panel_view_params.merge(stats_date: params[:stats_date].presence, stats_mode: "report")),
                 alert: error.record.errors.full_messages.to_sentence
   end
 
@@ -1409,9 +1485,37 @@ class DatabasesController < ApplicationController
     resolve_filter_and_sort_settings!
   end
 
+  def prepare_stats_template_data!
+    @stats_date = Databases::StatsTemplateService.selected_date(params[:stats_date], today: Time.zone.today)
+    @stats_mode = params[:stats_mode].to_s == "setup" ? "setup" : "report"
+    @stats_frequency_options = Databases::StatsTemplateService::FREQUENCIES.map { |value, label| [ label, value ] }
+
+    if @stats_mode == "setup"
+      @stats_definitions = Databases::StatsTemplateService.setup_definitions(@database)
+    else
+      @stats_report_rows = Databases::StatsTemplateService.report_rows(database: @database, date: @stats_date)
+    end
+  end
+
+  def stats_setup_params
+    raw = params[:stats].respond_to?(:to_unsafe_h) ? params[:stats].to_unsafe_h : {}
+    {
+      "definitions" => raw.fetch("definitions", {}),
+      "new_definition" => raw.fetch("new_definition", {})
+    }
+  end
+
+  def stats_entries_params
+    raw = params[:stats].respond_to?(:to_unsafe_h) ? params[:stats].to_unsafe_h : {}
+    {
+      "entries" => raw.fetch("entries", {})
+    }
+  end
+
   def normalize_template(raw_template)
     template = raw_template.to_s
     return "tasks" if template == "tasks"
+    return "stats" if template == "stats"
 
     "blank"
   end
@@ -1419,14 +1523,22 @@ class DatabasesController < ApplicationController
   def apply_template_default_name!(template)
     return unless @database.name.to_s.strip.blank?
 
-    @database.name = template == "tasks" ? "Tasks grid" : "Untitled grid"
+    @database.name =
+      case template
+      when "tasks" then "Tasks grid"
+      when "stats" then "Stats grid"
+      else "Untitled grid"
+      end
   end
 
   def apply_template!(template, table_view:)
-    return unless template == "tasks"
-
-    build_tasks_template!(table_view:)
-    @database.update!(database_template: nil, applied_template_name: "Tasks")
+    case template
+    when "tasks"
+      build_tasks_template!(table_view:)
+      @database.update!(database_template: nil, applied_template_name: "Tasks")
+    when "stats"
+      Databases::StatsTemplateService.apply!(database: @database, table_view:)
+    end
   end
 
   def build_tasks_template!(table_view:)
@@ -1559,6 +1671,12 @@ class DatabasesController < ApplicationController
         matching_properties.one? &&
         matching_properties.first.property_type == expected_type
     end
+  end
+
+  def stats_template_convertible?(properties: nil)
+    return true if Databases::StatsTemplateService.stats_database?(@database)
+
+    Array(properties || @database.db_properties.ordered.to_a).empty?
   end
 
   def tasks_template_ready?(properties: nil)
