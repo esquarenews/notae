@@ -1,6 +1,19 @@
 <% stats_date = @stats_date || Time.zone.today %>
 <% stats_mode = @stats_mode || "report" %>
 <% stats_view_params = view_params.except(:workspace_slug, :id, :stats_date, :stats_mode).compact %>
+<% stats_setup_form_id = "stats_setup_form_#{@database.id}" %>
+<% row_color_options = [
+  ["Default", "default"],
+  ["Gray", "gray"],
+  ["Brown", "brown"],
+  ["Orange", "orange"],
+  ["Yellow", "yellow"],
+  ["Green", "green"],
+  ["Blue", "blue"],
+  ["Purple", "purple"],
+  ["Pink", "pink"],
+  ["Red", "red"]
+] %>
 
 <div class="notae-db-stats-view">
   <%= form_with url: database_path(workspace_slug: @workspace.slug, id: @database.id),
@@ -23,13 +36,16 @@
   <% end %>
 
   <% if stats_mode == "setup" %>
-    <%= form_with url: stats_setup_database_path(workspace_slug: @workspace.slug, id: @database.id),
-                  method: :patch,
-                  class: "notae-db-stats-form" do %>
+    <div class="notae-db-stats-form" data-controller="stats-setup">
+      <%= form_with url: stats_setup_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                    method: :patch,
+                    id: stats_setup_form_id,
+                    data: { stats_setup_target: "form" } do %>
       <% stats_view_params.each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
       <%= hidden_field_tag :stats_date, stats_date.iso8601 %>
+      <% end %>
       <div class="notae-db-grid-wrap">
         <table class="notae-db-grid">
           <thead>
@@ -38,34 +54,111 @@
               <th>Frequency</th>
               <th>Assigned person</th>
               <th>Post</th>
+              <th>Division</th>
+              <th>Description</th>
               <th>Archive</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="stats_setup_rows"
+                 data-controller="db-table-reorder"
+                 data-db-table-reorder-workspace-slug-value="<%= @workspace.slug %>"
+                 data-db-table-reorder-database-id-value="<%= @database.id %>"
+                 data-db-table-reorder-view-id-value="<%= @current_view&.id %>"
+                 data-db-table-reorder-stats-date-value="<%= stats_date.iso8601 %>"
+                 data-db-table-reorder-stats-mode-value="setup">
             <% @stats_definitions.each do |definition| %>
-              <tr id="stats_definition_<%= definition.id %>">
+              <% row_is_bold = definition.row_bold? %>
+              <% row_is_italic = definition.row_italic? %>
+              <% row_text_color = definition.row_text_color %>
+              <% row_background_color = definition.row_background_color %>
+              <% row_style_classes = [] %>
+              <% row_style_classes << "is-row-bold" if row_is_bold %>
+              <% row_style_classes << "is-row-italic" if row_is_italic %>
+              <% row_style_classes << "is-row-color-#{row_text_color}" unless row_text_color == "default" %>
+              <% row_style_classes << "is-row-bg-#{row_background_color}" unless row_background_color == "default" %>
+              <% row_update_path = database_db_row_path(
+                {
+                  workspace_slug: @workspace.slug,
+                  database_id: @database.id,
+                  id: definition.id,
+                  stats_date: stats_date.iso8601,
+                  stats_mode: "setup",
+                  view_id: @current_view&.id
+                }.merge(stats_view_params)
+              ) %>
+              <tr id="stats_definition_<%= definition.id %>"
+                  class="notae-db-grid-data-row <%= row_style_classes.join(" ") %>"
+                  data-db-table-reorder-target="row"
+                  data-db-table-reorder-row-id="<%= definition.id %>"
+                  data-stats-setup-row-id="<%= definition.id %>"
+                  data-action="dragover->db-table-reorder#dragover drop->db-table-reorder#drop dragleave->db-table-reorder#dragleave">
                 <td class="notae-db-grid-name-col">
+                  <div class="notae-db-row-shell">
+                    <% if can_edit_database %>
+                      <div class="notae-db-row-hover-controls">
+                        <button type="button"
+                                class="notae-db-row-hover-control is-drag-handle"
+                                title="Drag to reorder"
+                                aria-label="Drag to reorder"
+                                draggable="true"
+                                data-db-table-reorder-row-id="<%= definition.id %>"
+                                data-action="dragstart->db-table-reorder#dragstart dragend->db-table-reorder#dragend">⠿</button>
+                        <%= render "databases/row_context_menu",
+                                   row: definition,
+                                   workspace: @workspace,
+                                   database: @database,
+                                   row_update_path: row_update_path,
+                                   row_params: stats_view_params.merge(view_id: @current_view&.id, stats_date: stats_date.iso8601, stats_mode: "setup"),
+                                   row_color_options: row_color_options,
+                                   row_can_destroy: false,
+                                   linked_page: nil,
+                                   row_is_bold: row_is_bold,
+                                   row_is_italic: row_is_italic,
+                                   row_text_color: row_text_color,
+                                   row_background_color: row_background_color %>
+                      </div>
+                    <% end %>
                   <%= text_field_tag "stats[definitions][#{definition.id}][title]",
                                      definition.title,
                                      class: "notae-db-cell-input",
+                                     form: stats_setup_form_id,
+                                     data: { action: "keydown.enter->stats-setup#insertAfter" },
                                      disabled: !can_edit_database %>
+                  </div>
                 </td>
                 <td>
                   <%= select_tag "stats[definitions][#{definition.id}][frequency]",
                                  options_for_select(@stats_frequency_options, Databases::StatsTemplateService.frequency_for(definition)),
                                  class: "notae-db-cell-select",
+                                 form: stats_setup_form_id,
                                  disabled: !can_edit_database %>
                 </td>
                 <td>
                   <%= text_field_tag "stats[definitions][#{definition.id}][assigned_person]",
                                      Databases::StatsTemplateService.cell_value(definition, "Assigned person"),
                                      class: "notae-db-cell-input",
+                                     form: stats_setup_form_id,
                                      disabled: !can_edit_database %>
                 </td>
                 <td>
                   <%= text_field_tag "stats[definitions][#{definition.id}][post]",
                                      Databases::StatsTemplateService.cell_value(definition, "Post"),
                                      class: "notae-db-cell-input",
+                                     form: stats_setup_form_id,
+                                     disabled: !can_edit_database %>
+                </td>
+                <td>
+                  <%= text_field_tag "stats[definitions][#{definition.id}][division]",
+                                     Databases::StatsTemplateService.cell_value(definition, "Division"),
+                                     class: "notae-db-cell-input",
+                                     form: stats_setup_form_id,
+                                     disabled: !can_edit_database %>
+                </td>
+                <td>
+                  <%= text_field_tag "stats[definitions][#{definition.id}][description]",
+                                     Databases::StatsTemplateService.cell_value(definition, "Description"),
+                                     class: "notae-db-cell-input",
+                                     form: stats_setup_form_id,
                                      disabled: !can_edit_database %>
                 </td>
                 <td>
@@ -74,44 +167,32 @@
                                  name: "archive_stat_id",
                                  value: definition.id,
                                  class: "notae-db-grid-add-link",
+                                 form: stats_setup_form_id,
                                  disabled: !can_edit_database %>
                 </td>
               </tr>
             <% end %>
-            <tr>
-              <td class="notae-db-grid-name-col">
-                <%= text_field_tag "stats[new_definition][title]",
-                                   "",
-                                   placeholder: "New stat",
-                                   class: "notae-db-cell-input",
-                                   disabled: !can_edit_database %>
-              </td>
+          </tbody>
+          <tbody>
+            <tr class="notae-db-grid-add-row-control">
               <td>
-                <%= select_tag "stats[new_definition][frequency]",
-                               options_for_select(@stats_frequency_options, "weekly_mon_sun"),
-                               class: "notae-db-cell-select",
+                <%= button_tag "+ New row",
+                               type: "submit",
+                               name: "add_definition",
+                               value: "1",
+                               class: "notae-db-new-row-trigger",
+                               form: stats_setup_form_id,
                                disabled: !can_edit_database %>
               </td>
-              <td>
-                <%= text_field_tag "stats[new_definition][assigned_person]",
-                                   "",
-                                   class: "notae-db-cell-input",
-                                   disabled: !can_edit_database %>
-              </td>
-              <td>
-                <%= text_field_tag "stats[new_definition][post]",
-                                   "",
-                                   class: "notae-db-cell-input",
-                                   disabled: !can_edit_database %>
-              </td>
-              <td>
-                <%= button_tag "Save setup", type: "submit", class: "notae-chip-button", disabled: !can_edit_database %>
-              </td>
+              <td colspan="6"></td>
             </tr>
           </tbody>
         </table>
       </div>
-    <% end %>
+      <div class="notae-db-toolbar">
+        <%= button_tag "Save setup", type: "submit", class: "notae-db-toolbar-new", form: stats_setup_form_id, disabled: !can_edit_database %>
+      </div>
+    </div>
   <% else %>
     <%= form_with url: stats_entries_database_path(workspace_slug: @workspace.slug, id: @database.id),
                   method: :patch,

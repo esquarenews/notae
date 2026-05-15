@@ -13,6 +13,8 @@ module Databases
       [ "Frequency", "select" ],
       [ "Assigned person", "text" ],
       [ "Post", "text" ],
+      [ "Division", "text" ],
+      [ "Description", "text" ],
       [ "Period start", "date" ],
       [ "Period label", "text" ],
       [ "Value", "number" ]
@@ -72,7 +74,7 @@ module Databases
         end
       end
 
-      def save_setup!(database:, definition_params:, new_definition_params: {}, archive_definition_id: nil)
+      def save_setup!(database:, definition_params:, new_definition_params: {}, archive_definition_id: nil, add_definition: false, add_definition_after_id: nil)
         properties = property_index(database)
 
         Array(definition_params).each do |id, attributes|
@@ -85,6 +87,7 @@ module Databases
         create_definition!(database:, properties:, attributes: new_definition_params)
 
         archive_definition!(database:, id: archive_definition_id)
+        create_blank_definition!(database:, properties:, after_id: add_definition_after_id) if add_definition || add_definition_after_id.present?
       end
 
       def save_entries!(database:, date:, entry_params:)
@@ -205,12 +208,16 @@ module Databases
             ROW_TYPE_KEY => ROW_TYPE_DEFINITION,
             FREQUENCY_KEY => attrs[:frequency],
             "Assigned person" => attrs[:assigned_person],
-            "Post" => attrs[:post]
+            "Post" => attrs[:post],
+            "Division" => attrs[:division],
+            "Description" => attrs[:description]
           )
         )
         set_cell!(row:, property: properties.fetch("Frequency"), value: FREQUENCIES.fetch(attrs[:frequency]))
         set_cell!(row:, property: properties.fetch("Assigned person"), value: attrs[:assigned_person])
         set_cell!(row:, property: properties.fetch("Post"), value: attrs[:post])
+        set_cell!(row:, property: properties.fetch("Division"), value: attrs[:division])
+        set_cell!(row:, property: properties.fetch("Description"), value: attrs[:description])
       end
 
       def create_definition!(database:, properties:, attributes:)
@@ -225,12 +232,39 @@ module Databases
             ROW_TYPE_KEY => ROW_TYPE_DEFINITION,
             FREQUENCY_KEY => attrs[:frequency],
             "Assigned person" => attrs[:assigned_person],
-            "Post" => attrs[:post]
+            "Post" => attrs[:post],
+            "Division" => attrs[:division],
+            "Description" => attrs[:description]
           }
         )
         set_cell!(row:, property: properties.fetch("Frequency"), value: FREQUENCIES.fetch(attrs[:frequency]))
         set_cell!(row:, property: properties.fetch("Assigned person"), value: attrs[:assigned_person])
         set_cell!(row:, property: properties.fetch("Post"), value: attrs[:post])
+        set_cell!(row:, property: properties.fetch("Division"), value: attrs[:division])
+        set_cell!(row:, property: properties.fetch("Description"), value: attrs[:description])
+      end
+
+      def create_blank_definition!(database:, properties:, after_id: nil)
+        row = database.db_rows.create!(
+          database:,
+          workspace: database.workspace,
+          title: "Untitled stat",
+          data_json: {
+            ROW_TYPE_KEY => ROW_TYPE_DEFINITION,
+            FREQUENCY_KEY => "weekly_mon_sun",
+            "Assigned person" => "",
+            "Post" => "",
+            "Division" => "",
+            "Description" => ""
+          }
+        )
+        set_cell!(row:, property: properties.fetch("Frequency"), value: FREQUENCIES.fetch("weekly_mon_sun"))
+        set_cell!(row:, property: properties.fetch("Assigned person"), value: "")
+        set_cell!(row:, property: properties.fetch("Post"), value: "")
+        set_cell!(row:, property: properties.fetch("Division"), value: "")
+        set_cell!(row:, property: properties.fetch("Description"), value: "")
+        insert_definition_after!(row:, database:, after_id:) if after_id.present?
+        row
       end
 
       def normalize_definition_attributes(attributes)
@@ -240,8 +274,25 @@ module Databases
           title: raw["title"].to_s.strip,
           frequency: FREQUENCIES.key?(frequency) ? frequency : "weekly_mon_sun",
           assigned_person: raw["assigned_person"].to_s.strip,
-          post: raw["post"].to_s.strip
+          post: raw["post"].to_s.strip,
+          division: raw["division"].to_s.strip,
+          description: raw["description"].to_s.strip
         }
+      end
+
+      def insert_definition_after!(row:, database:, after_id:)
+        ordered_rows = database.db_rows.active.ordered.to_a
+        reference_index = ordered_rows.index { |candidate| candidate.id == after_id }
+        return if reference_index.nil?
+
+        DbRows::MoveService.call(
+          row:,
+          database:,
+          workspace: database.workspace,
+          property: nil,
+          target_value: nil,
+          target_index: reference_index + 1
+        )
       end
 
       def archive_definition!(database:, id:)

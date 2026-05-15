@@ -6,7 +6,9 @@ export default class extends Controller {
     workspaceSlug: String,
     databaseId: String,
     viewId: String,
-    month: String
+    month: String,
+    statsDate: String,
+    statsMode: String
   }
 
   connect() {
@@ -99,6 +101,8 @@ export default class extends Controller {
       target_index: targetIndex,
       view_id: this.viewIdValue || null,
       month: this.monthValue || null,
+      stats_date: this.statsDateValue || null,
+      stats_mode: this.statsModeValue || null,
       clear_sort: true
     }
 

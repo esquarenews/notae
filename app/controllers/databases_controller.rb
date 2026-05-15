@@ -323,14 +323,18 @@ class DatabasesController < ApplicationController
       return
     end
 
-    Databases::StatsTemplateService.save_setup!(
+    added_definition = Databases::StatsTemplateService.save_setup!(
       database: @database,
       definition_params: stats_setup_params.fetch("definitions", {}),
       new_definition_params: stats_setup_params.fetch("new_definition", {}),
-      archive_definition_id: params[:archive_stat_id]
+      archive_definition_id: params[:archive_stat_id],
+      add_definition: ActiveModel::Type::Boolean.new.cast(params[:add_definition]),
+      add_definition_after_id: params[:add_definition_after_id].presence
     )
 
-    redirect_to database_path(database_panel_view_params.merge(stats_mode: "setup", stats_date: params[:stats_date].presence)),
+    redirect_params = database_panel_view_params.merge(stats_mode: "setup", stats_date: params[:stats_date].presence)
+    redirect_params[:anchor] = "stats_definition_#{added_definition.id}" if added_definition.present?
+    redirect_to database_path(redirect_params),
                 notice: "Stats setup saved."
   rescue ActiveRecord::RecordInvalid => error
     redirect_to database_path(database_panel_view_params.merge(stats_mode: "setup", stats_date: params[:stats_date].presence)),
@@ -1086,6 +1090,8 @@ class DatabasesController < ApplicationController
       view_settings_section: params[:view_settings_section].presence,
       actions_menu: params[:actions_menu].presence,
       options_menu: params[:options_menu].presence,
+      stats_date: params[:stats_date].presence,
+      stats_mode: params[:stats_mode].presence,
       split_panel: split_panel,
       split_page_id: split_page_id,
       split_source: split_source,
@@ -1273,6 +1279,8 @@ class DatabasesController < ApplicationController
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence,
       task_row_id: params[:task_row_id].presence,
+      stats_date: params[:stats_date].presence,
+      stats_mode: params[:stats_mode].presence,
       kalendarium_window_start: params[:kalendarium_window_start].presence
     }.compact
   end

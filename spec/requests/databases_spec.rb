@@ -298,6 +298,8 @@ RSpec.describe "Databases", type: :request do
         [ "Frequency", "select" ],
         [ "Assigned person", "text" ],
         [ "Post", "text" ],
+        [ "Division", "text" ],
+        [ "Description", "text" ],
         [ "Period start", "date" ],
         [ "Period label", "text" ],
         [ "Value", "number" ]
@@ -312,7 +314,9 @@ RSpec.describe "Databases", type: :request do
                 title: "Subscriber count",
                 frequency: "weekly_thu_2pm",
                 assigned_person: "Errol",
-                post: "Publisher"
+                post: "Publisher",
+                division: "Marketing",
+                description: "Total active subscribers"
               }
             }
           }
@@ -321,6 +325,51 @@ RSpec.describe "Databases", type: :request do
     expect(definition.data_json[Databases::StatsTemplateService::ROW_TYPE_KEY]).to eq(Databases::StatsTemplateService::ROW_TYPE_DEFINITION)
     expect(definition.data_json[Databases::StatsTemplateService::FREQUENCY_KEY]).to eq("weekly_thu_2pm")
     expect(definition.db_cells.joins(:db_property).find_by!(db_properties: { name: "Assigned person" }).value_text).to eq("Errol")
+    expect(definition.db_cells.joins(:db_property).find_by!(db_properties: { name: "Division" }).value_text).to eq("Marketing")
+    expect(definition.db_cells.joins(:db_property).find_by!(db_properties: { name: "Description" }).value_text).to eq("Total active subscribers")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id, stats_mode: "setup", stats_date: "2026-05-15")
+
+    expect(response).to have_http_status(:ok)
+    setup_html = Nokogiri::HTML(response.body)
+    setup_row = setup_html.at_css("#stats_definition_#{definition.id}")
+    expect(setup_html.text).to include("Division", "Description")
+    expect(setup_html.at_css("button[name='add_definition'][value='1']").text.squish).to eq("+ New row")
+    expect(setup_html.at_css("#stats_setup_rows")["data-controller"]).to include("db-table-reorder")
+    expect(setup_row.at_css(".notae-db-row-more-menu")).to be_present
+    expect(setup_row.at_css(".is-drag-handle")).to be_present
+    expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][title]']")["data-action"]).to include("keydown.enter->stats-setup#insertAfter")
+
+    patch stats_setup_database_path(workspace_slug: workspace.slug, id: database.id),
+          params: {
+            stats_date: "2026-05-15",
+            add_definition_after_id: definition.id,
+            stats: {
+              definitions: {
+                definition.id => {
+                  title: "Subscriber count",
+                  frequency: "weekly_thu_2pm",
+                  assigned_person: "Errol",
+                  post: "Publisher",
+                  division: "Marketing",
+                  description: "Total active subscribers"
+                }
+              }
+            }
+          }
+
+    added_definition = database.db_rows.where(title: "Untitled stat").order(:created_at).last
+    expect(added_definition).to be_present
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        stats_mode: "setup",
+        stats_date: "2026-05-15",
+        anchor: "stats_definition_#{added_definition.id}"
+      )
+    )
+    expect(database.db_rows.active.ordered.pluck(:id)).to eq([ definition.id, added_definition.id ])
 
     patch stats_entries_database_path(workspace_slug: workspace.slug, id: database.id),
           params: {
@@ -385,7 +434,9 @@ RSpec.describe "Databases", type: :request do
                     title: "Revenue",
                     frequency: "weekly_mon_sun",
                     assigned_person: "Ari",
-                    post: "Ops"
+                    post: "Ops",
+                    division: "Finance",
+                    description: "Weekly booked revenue"
                   }
                 }
               }

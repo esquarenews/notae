@@ -4427,6 +4427,10 @@ turbo-frame#notae_sidebar_sections {
   width: 170px;
 }
 
+.notae-db-stats-toolbar {
+  margin-bottom: 0.75rem;
+}
+
 .notae-db-inline-details {
   position: relative;
 }
