@@ -73,4 +73,33 @@ RSpec.describe Databases::StatsGraphDataBuilder do
     expect(result.range_start_date).to eq(Date.new(2026, 5, 4))
     expect(result.range_end_date).to eq(Date.new(2026, 5, 24))
   end
+
+  it "uses the stat reporting frequency for weekly graph period ends" do
+    owner = User.create!(email: "stats-graph-thursday@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Stats graph Thursday", slug: "stats-graph-thursday")
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Metrics")
+    Databases::StatsTemplateService.apply!(database:)
+    Databases::StatsTemplateService.save_setup!(
+      database: database,
+      definition_params: {},
+      new_definition_params: { "title" => "Leads", "frequency" => "weekly_thu_2pm" }
+    )
+    definition = database.db_rows.find_by!(title: "Leads")
+    Databases::StatsTemplateService.save_entries!(
+      database: database,
+      date: Date.new(2026, 5, 15),
+      entry_params: { definition.id => { "value" => "12" } }
+    )
+
+    result = described_class.new(
+      database: database,
+      definition: definition,
+      date: Date.new(2026, 5, 15),
+      aggregation_period: "weekly",
+      period_count: 4
+    ).call
+
+    expect(result.graph.categories.last.label).to eq("21 May 2026")
+    expect(result.graph.series.first.points.last.value).to eq(12.0)
+  end
 end

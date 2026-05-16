@@ -439,7 +439,8 @@ RSpec.describe "Databases", type: :request do
     expect(graph_html.at_css("input[name='stats_graph_start_date'][type='date']")).to be_present
     expect(graph_html.at_css("input[name='stats_graph_end_date'][type='date']")).to be_present
     expect(graph_html.css(".notae-db-graph-axis-label").map { |label| label.text.squish }).to include("0")
-    expect(graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }.join(" ")).to include("17 May")
+    graph_labels = graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }
+    expect(graph_labels.last).to include("21 May")
     expect(graph_html.css(".notae-db-graph-detail").map { |detail| detail.text.squish }).to include("Assigned to Errol", "Division Marketing", "Description Total active subscribers")
     expect(graph_html.to_html).to include("data-notae-graph-embed-query")
 

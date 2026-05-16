@@ -135,8 +135,9 @@ module Databases
         end_date = period_date.end_of_year
         { start_date: start_date, end_date: end_date, label: end_date.strftime("%d %b %Y"), short_label: end_date.strftime("%d %b") }
       else
-        start_date = period_date.beginning_of_week(:monday)
-        end_date = period_date.end_of_week(:monday)
+        period = StatsTemplateService.period_for(date: period_date, frequency: StatsTemplateService.frequency_for(definition))
+        start_date = period.start_date
+        end_date = period.end_date
         { start_date: start_date, end_date: end_date, label: end_date.strftime("%d %b %Y"), short_label: end_date.strftime("%d %b") }
       end
     end
