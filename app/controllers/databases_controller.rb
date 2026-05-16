@@ -634,7 +634,10 @@ class DatabasesController < ApplicationController
 
     parent_page = policy_scope(Page).for_workspace(@workspace).active.find_by(id: parent_page_id)
     if parent_page.present?
-      Databases::EnsureLinkedPageService.call(database: parent_page.linked_database, actor: current_user) if parent_page.linked_database.present?
+      linked_database = parent_page.linked_database
+      if linked_database.present? && policy_scope(Database).for_workspace(@workspace).active.where(id: linked_database.id).exists?
+        Databases::EnsureLinkedPageService.call(database: linked_database, actor: current_user)
+      end
       return parent_page.reload
     end
 

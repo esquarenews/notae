@@ -982,6 +982,46 @@ RSpec.describe "Databases", type: :request do
     expect(html.css(".notae-page-tab-label").map(&:text).map(&:strip)).to include("Tasks")
   end
 
+  it "does not sync linked database visuals for inaccessible parent linked databases" do
+    owner = User.create!(email: "database-tab-security-owner@example.com", password: "password123")
+    member = User.create!(email: "database-tab-security-member@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Database tab security", slug: "database-tab-security")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+
+    private_database = Database.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Private grid",
+      permission_mode: :private_database,
+      cover_preset_key: Database::COVER_PRESET_KEYS.first,
+      cover_focal_y: 40
+    )
+    shared_shell = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Shared shell",
+      permission_mode: :shared_to_workspace,
+      cover_preset_key: nil,
+      cover_focal_y: 50
+    )
+    private_database.update!(linked_page: shared_shell)
+
+    sign_in member
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: {
+           database: {
+             name: "Member tab",
+             parent_page_id: shared_shell.id,
+             tab_title: "Member tab"
+           }
+         }
+
+    expect(response).to have_http_status(:redirect)
+    expect(shared_shell.reload.cover_preset_key).to be_nil
+  end
+
   it "creates a new top-level grid tab without falling back home when the default name already exists" do
     owner = User.create!(email: "database-top-level-tab-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Database top level tabs", slug: "database-top-level-tabs")
