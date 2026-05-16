@@ -122,7 +122,7 @@ module Databases
       end_boundary = [ range_start_date, range_end_date ].max
       periods = [ period_for(start_boundary) ]
 
-      while periods.last.fetch(:end_date) < end_boundary
+      while periods.last.fetch(:end_date) < end_boundary && periods.length < MAX_PERIOD_COUNT
         periods << next_period(periods.last.fetch(:start_date))
       end
 
