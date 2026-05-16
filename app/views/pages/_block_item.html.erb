@@ -64,7 +64,7 @@
         <%= form.submit "Save", class: "notae-chip-button" %>
       <% end %>
       <% if block.embed_url.present? %>
-        <iframe src="<%= block.embed_url %>" class="notae-doc-embed-frame" loading="lazy" allowfullscreen></iframe>
+        <iframe src="<%= block.embed_url %>" class="notae-doc-embed-frame" loading="lazy" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" referrerpolicy="no-referrer" allowfullscreen></iframe>
       <% else %>
         <p class="notae-doc-muted">Allowed embed domains: youtube, vimeo, figma, loom.</p>
       <% end %>

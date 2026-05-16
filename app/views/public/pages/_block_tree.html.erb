@@ -9,7 +9,7 @@
             <iframe src="<%= block.embed_url %>"
                     loading="lazy"
                     class="h-72 w-full rounded border border-stone-200"
-                    allowfullscreen></iframe>
+                    sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" referrerpolicy="no-referrer" allowfullscreen></iframe>
           </div>
         <% elsif %w[image video file].include?(block.block_type) && block.asset.attached? %>
           <div class="space-y-2">
