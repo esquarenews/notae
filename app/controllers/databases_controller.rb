@@ -941,7 +941,9 @@ class DatabasesController < ApplicationController
       definition: @stats_graph_definition,
       date: @stats_date || Databases::StatsTemplateService.selected_date(params[:stats_date], today: Time.zone.today),
       aggregation_period: params[:stats_graph_period],
-      period_count: params[:stats_graph_periods]
+      period_count: params[:stats_graph_periods],
+      range_start_date: params[:stats_graph_start_date],
+      range_end_date: params[:stats_graph_end_date]
     ).call
   end
 
@@ -1207,7 +1209,9 @@ class DatabasesController < ApplicationController
           definition: stats_definition,
           date: @stats_date,
           aggregation_period: params[:stats_graph_period],
-          period_count: params[:stats_graph_periods]
+          period_count: params[:stats_graph_periods],
+          range_start_date: params[:stats_graph_start_date],
+          range_end_date: params[:stats_graph_end_date]
         ).call
         @graph_split = @stats_graph_data.graph
         return
@@ -1314,6 +1318,8 @@ class DatabasesController < ApplicationController
       stats_graph_definition_id: params[:stats_graph_definition_id].presence,
       stats_graph_period: params[:stats_graph_period].presence,
       stats_graph_periods: params[:stats_graph_periods].presence,
+      stats_graph_start_date: params[:stats_graph_start_date].presence,
+      stats_graph_end_date: params[:stats_graph_end_date].presence,
       stats_date: params[:stats_date].presence,
       stats_mode: params[:stats_mode].presence,
       kalendarium_window_start: params[:kalendarium_window_start].presence

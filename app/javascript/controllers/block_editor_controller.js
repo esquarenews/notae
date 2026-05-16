@@ -971,6 +971,8 @@ export default class extends Controller {
       "stats_graph_definition_id",
       "stats_graph_period",
       "stats_graph_periods",
+      "stats_graph_start_date",
+      "stats_graph_end_date",
       "stats_date"
     ]
     const params = new URLSearchParams()

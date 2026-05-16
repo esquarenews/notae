@@ -4435,6 +4435,31 @@ turbo-frame#notae_sidebar_sections {
   margin-top: 0.85rem;
 }
 
+.notae-db-stats-report-table {
+  width: auto;
+  min-width: 0;
+}
+
+.notae-db-stats-report-table .notae-db-grid-name-col {
+  width: 360px;
+  min-width: 280px;
+}
+
+.notae-db-stats-report-period-col {
+  width: 240px;
+  min-width: 240px;
+  white-space: nowrap;
+}
+
+.notae-db-stats-report-value-col {
+  width: 130px;
+  min-width: 130px;
+}
+
+.notae-db-stats-report-value-col .notae-db-cell-input {
+  width: 100px;
+}
+
 .notae-db-stats-report-name {
   display: flex;
   align-items: center;

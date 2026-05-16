@@ -6,13 +6,15 @@
     split_panel: "stats_graph",
     stats_graph_definition_id: stats_graph.definition.id,
     stats_graph_period: stats_graph.aggregation_period,
-    stats_graph_periods: stats_graph.period_count
+    stats_graph_periods: stats_graph.period_count,
+    stats_graph_start_date: stats_graph.range_start_date&.iso8601,
+    stats_graph_end_date: stats_graph.range_end_date&.iso8601
   ) %>
   <div class="notae-db-stats-graph-controls">
     <%= form_with url: database_path(workspace_slug: @workspace.slug, id: @database.id),
                   method: :get,
                   class: "notae-db-stats-graph-control-form" do %>
-      <% toolbar_params.except(:workspace_slug, :id, :stats_graph_period, :stats_graph_periods).each do |key, value| %>
+      <% toolbar_params.except(:workspace_slug, :id, :stats_graph_period, :stats_graph_periods, :stats_graph_start_date, :stats_graph_end_date).each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
       <label class="notae-db-stats-graph-control">
@@ -30,6 +32,20 @@
                             max: Databases::StatsGraphDataBuilder::MAX_PERIOD_COUNT,
                             step: 1,
                             onchange: "this.form.requestSubmit()" %>
+      </label>
+      <label class="notae-db-stats-graph-control">
+        <span>Start</span>
+        <%= date_field_tag :stats_graph_start_date,
+                           stats_graph.range_start_date&.iso8601,
+                           class: "notae-options-input",
+                           onchange: "this.form.requestSubmit()" %>
+      </label>
+      <label class="notae-db-stats-graph-control">
+        <span>End</span>
+        <%= date_field_tag :stats_graph_end_date,
+                           stats_graph.range_end_date&.iso8601,
+                           class: "notae-options-input",
+                           onchange: "this.form.requestSubmit()" %>
       </label>
     <% end %>
   </div>

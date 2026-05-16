@@ -38,11 +38,39 @@ RSpec.describe Databases::StatsGraphDataBuilder do
       period_count: 4
     ).call
 
-    february_index = result.graph.categories.index { |category| category.label == "February 2026" }
+    february_index = result.graph.categories.index { |category| category.label == "28 Feb 2026" }
     expect(result.graph.series.first.points[february_index].value).to eq(80.0)
     expect(result.graph.axis_ticks.map(&:label)).to include("0")
     expect(result.assigned_person).to eq("Errol")
     expect(result.division).to eq("Marketing")
     expect(result.description).to eq("Active subscribers")
+  end
+
+  it "builds buckets from an explicit start and end date range" do
+    owner = User.create!(email: "stats-graph-range@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Stats graph range", slug: "stats-graph-range")
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Metrics")
+    Databases::StatsTemplateService.apply!(database:)
+    Databases::StatsTemplateService.save_setup!(
+      database: database,
+      definition_params: {},
+      new_definition_params: { "title" => "Revenue", "frequency" => "weekly_mon_sun" }
+    )
+    definition = database.db_rows.find_by!(title: "Revenue")
+
+    result = described_class.new(
+      database: database,
+      definition: definition,
+      date: Date.new(2026, 5, 16),
+      aggregation_period: "weekly",
+      period_count: 12,
+      range_start_date: "2026-05-04",
+      range_end_date: "2026-05-24"
+    ).call
+
+    expect(result.period_count).to eq(3)
+    expect(result.graph.categories.map(&:label)).to eq([ "10 May 2026", "17 May 2026", "24 May 2026" ])
+    expect(result.range_start_date).to eq(Date.new(2026, 5, 4))
+    expect(result.range_end_date).to eq(Date.new(2026, 5, 24))
   end
 end

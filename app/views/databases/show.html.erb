@@ -769,7 +769,7 @@
       </p>
       <div class="notae-db-split-pane-actions">
         <%= link_to "✕",
-                    database_path(view_params.except(:split_panel, :split_page_id, :split_source, :split_row_id, :task_row_id, :stats_graph_definition_id, :stats_graph_period, :stats_graph_periods)),
+                    database_path(view_params.except(:split_panel, :split_page_id, :split_source, :split_row_id, :task_row_id, :stats_graph_definition_id, :stats_graph_period, :stats_graph_periods, :stats_graph_start_date, :stats_graph_end_date)),
                     class: "notae-inline-icon-button",
                     aria: { label: "Close stats graph side peek" },
                     title: "Close stats graph side peek" %>

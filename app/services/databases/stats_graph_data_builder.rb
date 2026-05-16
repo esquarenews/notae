@@ -14,6 +14,8 @@ module Databases
       :definition,
       :aggregation_period,
       :period_count,
+      :range_start_date,
+      :range_end_date,
       :graph,
       :assigned_person,
       :division,
@@ -25,12 +27,14 @@ module Databases
       end
     end
 
-    def initialize(database:, definition:, date:, aggregation_period: nil, period_count: nil)
+    def initialize(database:, definition:, date:, aggregation_period: nil, period_count: nil, range_start_date: nil, range_end_date: nil)
       @database = database
       @definition = definition
       @date = date
       @aggregation_period = normalize_aggregation_period(aggregation_period)
       @period_count = normalize_period_count(period_count)
+      @range_start_date = parse_date(range_start_date)
+      @range_end_date = parse_date(range_end_date)
     end
 
     def call
@@ -61,7 +65,9 @@ module Databases
       Result.new(
         definition: definition,
         aggregation_period: aggregation_period,
-        period_count: period_count,
+        period_count: periods.length,
+        range_start_date: range_start_date,
+        range_end_date: range_end_date,
         graph: GraphChartDataBuilder::Result.new(
           eligible: true,
           message: nil,
@@ -87,9 +93,11 @@ module Databases
 
     private
 
-    attr_reader :database, :definition, :date, :aggregation_period, :period_count
+    attr_reader :database, :definition, :date, :aggregation_period, :period_count, :range_start_date, :range_end_date
 
     def graph_periods
+      return range_periods if explicit_range?
+
       periods = [ period_for(date) ]
 
       (period_count - 1).times do
@@ -99,26 +107,50 @@ module Databases
       periods.reverse
     end
 
+    def range_periods
+      start_boundary = [ range_start_date, range_end_date ].min
+      end_boundary = [ range_start_date, range_end_date ].max
+      periods = [ period_for(start_boundary) ]
+
+      while periods.last.fetch(:end_date) < end_boundary
+        periods << next_period(periods.last.fetch(:start_date))
+      end
+
+      periods
+    end
+
     def period_for(period_date)
       case aggregation_period
       when "monthly"
         start_date = period_date.beginning_of_month
         end_date = period_date.end_of_month
-        { start_date: start_date, end_date: end_date, label: period_date.strftime("%B %Y"), short_label: period_date.strftime("%b %Y") }
+        { start_date: start_date, end_date: end_date, label: end_date.strftime("%d %b %Y"), short_label: end_date.strftime("%d %b") }
       when "quarterly"
         quarter_month = (((period_date.month - 1) / 3) * 3) + 1
         start_date = Date.new(period_date.year, quarter_month, 1)
         end_date = (start_date + 3.months) - 1.day
-        quarter = ((period_date.month - 1) / 3) + 1
-        { start_date: start_date, end_date: end_date, label: "Q#{quarter} #{period_date.year}", short_label: "Q#{quarter} #{period_date.year}" }
+        { start_date: start_date, end_date: end_date, label: end_date.strftime("%d %b %Y"), short_label: end_date.strftime("%d %b") }
       when "annual"
         start_date = period_date.beginning_of_year
         end_date = period_date.end_of_year
-        { start_date: start_date, end_date: end_date, label: period_date.year.to_s, short_label: period_date.year.to_s }
+        { start_date: start_date, end_date: end_date, label: end_date.strftime("%d %b %Y"), short_label: end_date.strftime("%d %b") }
       else
         start_date = period_date.beginning_of_week(:monday)
         end_date = period_date.end_of_week(:monday)
-        { start_date: start_date, end_date: end_date, label: "#{start_date.strftime('%d %b')} - #{end_date.strftime('%d %b')}", short_label: start_date.strftime("%d %b") }
+        { start_date: start_date, end_date: end_date, label: end_date.strftime("%d %b %Y"), short_label: end_date.strftime("%d %b") }
+      end
+    end
+
+    def next_period(start_date)
+      case aggregation_period
+      when "monthly"
+        period_for(start_date + 1.month)
+      when "quarterly"
+        period_for(start_date + 3.months)
+      when "annual"
+        period_for(start_date + 1.year)
+      else
+        period_for(start_date + 1.week)
       end
     end
 
@@ -264,6 +296,16 @@ module Databases
       value.to_i.clamp(MIN_PERIOD_COUNT, MAX_PERIOD_COUNT)
     rescue NoMethodError
       DEFAULT_PERIOD_COUNT
+    end
+
+    def explicit_range?
+      range_start_date.present? && range_end_date.present?
+    end
+
+    def parse_date(value)
+      Date.iso8601(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
   end
 end

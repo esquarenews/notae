@@ -209,12 +209,12 @@
       <% end %>
       <%= hidden_field_tag :stats_date, stats_date.iso8601 %>
       <div class="notae-db-grid-wrap">
-        <table class="notae-db-grid">
+        <table class="notae-db-grid notae-db-stats-report-table">
           <thead>
             <tr>
               <th class="notae-db-grid-name-col">Stat</th>
-              <th>Report period dates</th>
-              <th>Value</th>
+              <th class="notae-db-stats-report-period-col">Report period dates</th>
+              <th class="notae-db-stats-report-value-col">Value</th>
             </tr>
           </thead>
           <tbody>
@@ -254,8 +254,8 @@
                                 data: { preserve_database_scroll: true } %>
                   </div>
                 </td>
-                <td><%= report_row.period.label %></td>
-                <td>
+                <td class="notae-db-stats-report-period-col"><%= report_row.period.label %></td>
+                <td class="notae-db-stats-report-value-col">
                   <%= number_field_tag "stats[entries][#{definition.id}][value]",
                                        Databases::StatsTemplateService.cell_value(report_row.entry, "Value"),
                                        step: "any",

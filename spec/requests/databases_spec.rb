@@ -436,10 +436,32 @@ RSpec.describe "Databases", type: :request do
     expect(graph_html.at_css(".notae-db-graph-title").text.squish).to eq("Subscriber count")
     expect(graph_html.at_css("select[name='stats_graph_period']")).to be_present
     expect(graph_html.at_css("input[name='stats_graph_periods'][type='range']")["value"]).to eq("12")
+    expect(graph_html.at_css("input[name='stats_graph_start_date'][type='date']")).to be_present
+    expect(graph_html.at_css("input[name='stats_graph_end_date'][type='date']")).to be_present
     expect(graph_html.css(".notae-db-graph-axis-label").map { |label| label.text.squish }).to include("0")
-    expect(graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }.join(" ")).to include("11 May")
+    expect(graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }.join(" ")).to include("17 May")
     expect(graph_html.css(".notae-db-graph-detail").map { |detail| detail.text.squish }).to include("Assigned to Errol", "Division Marketing", "Description Total active subscribers")
     expect(graph_html.to_html).to include("data-notae-graph-embed-query")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      stats_date: "2026-05-15",
+      split_panel: "stats_graph",
+      stats_graph_definition_id: definition.id,
+      stats_graph_period: "monthly",
+      stats_graph_periods: "4",
+      stats_graph_start_date: "2026-02-01",
+      stats_graph_end_date: "2026-05-31"
+    )
+
+    expect(response).to have_http_status(:ok)
+    graph_html = Nokogiri::HTML(response.body)
+    expect(graph_html.at_css("select[name='stats_graph_period'] option[selected]")["value"]).to eq("monthly")
+    expect(graph_html.at_css("input[name='stats_graph_periods'][type='range']")["value"]).to eq("4")
+    expect(graph_html.at_css("input[name='stats_graph_start_date'][type='date']")["value"]).to eq("2026-02-01")
+    expect(graph_html.at_css("input[name='stats_graph_end_date'][type='date']")["value"]).to eq("2026-05-31")
+    expect(graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }.join(" ")).to include("28 Feb", "31 May")
   end
 
   it "archives stats definitions without deleting historical stat reports" do
