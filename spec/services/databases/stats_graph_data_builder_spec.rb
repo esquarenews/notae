@@ -74,6 +74,32 @@ RSpec.describe Databases::StatsGraphDataBuilder do
     expect(result.range_end_date).to eq(Date.new(2026, 5, 24))
   end
 
+  it "caps explicit range buckets to the max period count" do
+    owner = User.create!(email: "stats-graph-range-cap@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Stats graph range cap", slug: "stats-graph-range-cap")
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Metrics")
+    Databases::StatsTemplateService.apply!(database:)
+    Databases::StatsTemplateService.save_setup!(
+      database: database,
+      definition_params: {},
+      new_definition_params: { "title" => "Revenue", "frequency" => "weekly_mon_sun" }
+    )
+    definition = database.db_rows.find_by!(title: "Revenue")
+
+    result = described_class.new(
+      database: database,
+      definition: definition,
+      date: Date.new(2026, 5, 16),
+      aggregation_period: "weekly",
+      period_count: 12,
+      range_start_date: "1900-01-01",
+      range_end_date: "2100-01-01"
+    ).call
+
+    expect(result.period_count).to eq(described_class::MAX_PERIOD_COUNT)
+    expect(result.graph.categories.length).to eq(described_class::MAX_PERIOD_COUNT)
+  end
+
   it "uses the stat reporting frequency for weekly graph period ends" do
     owner = User.create!(email: "stats-graph-thursday@example.com", password: "password123")
     workspace = Workspace.create!(name: "Stats graph Thursday", slug: "stats-graph-thursday")
