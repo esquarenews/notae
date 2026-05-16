@@ -228,11 +228,20 @@ class MeetingSessionsController < ApplicationController
       updated_by: current_user
     )
 
+    return unless writable_linked_page_for(@meeting_session)
+
     Meetings::NotaMaterializerService.new(session: @meeting_session, actor: current_user).upsert_session_output!(
       transcript_text: transcript,
       summary_markdown: updated_summary,
       action_items: updated_action_items
     )
+  end
+
+  def writable_linked_page_for(session)
+    page = session.page || session.kalendarium_event&.linked_page
+    return true if page.blank?
+
+    policy_scope(Page).where(id: page.id).exists?
   end
 
   def speaker_replacements_from_utterances(session)
