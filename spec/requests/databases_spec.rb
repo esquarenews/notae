@@ -439,6 +439,7 @@ RSpec.describe "Databases", type: :request do
     expect(range_input["value"]).to eq("12")
     expect(range_input["max"]).to eq("52")
     expect(range_input["oninput"]).to include("requestSubmit")
+    expect(range_input["oninput"]).to include("stats_graph_start_date", "stats_graph_end_date")
     expect(range_input.ancestors("label").first.at_css("span").text.squish).to eq("period")
     expect(graph_html.at_css("input[name='stats_graph_start_date'][type='date']")).to be_present
     expect(graph_html.at_css("input[name='stats_graph_end_date'][type='date']")).to be_present
@@ -447,6 +448,22 @@ RSpec.describe "Databases", type: :request do
     expect(graph_labels.last).to include("21 May")
     expect(graph_html.css(".notae-db-graph-detail").map { |detail| detail.text.squish }).to include("Assigned to Errol", "Division Marketing", "Description Total active subscribers")
     expect(graph_html.to_html).to include("data-notae-graph-embed-query")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      stats_date: "2026-05-15",
+      split_panel: "stats_graph",
+      stats_graph_definition_id: definition.id,
+      stats_graph_period: "weekly",
+      stats_graph_periods: "4"
+    )
+
+    expect(response).to have_http_status(:ok)
+    graph_html = Nokogiri::HTML(response.body)
+    graph_labels = graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }
+    expect(graph_labels.size).to eq(4)
+    expect(graph_labels.last).to include("21 May")
 
     get database_path(
       workspace_slug: workspace.slug,

@@ -10,6 +10,7 @@
     stats_graph_start_date: stats_graph.range_start_date&.iso8601,
     stats_graph_end_date: stats_graph.range_end_date&.iso8601
   ) %>
+  <% reset_range_dates = "this.form.querySelector('[name=stats_graph_start_date]').value = ''; this.form.querySelector('[name=stats_graph_end_date]').value = '';" %>
   <div class="notae-db-stats-graph-controls">
     <%= form_with url: database_path(workspace_slug: @workspace.slug, id: @database.id),
                   method: :get,
@@ -31,8 +32,8 @@
                             min: Databases::StatsGraphDataBuilder::MIN_PERIOD_COUNT,
                             max: Databases::StatsGraphDataBuilder.max_period_count_for(stats_graph.aggregation_period),
                             step: 1,
-                            oninput: "clearTimeout(this.form._statsGraphSubmitTimer); this.form._statsGraphSubmitTimer = setTimeout(() => this.form.requestSubmit(), 150)",
-                            onchange: "this.form.requestSubmit()" %>
+                            oninput: "#{reset_range_dates} clearTimeout(this.form._statsGraphSubmitTimer); this.form._statsGraphSubmitTimer = setTimeout(() => this.form.requestSubmit(), 150)",
+                            onchange: "#{reset_range_dates} this.form.requestSubmit()" %>
       </label>
       <label class="notae-db-stats-graph-control">
         <span>Start</span>
