@@ -4,6 +4,7 @@
 <% row_is_italic = local_assigns.fetch(:row_is_italic) { row.row_italic? } %>
 <% row_text_color = local_assigns.fetch(:row_text_color) { row.row_text_color } %>
 <% row_background_color = local_assigns.fetch(:row_background_color) { row.row_background_color } %>
+<% row_menu_form_turbo = local_assigns.fetch(:row_menu_form_turbo, true) %>
 <% form_authenticity_token_value = local_assigns[:form_authenticity_token_value] || form_authenticity_token %>
 <% row_params_hidden_fields = safe_join(row_params.map do |name, value|
   hidden_field_tag(name, value, id: nil)
@@ -47,6 +48,7 @@ end) %>
   <% end %>
   <form class="notae-db-row-menu-form"
         data-preserve-database-scroll="true"
+        <% unless row_menu_form_turbo %>data-turbo="false"<% end %>
         action="<%= row_update_path %>"
         accept-charset="UTF-8"
         method="post">
@@ -60,6 +62,7 @@ end) %>
   </form>
   <form class="notae-db-row-menu-form"
         data-preserve-database-scroll="true"
+        <% unless row_menu_form_turbo %>data-turbo="false"<% end %>
         action="<%= row_update_path %>"
         accept-charset="UTF-8"
         method="post">
@@ -76,6 +79,7 @@ end) %>
     <% row_color_options.each do |label, color_key| %>
       <form class="notae-db-row-menu-form"
             data-preserve-database-scroll="true"
+            <% unless row_menu_form_turbo %>data-turbo="false"<% end %>
             action="<%= row_update_path %>"
             accept-charset="UTF-8"
             method="post">
@@ -95,6 +99,7 @@ end) %>
     <% DbRow::BACKGROUND_COLOR_OPTIONS.each do |label, color_key| %>
       <form class="notae-db-row-menu-form"
             data-preserve-database-scroll="true"
+            <% unless row_menu_form_turbo %>data-turbo="false"<% end %>
             action="<%= row_update_path %>"
             accept-charset="UTF-8"
             method="post">

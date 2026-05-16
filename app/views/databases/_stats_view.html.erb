@@ -116,6 +116,7 @@
                                    row_is_italic: row_is_italic,
                                    row_text_color: row_text_color,
                                    row_background_color: row_background_color,
+                                   row_menu_form_turbo: false,
                                    defer_body: false %>
                       </div>
                     <% end %>
@@ -123,7 +124,7 @@
                                      definition.title,
                                      class: "notae-db-cell-input",
                                      form: stats_setup_form_id,
-                                     data: { action: "keydown.enter->stats-setup#insertAfter" },
+                                     data: { action: "change->stats-setup#save keydown.enter->stats-setup#insertAfter" },
                                      disabled: !can_edit_database %>
                   </div>
                 </td>
@@ -132,6 +133,7 @@
                                  options_for_select(@stats_frequency_options, Databases::StatsTemplateService.frequency_for(definition)),
                                  class: "notae-db-cell-select",
                                  form: stats_setup_form_id,
+                                 data: { action: "change->stats-setup#save" },
                                  disabled: !can_edit_database %>
                 </td>
                 <td>
@@ -139,6 +141,7 @@
                                      Databases::StatsTemplateService.cell_value(definition, "Assigned person"),
                                      class: "notae-db-cell-input",
                                      form: stats_setup_form_id,
+                                     data: { action: "change->stats-setup#save" },
                                      disabled: !can_edit_database %>
                 </td>
                 <td>
@@ -146,6 +149,7 @@
                                      Databases::StatsTemplateService.cell_value(definition, "Post"),
                                      class: "notae-db-cell-input",
                                      form: stats_setup_form_id,
+                                     data: { action: "change->stats-setup#save" },
                                      disabled: !can_edit_database %>
                 </td>
                 <td>
@@ -153,6 +157,7 @@
                                      Databases::StatsTemplateService.cell_value(definition, "Division"),
                                      class: "notae-db-cell-input",
                                      form: stats_setup_form_id,
+                                     data: { action: "change->stats-setup#save" },
                                      disabled: !can_edit_database %>
                 </td>
                 <td>
@@ -160,6 +165,7 @@
                                      Databases::StatsTemplateService.cell_value(definition, "Description"),
                                      class: "notae-db-cell-input",
                                      form: stats_setup_form_id,
+                                     data: { action: "change->stats-setup#save" },
                                      disabled: !can_edit_database %>
                 </td>
                 <td>

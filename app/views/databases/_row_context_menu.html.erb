@@ -37,6 +37,7 @@ end %>
                    row_is_italic: local_assigns.fetch(:row_is_italic) { row.row_italic? },
                    row_text_color: local_assigns.fetch(:row_text_color) { row.row_text_color },
                    row_background_color: local_assigns.fetch(:row_background_color) { row.row_background_color },
+                   row_menu_form_turbo: local_assigns.fetch(:row_menu_form_turbo, true),
                    form_authenticity_token_value: local_assigns[:form_authenticity_token_value] || form_authenticity_token %>
       <% end %>
     </div>

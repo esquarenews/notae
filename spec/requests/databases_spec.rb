@@ -340,8 +340,19 @@ RSpec.describe "Databases", type: :request do
     expect(setup_row.at_css(".notae-db-row-more-menu")).to be_present
     expect(setup_row.at_css(".notae-db-row-more-menu")["data-row-menu-url-value"]).to be_blank
     expect(setup_row.css(".notae-db-row-menu-section-label").map { |node| node.text.squish }).to include("Text colour", "Background colour")
+    expect(
+      setup_row.css(".notae-db-row-menu-form").find { |form| form.at_css("input[name='db_row[style_action]'][value='set_color']") }["data-turbo"]
+    ).to eq("false")
     expect(setup_row.at_css(".is-drag-handle")).to be_present
-    expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][title]']")["data-action"]).to include("keydown.enter->stats-setup#insertAfter")
+    expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][title]']")["data-action"]).to include(
+      "change->stats-setup#save",
+      "keydown.enter->stats-setup#insertAfter"
+    )
+    expect(setup_row.at_css("select[name='stats[definitions][#{definition.id}][frequency]']")["data-action"]).to include("change->stats-setup#save")
+    expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][assigned_person]']")["data-action"]).to include("change->stats-setup#save")
+    expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][post]']")["data-action"]).to include("change->stats-setup#save")
+    expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][division]']")["data-action"]).to include("change->stats-setup#save")
+    expect(setup_row.at_css("input[name='stats[definitions][#{definition.id}][description]']")["data-action"]).to include("change->stats-setup#save")
 
     patch stats_setup_database_path(workspace_slug: workspace.slug, id: database.id),
           params: {
