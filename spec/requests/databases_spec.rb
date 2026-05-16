@@ -435,7 +435,11 @@ RSpec.describe "Databases", type: :request do
     expect(graph_html.at_css(".notae-db-split-pane-title").text.squish).to include("Graph", "Subscriber count")
     expect(graph_html.at_css(".notae-db-graph-title").text.squish).to eq("Subscriber count")
     expect(graph_html.at_css("select[name='stats_graph_period']")).to be_present
-    expect(graph_html.at_css("input[name='stats_graph_periods'][type='range']")["value"]).to eq("12")
+    range_input = graph_html.at_css("input[name='stats_graph_periods'][type='range']")
+    expect(range_input["value"]).to eq("12")
+    expect(range_input["max"]).to eq("52")
+    expect(range_input["oninput"]).to include("requestSubmit")
+    expect(range_input.ancestors("label").first.at_css("span").text.squish).to eq("period")
     expect(graph_html.at_css("input[name='stats_graph_start_date'][type='date']")).to be_present
     expect(graph_html.at_css("input[name='stats_graph_end_date'][type='date']")).to be_present
     expect(graph_html.css(".notae-db-graph-axis-label").map { |label| label.text.squish }).to include("0")
@@ -459,7 +463,9 @@ RSpec.describe "Databases", type: :request do
     expect(response).to have_http_status(:ok)
     graph_html = Nokogiri::HTML(response.body)
     expect(graph_html.at_css("select[name='stats_graph_period'] option[selected]")["value"]).to eq("monthly")
-    expect(graph_html.at_css("input[name='stats_graph_periods'][type='range']")["value"]).to eq("4")
+    range_input = graph_html.at_css("input[name='stats_graph_periods'][type='range']")
+    expect(range_input["value"]).to eq("4")
+    expect(range_input["max"]).to eq("60")
     expect(graph_html.at_css("input[name='stats_graph_start_date'][type='date']")["value"]).to eq("2026-02-01")
     expect(graph_html.at_css("input[name='stats_graph_end_date'][type='date']")["value"]).to eq("2026-05-31")
     expect(graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }.join(" ")).to include("28 Feb", "31 May")

@@ -102,4 +102,35 @@ RSpec.describe Databases::StatsGraphDataBuilder do
     expect(result.graph.categories.last.label).to eq("21 May 2026")
     expect(result.graph.series.first.points.last.value).to eq(12.0)
   end
+
+  it "allows longer period counts for broader aggregation ranges" do
+    owner = User.create!(email: "stats-graph-period-count@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Stats graph period count", slug: "stats-graph-period-count")
+    database = Database.create!(workspace: workspace, created_by: owner, name: "Metrics")
+    Databases::StatsTemplateService.apply!(database:)
+    Databases::StatsTemplateService.save_setup!(
+      database: database,
+      definition_params: {},
+      new_definition_params: { "title" => "Bookings", "frequency" => "weekly_mon_sun" }
+    )
+    definition = database.db_rows.find_by!(title: "Bookings")
+
+    monthly = described_class.new(
+      database: database,
+      definition: definition,
+      date: Date.new(2026, 5, 16),
+      aggregation_period: "monthly",
+      period_count: 75
+    ).call
+    annual = described_class.new(
+      database: database,
+      definition: definition,
+      date: Date.new(2026, 5, 16),
+      aggregation_period: "annual",
+      period_count: 75
+    ).call
+
+    expect(monthly.period_count).to eq(60)
+    expect(annual.period_count).to eq(75)
+  end
 end

@@ -9,6 +9,16 @@ module Databases
     DEFAULT_PERIOD_COUNT = 12
     MIN_PERIOD_COUNT = 4
     MAX_PERIOD_COUNT = 52
+    MAX_PERIOD_COUNT_BY_AGGREGATION = {
+      "weekly" => 52,
+      "monthly" => 60,
+      "quarterly" => 80,
+      "annual" => 100
+    }.freeze
+
+    def self.max_period_count_for(aggregation_period)
+      MAX_PERIOD_COUNT_BY_AGGREGATION.fetch(aggregation_period.to_s, MAX_PERIOD_COUNT)
+    end
 
     Result = Struct.new(
       :definition,
@@ -294,7 +304,7 @@ module Databases
     def normalize_period_count(value)
       return DEFAULT_PERIOD_COUNT if value.blank?
 
-      value.to_i.clamp(MIN_PERIOD_COUNT, MAX_PERIOD_COUNT)
+      value.to_i.clamp(MIN_PERIOD_COUNT, self.class.max_period_count_for(aggregation_period))
     rescue NoMethodError
       DEFAULT_PERIOD_COUNT
     end

@@ -25,12 +25,13 @@
                        onchange: "this.form.requestSubmit()" %>
       </label>
       <label class="notae-db-stats-graph-control is-range">
-        <span><%= pluralize(stats_graph.period_count, "period") %></span>
+        <span>period</span>
         <%= range_field_tag :stats_graph_periods,
                             stats_graph.period_count,
                             min: Databases::StatsGraphDataBuilder::MIN_PERIOD_COUNT,
-                            max: Databases::StatsGraphDataBuilder::MAX_PERIOD_COUNT,
+                            max: Databases::StatsGraphDataBuilder.max_period_count_for(stats_graph.aggregation_period),
                             step: 1,
+                            oninput: "clearTimeout(this.form._statsGraphSubmitTimer); this.form._statsGraphSubmitTimer = setTimeout(() => this.form.requestSubmit(), 150)",
                             onchange: "this.form.requestSubmit()" %>
       </label>
       <label class="notae-db-stats-graph-control">
