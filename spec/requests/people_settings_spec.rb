@@ -51,6 +51,23 @@ RSpec.describe "People settings", type: :request do
     expect(workspace.reload.join_link_token).not_to eq(previous_token)
   end
 
+  it "does not expose the join link to members who cannot invite" do
+    owner = User.create!(email: "people-settings-link-hidden-owner@example.com", password: "password123")
+    member = User.create!(email: "people-settings-link-hidden-member@example.com", password: "password123")
+    workspace = Workspace.create!(name: "People settings hidden link", slug: "people-settings-hidden-link")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    workspace.ensure_join_link_token!
+    sign_in member
+
+    get workspace_people_settings_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include(workspace.join_link_token)
+    expect(response.body).not_to include("Add members via link")
+    expect(response.body).not_to include("Copy link")
+  end
+
   it "allows a signed-in user to join a workspace with a valid join token" do
     owner = User.create!(email: "people-settings-link-owner@example.com", password: "password123")
     guest = User.create!(email: "people-settings-link-guest@example.com", password: "password123")
