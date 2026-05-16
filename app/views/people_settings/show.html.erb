@@ -18,38 +18,40 @@
         <%= link_to "View People Directory ↗", workspace_path(@workspace.slug), class: "notae-utility-workspace-link" %>
       </div>
 
-      <div class="notae-people-header-row">
-        <div class="notae-pref-copy">
-          <p class="notae-pref-label">Add members via link</p>
-          <p class="notae-pref-description">
-            Only people with permission to invite members to this workspace can view this link.
-            <%= button_to "generate a new link",
-                          workspace_people_settings_path(workspace_slug: @workspace.slug),
-                          method: :patch,
-                          params: { workspace: { regenerate_join_link: "1" } },
-                          class: "notae-link-button" %>
-          </p>
+      <% if @can_invite %>
+        <div class="notae-people-header-row">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Add members via link</p>
+            <p class="notae-pref-description">
+              Only people with permission to invite members to this workspace can view this link.
+              <%= button_to "generate a new link",
+                            workspace_people_settings_path(workspace_slug: @workspace.slug),
+                            method: :patch,
+                            params: { workspace: { regenerate_join_link: "1" } },
+                            class: "notae-link-button" %>
+            </p>
+          </div>
+          <div class="notae-people-header-actions">
+            <button type="button"
+                    class="notae-chip-button"
+                    data-action="click->shell#copyFromDataset"
+                    data-copy-value="<%= @join_link %>">
+              Copy link
+            </button>
+            <%= form_with model: @workspace, url: workspace_people_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
+              <label class="notae-pref-toggle">
+                <%= form.check_box :join_link_enabled,
+                                   { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
+                                   "1",
+                                   "0" %>
+                <span class="notae-pref-toggle-track"></span>
+              </label>
+            <% end %>
+          </div>
         </div>
-        <div class="notae-people-header-actions">
-          <button type="button"
-                  class="notae-chip-button"
-                  data-action="click->shell#copyFromDataset"
-                  data-copy-value="<%= @join_link %>">
-            Copy link
-          </button>
-          <%= form_with model: @workspace, url: workspace_people_settings_path(workspace_slug: @workspace.slug), method: :patch, class: "notae-pref-control-form" do |form| %>
-            <label class="notae-pref-toggle">
-              <%= form.check_box :join_link_enabled,
-                                 { class: "notae-pref-toggle-input", data: { action: "change->auto-submit#submit" } },
-                                 "1",
-                                 "0" %>
-              <span class="notae-pref-toggle-track"></span>
-            </label>
-          <% end %>
-        </div>
-      </div>
 
-      <p class="notae-people-link-preview"><%= @join_link %></p>
+        <p class="notae-people-link-preview"><%= @join_link %></p>
+      <% end %>
 
       <div class="notae-people-toolbar">
         <nav class="notae-people-tabs">

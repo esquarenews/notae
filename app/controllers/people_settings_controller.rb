@@ -51,7 +51,9 @@ class PeopleSettingsController < ApplicationController
     @tab = TABS.include?(params[:tab].to_s) ? params[:tab].to_s : "guests"
     @can_invite = policy(Invitation.new(workspace: @workspace, invited_by: current_user)).create?
     @invitation = Invitation.new
-    @join_link = workspace_join_link_url(workspace_slug: @workspace.slug, token: @workspace.join_link_token)
+    @join_link = if @can_invite
+      workspace_join_link_url(workspace_slug: @workspace.slug, token: @workspace.join_link_token)
+    end
   end
 
   def people_settings_params
