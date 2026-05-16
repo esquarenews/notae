@@ -209,10 +209,17 @@ class Block < ApplicationRecord
     asset.attached? && asset.content_type.to_s.start_with?("video/")
   end
 
-  def extract_embed_host
-    URI.parse(embed_url.to_s).host&.downcase
+  def parsed_embed_uri
+    uri = URI.parse(embed_url.to_s)
+    return unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+
+    uri
   rescue URI::InvalidURIError
     nil
+  end
+
+  def extract_embed_host
+    parsed_embed_uri&.host&.downcase
   end
 
   def validate_embed_domain
@@ -221,7 +228,7 @@ class Block < ApplicationRecord
 
     host = extract_embed_host
     unless host && EMBED_ALLOWLIST.any? { |allowed| host == allowed || host.end_with?(".#{allowed}") }
-      errors.add(:embed_url, "is not in the allowlist")
+      errors.add(:embed_url, "must use http(s) and be in the allowlist")
     end
   end
 end
