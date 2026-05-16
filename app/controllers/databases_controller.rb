@@ -60,6 +60,7 @@ class DatabasesController < ApplicationController
     @kalendarium_split_active = params[:split_panel].to_s == "kalendarium"
     @gantt_split_active = params[:split_panel].to_s == "gantt"
     @graph_split_active = params[:split_panel].to_s == "graph"
+    @stats_graph_split_active = params[:split_panel].to_s == "stats_graph" && @stats_template_active
     @kalendarium_split_project = resolve_tasks_project_for_split if @kalendarium_split_active
     @kalendarium_task_row = resolve_kalendarium_task_row if @kalendarium_split_active
     @kalendarium_split_window_start = resolve_kalendarium_split_window_start if @kalendarium_split_active
@@ -81,6 +82,7 @@ class DatabasesController < ApplicationController
     prepare_calendar_view_data!
     prepare_gantt_split_data!
     prepare_graph_split_data!
+    prepare_stats_graph_split_data!
 
     @new_database = Database.new
     @new_property = DbProperty.new
@@ -928,6 +930,21 @@ class DatabasesController < ApplicationController
     ).call
   end
 
+  def prepare_stats_graph_split_data!
+    return unless @stats_graph_split_active
+
+    @stats_graph_definition = Databases::StatsTemplateService.setup_definitions(@database).find { |definition| definition.id.to_s == params[:stats_graph_definition_id].to_s }
+    return if @stats_graph_definition.blank?
+
+    @stats_graph_data = Databases::StatsGraphDataBuilder.new(
+      database: @database,
+      definition: @stats_graph_definition,
+      date: @stats_date || Databases::StatsTemplateService.selected_date(params[:stats_date], today: Time.zone.today),
+      aggregation_period: params[:stats_graph_period],
+      period_count: params[:stats_graph_periods]
+    ).call
+  end
+
   def resolve_property_from_config(config_key, required_type)
     property_id = params[config_key].presence || @view_config[config_key.to_s]
     @db_properties.find { |property| property.id.to_s == property_id.to_s && property.property_type == required_type }
@@ -1181,6 +1198,21 @@ class DatabasesController < ApplicationController
     @current_view = resolve_current_view
     @view_config = @current_view&.config_json.to_h || {}
     resolve_filter_and_sort_settings!
+    if Databases::StatsTemplateService.stats_database?(@database) && params[:stats_graph_definition_id].present?
+      stats_definition = Databases::StatsTemplateService.setup_definitions(@database).find { |definition| definition.id.to_s == params[:stats_graph_definition_id].to_s }
+      if stats_definition.present?
+        @stats_date = Databases::StatsTemplateService.selected_date(params[:stats_date], today: Time.zone.today)
+        @stats_graph_data = Databases::StatsGraphDataBuilder.new(
+          database: @database,
+          definition: stats_definition,
+          date: @stats_date,
+          aggregation_period: params[:stats_graph_period],
+          period_count: params[:stats_graph_periods]
+        ).call
+        @graph_split = @stats_graph_data.graph
+        return
+      end
+    end
 
     @rows = Databases::RowWindowQueryService.new(
       scope: policy_scope(DbRow).for_database(@database).active,
@@ -1279,6 +1311,9 @@ class DatabasesController < ApplicationController
       split_source: params[:split_source].presence,
       split_row_id: params[:split_row_id].presence,
       task_row_id: params[:task_row_id].presence,
+      stats_graph_definition_id: params[:stats_graph_definition_id].presence,
+      stats_graph_period: params[:stats_graph_period].presence,
+      stats_graph_periods: params[:stats_graph_periods].presence,
       stats_date: params[:stats_date].presence,
       stats_mode: params[:stats_mode].presence,
       kalendarium_window_start: params[:kalendarium_window_start].presence

@@ -1,0 +1,52 @@
+<% stats_graph ||= nil %>
+<% graph = stats_graph&.graph %>
+<% view_params ||= {} %>
+<% if stats_graph.present? && graph.present? %>
+  <% toolbar_params = view_params.merge(
+    split_panel: "stats_graph",
+    stats_graph_definition_id: stats_graph.definition.id,
+    stats_graph_period: stats_graph.aggregation_period,
+    stats_graph_periods: stats_graph.period_count
+  ) %>
+  <div class="notae-db-stats-graph-controls">
+    <%= form_with url: database_path(workspace_slug: @workspace.slug, id: @database.id),
+                  method: :get,
+                  class: "notae-db-stats-graph-control-form" do %>
+      <% toolbar_params.except(:workspace_slug, :id, :stats_graph_period, :stats_graph_periods).each do |key, value| %>
+        <%= hidden_field_tag key, value %>
+      <% end %>
+      <label class="notae-db-stats-graph-control">
+        <span>Combine by</span>
+        <%= select_tag :stats_graph_period,
+                       options_for_select(Databases::StatsGraphDataBuilder::AGGREGATION_PERIODS.map { |value, label| [label, value] }, stats_graph.aggregation_period),
+                       class: "notae-options-select",
+                       onchange: "this.form.requestSubmit()" %>
+      </label>
+      <label class="notae-db-stats-graph-control is-range">
+        <span><%= pluralize(stats_graph.period_count, "period") %></span>
+        <%= range_field_tag :stats_graph_periods,
+                            stats_graph.period_count,
+                            min: Databases::StatsGraphDataBuilder::MIN_PERIOD_COUNT,
+                            max: Databases::StatsGraphDataBuilder::MAX_PERIOD_COUNT,
+                            step: 1,
+                            onchange: "this.form.requestSubmit()" %>
+      </label>
+    <% end %>
+  </div>
+
+  <%= render "databases/graph_split_view",
+             graph_split: graph,
+             can_edit_database: false,
+             view_params: toolbar_params,
+             graph_title: stats_graph.title,
+             graph_details: [
+               { label: "Assigned to", value: stats_graph.assigned_person },
+               { label: "Division", value: stats_graph.division },
+               { label: "Description", value: stats_graph.description }
+             ] %>
+<% else %>
+  <div class="notae-db-gantt-empty">
+    <h3>Graph unavailable</h3>
+    <p>Select a stat row to show its graph.</p>
+  </div>
+<% end %>

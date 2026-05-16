@@ -150,6 +150,8 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("graphEmbedPayloadFromClipboard(event)")
     expect(source).to include("data-notae-graph-embed='1'")
     expect(source).to include("/graph_embed$/")
+    expect(source).to include("graphEmbedQueryFromUrl(url)")
+    expect(source).to include('formData.append("block[content_json][notae_graph_embed_query]", payload.embedQuery)')
     expect(source).to include('formData.append("block[block_type]", "graph_embed")')
     expect(source).to include("window.Turbo.renderStreamMessage(responseText)")
   end

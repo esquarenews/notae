@@ -89,11 +89,11 @@
 
 <% view_params = topbar_view_params %>
 <% db_layout_classes = [ "notae-db-split-layout" ] %>
-<% db_layout_classes << "has-side-peek" if @split_page.present? || @kalendarium_split_active || @gantt_split_active || @graph_split_active %>
+<% db_layout_classes << "has-side-peek" if @split_page.present? || @kalendarium_split_active || @gantt_split_active || @graph_split_active || @stats_graph_split_active %>
 <% db_layout_classes << "is-small-text" if @database.small_text? %>
 <% db_layout_classes << "is-font-serif" if @database.font_style == "serif" %>
 <% db_layout_classes << "is-font-mono" if @database.font_style == "mono" %>
-<% db_layout_classes << "has-covered-primary" if (@split_page.present? || @kalendarium_split_active || @gantt_split_active || @graph_split_active) && has_display_cover && !embedded_preview %>
+<% db_layout_classes << "has-covered-primary" if (@split_page.present? || @kalendarium_split_active || @gantt_split_active || @graph_split_active || @stats_graph_split_active) && has_display_cover && !embedded_preview %>
 <% db_layout_classes << "is-embedded-preview" if embedded_preview %>
 <% kalendarium_split_params = view_params.merge(split_panel: "kalendarium", split_page_id: nil, split_source: nil, split_row_id: nil, task_row_id: nil) %>
 <% gantt_split_params = view_params.merge(split_panel: "gantt", split_page_id: nil, split_source: nil, split_row_id: nil, task_row_id: nil) %>
@@ -755,6 +755,29 @@
     <div class="notae-db-split-pane-body">
       <%= render "databases/gantt_split_view",
                  gantt_split: @gantt_split_data,
+                 can_edit_database: can_edit_database,
+                 view_params: view_params %>
+    </div>
+  </aside>
+<% elsif @stats_graph_split_active %>
+  <aside class="notae-db-split-pane">
+    <div class="notae-db-split-pane-head">
+      <% stats_graph_title = @stats_graph_data.present? ? "Graph · #{@stats_graph_data.title}" : "Graph" %>
+      <p class="notae-db-split-pane-title" title="<%= stats_graph_title %>">
+        <%= render_notae_icon("📈", workspace: @workspace, fallback: "📈", css_class: "notae-inline-linked-icon", label: "Graph") %>
+        <%= stats_graph_title %>
+      </p>
+      <div class="notae-db-split-pane-actions">
+        <%= link_to "✕",
+                    database_path(view_params.except(:split_panel, :split_page_id, :split_source, :split_row_id, :task_row_id, :stats_graph_definition_id, :stats_graph_period, :stats_graph_periods)),
+                    class: "notae-inline-icon-button",
+                    aria: { label: "Close stats graph side peek" },
+                    title: "Close stats graph side peek" %>
+      </div>
+    </div>
+    <div class="notae-db-split-pane-body">
+      <%= render "databases/stats_graph_split_view",
+                 stats_graph: @stats_graph_data,
                  can_edit_database: can_edit_database,
                  view_params: view_params %>
     </div>

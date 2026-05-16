@@ -107,6 +107,10 @@ class Block < ApplicationRecord
     metadata["notae_graph_view_id"].presence
   end
 
+  def graph_embed_query
+    metadata["notae_graph_embed_query"].to_s
+  end
+
   def layout_columns_count
     count = metadata["notae_columns_count"].to_i
     count.positive? ? count : nil

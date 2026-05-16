@@ -213,35 +213,54 @@
           <thead>
             <tr>
               <th class="notae-db-grid-name-col">Stat</th>
-              <th>Period</th>
-              <th>Assigned person</th>
-              <th>Post</th>
+              <th>Report period dates</th>
               <th>Value</th>
-              <th>Graph</th>
             </tr>
           </thead>
           <tbody>
             <% if @stats_report_rows.blank? %>
               <tr>
-                <td colspan="6">No stats have been set up yet.</td>
+                <td colspan="3">No stats have been set up yet.</td>
               </tr>
             <% end %>
             <% @stats_report_rows.each do |report_row| %>
               <% definition = report_row.definition %>
-              <tr id="stats_report_<%= definition.id %>">
-                <td class="notae-db-grid-name-col"><%= definition.title %></td>
+              <% row_is_bold = definition.row_bold? %>
+              <% row_is_italic = definition.row_italic? %>
+              <% row_text_color = definition.row_text_color %>
+              <% row_background_color = definition.row_background_color %>
+              <% row_style_classes = [] %>
+              <% row_style_classes << "is-row-bold" if row_is_bold %>
+              <% row_style_classes << "is-row-italic" if row_is_italic %>
+              <% row_style_classes << "is-row-color-#{row_text_color}" unless row_text_color == "default" %>
+              <% row_style_classes << "is-row-bg-#{row_background_color}" unless row_background_color == "default" %>
+              <% stats_graph_params = stats_view_params.merge(
+                workspace_slug: @workspace.slug,
+                id: @database.id,
+                stats_date: stats_date.iso8601,
+                stats_mode: "report",
+                split_panel: "stats_graph",
+                stats_graph_definition_id: definition.id,
+                stats_graph_period: "weekly",
+                stats_graph_periods: Databases::StatsGraphDataBuilder::DEFAULT_PERIOD_COUNT
+              ) %>
+              <tr id="stats_report_<%= definition.id %>" class="notae-db-grid-data-row <%= row_style_classes.join(" ") %>">
+                <td class="notae-db-grid-name-col">
+                  <div class="notae-db-stats-report-name">
+                    <span><%= definition.title %></span>
+                    <%= link_to "Show graph",
+                                database_path(stats_graph_params),
+                                class: "notae-chip-button notae-db-stats-graph-link",
+                                data: { preserve_database_scroll: true } %>
+                  </div>
+                </td>
                 <td><%= report_row.period.label %></td>
-                <td><%= Databases::StatsTemplateService.cell_value(definition, "Assigned person") %></td>
-                <td><%= Databases::StatsTemplateService.cell_value(definition, "Post") %></td>
                 <td>
                   <%= number_field_tag "stats[entries][#{definition.id}][value]",
                                        Databases::StatsTemplateService.cell_value(report_row.entry, "Value"),
                                        step: "any",
                                        class: "notae-db-cell-input",
                                        disabled: !can_edit_database %>
-                </td>
-                <td>
-                  <button type="button" class="notae-chip-button" disabled>Show graph</button>
                 </td>
               </tr>
             <% end %>

@@ -910,7 +910,8 @@ export default class extends Controller {
     const datasetPayload = {
       workspaceSlug: source.dataset.notaeGraphWorkspaceSlug,
       databaseId: source.dataset.notaeGraphDatabaseId,
-      viewId: source.dataset.notaeGraphViewId
+      viewId: source.dataset.notaeGraphViewId,
+      embedQuery: source.dataset.notaeGraphEmbedQuery
     }
 
     return this.normalizeGraphEmbedPayload(datasetPayload, href)
@@ -926,7 +927,8 @@ export default class extends Controller {
     const normalized = {
       workspaceSlug: String(payload.workspaceSlug || "").trim(),
       databaseId: String(payload.databaseId || "").trim(),
-      viewId: String(payload.viewId || "").trim()
+      viewId: String(payload.viewId || "").trim(),
+      embedQuery: String(payload.embedQuery || "").trim()
     }
 
     const parsedUrl = this.parseGraphEmbedUrl(href)
@@ -934,6 +936,7 @@ export default class extends Controller {
       normalized.workspaceSlug ||= parsedUrl.workspaceSlug
       normalized.databaseId ||= parsedUrl.databaseId
       normalized.viewId ||= parsedUrl.viewId
+      normalized.embedQuery ||= parsedUrl.embedQuery
     }
 
     if (!normalized.workspaceSlug || !normalized.databaseId) return null
@@ -958,8 +961,24 @@ export default class extends Controller {
     return {
       workspaceSlug: decodeURIComponent(match[1]),
       databaseId: decodeURIComponent(match[2]),
-      viewId: url.searchParams.get("view_id") || ""
+      viewId: url.searchParams.get("view_id") || "",
+      embedQuery: this.graphEmbedQueryFromUrl(url)
     }
+  }
+
+  graphEmbedQueryFromUrl(url) {
+    const allowedParams = [
+      "stats_graph_definition_id",
+      "stats_graph_period",
+      "stats_graph_periods",
+      "stats_date"
+    ]
+    const params = new URLSearchParams()
+    allowedParams.forEach((name) => {
+      const value = url.searchParams.get(name)
+      if (value) params.set(name, value)
+    })
+    return params.toString()
   }
 
   ganttEmbedPayloadFromClipboard(event) {
@@ -1075,6 +1094,9 @@ export default class extends Controller {
     formData.append("block[content_json][notae_graph_database_id]", payload.databaseId)
     if (payload.viewId) {
       formData.append("block[content_json][notae_graph_view_id]", payload.viewId)
+    }
+    if (payload.embedQuery) {
+      formData.append("block[content_json][notae_graph_embed_query]", payload.embedQuery)
     }
 
     const response = await fetch(this.createUrlValue, {

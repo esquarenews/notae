@@ -322,6 +322,9 @@ RSpec.describe "Databases", type: :request do
           }
 
     definition = database.db_rows.find_by!(title: "Subscriber count")
+    definition.apply_row_style_action!(action: "set_color", text_color: "blue")
+    definition.apply_row_style_action!(action: "set_background_color", background_color: "mint")
+    definition.save!
     expect(definition.data_json[Databases::StatsTemplateService::ROW_TYPE_KEY]).to eq(Databases::StatsTemplateService::ROW_TYPE_DEFINITION)
     expect(definition.data_json[Databases::StatsTemplateService::FREQUENCY_KEY]).to eq("weekly_thu_2pm")
     expect(definition.db_cells.joins(:db_property).find_by!(db_properties: { name: "Assigned person" }).value_text).to eq("Errol")
@@ -404,10 +407,39 @@ RSpec.describe "Databases", type: :request do
     get database_path(workspace_slug: workspace.slug, id: database.id, stats_date: "2026-05-15")
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Subscriber count")
-    expect(response.body).to include("14 May 2026 2pm - 21 May 2026 2pm")
-    expect(response.body).to include("value=\"42\"")
-    expect(response.body).to include("Show graph")
+    report_html = Nokogiri::HTML(response.body)
+    report_headers = report_html.css(".notae-db-grid thead th").map { |header| header.text.squish }
+    report_row = report_html.at_css("#stats_report_#{definition.id}")
+    expect(report_headers).to eq([ "Stat", "Report period dates", "Value" ])
+    expect(report_row.text).to include("Subscriber count")
+    expect(report_row.text).to include("14 May 2026 2pm - 21 May 2026 2pm")
+    expect(report_row.at_css("input[name='stats[entries][#{definition.id}][value]']")["value"]).to eq("42")
+    expect(report_row["class"]).to include("is-row-color-blue", "is-row-bg-mint")
+    graph_link = report_row.at_css(".notae-db-stats-graph-link")
+    expect(graph_link.text.squish).to eq("Show graph")
+    expect(graph_link["href"]).to include("split_panel=stats_graph", "stats_graph_definition_id=#{definition.id}", "stats_graph_periods=12")
+    expect(report_headers).not_to include("Assigned person", "Post", "Graph")
+
+    get database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      stats_date: "2026-05-15",
+      split_panel: "stats_graph",
+      stats_graph_definition_id: definition.id,
+      stats_graph_period: "weekly",
+      stats_graph_periods: "12"
+    )
+
+    expect(response).to have_http_status(:ok)
+    graph_html = Nokogiri::HTML(response.body)
+    expect(graph_html.at_css(".notae-db-split-pane-title").text.squish).to include("Graph", "Subscriber count")
+    expect(graph_html.at_css(".notae-db-graph-title").text.squish).to eq("Subscriber count")
+    expect(graph_html.at_css("select[name='stats_graph_period']")).to be_present
+    expect(graph_html.at_css("input[name='stats_graph_periods'][type='range']")["value"]).to eq("12")
+    expect(graph_html.css(".notae-db-graph-axis-label").map { |label| label.text.squish }).to include("0")
+    expect(graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }.join(" ")).to include("11 May")
+    expect(graph_html.css(".notae-db-graph-detail").map { |detail| detail.text.squish }).to include("Assigned to Errol", "Division Marketing", "Description Total active subscribers")
+    expect(graph_html.to_html).to include("data-notae-graph-embed-query")
   end
 
   it "archives stats definitions without deleting historical stat reports" do

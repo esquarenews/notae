@@ -4435,6 +4435,46 @@ turbo-frame#notae_sidebar_sections {
   margin-top: 0.85rem;
 }
 
+.notae-db-stats-report-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.notae-db-stats-graph-link {
+  flex: 0 0 auto;
+}
+
+.notae-db-stats-graph-controls {
+  padding: 0.9rem 0.9rem 0;
+}
+
+.notae-db-stats-graph-control-form {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.notae-db-stats-graph-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: var(--notae-muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.notae-db-stats-graph-control.is-range {
+  min-width: 220px;
+}
+
+.notae-db-stats-graph-control input[type="range"] {
+  width: 150px;
+}
+
 .notae-db-inline-details {
   position: relative;
 }
@@ -5938,6 +5978,14 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   padding: 0.9rem;
 }
 
+.notae-db-graph-title {
+  margin: 0;
+  color: var(--notae-text-strong);
+  font-size: 1rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
 .notae-db-graph-scroll {
   overflow-x: auto;
   padding-bottom: 0.18rem;
@@ -6009,6 +6057,33 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   flex-wrap: wrap;
   gap: 0.55rem 0.9rem;
   align-items: center;
+}
+
+.notae-db-graph-details {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-top: 0.35rem;
+}
+
+.notae-db-graph-detail {
+  display: grid;
+  grid-template-columns: minmax(6rem, 0.3fr) 1fr;
+  gap: 0.65rem;
+  align-items: baseline;
+}
+
+.notae-db-graph-detail dt {
+  color: var(--notae-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.notae-db-graph-detail dd {
+  margin: 0;
+  color: var(--notae-text);
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .notae-db-graph-split-series {

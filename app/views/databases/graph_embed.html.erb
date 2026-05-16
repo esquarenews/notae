@@ -14,7 +14,13 @@
                  graph_split: @graph_split,
                  can_edit_database: false,
                  show_toolbar: false,
-                 view_params: @graph_embed_view_params %>
+                 view_params: @graph_embed_view_params,
+                 graph_title: @stats_graph_data&.title,
+                 graph_details: (@stats_graph_data.present? ? [
+                   { label: "Assigned to", value: @stats_graph_data.assigned_person },
+                   { label: "Division", value: @stats_graph_data.division },
+                   { label: "Description", value: @stats_graph_data.description }
+                 ] : []) %>
     </main>
   </body>
 </html>

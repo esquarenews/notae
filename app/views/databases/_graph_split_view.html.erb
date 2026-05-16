@@ -1,6 +1,8 @@
 <% graph_split ||= nil %>
 <% can_edit_database ||= false %>
 <% show_toolbar = local_assigns.fetch(:show_toolbar, true) %>
+<% graph_title = local_assigns[:graph_title].presence %>
+<% graph_details = Array(local_assigns[:graph_details]).reject { |item| item[:value].blank? } %>
 <% embed_view_params = (view_params || {}).except(
   :workspace_slug,
   :id,
@@ -30,7 +32,8 @@
     notae_graph_embed: "1",
     notae_graph_workspace_slug: @workspace.slug,
     notae_graph_database_id: @database.id,
-    notae_graph_view_id: @current_view&.id
+    notae_graph_view_id: @current_view&.id,
+    notae_graph_embed_query: URI.parse(graph_embed_url).query.to_s
   }
 ) %>
 <% graph_toolbar_params = (view_params || {}).except(
@@ -138,6 +141,10 @@
       </div>
     <% end %>
 
+    <% if graph_title.present? %>
+      <h3 class="notae-db-graph-title"><%= graph_title %></h3>
+    <% end %>
+
     <%= render "databases/graph_chart_canvas",
                chart_type: graph_split.chart_type,
                show_values: graph_split.show_values,
@@ -179,6 +186,17 @@
         </div>
       <% end %>
     </div>
+
+    <% if graph_details.any? %>
+      <dl class="notae-db-graph-details">
+        <% graph_details.each do |detail| %>
+          <div class="notae-db-graph-detail">
+            <dt><%= detail.fetch(:label) %></dt>
+            <dd><%= detail.fetch(:value) %></dd>
+          </div>
+        <% end %>
+      </dl>
+    <% end %>
 
     <% if graph_split.split_series? %>
       <div class="notae-db-graph-split-series">

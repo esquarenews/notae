@@ -83,7 +83,8 @@
   <% elsif is_graph_embed_block %>
     <div class="notae-doc-graph-embed">
       <% if block.graph_database_id.present? %>
-        <iframe src="<%= graph_embed_database_path(workspace_slug: block.graph_workspace_slug || workspace.slug, id: block.graph_database_id, view_id: block.graph_view_id.presence) %>"
+        <% graph_embed_params = Rack::Utils.parse_nested_query(block.graph_embed_query).merge(view_id: block.graph_view_id.presence).compact %>
+        <iframe src="<%= graph_embed_database_path(graph_embed_params.merge(workspace_slug: block.graph_workspace_slug || workspace.slug, id: block.graph_database_id)) %>"
                 class="notae-doc-graph-embed-frame"
                 loading="lazy"
                 title="Embedded graph"></iframe>
