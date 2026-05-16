@@ -142,6 +142,56 @@ RSpec.describe "Blocks", type: :request do
     )
   end
 
+  it "does not resolve synced block roots from another workspace when applying commands" do
+    owner = User.create!(email: "blocks-synced-cross-workspace-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Synced local workspace", slug: "synced-local-workspace")
+    other_workspace = Workspace.create!(name: "Synced other workspace", slug: "synced-other-workspace")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    Membership.create!(workspace: other_workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Local page")
+    other_page = Page.create!(workspace: other_workspace, created_by: owner, title: "Other page")
+    other_source = Block.create!(
+      workspace: other_workspace,
+      page: other_page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Other workspace secret" } ]
+          }
+        ]
+      }
+    )
+    local_copy = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "synced_block",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Local content" } ]
+          }
+        ],
+        "notae_synced_source_id" => other_source.id.to_s
+      }
+    )
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: local_copy.id),
+         params: { block_command: { command: "color", color: "red" } }
+
+    expect(response).to have_http_status(:redirect)
+    expect(local_copy.reload.content_json.dig("content", 0, "content", 0, "text")).to eq("Local content")
+    expect(local_copy.content_json["notae_synced_source_id"]).to eq(other_source.id.to_s)
+    expect(local_copy.content_json["notae_color"]).to eq("red")
+  end
+
   it "preserves block color metadata when saving heading content" do
     owner = User.create!(email: "blocks-heading-color-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Heading colors", slug: "heading-colors")
