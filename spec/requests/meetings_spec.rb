@@ -259,6 +259,74 @@ RSpec.describe "Meetings", type: :request do
     expect(page_text).not_to include("owner: Speaker 1")
   end
 
+  it "does not rewrite a linked private note when the speaker editor cannot see it" do
+    owner, workspace, event = build_stack(suffix: "speaker-private-note-owner")
+    member = User.create!(email: "meetings-speaker-private-note-member@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: member, role: :member)
+    private_page = Page.create!(
+      workspace: workspace,
+      created_by: owner,
+      title: "Private meeting notes",
+      permission_mode: :private_page
+    )
+    private_block = private_page.blocks.create!(
+      workspace: workspace,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        Meetings::NotaMaterializerService::SESSION_MARKER_KEY => "pending-session",
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Private owner note" } ]
+          }
+        ]
+      }
+    )
+    event.update!(linked_page: private_page, updated_by: owner)
+    session = MeetingSession.create!(
+      workspace: workspace,
+      kalendarium_event: event,
+      title: "Private speaker sync call",
+      capture_mode: "upload",
+      provider: "local",
+      status: "completed",
+      summary_markdown: "### Summary\n- Speaker 1 confirmed the scope",
+      action_items_json: [ { "title" => "Send recap", "owner" => "Speaker 1", "due_at" => nil, "confidence" => 0.8 } ],
+      created_by: member,
+      updated_by: member
+    )
+    private_block.update!(
+      content_json: private_block.content_json.merge(
+        Meetings::NotaMaterializerService::SESSION_MARKER_KEY => session.id.to_s
+      )
+    )
+    session.meeting_utterances.create!(
+      position: 0,
+      started_ms: 0,
+      ended_ms: 1200,
+      speaker_key: "S1",
+      speaker_name: "Speaker 1",
+      text: "Hello team"
+    )
+    sign_in member
+
+    patch speakers_meeting_session_path(workspace_slug: workspace.slug, id: session.id), params: {
+      meeting_session: {
+        speaker_map: {
+          "S1" => "Errol"
+        }
+      }
+    }
+
+    expect(response).to redirect_to(workspace_meetings_path(workspace_slug: workspace.slug))
+    expect(session.reload.transcript_text).to include("Errol")
+    expect(private_page.blocks.active.count).to eq(1)
+    expect(private_block.reload.search_text).to include("Private owner note")
+    expect(private_page.blocks.active.pluck(:search_text).join("\n")).not_to include("Errol")
+  end
+
   it "creates an upload session, links a meeting note, and queues processing" do
     user, workspace, event = build_stack(suffix: "upload-create")
     sign_in user
