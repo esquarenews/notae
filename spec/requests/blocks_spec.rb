@@ -885,6 +885,21 @@ RSpec.describe "Blocks", type: :request do
     expect(block.reload.embed_url).to be_nil
   end
 
+  it "rejects embed URLs with allowlisted hosts on unsafe schemes" do
+    owner = User.create!(email: "blocks-embed-scheme-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Embed schemes", slug: "embed-schemes")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embed schemes page")
+    block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "embed")
+    sign_in owner
+
+    patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+          params: { block: { embed_url: "javascript://www.youtube.com/%0Aalert(1)" } }
+
+    expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
+    expect(block.reload.embed_url).to be_nil
+  end
+
   it "renders a single media insertion action and previews uploaded media blocks" do
     owner = User.create!(email: "blocks-media-menu-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Media menu", slug: "media-menu")

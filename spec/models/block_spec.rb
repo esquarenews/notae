@@ -50,7 +50,23 @@ RSpec.describe Block, type: :model do
     )
 
     expect(block).not_to be_valid
-    expect(block.errors[:embed_url]).to include("is not in the allowlist")
+    expect(block.errors[:embed_url]).to include("must use http(s) and be in the allowlist")
+  end
+
+  it "rejects allowlisted hosts when the embed URL does not use http or https" do
+    owner = User.create!(email: "embed-scheme-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Embeds scheme", slug: "embeds-scheme")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embeds")
+    block = described_class.new(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "embed",
+      embed_url: "javascript://www.youtube.com/%0Aalert(1)"
+    )
+
+    expect(block).not_to be_valid
+    expect(block.errors[:embed_url]).to include("must use http(s) and be in the allowlist")
   end
 
   it "uses top-level page links sync service from the callback helper" do
