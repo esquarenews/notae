@@ -434,15 +434,19 @@ RSpec.describe "Databases", type: :request do
     graph_html = Nokogiri::HTML(response.body)
     expect(graph_html.at_css(".notae-db-split-pane-title").text.squish).to include("Graph", "Subscriber count")
     expect(graph_html.at_css(".notae-db-graph-title").text.squish).to eq("Subscriber count")
-    expect(graph_html.at_css("select[name='stats_graph_period']")).to be_present
+    expect(graph_html.at_css("form[data-controller='stats-graph-controls']")).to be_present
+    expect(graph_html.at_css("select[name='stats_graph_period']")["data-action"]).to eq("change->stats-graph-controls#submit")
     range_input = graph_html.at_css("input[name='stats_graph_periods'][type='range']")
     expect(range_input["value"]).to eq("12")
     expect(range_input["max"]).to eq("52")
-    expect(range_input["oninput"]).to include("requestSubmit")
-    expect(range_input["oninput"]).to include("stats_graph_start_date", "stats_graph_end_date")
+    expect(range_input["data-action"]).to include("input->stats-graph-controls#submitFromPeriodInput", "change->stats-graph-controls#submitFromPeriodChange")
     expect(range_input.ancestors("label").first.at_css("span").text.squish).to eq("period")
-    expect(graph_html.at_css("input[name='stats_graph_start_date'][type='date']")).to be_present
-    expect(graph_html.at_css("input[name='stats_graph_end_date'][type='date']")).to be_present
+    start_date_input = graph_html.at_css("input[name='stats_graph_start_date'][type='date']")
+    end_date_input = graph_html.at_css("input[name='stats_graph_end_date'][type='date']")
+    expect(start_date_input["data-stats-graph-controls-target"]).to eq("startDate")
+    expect(start_date_input["data-action"]).to eq("change->stats-graph-controls#submit")
+    expect(end_date_input["data-stats-graph-controls-target"]).to eq("endDate")
+    expect(end_date_input["data-action"]).to eq("change->stats-graph-controls#submit")
     expect(graph_html.css(".notae-db-graph-axis-label").map { |label| label.text.squish }).to include("0")
     graph_labels = graph_html.css(".notae-db-graph-category-label").map { |label| label.text.squish }
     expect(graph_labels.last).to include("21 May")

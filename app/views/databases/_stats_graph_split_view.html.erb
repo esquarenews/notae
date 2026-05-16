@@ -10,11 +10,11 @@
     stats_graph_start_date: stats_graph.range_start_date&.iso8601,
     stats_graph_end_date: stats_graph.range_end_date&.iso8601
   ) %>
-  <% reset_range_dates = "this.form.querySelector('[name=stats_graph_start_date]').value = ''; this.form.querySelector('[name=stats_graph_end_date]').value = '';" %>
   <div class="notae-db-stats-graph-controls">
     <%= form_with url: database_path(workspace_slug: @workspace.slug, id: @database.id),
                   method: :get,
-                  class: "notae-db-stats-graph-control-form" do %>
+                  class: "notae-db-stats-graph-control-form",
+                  data: { controller: "stats-graph-controls" } do %>
       <% toolbar_params.except(:workspace_slug, :id, :stats_graph_period, :stats_graph_periods, :stats_graph_start_date, :stats_graph_end_date).each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
@@ -23,7 +23,7 @@
         <%= select_tag :stats_graph_period,
                        options_for_select(Databases::StatsGraphDataBuilder::AGGREGATION_PERIODS.map { |value, label| [label, value] }, stats_graph.aggregation_period),
                        class: "notae-options-select",
-                       onchange: "this.form.requestSubmit()" %>
+                       data: { action: "change->stats-graph-controls#submit" } %>
       </label>
       <label class="notae-db-stats-graph-control is-range">
         <span>period</span>
@@ -32,22 +32,29 @@
                             min: Databases::StatsGraphDataBuilder::MIN_PERIOD_COUNT,
                             max: Databases::StatsGraphDataBuilder.max_period_count_for(stats_graph.aggregation_period),
                             step: 1,
-                            oninput: "#{reset_range_dates} clearTimeout(this.form._statsGraphSubmitTimer); this.form._statsGraphSubmitTimer = setTimeout(() => this.form.requestSubmit(), 150)",
-                            onchange: "#{reset_range_dates} this.form.requestSubmit()" %>
+                            data: {
+                              action: "input->stats-graph-controls#submitFromPeriodInput change->stats-graph-controls#submitFromPeriodChange"
+                            } %>
       </label>
       <label class="notae-db-stats-graph-control">
         <span>Start</span>
         <%= date_field_tag :stats_graph_start_date,
                            stats_graph.range_start_date&.iso8601,
                            class: "notae-options-input",
-                           onchange: "this.form.requestSubmit()" %>
+                           data: {
+                             stats_graph_controls_target: "startDate",
+                             action: "change->stats-graph-controls#submit"
+                           } %>
       </label>
       <label class="notae-db-stats-graph-control">
         <span>End</span>
         <%= date_field_tag :stats_graph_end_date,
                            stats_graph.range_end_date&.iso8601,
                            class: "notae-options-input",
-                           onchange: "this.form.requestSubmit()" %>
+                           data: {
+                             stats_graph_controls_target: "endDate",
+                             action: "change->stats-graph-controls#submit"
+                           } %>
       </label>
     <% end %>
   </div>
