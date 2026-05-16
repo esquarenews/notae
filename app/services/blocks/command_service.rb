@@ -403,7 +403,7 @@ module Blocks
       source_id = candidate.synced_source_block_id
       return candidate if source_id.blank? || source_id.to_s == candidate.id.to_s
 
-      Block.find_by(id: source_id) || candidate
+      workspace.blocks.find_by(id: source_id) || candidate
     end
 
     def build_content_payload_for(mapped_type)
