@@ -1,6 +1,40 @@
 # Deploy And Restart
 
-Use this after pulling new code to production.
+Use this on the production host to deploy `main` cleanly.
+
+## Recommended path
+
+```bash
+cd /home/esquarenews/apps/notae
+bin/deploy-production
+```
+
+The script performs the full deploy sequence:
+
+- takes an exclusive deploy lock
+- refuses to run with a dirty production checkout
+- fetches and fast-forwards `main`
+- installs production gems
+- stops background workers before migrations
+- runs production migrations through `systemd-run` with `/etc/notae/notae.env`
+- rebuilds production assets
+- restarts the web service, Sidekiq, meeting bot, sync timers, and one-shot sync services when present
+- verifies systemd health, `/up`, sign-in HTML, and linked CSS/JS assets
+
+Useful overrides:
+
+```bash
+APP_URL=https://notae.esquarenews.tech bin/deploy-production
+RUN_TESTS=1 bin/deploy-production
+RUN_ASSET_CLOBBER=0 bin/deploy-production
+RUN_OPTIONAL_SYNC=0 RESTART_TIMERS=0 bin/deploy-production
+```
+
+The script prints the previous git revision and rollback starting point if a step fails.
+
+## Manual fallback
+
+Use this only if the script cannot run and you need to perform the steps manually.
 
 ## 1. Update the code
 

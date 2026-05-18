@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+APP_NAME="${APP_NAME:-notae}"
+APP_ROOT="${APP_ROOT:-/home/esquarenews/apps/notae}"
+APP_USER="${APP_USER:-esquarenews}"
+APP_GROUP="${APP_GROUP:-$APP_USER}"
+ENV_FILE="${ENV_FILE:-/etc/notae/notae.env}"
+REMOTE="${REMOTE:-origin}"
+BRANCH="${BRANCH:-main}"
+APP_URL="${APP_URL:-https://notae.esquarenews.tech}"
+LOCK_FILE="${LOCK_FILE:-/tmp/notae-production-deploy.lock}"
+RUN_TESTS="${RUN_TESTS:-0}"
+RUN_ASSET_CLOBBER="${RUN_ASSET_CLOBBER:-1}"
+RUN_OPTIONAL_SYNC="${RUN_OPTIONAL_SYNC:-1}"
+RESTART_TIMERS="${RESTART_TIMERS:-1}"
+REQUIRED_SERVICES="${REQUIRED_SERVICES:-notae}"
+OPTIONAL_SERVICES="${OPTIONAL_SERVICES:-notae-sidekiq notae-meeting-bot-worker}"
+OPTIONAL_TIMERS="${OPTIONAL_TIMERS:-notae-epistularium-sync.timer notae-kalendarium-sync.timer}"
+OPTIONAL_ONESHOTS="${OPTIONAL_ONESHOTS:-notae-epistularium-sync.service notae-kalendarium-sync.service}"
+PRODUCTION_PATH="${PRODUCTION_PATH:-/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
+
+log() {
+  printf '[deploy] %s\n' "$*"
+}
+
+die() {
+  printf '[deploy] ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Deploy Notae to production.
+
+Run on the production host. Defaults match the current notae systemd deployment.
+
+Environment overrides:
+  APP_ROOT=/home/esquarenews/apps/notae
+  APP_USER=esquarenews
+  APP_GROUP=esquarenews
+  ENV_FILE=/etc/notae/notae.env
+  APP_URL=https://notae.esquarenews.tech
+  REMOTE=origin
+  BRANCH=main
+  RUN_TESTS=1                  Run local test suite before restarting services.
+  RUN_ASSET_CLOBBER=0          Run assets:precompile without assets:clobber.
+  RUN_OPTIONAL_SYNC=0          Skip one-shot calendar/mail sync starts.
+  RESTART_TIMERS=0             Skip timer restarts.
+  REQUIRED_SERVICES="notae"
+  OPTIONAL_SERVICES="notae-sidekiq notae-meeting-bot-worker"
+  OPTIONAL_TIMERS="notae-epistularium-sync.timer notae-kalendarium-sync.timer"
+  OPTIONAL_ONESHOTS="notae-epistularium-sync.service notae-kalendarium-sync.service"
+
+Examples:
+  bin/deploy-production
+  APP_URL=https://notae.example.com RUN_TESTS=1 bin/deploy-production
+USAGE
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
+}
+
+split_words() {
+  # shellcheck disable=SC2206
+  WORDS=($1)
+}
+
+unit_exists() {
+  systemctl list-unit-files "$1" --no-legend --no-pager 2>/dev/null | grep -q .
+}
+
+active_or_oneshot_ok() {
+  local unit="$1"
+  local active_state
+  local result
+  active_state="$(systemctl show "$unit" -p ActiveState --value 2>/dev/null || true)"
+  result="$(systemctl show "$unit" -p Result --value 2>/dev/null || true)"
+
+  [[ "$active_state" == "active" || ( "$active_state" == "inactive" && "$result" == "success" ) ]]
+}
+
+sudo_systemd_run() {
+  local description="$1"
+  local command="$2"
+
+  log "$description"
+  sudo systemd-run --wait --collect --pty \
+    -p "User=$APP_USER" \
+    -p "Group=$APP_GROUP" \
+    -p "WorkingDirectory=$APP_ROOT" \
+    -p "EnvironmentFile=$ENV_FILE" \
+    -p "Environment=RAILS_ENV=production" \
+    -p "Environment=PATH=$PRODUCTION_PATH" \
+    /usr/bin/bash -lc "$command"
+}
+
+rollback_hint() {
+  if [[ -n "${PREVIOUS_REVISION:-}" ]]; then
+    cat <<ROLLBACK >&2
+
+[deploy] Rollback starting point:
+  cd "$APP_ROOT"
+  git checkout "$PREVIOUS_REVISION"
+  sudo systemctl restart $REQUIRED_SERVICES $OPTIONAL_SERVICES
+
+[deploy] If migrations already ran, inspect them before rolling data back.
+ROLLBACK
+  fi
+}
+
+on_error() {
+  local exit_code=$?
+  printf '\n[deploy] Failed at line %s with exit code %s.\n' "${BASH_LINENO[0]}" "$exit_code" >&2
+  rollback_hint
+  exit "$exit_code"
+}
+
+trap on_error ERR
+
+main() {
+  require_command git
+  require_command bundle
+  require_command sudo
+  require_command systemctl
+  require_command curl
+  require_command grep
+
+  [[ -d "$APP_ROOT/.git" ]] || die "APP_ROOT is not a git checkout: $APP_ROOT"
+  [[ -f "$ENV_FILE" ]] || die "Production env file not found: $ENV_FILE"
+
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || die "Another deploy is already running; lock file: $LOCK_FILE"
+
+  cd "$APP_ROOT"
+
+  local git_root
+  git_root="$(git rev-parse --show-toplevel)"
+  [[ "$git_root" == "$APP_ROOT" ]] || die "APP_ROOT does not match git root: $git_root"
+
+  [[ -z "$(git status --porcelain)" ]] || die "Working tree is dirty in $APP_ROOT; commit or stash before deploying."
+
+  PREVIOUS_REVISION="$(git rev-parse HEAD)"
+  log "Starting deploy from $PREVIOUS_REVISION"
+
+  log "Fetching $REMOTE"
+  git fetch --prune "$REMOTE"
+
+  log "Checking out $BRANCH"
+  git checkout "$BRANCH"
+
+  log "Fast-forwarding $BRANCH from $REMOTE/$BRANCH"
+  git pull --ff-only "$REMOTE" "$BRANCH"
+
+  local new_revision
+  new_revision="$(git rev-parse HEAD)"
+  log "Deploying revision $new_revision"
+
+  log "Installing gems"
+  bundle config set deployment true
+  if [[ "$RUN_TESTS" == "1" ]]; then
+    bundle config unset without || true
+  else
+    bundle config set without "development test"
+  fi
+  bundle install
+
+  if [[ "$RUN_TESTS" == "1" ]]; then
+    log "Running test suite"
+    RAILS_ENV=test bundle exec rails db:prepare
+    bundle exec rspec
+  else
+    log "Skipping test suite; set RUN_TESTS=1 to enable."
+  fi
+
+  split_words "$OPTIONAL_SERVICES"
+  for service in "${WORDS[@]}"; do
+    if unit_exists "$service"; then
+      log "Stopping background service before migrations: $service"
+      sudo systemctl stop "$service"
+    else
+      log "Skipping missing optional service: $service"
+    fi
+  done
+
+  sudo_systemd_run "Running database migrations" "bundle exec rails db:migrate"
+
+  if [[ "$RUN_ASSET_CLOBBER" == "1" ]]; then
+    sudo_systemd_run "Rebuilding assets from a clean manifest" "bundle exec rails assets:clobber assets:precompile"
+  else
+    sudo_systemd_run "Precompiling assets" "bundle exec rails assets:precompile"
+  fi
+
+  split_words "$REQUIRED_SERVICES"
+  for service in "${WORDS[@]}"; do
+    unit_exists "$service" || die "Required systemd service is missing: $service"
+    log "Restarting required service: $service"
+    sudo systemctl restart "$service"
+  done
+
+  split_words "$OPTIONAL_SERVICES"
+  for service in "${WORDS[@]}"; do
+    if unit_exists "$service"; then
+      log "Restarting optional service: $service"
+      sudo systemctl restart "$service"
+    fi
+  done
+
+  if [[ "$RESTART_TIMERS" == "1" ]]; then
+    split_words "$OPTIONAL_TIMERS"
+    for timer in "${WORDS[@]}"; do
+      if unit_exists "$timer"; then
+        log "Restarting optional timer: $timer"
+        sudo systemctl restart "$timer"
+      else
+        log "Skipping missing optional timer: $timer"
+      fi
+    done
+  fi
+
+  if [[ "$RUN_OPTIONAL_SYNC" == "1" ]]; then
+    split_words "$OPTIONAL_ONESHOTS"
+    for oneshot in "${WORDS[@]}"; do
+      if unit_exists "$oneshot"; then
+        log "Starting optional one-shot: $oneshot"
+        sudo systemctl start "$oneshot"
+      else
+        log "Skipping missing optional one-shot: $oneshot"
+      fi
+    done
+  fi
+
+  log "Verifying required services"
+  split_words "$REQUIRED_SERVICES"
+  for service in "${WORDS[@]}"; do
+    active_or_oneshot_ok "$service" || die "Service is not healthy: $service"
+    sudo systemctl status "$service" --no-pager --lines=20
+  done
+
+  log "Checking app health endpoint"
+  curl --fail --silent --show-error --max-time 15 "$APP_URL/up" >/dev/null
+
+  log "Checking sign-in page asset references"
+  local signin_html
+  signin_html="$(curl --fail --silent --show-error --max-time 20 "$APP_URL/users/sign_in")"
+  grep -Eq '/assets/application.*\.(css|js)' <<<"$signin_html" || die "Sign-in page does not reference compiled application assets."
+
+  log "Checking referenced CSS and JS assets"
+  mapfile -t assets < <(grep -Eo '/assets/[^"]+\.(css|js)' <<<"$signin_html" | sort -u)
+  [[ "${#assets[@]}" -gt 0 ]] || die "No CSS/JS assets found on sign-in page."
+  for asset in "${assets[@]}"; do
+    curl --fail --silent --show-error --max-time 15 -o /dev/null "$APP_URL$asset"
+    log "Asset ok: $asset"
+  done
+
+  log "Deployment complete: $PREVIOUS_REVISION -> $new_revision"
+}
+
+main "$@"

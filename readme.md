@@ -19,9 +19,44 @@ Things you may want to cover:
 
 * Services (job queues, cache servers, search engines, etc.)
 
-* Deployment instructions
+## Production deployment
 
-* ...
+Production deploys should be run from the production host with the checked-in deploy script:
+
+```bash
+cd /home/esquarenews/apps/notae
+bin/deploy-production
+```
+
+The script is designed to account for the full Notae production deploy path:
+
+- takes an exclusive deploy lock so two deploys cannot run at once
+- refuses to run with a dirty production checkout
+- fetches and fast-forwards `main` from `origin`
+- installs production gems
+- optionally runs the test suite with `RUN_TESTS=1`
+- stops optional background workers before migrations
+- runs production migrations through `systemd-run` using `/etc/notae/notae.env`
+- rebuilds production assets
+- restarts the web service, Sidekiq, meeting bot worker, sync timers, and one-shot sync services when present
+- verifies required systemd service health
+- checks `/up`
+- checks the sign-in page and verifies linked compiled CSS/JS assets return successfully
+- prints the previous git revision and rollback starting point if a step fails
+
+Useful overrides:
+
+```bash
+APP_URL=https://notae.esquarenews.tech bin/deploy-production
+RUN_TESTS=1 bin/deploy-production
+RUN_ASSET_CLOBBER=0 bin/deploy-production
+RUN_OPTIONAL_SYNC=0 RESTART_TIMERS=0 bin/deploy-production
+```
+
+For the detailed runbook, manual fallback commands, common failures, and rollback notes, see:
+
+- [`bin/deploy-production`](bin/deploy-production)
+- [`docs/runbooks/deploy_and_restart.md`](docs/runbooks/deploy_and_restart.md)
 
 ## Email notifications setup (Dev + Production)
 
