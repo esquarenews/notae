@@ -98,7 +98,11 @@ split_words() {
 }
 
 unit_exists() {
-  systemctl list-unit-files "$1" --no-legend --no-pager 2>/dev/null | grep -q .
+  local unit="$1"
+  local load_state
+  load_state="$(systemctl show "$unit" -p LoadState --value 2>/dev/null || true)"
+
+  [[ "$load_state" == "loaded" ]]
 }
 
 active_or_oneshot_ok() {

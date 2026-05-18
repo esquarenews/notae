@@ -25,4 +25,13 @@ RSpec.describe "bin/deploy-production" do
     expect(stdout).to include("RUN_TESTS=1")
     expect(stdout).to include("RESTART_TIMERS=0")
   end
+
+  it "checks systemd unit existence through LoadState resolution" do
+    source = script_path.read
+
+    expect(source).to include("systemctl show")
+    expect(source).to include("-p LoadState --value")
+    expect(source).to include('[[ "$load_state" == "loaded" ]]')
+    expect(source).not_to include("list-unit-files")
+  end
 end
