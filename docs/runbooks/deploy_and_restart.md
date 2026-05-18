@@ -32,6 +32,61 @@ RUN_OPTIONAL_SYNC=0 RESTART_TIMERS=0 bin/deploy-production
 
 The script prints the previous git revision and rollback starting point if a step fails.
 
+### If deploy stops on a dirty production checkout
+
+The script intentionally refuses to deploy over local production edits. Inspect first:
+
+```bash
+cd /home/esquarenews/apps/notae
+git status --short
+```
+
+If the only dirty files are meeting-bot runtime files like:
+
+```text
+?? services/meeting_bot_worker/.env.production
+?? services/meeting_bot_worker/node_modules/
+?? services/meeting_bot_worker/output/
+?? services/meeting_bot_worker/package-lock.json
+```
+
+keep the files in place and ignore them locally on the production host:
+
+```bash
+cat >> .git/info/exclude <<'EOF'
+services/meeting_bot_worker/.env.production
+services/meeting_bot_worker/node_modules/
+services/meeting_bot_worker/output/
+services/meeting_bot_worker/package-lock.json
+EOF
+
+git status --short
+bin/deploy-production
+```
+
+Then choose one path:
+
+```bash
+# Keep intentional changes
+git add <files>
+git commit -m "Describe production change"
+git push origin main
+
+# Preserve temporary production-only changes without deploying them
+git stash push --include-untracked -m "production dirty state before deploy $(date -Iseconds)"
+
+# Discard generated/unwanted files only after reviewing them
+git clean -nd
+git restore <tracked-file>
+git clean -fd <untracked-path>
+```
+
+After the production checkout is clean, rerun:
+
+```bash
+bin/deploy-production
+```
+
 ## Manual fallback
 
 Use this only if the script cannot run and you need to perform the steps manually.

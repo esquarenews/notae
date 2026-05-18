@@ -33,6 +33,10 @@
 !/app/assets/builds/.keep
 /coverage/
 /services/notae_mcp_server/node_modules/
+/services/meeting_bot_worker/.env.production
+/services/meeting_bot_worker/node_modules/
+/services/meeting_bot_worker/output/
+/services/meeting_bot_worker/package-lock.json
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key

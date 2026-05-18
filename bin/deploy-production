@@ -29,6 +29,31 @@ die() {
   exit 1
 }
 
+die_dirty_worktree() {
+  cat >&2 <<DIRTY
+[deploy] ERROR: Working tree is dirty in $APP_ROOT.
+
+[deploy] Dirty files:
+$(git status --short)
+
+[deploy] Resolve on the production host before deploying:
+  cd "$APP_ROOT"
+  git status --short
+
+[deploy] If the changes are intentional, commit and push them first.
+[deploy] If they are temporary production-only edits, preserve them explicitly:
+  git stash push --include-untracked -m "production dirty state before deploy \$(date -Iseconds)"
+
+[deploy] If they are generated files that should be discarded, review them first, then run:
+  git clean -nd
+  git restore <tracked-file>
+  git clean -fd <untracked-path>
+
+[deploy] The deploy script will not modify a dirty production checkout automatically.
+DIRTY
+  exit 1
+}
+
 usage() {
   cat <<'USAGE'
 Deploy Notae to production.
@@ -144,7 +169,7 @@ main() {
   git_root="$(git rev-parse --show-toplevel)"
   [[ "$git_root" == "$APP_ROOT" ]] || die "APP_ROOT does not match git root: $git_root"
 
-  [[ -z "$(git status --porcelain)" ]] || die "Working tree is dirty in $APP_ROOT; commit or stash before deploying."
+  [[ -z "$(git status --porcelain)" ]] || die_dirty_worktree
 
   PREVIOUS_REVISION="$(git rev-parse HEAD)"
   log "Starting deploy from $PREVIOUS_REVISION"

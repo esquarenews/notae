@@ -44,6 +44,26 @@ The script is designed to account for the full Notae production deploy path:
 - checks the sign-in page and verifies linked compiled CSS/JS assets return successfully
 - prints the previous git revision and rollback starting point if a step fails
 
+If the script stops because the production checkout is dirty, inspect the production files first:
+
+```bash
+cd /home/esquarenews/apps/notae
+git status --short
+```
+
+Meeting-bot runtime files under `services/meeting_bot_worker` are expected to exist only on the production host. If those are the only dirty files, add them to `.git/info/exclude` on production so they stay in place without blocking deploys:
+
+```bash
+cat >> .git/info/exclude <<'EOF'
+services/meeting_bot_worker/.env.production
+services/meeting_bot_worker/node_modules/
+services/meeting_bot_worker/output/
+services/meeting_bot_worker/package-lock.json
+EOF
+```
+
+Commit intentional app changes, stash temporary production-only edits, or explicitly discard generated files before rerunning the deploy. The script will not modify a dirty production checkout automatically.
+
 Useful overrides:
 
 ```bash
