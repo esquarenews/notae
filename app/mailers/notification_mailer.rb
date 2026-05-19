@@ -13,8 +13,6 @@ class NotificationMailer < ApplicationMailer
       subject: "#{@actor.email} mentioned you in #{@workspace.name}",
       from: mail_from_value
     }
-    delivery_options = smtp_delivery_options
-    mail_attributes[:delivery_method_options] = delivery_options if delivery_options.present?
 
     mail(mail_attributes)
   end
@@ -37,8 +35,6 @@ class NotificationMailer < ApplicationMailer
       subject: "Reminder: #{@event&.title || 'Kalendarium event'}",
       from: mail_from_value
     }
-    delivery_options = smtp_delivery_options
-    mail_attributes[:delivery_method_options] = delivery_options if delivery_options.present?
 
     mail(mail_attributes)
   end

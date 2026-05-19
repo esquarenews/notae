@@ -27,7 +27,7 @@ RSpec.describe "Invitations", type: :request do
     expect(AuditEvent.recent_first.first.action).to eq("share")
   end
 
-  it "uses configured SMTP sender identity when inviter saved SMTP settings" do
+  it "uses the system sender identity when inviter has legacy SMTP settings" do
     owner = User.create!(
       email: "invite-smtp-owner@example.com",
       password: "password123",
@@ -50,8 +50,8 @@ RSpec.describe "Invitations", type: :request do
     expect(response).to redirect_to(workspace_path(workspace.slug))
     sent_mail = ActionMailer::Base.deliveries.last
     expect(sent_mail.to).to include("smtp-joiner@example.com")
-    expect(sent_mail[:from].decoded).to include("Notae Ops")
-    expect(sent_mail.from).to include("noreply@example.com")
+    expect(sent_mail[:from].decoded).to include("Notae")
+    expect(sent_mail.from).to include("noreply@notae.local")
   end
 
   it "creates membership when a valid invitation is accepted" do

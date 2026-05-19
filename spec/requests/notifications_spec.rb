@@ -58,7 +58,7 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include("Unread: 0")
   end
 
-  it "uses configured SMTP sender identity for mention emails when actor has SMTP settings" do
+  it "uses the system sender identity for mention emails when actor has legacy SMTP settings" do
     author = User.create!(
       email: "mention-smtp-author@example.com",
       password: "password123",
@@ -84,8 +84,8 @@ RSpec.describe "Notifications", type: :request do
 
     sent_mail = ActionMailer::Base.deliveries.last
     expect(sent_mail.to).to eq([ mentioned.email ])
-    expect(sent_mail[:from].decoded).to include("Notae Alerts")
-    expect(sent_mail.from).to include("alerts@example.com")
+    expect(sent_mail[:from].decoded).to include("Notae")
+    expect(sent_mail.from).to include("noreply@notae.local")
   end
 
   it "does not send mention email when recipient disables activity email notifications" do
