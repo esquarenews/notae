@@ -2997,7 +2997,9 @@ RSpec.describe "Databases", type: :request do
     expect(title_form).to be_present
     expect(cell_form).to be_nil
     expect(cell_input).to be_present
+    expect(title_form.at_css("input[name='db_row[title]']")["data-action"]).to include("input->auto-submit#submitDebounced")
     expect(cell_input["data-action"]).to include("change->auto-submit#submit")
+    expect(cell_input["data-action"]).to include("input->auto-submit#submitDebounced")
     expect(cell_input["data-auto-submit-url"]).to eq(
       database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: cell.id, view_id: database.database_views.first.id)
     )

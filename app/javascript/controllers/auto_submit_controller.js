@@ -3,6 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static VIEW_STATE_KEY = "notae:auto-submit:view-state"
   static VIEW_STATE_TTL_MS = 10_000
+  static INPUT_DEBOUNCE_MS = 650
 
   static values = {
     focusOnConnect: Boolean
@@ -31,6 +32,7 @@ export default class extends Controller {
   static documentPointerDownHandler = null
 
   connect() {
+    this.debounceTimers = new Map()
     this.handleSubmitStart = (event) => {
       const form = this.eventForm(event)
       this.markSubmitting(form)
@@ -57,6 +59,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.clearDebounceTimers()
     this.constructor.removeDocumentPointerListener()
     this.element.removeEventListener("turbo:submit-start", this.handleSubmitStart)
     this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd)
@@ -91,6 +94,7 @@ export default class extends Controller {
   }
 
   submit(event) {
+    this.clearDebounceTimerFor(event.target)
     this.applyTaskStatusVisualState(event.target)
 
     const form = this.formFor(event)
@@ -101,6 +105,21 @@ export default class extends Controller {
 
     this.captureViewState(event.target, form)
     this.requestSubmitOnce(form)
+  }
+
+  submitDebounced(event) {
+    const target = event.target
+    if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement)) return
+
+    const existingTimer = this.debounceTimers.get(target)
+    if (existingTimer) window.clearTimeout(existingTimer)
+
+    const timer = window.setTimeout(() => {
+      this.debounceTimers.delete(target)
+      this.submit({ target })
+    }, this.constructor.INPUT_DEBOUNCE_MS)
+
+    this.debounceTimers.set(target, timer)
   }
 
   submitOnEnter(event) {
@@ -404,5 +423,22 @@ export default class extends Controller {
         this.focusNextCreatedRow(attempt + 1)
       }
     }, attempt === 0 ? 0 : 75)
+  }
+
+  clearDebounceTimers() {
+    if (!this.debounceTimers) return
+
+    this.debounceTimers.forEach((timer) => window.clearTimeout(timer))
+    this.debounceTimers.clear()
+  }
+
+  clearDebounceTimerFor(target) {
+    if (!this.debounceTimers || !target) return
+
+    const timer = this.debounceTimers.get(target)
+    if (!timer) return
+
+    window.clearTimeout(timer)
+    this.debounceTimers.delete(target)
   }
 }
