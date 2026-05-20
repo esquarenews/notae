@@ -262,6 +262,7 @@
                } %>
 
     <section class="notae-doc-backlinks">
+      <%= render "shared/document_timestamps", record: @page %>
       <h2>Backlinks</h2>
       <% backlink_targets = [] %>
       <% @backlinks.each do |backlink| %>

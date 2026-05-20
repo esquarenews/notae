@@ -12442,6 +12442,11 @@ body.notae-theme-dark .notae-doc-muted {
   color: #57534e;
 }
 
+.notae-doc-timestamps {
+  display: grid;
+  gap: 0.12rem;
+}
+
 .notae-doc-backlinks ul {
   margin: 0;
   padding: 0;

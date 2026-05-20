@@ -6,6 +6,10 @@ RSpec.describe "Backlinks", type: :request do
     document.at_css(%([data-backlink-source="#{source}"]))&.[]("href")
   end
 
+  def local_document_timestamp(timestamp, user)
+    timestamp.in_time_zone(user.time_zone).strftime("%a %-d %b %Y %H:%M %Z")
+  end
+
   it "detects links from block content and renders backlinks on target pages" do
     owner = User.create!(email: "backlink-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Backlinks", slug: "backlinks")
@@ -32,6 +36,60 @@ RSpec.describe "Backlinks", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Backlinks")
     expect(response.body).to include("data-backlink-source=\"#{source_page.id}\"")
+  end
+
+  it "renders local originated and edited timestamps above page backlinks" do
+    owner = User.create!(
+      email: "backlink-page-timestamps@example.com",
+      password: "password123",
+      time_zone: "Australia/Melbourne"
+    )
+    workspace = Workspace.create!(name: "Page timestamps", slug: "page-timestamps")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Timestamped note")
+    page.update_columns(
+      created_at: Time.utc(2026, 5, 20, 23, 15),
+      updated_at: Time.utc(2026, 5, 21, 1, 45)
+    )
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Originated: #{local_document_timestamp(page.reload.created_at, owner)}")
+    expect(response.body).to include("Last edited: #{local_document_timestamp(page.updated_at, owner)}")
+
+    document = Nokogiri::HTML.parse(response.body)
+    timestamp_block = document.at_css(".notae-doc-backlinks .notae-doc-timestamps")
+    expect(timestamp_block).to be_present
+    expect(timestamp_block.ancestors(".notae-doc-backlinks")).to be_present
+  end
+
+  it "renders local originated and edited timestamps above grid backlinks" do
+    owner = User.create!(
+      email: "backlink-grid-timestamps@example.com",
+      password: "password123",
+      time_zone: "Australia/Melbourne"
+    )
+    workspace = Workspace.create!(name: "Grid timestamps", slug: "grid-timestamps")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Timestamped grid", created_by: owner)
+    database.update_columns(
+      created_at: Time.utc(2026, 5, 19, 22, 30),
+      updated_at: Time.utc(2026, 5, 21, 2, 5)
+    )
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Originated: #{local_document_timestamp(database.reload.created_at, owner)}")
+    expect(response.body).to include("Last edited: #{local_document_timestamp(database.updated_at, owner)}")
+
+    document = Nokogiri::HTML.parse(response.body)
+    timestamp_block = document.at_css(".notae-doc-backlinks .notae-doc-timestamps")
+    expect(timestamp_block).to be_present
+    expect(timestamp_block.ancestors(".notae-doc-backlinks")).to be_present
   end
 
   it "removes backlinks when links are removed from block content" do

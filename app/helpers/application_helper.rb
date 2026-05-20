@@ -32,6 +32,12 @@ module ApplicationHelper
     emoji&.image&.attached? && Notae::UploadPolicy.safe_inline_image_content_type?(emoji.image.blob.content_type)
   end
 
+  def document_local_timestamp(timestamp)
+    return "" if timestamp.blank?
+
+    timestamp.in_time_zone(current_user&.time_zone.presence || Time.zone).strftime("%a %-d %b %Y %H:%M %Z")
+  end
+
   def render_notae_icon(icon_value, workspace:, fallback:, css_class: nil, label: nil)
     resolved_icon = resolved_notae_icon(icon_value, workspace:, fallback:)
     wrapper_classes = [ "notae-icon-renderer", css_class, ("is-custom" if resolved_icon[:kind] == :custom) ].compact.join(" ")

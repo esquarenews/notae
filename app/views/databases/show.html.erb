@@ -659,6 +659,7 @@
   <% end %>
 
   <section class="notae-doc-backlinks">
+    <%= render "shared/document_timestamps", record: @database %>
     <h2>Backlinks</h2>
     <% backlink_pages = @backlinks.map(&:source_page).compact.uniq { |source_page| source_page.id } %>
     <% if backlink_pages.any? %>

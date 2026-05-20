@@ -105,6 +105,36 @@
     </section>
 
     <section class="notae-settings-section">
+      <h2>Workspace games</h2>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">The Archive</p>
+          <p class="notae-pref-description">
+            Open <code class="notae-pref-code">/w/<%= @workspace.slug %>/_archive</code>.
+            You can also type <strong>archive</strong> while you are not editing text.
+          </p>
+        </div>
+        <%= link_to "Open The Archive",
+                    workspace_archive_game_path(workspace_slug: @workspace.slug),
+                    class: "notae-chip-button" %>
+      </div>
+
+      <div class="notae-pref-row">
+        <div class="notae-pref-copy">
+          <p class="notae-pref-label">Nota Maze</p>
+          <p class="notae-pref-description">
+            Open <code class="notae-pref-code">/w/<%= @workspace.slug %>/_nota_maze</code>.
+            You can also type <strong>maze</strong> while you are not editing text.
+          </p>
+        </div>
+        <%= link_to "Open Nota Maze",
+                    workspace_nota_maze_game_path(workspace_slug: @workspace.slug),
+                    class: "notae-chip-button" %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
       <h2>Danger zone</h2>
 
       <div class="notae-pref-row">
