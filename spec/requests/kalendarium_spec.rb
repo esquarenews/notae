@@ -1037,6 +1037,57 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include(event.title)
   end
 
+  it "does not load regular calendar events into project view" do
+    user, workspace, calendar = build_stack(suffix: "project-view-calendar-scope")
+    sign_in user
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch Week",
+      color_hex: "#8B5CF6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: project_calendar,
+      name: "Launch Week",
+      slug: "launch-week",
+      color_hex: "#8B5CF6"
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Provider event that should not be considered by project view",
+      starts_at_utc: Time.zone.parse("2026-05-30 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-05-30 10:00:00")
+    )
+    project_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Project launch event",
+      starts_at_utc: Time.zone.parse("2026-05-30 11:00:00"),
+      ends_at_utc: Time.zone.parse("2026-05-30 12:00:00")
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "project",
+      date: "2026-05-30",
+      calendar_ids: [ calendar.id ]
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(project_event.title)
+    expect(response.body).not_to include("Provider event that should not be considered by project view")
+  end
+
   it "keeps the last calendar view after a session reset" do
     user, workspace, = build_stack(suffix: "last-view-reset")
     sign_in user

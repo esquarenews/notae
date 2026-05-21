@@ -42,7 +42,11 @@ class KalendariumController < ApplicationController
     @calendar_filter_calendars = @all_calendars.reject { |calendar| calendar.source_kind == "project" }
     @selected_calendar_ids = resolve_selected_calendar_ids(@calendar_filter_calendars)
     @visible_calendars = @calendar_filter_calendars.select { |calendar| @selected_calendar_ids.include?(calendar.id.to_s) }
-    @visible_event_calendars = (@visible_calendars + @project_calendars).uniq
+    @visible_event_calendars = if @view == "project"
+      @project_calendars
+    else
+      (@visible_calendars + @project_calendars).uniq
+    end
 
     @time_zone_rail = resolve_time_zone_rail
     prepare_task_schedule_state!
