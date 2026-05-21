@@ -1037,6 +1037,58 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include(event.title)
   end
 
+  it "renders project view when all projects are hidden by the saved visibility preference" do
+    user, workspace, = build_stack(suffix: "project-view-hidden-projects")
+    sign_in user
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Hidden Launch Week",
+      color_hex: "#8B5CF6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: project_calendar,
+      name: "Hidden Launch Week",
+      slug: "hidden-launch-week",
+      color_hex: "#8B5CF6"
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Hidden legacy project event",
+      starts_at_utc: Time.zone.parse("2026-05-30 00:00:00"),
+      ends_at_utc: Time.zone.parse("2026-05-30 23:59:59"),
+      all_day: true
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-05-30",
+      toggle_project_id: project.id,
+      project_visible: "0"
+    )
+    expect(response).to have_http_status(:ok)
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "project",
+      date: "2026-05-30",
+      project_id: project.id
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(project.name)
+    expect(response.body).not_to include("Hidden legacy project event")
+    expect(response.body).to include("No events yet.")
+  end
+
   it "does not load regular calendar events into project view" do
     user, workspace, calendar = build_stack(suffix: "project-view-calendar-scope")
     sign_in user

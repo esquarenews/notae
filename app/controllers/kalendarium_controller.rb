@@ -33,9 +33,13 @@ class KalendariumController < ApplicationController
     @scoped_project_id = scoped_project_id(@projects)
     @selected_project_id = selected_active_project_id
     @visible_project_ids = resolve_visible_project_ids(@projects)
+    @visible_project_id_set = @visible_project_ids.index_with(true)
     @visible_projects = @projects.select { |project| @visible_project_ids.include?(project.id.to_s) }
     active_project_ids = @projects.map(&:id)
     visible_project_calendar_ids = @visible_projects.map(&:kalendarium_calendar_id).compact
+    @project_id_by_calendar_id = @projects.each_with_object({}) do |project, index|
+      index[project.kalendarium_calendar_id] = project.id if project.kalendarium_calendar_id.present?
+    end
 
     @all_calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).order(:name).to_a
     @project_calendars = @all_calendars.select { |calendar| calendar.source_kind == "project" && visible_project_calendar_ids.include?(calendar.id) }
@@ -60,10 +64,14 @@ class KalendariumController < ApplicationController
                 .for_range(range_start, range_end)
                 .order(:starts_at_utc)
     if active_project_ids.any?
-      @events = @events.where(
-        "kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)",
-        @visible_project_ids
-      )
+      @events = if @visible_project_ids.any?
+        @events.where(
+          "kalendarium_events.kalendarium_project_id IS NULL OR kalendarium_events.kalendarium_project_id IN (?)",
+          @visible_project_ids
+        )
+      else
+        @events.where(kalendarium_project_id: nil)
+      end
     else
       @events = @events.where(kalendarium_project_id: nil)
     end
@@ -425,6 +433,7 @@ class KalendariumController < ApplicationController
     @day_all_day_offset = 0
     @week_all_day_rows = 0
     @week_all_day_offset = 0
+    @project_events_by_project_id = Hash.new { |index, project_id| index[project_id] = [] }
 
     case @view
     when "day"
@@ -448,9 +457,19 @@ class KalendariumController < ApplicationController
                            .archived
                            .order(archived_at: :desc, name: :asc)
                            .to_a
+      @project_events_by_project_id = build_project_events_by_project_id(@events)
     else
       @events_by_day = events_grouped_by_day
       @month_days = build_month_days
+    end
+  end
+
+  def build_project_events_by_project_id(events)
+    events.each_with_object(Hash.new { |index, project_id| index[project_id] = [] }) do |event, index|
+      project_id = event.kalendarium_project_id || @project_id_by_calendar_id[event.kalendarium_calendar_id]
+      next if project_id.blank?
+
+      index[project_id] << event
     end
   end
 

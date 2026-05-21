@@ -328,7 +328,7 @@
           </details>
         <% end %>
 
-        <% visible_project_id_set = @visible_project_ids.to_set %>
+        <% visible_project_id_set = @visible_project_id_set || @visible_project_ids.index_with(true) %>
         <% menu_time_zones = Array(params[:tz]).map(&:to_s).reject(&:blank?) %>
         <% project_menu_params = {
              view: @view,
@@ -875,7 +875,7 @@
                                   form: { data: { turbo_confirm: "Delete #{project.name}? This removes the project and unassigns its events." } } %>
                   </div>
                 </header>
-                <% project_events = @events.select { |event| event.kalendarium_project_id == project.id || (event.kalendarium_project_id.blank? && event.kalendarium_calendar_id == project.kalendarium_calendar_id) } %>
+                <% project_events = @project_events_by_project_id[project.id] %>
                 <% if project.linked_page.present? %>
                   <p><%= link_to "Linked Nota", page_path(workspace_slug: @workspace.slug, id: project.linked_page_id), class: "notae-utility-link" %></p>
                 <% end %>
