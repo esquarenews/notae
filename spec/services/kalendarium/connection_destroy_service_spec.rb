@@ -70,6 +70,16 @@ RSpec.describe Kalendarium::ConnectionDestroyService do
       token_count: 3,
       content_hash: Digest::SHA256.hexdigest("Destroy event chunk")
     )
+    meeting_session = MeetingSession.create!(
+      workspace: workspace,
+      kalendarium_event: event,
+      created_by: user,
+      updated_by: user,
+      title: "Captured meeting",
+      capture_mode: "browser_extension",
+      provider: "google_meet",
+      status: "completed"
+    )
 
     described_class.new(connection: connection).call
 
@@ -78,6 +88,7 @@ RSpec.describe Kalendarium::ConnectionDestroyService do
     expect(KalendariumEvent.where(id: event.id)).to be_empty
     expect(SearchChunk.where(source_type: SearchChunk::SOURCE_KALENDARIUM_EVENT, source_id: event.id)).to be_empty
     expect(proposal.reload.kalendarium_event_id).to be_nil
+    expect(meeting_session.reload.kalendarium_event_id).to be_nil
     expect(project.reload.kalendarium_calendar_id).to be_nil
   end
 end

@@ -16,6 +16,10 @@ module Kalendarium
             kalendarium_event_id: nil,
             updated_at: Time.current
           )
+          MeetingSession.where(kalendarium_event_id: event_ids).update_all(
+            kalendarium_event_id: nil,
+            updated_at: Time.current
+          )
           SearchChunk.where(source_type: SearchChunk::SOURCE_KALENDARIUM_EVENT, source_id: event_ids).delete_all
           SearchChunk.where(kalendarium_event_id: event_ids).delete_all
           KalendariumEvent.where(id: event_ids).delete_all
