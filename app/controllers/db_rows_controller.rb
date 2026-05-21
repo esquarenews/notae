@@ -658,8 +658,19 @@ class DbRowsController < ApplicationController
 
   def persist_visible_project_ids_for_workspace(ids, available_ids: nil)
     payload = compact_visibility_payload_for_workspace(ids, available_ids)
-    persist_workspace_calendar_preference!("project_visibility", payload)
-    project_visibility_session_for_workspace[project_visibility_workspace_key] = payload
+    if persist_workspace_calendar_preference!("project_visibility", payload)
+      clear_project_visibility_session_for_workspace!
+    else
+      project_visibility_session_for_workspace[project_visibility_workspace_key] = payload
+    end
+  end
+
+  def clear_project_visibility_session_for_workspace!
+    workspace_preferences = session[:kalendarium_project_visibility]
+    return unless workspace_preferences.respond_to?(:delete)
+
+    workspace_preferences.delete(project_visibility_workspace_key)
+    session.delete(:kalendarium_project_visibility) if workspace_preferences.empty?
   end
 
   def compact_visibility_payload_for_workspace(ids, available_ids)

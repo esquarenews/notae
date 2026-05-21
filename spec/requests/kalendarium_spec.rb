@@ -1140,6 +1140,62 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).not_to include("Provider event that should not be considered by project view")
   end
 
+  it "toggles project visibility from the rendered project menu link" do
+    user, workspace, calendar = build_stack(suffix: "project-menu-toggle-link")
+    sign_in user
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch Week",
+      color_hex: "#8B5CF6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: project_calendar,
+      name: "Launch Week",
+      slug: "launch-week",
+      color_hex: "#8B5CF6"
+    )
+    project_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Project toggle event",
+      starts_at_utc: Time.zone.parse("2026-05-30 11:00:00"),
+      ends_at_utc: Time.zone.parse("2026-05-30 12:00:00")
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-05-30",
+      calendar_ids: [ calendar.id ],
+      calendar_filter_applied: "1"
+    )
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(project_event.title)
+
+    document = Nokogiri::HTML.parse(response.body)
+    toggle_link = document.css("a.notae-kalendarium-project-action-link.is-toggle").find do |link|
+      link["href"].to_s.include?("toggle_project_id=#{project.id}")
+    end
+    expect(toggle_link).to be_present
+
+    get toggle_link["href"]
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include(project_event.title)
+    expect(response.body).to include("Projects (0)")
+    expect(request.session[:kalendarium_calendar_selection]).to be_blank
+    expect(request.session[:kalendarium_last_calendar_view]).to be_blank
+    expect(request.session[:kalendarium_project_visibility]).to be_blank
+  end
+
   it "keeps the last calendar view after a session reset" do
     user, workspace, = build_stack(suffix: "last-view-reset")
     sign_in user

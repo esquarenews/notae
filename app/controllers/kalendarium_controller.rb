@@ -790,8 +790,11 @@ class KalendariumController < ApplicationController
 
   def persist_selected_calendar_ids(ids, available_ids: nil)
     payload = compact_visibility_payload(ids, available_ids)
-    persist_workspace_calendar_preference!("calendar_selection", payload)
-    calendar_filter_session[calendar_filter_workspace_key] = payload
+    if persist_workspace_calendar_preference!("calendar_selection", payload)
+      clear_session_workspace_preference!(:kalendarium_calendar_selection, calendar_filter_workspace_key)
+    else
+      calendar_filter_session[calendar_filter_workspace_key] = payload
+    end
   end
 
   def project_visibility_session
@@ -841,8 +844,11 @@ class KalendariumController < ApplicationController
 
   def persist_visible_project_ids(ids, available_ids: nil)
     payload = compact_visibility_payload(ids, available_ids)
-    persist_workspace_calendar_preference!("project_visibility", payload)
-    project_visibility_session[project_visibility_workspace_key] = payload
+    if persist_workspace_calendar_preference!("project_visibility", payload)
+      clear_session_workspace_preference!(:kalendarium_project_visibility, project_visibility_workspace_key)
+    else
+      project_visibility_session[project_visibility_workspace_key] = payload
+    end
   end
 
   def persisted_visible_project_ids(allowed_ids:)
@@ -887,8 +893,19 @@ class KalendariumController < ApplicationController
   def persist_last_calendar_view!
     return if @view == "project"
 
-    persist_workspace_calendar_preference!("last_view", @view)
-    last_calendar_view_session[last_calendar_view_workspace_key] = @view
+    if persist_workspace_calendar_preference!("last_view", @view)
+      clear_session_workspace_preference!(:kalendarium_last_calendar_view, last_calendar_view_workspace_key)
+    else
+      last_calendar_view_session[last_calendar_view_workspace_key] = @view
+    end
+  end
+
+  def clear_session_workspace_preference!(session_key, workspace_key)
+    workspace_preferences = session[session_key]
+    return unless workspace_preferences.respond_to?(:delete)
+
+    workspace_preferences.delete(workspace_key)
+    session.delete(session_key) if workspace_preferences.empty?
   end
 
   def resolve_project_return_view
