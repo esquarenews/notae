@@ -139,6 +139,46 @@ RSpec.describe "API V1 Kalendarium events", type: :request do
     expect(payload.fetch("url")).to include("/w/#{workspace.slug}/kalendarium")
   end
 
+  it "assigns events created on a project calendar to the owning project" do
+    owner = User.create!(email: "api-kal-events-project-calendar@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Kal project calendar events", slug: "api-kal-project-calendar-events")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: owner,
+      name: "Launch Week",
+      color_hex: "#8B5CF6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: owner,
+      kalendarium_calendar: project_calendar,
+      name: "Launch Week",
+      slug: "launch-week",
+      color_hex: "#8B5CF6"
+    )
+    token = ApiToken.create!(user: owner, name: "Kal project create API")
+
+    post "/api/v1/workspaces/#{workspace.slug}/kalendarium/events",
+         params: {
+           kalendarium_event: {
+             kalendarium_calendar_id: project_calendar.id,
+             title: "Launch announcement",
+             starts_at: "2026-05-30",
+             ends_at: "2026-05-30",
+             all_day: true,
+             time_zone: "Australia/Melbourne"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    event = KalendariumEvent.find(json_body.dig("data", "event", "id"))
+    expect(event.kalendarium_project).to eq(project)
+  end
+
   it "syncs provider-backed calendar events without namespace resolution errors" do
     owner = User.create!(email: "api-kal-events-provider-sync@example.com", password: "password123")
     workspace = Workspace.create!(name: "API Kal events provider sync", slug: "api-kal-events-provider-sync")

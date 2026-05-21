@@ -34,6 +34,7 @@ module Api
               :reminder_offsets_minutes
             ).merge(
               kalendarium_calendar: calendar,
+              kalendarium_project: selected_project_for_calendar,
               created_by: current_user,
               updated_by: current_user,
               starts_at_utc: starts_at_utc,
@@ -104,6 +105,12 @@ module Api
 
         def selected_calendar
           @selected_calendar ||= policy_scope(KalendariumCalendar).for_workspace(workspace).find(event_params[:kalendarium_calendar_id])
+        end
+
+        def selected_project_for_calendar
+          return nil unless selected_calendar.source_kind == "project"
+
+          selected_calendar.kalendarium_project
         end
 
         def raw_starts_at

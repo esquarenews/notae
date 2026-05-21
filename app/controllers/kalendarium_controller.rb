@@ -35,10 +35,10 @@ class KalendariumController < ApplicationController
     @visible_project_ids = resolve_visible_project_ids(@projects)
     @visible_projects = @projects.select { |project| @visible_project_ids.include?(project.id.to_s) }
     active_project_ids = @projects.map(&:id)
-    active_project_calendar_ids = @projects.map(&:kalendarium_calendar_id).compact
+    visible_project_calendar_ids = @visible_projects.map(&:kalendarium_calendar_id).compact
 
     @all_calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).order(:name).to_a
-    @project_calendars = @all_calendars.select { |calendar| calendar.source_kind == "project" && active_project_calendar_ids.include?(calendar.id) }
+    @project_calendars = @all_calendars.select { |calendar| calendar.source_kind == "project" && visible_project_calendar_ids.include?(calendar.id) }
     @calendar_filter_calendars = @all_calendars.reject { |calendar| calendar.source_kind == "project" }
     @selected_calendar_ids = resolve_selected_calendar_ids(@calendar_filter_calendars)
     @visible_calendars = @calendar_filter_calendars.select { |calendar| @selected_calendar_ids.include?(calendar.id.to_s) }

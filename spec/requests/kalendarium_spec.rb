@@ -995,6 +995,48 @@ RSpec.describe "Kalendarium", type: :request do
     expect(close_link["href"]).to include("date=2026-03-01")
   end
 
+  it "renders project-calendar events in project view even when legacy rows have no project id" do
+    user, workspace, = build_stack(suffix: "project-calendar-event-view")
+    sign_in user
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch Week",
+      color_hex: "#8B5CF6",
+      time_zone: "Australia/Melbourne",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: project_calendar,
+      name: "Launch Week",
+      slug: "launch-week",
+      color_hex: "#8B5CF6"
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Launch announcement",
+      starts_at_utc: Time.zone.parse("2026-05-30 00:00:00"),
+      ends_at_utc: Time.zone.parse("2026-05-30 23:59:59"),
+      all_day: true
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "project",
+      date: "2026-05-30",
+      project_id: project.id
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(project.name)
+    expect(response.body).to include(event.title)
+  end
+
   it "keeps the last calendar view after a session reset" do
     user, workspace, = build_stack(suffix: "last-view-reset")
     sign_in user
