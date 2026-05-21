@@ -63,12 +63,36 @@ RSpec.describe "Kalendarium settings", type: :request do
 
   it "renders Google connections as OAuth-only in settings UI" do
     user, workspace = build_stack(suffix: "oauth-only-ui")
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Google calendar",
+      access_token: "token",
+      refresh_token: "refresh-token",
+      enabled: true,
+      status: "connected"
+    )
+    KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      source_kind: "provider",
+      name: "Primary",
+      color_hex: "#336699",
+      time_zone: "UTC",
+      enabled: true
+    )
     sign_in user
 
     get workspace_kalendarium_settings_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Connect Google with OAuth")
+    expect(response.body).to include("Use a different connection label for each Google account")
+    expect(response.body).to include("value=\"Google calendar 2\"")
     expect(response.body).to include("action=\"/w/#{workspace.slug}/kalendarium/connections/google_authorize\"")
     expect(response.body).to include("data-controller=\"google-oauth-launch\"")
     expect(response.body).to include("submit-&gt;google-oauth-launch#submit")
@@ -78,6 +102,9 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(response.body).not_to include("Access token (Google)")
     expect(response.body).not_to include("Refresh token (Google)")
     expect(response.body).not_to include(">Google</option>")
+    expect(response.body).to include("Turn off <strong>Show in Kalendārium</strong>")
+    expect(response.body).to include("Google connection · 1 calendar")
+    expect(response.body).to include("Show in Kalendārium")
     expect(response.headers["Content-Security-Policy"]).to include("form-action 'self'")
     expect(response.headers["Content-Security-Policy"]).to include("https://accounts.google.com")
   end

@@ -16583,6 +16583,50 @@ button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button:ho
   max-width: min(720px, 100%);
 }
 
+.notae-kalendarium-calendar-groups {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.notae-kalendarium-calendar-group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.notae-kalendarium-calendar-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.notae-kalendarium-calendar-group-header h3 {
+  margin: 0;
+  font-size: 0.94rem;
+}
+
+.notae-kalendarium-calendar-group-header .notae-page-subtle {
+  margin: 0.1rem 0 0;
+}
+
+.notae-kalendarium-calendar-name {
+  font-weight: 700;
+}
+
+.notae-kalendarium-field-label {
+  display: grid;
+  gap: 0.18rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--notae-muted, #57534e);
+}
+
+.notae-kalendarium-field-label .notae-auth-input {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--notae-text, #1c1917);
+}
+
 .notae-kalendarium-connection-form > *,
 .notae-kalendarium-calendar-row > * {
   min-width: 0;

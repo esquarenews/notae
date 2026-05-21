@@ -298,12 +298,24 @@ RSpec.describe "Epistularium", type: :request do
 
   it "renders Epistularium settings with provider setup and navigation entry" do
     user, workspace, = build_stack(suffix: "settings-page")
+    EpistulariumAccount.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "gmail",
+      label: "Gmail mailbox",
+      refresh_token: "gmail-refresh-token",
+      enabled: true,
+      status: "connected"
+    )
     sign_in user
 
     get workspace_epistularium_settings_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Connect Gmail with OAuth")
+    expect(response.body).to include("Use a different mailbox label for each Gmail account")
+    expect(response.body).to include("value=\"Gmail mailbox 2\"")
     expect(response.body).to include("Add IMAP or Amazon WorkMail")
     expect(response.body).to include("Manage Epistula")
     expect(response.body).to include("Open Epistularium")

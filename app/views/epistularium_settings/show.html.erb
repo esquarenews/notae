@@ -13,7 +13,7 @@
   <div class="notae-settings-content">
     <section class="notae-settings-section">
       <h2>Connect Gmail with OAuth</h2>
-      <p class="notae-pref-description">Use Google OAuth for read-only Gmail access. Message history is backfilled and indexed for AI context.</p>
+      <p class="notae-pref-description">Use Google OAuth for read-only Gmail access. Message history is backfilled and indexed for AI context. Use a different mailbox label for each Gmail account; use Re-authorize on an existing row when you want to refresh that account.</p>
       <% unless @google_oauth_configured %>
         <p class="notae-page-subtle">Google OAuth is not configured on the server. Set <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code>.</p>
       <% end %>
@@ -26,7 +26,7 @@
                       "data-action": "submit->google-oauth-launch#submit",
                       "data-google-oauth-launch": "true"
                     } do %>
-        <%= text_field_tag :label, "Gmail mailbox", placeholder: "Mailbox label", required: true, class: "notae-auth-input" %>
+        <%= text_field_tag :label, @google_oauth_label, placeholder: "Mailbox label", required: true, class: "notae-auth-input" %>
         <%= select_tag "epistularium_account[owner_scope]",
                        options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
                        class: "notae-auth-input" %>

@@ -36,6 +36,7 @@
     <section class="notae-settings-section">
       <h2>Calendar connections</h2>
       <p class="notae-pref-description">Google can be connected with OAuth (recommended), iCloud uses CalDAV credentials (Apple ID + app-specific password), and ICS uses read-only feed URLs.</p>
+      <p class="notae-pref-description">Use a different connection label for each Google account. Re-authorize from an existing connection row when you want to refresh that account instead of adding another one.</p>
       <p class="notae-pref-description">Scope controls: choose <strong>This workspace</strong> for local-only visibility, or <strong>All workspaces</strong> to create an independent copy in each accessible workspace.</p>
       <% unless @google_oauth_configured %>
         <p class="notae-page-subtle">
@@ -62,7 +63,7 @@
                       "data-google-oauth-launch": "true"
                     } do %>
         <%= text_field_tag :label,
-                           "Google calendar",
+                           @google_oauth_label,
                            placeholder: "Google connection label",
                            required: true,
                            class: "notae-auth-input" %>
@@ -143,23 +144,48 @@
 
     <section class="notae-settings-section">
       <h2>Calendars and colors</h2>
+      <p class="notae-pref-description">These are the individual calendars synced from each connection. Turn off <strong>Show in Kalendārium</strong> for calendars you do not want to see; delete the source connection above to remove all calendars from that account.</p>
       <% if @calendars.any? %>
-        <ul class="notae-kalendarium-calendars-list">
-          <% @calendars.each do |calendar| %>
-            <li>
-              <%= form_with model: calendar,
-                            url: kalendarium_calendar_path(workspace_slug: @workspace.slug, id: calendar.id),
-                            method: :patch,
-                            class: "notae-kalendarium-calendar-row" do |form| %>
-                <span><%= calendar.name %></span>
-                <%= form.color_field :color_hex, value: calendar.color_hex %>
-                <%= form.text_field :time_zone, value: calendar.time_zone, class: "notae-auth-input" %>
-                <label class="notae-options-checkbox"><%= form.check_box :enabled %><span>Enabled</span></label>
-                <%= form.submit "Save", class: "notae-chip-button" %>
-              <% end %>
-            </li>
+        <div class="notae-kalendarium-calendar-groups">
+          <% @calendars_by_connection.each do |connection, calendars| %>
+            <section class="notae-kalendarium-calendar-group">
+              <header class="notae-kalendarium-calendar-group-header">
+                <div>
+                  <h3><%= connection&.label.presence || "Local and project calendars" %></h3>
+                  <p class="notae-page-subtle">
+                    <% if connection.present? %>
+                      <%= connection.provider.titleize %> connection · <%= pluralize(calendars.count, "calendar") %>
+                    <% else %>
+                      Calendars created inside Notae · <%= pluralize(calendars.count, "calendar") %>
+                    <% end %>
+                  </p>
+                </div>
+              </header>
+              <ul class="notae-kalendarium-calendars-list">
+                <% calendars.each do |calendar| %>
+                  <li>
+                    <%= form_with model: calendar,
+                                  url: kalendarium_calendar_path(workspace_slug: @workspace.slug, id: calendar.id),
+                                  method: :patch,
+                                  class: "notae-kalendarium-calendar-row" do |form| %>
+                      <span class="notae-kalendarium-calendar-name"><%= calendar.name %></span>
+                      <label class="notae-kalendarium-field-label">
+                        <span>Colour</span>
+                        <%= form.color_field :color_hex, value: calendar.color_hex %>
+                      </label>
+                      <label class="notae-kalendarium-field-label">
+                        <span>Time zone</span>
+                        <%= form.text_field :time_zone, value: calendar.time_zone, class: "notae-auth-input" %>
+                      </label>
+                      <label class="notae-options-checkbox"><%= form.check_box :enabled %><span>Show in Kalendārium</span></label>
+                      <%= form.submit "Save calendar", class: "notae-chip-button" %>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            </section>
           <% end %>
-        </ul>
+        </div>
       <% else %>
         <p class="notae-page-subtle">No calendars yet. Create a project or connect a provider.</p>
       <% end %>

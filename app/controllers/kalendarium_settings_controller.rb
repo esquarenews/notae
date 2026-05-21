@@ -7,7 +7,9 @@ class KalendariumSettingsController < ApplicationController
 
     @connections = policy_scope(KalendariumConnection).for_workspace(@workspace).includes(:kalendarium_calendars).order(created_at: :desc)
     @external_connections = resolve_external_connections
-    @calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).order(:name)
+    @calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).includes(:kalendarium_connection).order(:name)
+    @calendars_by_connection = @calendars.group_by(&:kalendarium_connection)
+    @google_oauth_label = next_available_google_label
     @time_zone_options = User.time_zone_options
     @google_oauth_configured = Kalendarium::GoogleOauthService.configured?
     @google_oauth_debug = google_oauth_debug_state if Rails.env.development?
@@ -105,6 +107,20 @@ class KalendariumSettingsController < ApplicationController
       .includes(:workspace)
       .order(:label, :created_at)
       .reject { |connection| local_signatures.include?(connection_signature(connection)) }
+  end
+
+  def next_available_google_label
+    base = "Google calendar"
+    existing_labels = @connections.select { |connection| connection.provider == "google" }.map { |connection| connection.label.to_s }
+    return base unless existing_labels.include?(base)
+
+    index = 2
+    loop do
+      candidate = "#{base} #{index}"
+      return candidate unless existing_labels.include?(candidate)
+
+      index += 1
+    end
   end
 
   def connection_signature(connection)
