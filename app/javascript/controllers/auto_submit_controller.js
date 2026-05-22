@@ -33,16 +33,21 @@ export default class extends Controller {
 
   connect() {
     this.debounceTimers = new Map()
+    this.createRowFocusRequested = false
     this.handleSubmitStart = (event) => {
       const form = this.eventForm(event)
       this.markSubmitting(form)
+      if (this.isCreateRowForm(form)) {
+        this.createRowFocusRequested = true
+      }
     }
     this.handleSubmitEnd = (event) => {
       const form = this.eventForm(event)
       this.clearSubmitting(form)
-      if (!this.nextRowFocusRequested) return
+      if (!this.nextRowFocusRequested && !this.createRowFocusRequested) return
 
       this.nextRowFocusRequested = false
+      this.createRowFocusRequested = false
       this.focusNextCreatedRow()
     }
     this.clearSubmitting()
@@ -91,6 +96,15 @@ export default class extends Controller {
     if (target instanceof HTMLFormElement) return target
 
     return this.formFor(event)
+  }
+
+  isCreateRowForm(form) {
+    if (!(form instanceof HTMLFormElement)) return false
+
+    return (
+      form.classList.contains("notae-db-new-row-trigger-form") ||
+      form.classList.contains("notae-db-row-hover-control-form")
+    )
   }
 
   submit(event) {
@@ -231,6 +245,7 @@ export default class extends Controller {
 
       if (contentType.includes("turbo-stream") && window.Turbo?.renderStreamMessage) {
         window.Turbo.renderStreamMessage(responseBody)
+        this.restoreViewState()
       } else if (response.redirected) {
         window.location.assign(response.url)
       } else if (!response.ok) {
@@ -274,7 +289,11 @@ export default class extends Controller {
       capturedAt: Date.now(),
       formAction: form?.action || "",
       pendingFocusSelector: this.constructor.pendingFocusSelector,
-      pendingFocusCapturedAt: this.constructor.pendingFocusCapturedAt
+      pendingFocusCapturedAt: this.constructor.pendingFocusCapturedAt,
+      preservesSelection: this.supportsSelectionRange(target),
+      selectionStart: this.selectionStartFor(target),
+      selectionEnd: this.selectionEndFor(target),
+      selectionDirection: this.selectionDirectionFor(target)
     }
 
     window.sessionStorage.setItem(this.constructor.VIEW_STATE_KEY, JSON.stringify(payload))
@@ -309,11 +328,51 @@ export default class extends Controller {
       window.scrollTo({ top: Number(payload.scrollY) || 0, behavior: "auto" })
       requestAnimationFrame(() => {
         target.focus({ preventScroll: true })
+        if (this.restoreSelection(target, payload)) return
+        if (payload?.preservesSelection) return
+
         if (typeof target.select === "function" && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
           target.select()
         }
       })
     })
+  }
+
+  supportsSelectionRange(target) {
+    return (
+      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+      typeof target.selectionStart === "number" &&
+      typeof target.selectionEnd === "number" &&
+      typeof target.setSelectionRange === "function"
+    )
+  }
+
+  selectionStartFor(target) {
+    return this.supportsSelectionRange(target) ? target.selectionStart : null
+  }
+
+  selectionEndFor(target) {
+    return this.supportsSelectionRange(target) ? target.selectionEnd : null
+  }
+
+  selectionDirectionFor(target) {
+    if (!this.supportsSelectionRange(target)) return "none"
+
+    return typeof target.selectionDirection === "string" ? target.selectionDirection : "none"
+  }
+
+  restoreSelection(target, payload) {
+    if (!payload?.preservesSelection || !this.supportsSelectionRange(target)) return false
+
+    const selectionStart = Number(payload.selectionStart)
+    const selectionEnd = Number(payload.selectionEnd)
+    if (!Number.isFinite(selectionStart) || !Number.isFinite(selectionEnd)) return false
+
+    const valueLength = target.value.length
+    const start = Math.min(Math.max(selectionStart, 0), valueLength)
+    const end = Math.min(Math.max(selectionEnd, 0), valueLength)
+    target.setSelectionRange(start, end, payload.selectionDirection || "none")
+    return true
   }
 
   preferredFocusSelector(payload) {
