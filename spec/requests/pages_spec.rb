@@ -1495,6 +1495,7 @@ RSpec.describe "Pages", type: :request do
     expect(response).to have_http_status(:ok)
     body = JSON.parse(response.body)
     expect(body["title"]).to eq("Autosaved title")
+    expect(body["sidebar_sections_url"]).to eq(workspace_sidebar_sections_path(workspace_slug: workspace.slug))
     expect(page.reload.title).to eq("Autosaved title")
   end
 end

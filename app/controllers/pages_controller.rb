@@ -120,7 +120,8 @@ class PagesController < ApplicationController
             remove_blocks: @page.remove_blocks?,
             locked: @page.locked?,
             suggest_edits: @page.suggest_edits?,
-            updated_at: @page.updated_at&.iso8601(6)
+            updated_at: @page.updated_at&.iso8601(6),
+            sidebar_sections_url: workspace_sidebar_sections_path(workspace_slug: @workspace.slug)
           }, status: :ok
         end
       end

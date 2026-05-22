@@ -102,6 +102,7 @@ export default class extends Controller {
       this.lastSavedTitle = title
       this.setStatus("Saved")
       this.updateTopbarEditedAt(responseData?.updated_at)
+      this.refreshSidebarSections(responseData?.sidebar_sections_url)
     } catch (_error) {
       this.setStatus("Save failed")
     } finally {
@@ -133,6 +134,23 @@ export default class extends Controller {
     if (!target) return
 
     target.textContent = `Edited ${this.relativeTimeLabel(updatedAtMs)} ago`
+  }
+
+  refreshSidebarSections(url) {
+    if (!url) return
+
+    const frame = document.getElementById("notae_sidebar_sections")
+    if (!frame) return
+
+    const refreshUrl = new URL(url, window.location.origin)
+    refreshUrl.searchParams.set("_sidebar_refresh", Date.now().toString())
+    const frameUrl = `${refreshUrl.pathname}${refreshUrl.search}${refreshUrl.hash}`
+
+    if (typeof frame.reload === "function" && frame.src === frameUrl) {
+      frame.reload()
+    } else {
+      frame.src = frameUrl
+    }
   }
 
   relativeTimeLabel(updatedAtMs) {

@@ -2702,7 +2702,8 @@ RSpec.describe "Databases", type: :request do
     expect(database.reload.name).to eq("Updated grid title")
     expect(JSON.parse(response.body)).to include(
       "id" => database.id,
-      "name" => "Updated grid title"
+      "name" => "Updated grid title",
+      "sidebar_sections_url" => workspace_sidebar_sections_path(workspace_slug: workspace.slug)
     )
   end
 

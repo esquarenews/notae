@@ -513,7 +513,8 @@ class DatabasesController < ApplicationController
             id: @database.id,
             name: @database.name,
             icon: @database.icon,
-            updated_at: @database.updated_at&.iso8601(6)
+            updated_at: @database.updated_at&.iso8601(6),
+            sidebar_sections_url: workspace_sidebar_sections_path(workspace_slug: @workspace.slug)
           }, status: :ok
         end
       end

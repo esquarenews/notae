@@ -32,4 +32,12 @@ RSpec.describe "PageTitleController JavaScript syntax" do
     expect(source).not_to include("this.flushSave({ keepalive: true, force: true })")
     expect(source).not_to include("this.flushSave({ force: true })")
   end
+
+  it "refreshes the sidebar sections frame after a successful title save" do
+    source = Rails.root.join("app/javascript/controllers/page_title_controller.js").read
+
+    expect(source).to include("refreshSidebarSections(responseData?.sidebar_sections_url)")
+    expect(source).to include('document.getElementById("notae_sidebar_sections")')
+    expect(source).to include("_sidebar_refresh")
+  end
 end
