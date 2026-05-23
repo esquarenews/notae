@@ -7,7 +7,7 @@ module Epistularium
   module Providers
     class BaseAdapter
       HTML_TAGS = %w[p br ul ol li a strong em b i blockquote pre code h1 h2 h3 h4 h5 h6 table thead tbody tr td th span div hr].freeze
-      HTML_ATTRIBUTES = %w[href title target rel colspan rowspan].freeze
+      HTML_ATTRIBUTES = %w[href title target rel colspan rowspan role aria-label].freeze
       HEADER_KEYS = %w[Subject From To Cc Bcc Reply-To Date Message-ID In-Reply-To References].freeze
       HIDDEN_EMAIL_TOKEN_PATTERN = /\b(hidden|preheader|preview(?:[-_ ]text)?|visually-hidden|sr-only|screen-reader-text)\b/i
       HIDDEN_STYLE_FRAGMENTS = %w[
@@ -50,6 +50,7 @@ module Epistularium
           fragment.css("style, script, noscript, meta, link, title, head, iframe, object, embed, svg").remove
           fragment.xpath("//comment()").remove
           remove_hidden_nodes!(fragment)
+          replace_image_nodes_with_placeholders!(fragment)
           trim_leading_css_noise!(fragment)
           fragment.to_html
         rescue Nokogiri::XML::SyntaxError
@@ -119,6 +120,40 @@ module Epistularium
                      hidden_by_class_or_id?(node)
             node.remove if hidden
           end
+        end
+
+        def replace_image_nodes_with_placeholders!(fragment)
+          fragment.css("img").each do |node|
+            if tracking_pixel?(node)
+              node.remove
+              next
+            end
+
+            placeholder = Nokogiri::XML::Node.new("span", node.document)
+            placeholder["role"] = "img"
+            placeholder["aria-label"] = image_placeholder_label(node)
+            placeholder["title"] = placeholder["aria-label"]
+            node.replace(placeholder)
+          end
+        end
+
+        def tracking_pixel?(node)
+          width = pixel_dimension(node["width"])
+          height = pixel_dimension(node["height"])
+          return false if width.blank? || height.blank?
+
+          width <= 2 && height <= 2
+        end
+
+        def pixel_dimension(value)
+          value.to_s[/\A\s*(\d{1,4})/, 1]&.to_i
+        end
+
+        def image_placeholder_label(node)
+          alt_text = node["alt"].to_s.squish
+          return "Image unavailable" if alt_text.blank?
+
+          "Image unavailable: #{alt_text.truncate(80)}"
         end
 
         def hidden_by_style?(style_value)

@@ -195,6 +195,14 @@ RSpec.describe "Epistularium", type: :request do
     expect(stylesheet).to include("@media (max-width: 900px) {\n  .notae-epistularium-grid {\n    grid-template-columns: 1fr;\n  }\n\n  .notae-epistularium-pane-accounts,\n  .notae-epistularium-pane-list,\n  .notae-epistularium-pane-detail {\n    position: static;\n    min-height: 0;\n    max-height: none;\n    overflow: visible;")
   end
 
+  it "keeps email table cells borderless and reserves outlines for image placeholders" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-epistularium-message-body td,\n.notae-epistularium-message-body th {\n  padding: 0.45rem 0.55rem;\n  border: 0;")
+    expect(stylesheet).to include('.notae-epistularium-message-body [role="img"][aria-label^="Image unavailable"]')
+    expect(stylesheet).to include("border: 1px dashed var(--notae-border-muted);")
+  end
+
   it "renders readable email html without leaking stylesheet text into the reading pane" do
     user, workspace, account, message = build_stack(suffix: "html-render")
     message.update!(
@@ -233,6 +241,38 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).not_to include("This should stay hidden.")
     expect(response.body).to include("notae-epistularium-message-meta-row")
     expect(response.body).to include("notae-epistularium-message-snippet")
+  end
+
+  it "renders unavailable email images as placeholders without loading remote image sources" do
+    user, workspace, account, message = build_stack(suffix: "image-placeholder")
+    message.update!(
+      body_text: nil,
+      body_html: <<~HTML
+        <table>
+          <tr>
+            <td><img src="https://cdn.example.com/hero.jpg" alt="Featured role"></td>
+          </tr>
+          <tr>
+            <td><img src="https://tracker.example.com/open.gif" width="1" height="1" alt=""></td>
+          </tr>
+        </table>
+      HTML
+    )
+    sign_in user
+
+    get workspace_epistularium_path(
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox",
+      message_id: message.id
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('role="img"')
+    expect(response.body).to include('aria-label="Image unavailable: Featured role"')
+    expect(response.body).not_to include("<img")
+    expect(response.body).not_to include("cdn.example.com/hero.jpg")
+    expect(response.body).not_to include("tracker.example.com/open.gif")
   end
 
   it "renders html-like body_text as html when no body_html is stored" do
