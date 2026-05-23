@@ -230,6 +230,33 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include(workspace_path(workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"))
   end
 
+  it "renders codex notifications with unavailable destinations as workspace links" do
+    user = User.create!(email: "notif-codex-bad-destination@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Codex Bad Destination", slug: "notif-codex-bad-destination")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "Codex request completed",
+        "body" => "I finished the Tabulae check.",
+        "path" => "/Users/errolschmidt/Documents/tabulae"
+      }
+    )
+
+    sign_in user
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("I finished the Tabulae check.")
+    expect(response.body).to include("The original destination is not available in Notae.")
+    expect(response.body).to include("Open workspace")
+    expect(response.body).to include(workspace_path(workspace.slug))
+    expect(response.body).not_to include("/Users/errolschmidt/Documents/tabulae")
+  end
+
   it "renders the daily summary agenda in the inbox" do
     user = User.create!(email: "notif-daily-summary@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notif Daily Summary", slug: "notif-daily-summary")

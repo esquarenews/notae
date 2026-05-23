@@ -65,9 +65,7 @@ module Notifications
 
     def codex_completion_destination_url
       path = notification.metadata["path"].to_s.strip
-      return if path.blank?
-
-      Notifications::InternalPathSanitizer.call(path, fallback: fallback_url)
+      Notifications::InternalPathSanitizer.call(path, fallback: workspace_path(notification.workspace.slug))
     end
 
     def agent_action_destination_url

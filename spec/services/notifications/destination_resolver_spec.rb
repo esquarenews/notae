@@ -96,7 +96,7 @@ RSpec.describe Notifications::DestinationResolver do
 
     destination = described_class.new(notification: notification).call
 
-    expect(destination).to eq("/w/#{workspace.slug}/notifications")
+    expect(destination).to eq("/w/#{workspace.slug}")
   end
 
   it "keeps codex completion paths with query strings and anchors when the route is valid" do

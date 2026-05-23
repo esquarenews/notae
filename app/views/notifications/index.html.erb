@@ -126,20 +126,30 @@
                         class: "notae-utility-link notae-utility-mini-link" %>
           <% elsif notification.notification_type == Notification::TYPE_CODEX_REQUEST_COMPLETED %>
             <% destination = Notifications::DestinationResolver.new(notification: notification).call %>
+            <% requested_destination = notification.metadata["path"].to_s.strip %>
+            <% destination_available = requested_destination.present? && destination == requested_destination %>
             <% if notification.metadata["body"].present? %>
               <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>
             <% end %>
-            <%= link_to "Open destination",
+            <% unless destination_available %>
+              <p class="notae-utility-meta">The original destination is not available in Notae.</p>
+            <% end %>
+            <%= link_to(destination_available ? "Open destination" : "Open workspace",
                         destination,
-                        class: "notae-utility-link notae-utility-mini-link" %>
+                        class: "notae-utility-link notae-utility-mini-link") %>
           <% elsif notification.notification_type == Notification::TYPE_TEST_PUSH %>
             <% destination = Notifications::DestinationResolver.new(notification: notification).call %>
+            <% requested_destination = notification.metadata["path"].to_s.strip %>
+            <% destination_available = requested_destination.present? && destination == requested_destination %>
             <% if notification.metadata["body"].present? %>
               <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>
             <% end %>
-            <%= link_to "Open destination",
+            <% unless destination_available %>
+              <p class="notae-utility-meta">The original destination is not available in Notae.</p>
+            <% end %>
+            <%= link_to(destination_available ? "Open destination" : "Open workspace",
                         destination,
-                        class: "notae-utility-link notae-utility-mini-link" %>
+                        class: "notae-utility-link notae-utility-mini-link") %>
           <% end %>
 
           <% if notification.read_at.nil? %>
