@@ -52,10 +52,7 @@ module Api
       end
 
       def normalize_internal_path(path)
-        return workspace_path(workspace.slug) if path.blank?
-        return path if path.start_with?("/")
-
-        workspace_path(workspace.slug)
+        Notifications::InternalPathSanitizer.call(path, fallback: workspace_path(workspace.slug))
       end
     end
   end

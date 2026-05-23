@@ -32,6 +32,10 @@ class EpistulariumAccount < ApplicationRecord
 
   scope :active, -> { where(enabled: true) }
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
+  scope :visible_in_workspace, ->(workspace) {
+    where(workspace_id: workspace.id)
+      .or(where("settings_json ->> 'workspace_scope' = ?", "all_workspaces"))
+  }
 
   def shared_account?
     owner_type == "Workspace"
@@ -39,6 +43,14 @@ class EpistulariumAccount < ApplicationRecord
 
   def user_account?
     owner_type == "User"
+  end
+
+  def workspace_scope
+    settings_json.to_h["workspace_scope"] == "all_workspaces" ? "all_workspaces" : "this_workspace"
+  end
+
+  def all_workspaces_scope?
+    workspace_scope == "all_workspaces"
   end
 
   def google_tokens_configured?

@@ -79,6 +79,51 @@ RSpec.describe "Kalendarium", type: :request do
     expect(active_view_link).to be_present
   end
 
+  it "shows one all-workspaces calendar connection from another workspace" do
+    user, source_workspace, = build_stack(suffix: "all-workspaces-source")
+    target_workspace = Workspace.create!(name: "Kal Request all-workspaces-target", slug: "kal-request-all-workspaces-target")
+    Membership.create!(workspace: target_workspace, user: user, role: :owner)
+    connection = KalendariumConnection.create!(
+      workspace: source_workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Shared Google",
+      access_token: "token",
+      enabled: true,
+      status: "connected",
+      settings_json: { "workspace_scope" => "all_workspaces" }
+    )
+    calendar = KalendariumCalendar.create!(
+      workspace: source_workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      source_kind: "provider",
+      name: "Shared calendar",
+      color_hex: "#336699",
+      time_zone: "UTC",
+      enabled: true
+    )
+    KalendariumEvent.create!(
+      workspace: source_workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Shared calendar event",
+      starts_at_utc: Time.zone.parse("2026-05-24 09:00:00 UTC"),
+      ends_at_utc: Time.zone.parse("2026-05-24 10:00:00 UTC")
+    )
+    sign_in user
+
+    get kalendarium_path(workspace_slug: target_workspace.slug, view: "week", date: "2026-05-24")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Shared calendar")
+    expect(response.body).to include("Shared calendar event")
+    expect(KalendariumConnection.where(provider: "google", label: "Shared Google").count).to eq(1)
+  end
+
   it "renders embedded task slot suggestions and hides the create event accordion" do
     user, workspace, calendar = build_stack(suffix: "task-slots", time_zone: "UTC")
     database = Database.create!(workspace: workspace, created_by: user, name: "Task Grid")

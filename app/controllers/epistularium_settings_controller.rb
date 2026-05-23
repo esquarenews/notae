@@ -5,7 +5,7 @@ class EpistulariumSettingsController < ApplicationController
   def show
     authorize @workspace, :show?
 
-    @accounts = policy_scope(EpistulariumAccount).for_workspace(@workspace).order(created_at: :desc)
+    @accounts = policy_scope(EpistulariumAccount).visible_in_workspace(@workspace).order(created_at: :desc)
     Epistularium::DueSyncScheduler.new(accounts: @accounts).call
     @google_oauth_label = next_available_google_label
     @google_oauth_configured = Epistularium::GoogleOauthService.configured?

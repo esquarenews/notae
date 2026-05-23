@@ -315,6 +315,7 @@ RSpec.describe "Epistularium", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Connect Gmail with OAuth")
     expect(response.body).to include("Use a different mailbox label for each Gmail account")
+    expect(response.body).to include("Connect each mailbox once")
     expect(response.body).to include("value=\"Gmail mailbox 2\"")
     expect(response.body).to include("Add IMAP or Amazon WorkMail")
     expect(response.body).to include("Manage Epistula")
@@ -323,6 +324,9 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).to include("For Amazon WorkMail, use the incoming IMAP host")
     expect(response.body).to include("username must be the full mailbox email address")
     expect(response.body).to include("Last fresh mail check")
+    expect(response.body).to include("Visible in:")
+    expect(response.body).to include("This workspace")
+    expect(response.body).to include("All workspaces")
     expect(response.body).to include("Backfill status")
     expect(response.body).to include("Backfill window: Last 12 months")
     expect(response.body).to include("data-controller=\"google-oauth-launch\"")
@@ -423,10 +427,11 @@ RSpec.describe "Epistularium", type: :request do
     sign_in user
     state = Rails.application.message_verifier("epistularium_google_oauth_state").generate(
       {
-        "workspace_id" => workspace.id,
-        "user_id" => user.id,
-        "owner_scope" => "workspace",
-        "label" => "Workspace Gmail"
+      "workspace_id" => workspace.id,
+      "user_id" => user.id,
+      "owner_scope" => "workspace",
+      "workspace_scope" => "all_workspaces",
+      "label" => "Workspace Gmail"
       },
       expires_in: 20.minutes
     )
@@ -454,7 +459,44 @@ RSpec.describe "Epistularium", type: :request do
     expect(account.label).to eq("Workspace Gmail")
     expect(account.access_token).to eq("oauth-access")
     expect(account.refresh_token).to eq("oauth-refresh")
+    expect(account.settings_json["workspace_scope"]).to eq("all_workspaces")
     expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
+  end
+
+  it "shows one all-workspaces Gmail account and its downloaded mail from another workspace" do
+    user = User.create!(email: "epistularium-all-workspaces@example.com", password: "password123")
+    source_workspace = Workspace.create!(name: "Epistularium Source", slug: "epistularium-source")
+    target_workspace = Workspace.create!(name: "Epistularium Target", slug: "epistularium-target")
+    Membership.create!(workspace: source_workspace, user: user, role: :owner)
+    Membership.create!(workspace: target_workspace, user: user, role: :owner)
+    account = EpistulariumAccount.create!(
+      workspace: source_workspace,
+      owner: user,
+      created_by: user,
+      provider: "gmail",
+      label: "Shared Gmail",
+      refresh_token: "gmail-refresh-token",
+      enabled: true,
+      status: "connected",
+      settings_json: { "workspace_scope" => "all_workspaces" }
+    )
+    EpistulariumMessage.create!(
+      workspace: source_workspace,
+      epistularium_account: account,
+      provider_message_id: "shared-message-1",
+      mailbox: "inbox",
+      subject: "Shared inbox message",
+      body_text: "Visible from the other workspace",
+      received_at: Time.current
+    )
+    sign_in user
+
+    get workspace_epistularium_path(workspace_slug: target_workspace.slug, account_id: account.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Shared Gmail")
+    expect(response.body).to include("Shared inbox message")
+    expect(EpistulariumAccount.where(provider: "gmail", label: "Shared Gmail").count).to eq(1)
   end
 
   it "queues due account refreshes when Epistularium is opened after the 10 minute sync window" do

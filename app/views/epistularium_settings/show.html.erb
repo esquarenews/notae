@@ -14,6 +14,7 @@
     <section class="notae-settings-section">
       <h2>Connect Gmail with OAuth</h2>
       <p class="notae-pref-description">Use Google OAuth for read-only Gmail access. Message history is backfilled and indexed for AI context. Use a different mailbox label for each Gmail account; use Re-authorize on an existing row when you want to refresh that account.</p>
+      <p class="notae-pref-description">Connect each mailbox once, then choose where it appears: only this workspace, or all workspaces you can access.</p>
       <% unless @google_oauth_configured %>
         <p class="notae-page-subtle">Google OAuth is not configured on the server. Set <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code>.</p>
       <% end %>
@@ -30,6 +31,10 @@
         <%= select_tag "epistularium_account[owner_scope]",
                        options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
                        class: "notae-auth-input" %>
+        <%= select_tag "epistularium_account[workspace_scope]",
+                       options_for_select([["This workspace", "this_workspace"], ["All workspaces", "all_workspaces"]], "this_workspace"),
+                       class: "notae-auth-input",
+                       aria: { label: "Workspace visibility" } %>
         <%= submit_tag "Connect Gmail", class: "notae-chip-button" %>
       <% end %>
     </section>
@@ -46,6 +51,10 @@
         <%= select_tag "epistularium_account[owner_scope]",
                        options_for_select([["Personal", "user"], ["Workspace shared", "workspace"]]),
                        class: "notae-auth-input" %>
+        <%= select_tag "epistularium_account[workspace_scope]",
+                       options_for_select([["This workspace", "this_workspace"], ["All workspaces", "all_workspaces"]], "this_workspace"),
+                       class: "notae-auth-input",
+                       aria: { label: "Workspace visibility" } %>
         <%= form.text_field :imap_host, placeholder: "IMAP host (incoming server)", required: true, class: "notae-auth-input" %>
         <%= form.number_field :imap_port, value: 993, class: "notae-auth-input" %>
         <%= form.text_field :provider_username, placeholder: "IMAP username", required: true, class: "notae-auth-input" %>
@@ -67,6 +76,7 @@
               <div>
                 <strong><%= account.label %></strong>
                 <p><%= account.provider.to_s.humanize %> · <%= account.shared_account? ? "Workspace shared" : "Personal" %></p>
+                <p>Visible in: <%= account.all_workspaces_scope? ? "All workspaces" : account.workspace.name %></p>
                 <p>Status: <%= account.status %></p>
                 <p>Last fresh mail check: <%= account.last_fresh_sync_at.present? ? "#{time_ago_in_words(account.last_fresh_sync_at)} ago" : "Not yet" %></p>
                 <p>Backfill status: <%= account.full_backfill_pending? ? "In progress" : "Complete" %></p>
@@ -82,7 +92,12 @@
                 <% end %>
                 <% if account.provider == "gmail" %>
                   <%= link_to "Re-authorize Google",
-                              google_authorize_epistularium_accounts_path(workspace_slug: @workspace.slug, account_id: account.id, label: account.label),
+                              google_authorize_epistularium_accounts_path(
+                                workspace_slug: @workspace.slug,
+                                account_id: account.id,
+                                label: account.label,
+                                epistularium_account: { workspace_scope: account.workspace_scope }
+                              ),
                               class: "notae-chip-button",
                               data: { turbo: false } %>
                 <% end %>
@@ -94,6 +109,11 @@
                                 method: :patch,
                                 class: "notae-workspace-home-stack" do |form| %>
                     <%= form.text_field :label, value: account.label, class: "notae-auth-input", placeholder: "Mailbox label" %>
+                    <%= form.select :workspace_scope,
+                                    options_for_select([["This workspace", "this_workspace"], ["All workspaces", "all_workspaces"]], account.workspace_scope),
+                                    {},
+                                    class: "notae-auth-input",
+                                    aria: { label: "Workspace visibility" } %>
                     <label class="notae-options-checkbox"><%= form.check_box :enabled, checked: account.enabled? %><span>Enabled</span></label>
                     <%= form.submit "Save", class: "notae-chip-button" %>
                   <% end %>
@@ -103,6 +123,11 @@
                                 method: :patch,
                                 class: "notae-workspace-home-stack" do |form| %>
                     <%= form.text_field :label, value: account.label, class: "notae-auth-input", placeholder: "Mailbox label" %>
+                    <%= form.select :workspace_scope,
+                                    options_for_select([["This workspace", "this_workspace"], ["All workspaces", "all_workspaces"]], account.workspace_scope),
+                                    {},
+                                    class: "notae-auth-input",
+                                    aria: { label: "Workspace visibility" } %>
                     <%= form.text_field :imap_host, value: account.imap_host, class: "notae-auth-input", placeholder: "IMAP host (incoming server)" %>
                     <%= form.number_field :imap_port, value: account.imap_port, class: "notae-auth-input" %>
                     <%= form.text_field :provider_username, value: account.provider_username, class: "notae-auth-input", placeholder: "IMAP username" %>

@@ -66,9 +66,8 @@ module Notifications
     def codex_completion_destination_url
       path = notification.metadata["path"].to_s.strip
       return if path.blank?
-      return path if path.start_with?("/")
 
-      nil
+      Notifications::InternalPathSanitizer.call(path, fallback: fallback_url)
     end
 
     def agent_action_destination_url

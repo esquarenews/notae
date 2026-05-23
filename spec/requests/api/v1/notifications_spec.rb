@@ -104,6 +104,49 @@ RSpec.describe "API V1 notifications", type: :request do
     expect(notification.metadata["path"]).to eq("/w/#{workspace.slug}")
   end
 
+  it "falls back to the workspace home when given a local filesystem destination" do
+    user = User.create!(email: "api-notifications-filesystem-fallback@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Notifications filesystem fallback", slug: "api-notifications-filesystem-fallback")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    token = ApiToken.create!(user: user, name: "Notifications filesystem fallback API")
+
+    post "/api/v1/workspaces/#{workspace.slug}/notifications/codex_completion",
+         params: {
+           notification: {
+             title: "Codex request completed",
+             path: "/Users/errolschmidt/Documents/tabulae"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    notification = Notification.find(json_body.dig("data", "notification", "id"))
+
+    expect(notification.metadata["path"]).to eq("/w/#{workspace.slug}")
+    expect(json_body.dig("data", "notification", "path")).to eq("/w/#{workspace.slug}")
+  end
+
+  it "falls back to the workspace home when given an unroutable internal-looking destination" do
+    user = User.create!(email: "api-notifications-unroutable-fallback@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API Notifications unroutable fallback", slug: "api-notifications-unroutable-fallback")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    token = ApiToken.create!(user: user, name: "Notifications unroutable fallback API")
+
+    post "/api/v1/workspaces/#{workspace.slug}/notifications/codex_completion",
+         params: {
+           notification: {
+             title: "Codex request completed",
+             path: "/definitely-not-a-notae-route"
+           }
+         }.to_json,
+         headers: auth_headers(token).merge("Content-Type" => "application/json")
+
+    expect(response).to have_http_status(:created)
+    notification = Notification.find(json_body.dig("data", "notification", "id"))
+
+    expect(notification.metadata["path"]).to eq("/w/#{workspace.slug}")
+  end
+
   it "records a denied scope audit event when the token lacks notification write access" do
     user = User.create!(email: "api-notifications-denied@example.com", password: "password123")
     workspace = Workspace.create!(name: "API Notifications denied", slug: "api-notifications-denied")

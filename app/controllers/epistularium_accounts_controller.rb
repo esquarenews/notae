@@ -105,7 +105,7 @@ class EpistulariumAccountsController < ApplicationController
   end
 
   def set_account
-    @account = policy_scope(EpistulariumAccount).for_workspace(@workspace).find(params[:id])
+    @account = policy_scope(EpistulariumAccount).visible_in_workspace(@workspace).find(params[:id])
   end
 
   def account_params
@@ -117,6 +117,7 @@ class EpistulariumAccountsController < ApplicationController
       :provider_username,
       :provider_password,
       :owner_scope,
+      :workspace_scope,
       :imap_host,
       :imap_port,
       :imap_ssl,
@@ -141,6 +142,7 @@ class EpistulariumAccountsController < ApplicationController
       provider_username: attributes[:provider_username],
       provider_password: attributes[:provider_password],
       settings_json: imap_settings_from(attributes)
+        .merge("workspace_scope" => requested_workspace_scope)
     }
   end
 
@@ -149,13 +151,14 @@ class EpistulariumAccountsController < ApplicationController
     update_hash = {
       label: attributes.fetch(:label),
       enabled: attributes.fetch(:enabled),
-      remote_account_id: attributes[:remote_account_id]
+      remote_account_id: attributes[:remote_account_id],
+      settings_json: @account.settings_json.to_h.merge("workspace_scope" => requested_workspace_scope)
     }
 
     if %w[imap amazon_workmail].include?(@account.provider)
       update_hash[:provider_username] = attributes[:provider_username] if attributes.key?(:provider_username)
       update_hash[:provider_password] = attributes[:provider_password] if attributes[:provider_password].present?
-      update_hash[:settings_json] = @account.settings_json.to_h.merge(imap_settings_from(attributes)).compact
+      update_hash[:settings_json] = update_hash[:settings_json].merge(imap_settings_from(attributes)).compact
     end
 
     update_hash
@@ -199,6 +202,10 @@ class EpistulariumAccountsController < ApplicationController
 
   def requested_owner_scope
     account_params[:owner_scope].to_s == "workspace" ? "workspace" : "user"
+  end
+
+  def requested_workspace_scope
+    account_params[:workspace_scope].to_s == "all_workspaces" ? "all_workspaces" : "this_workspace"
   end
 
   def sync_requested?
@@ -245,7 +252,7 @@ class EpistulariumAccountsController < ApplicationController
     account = nil
     account_id = params[:account_id].to_s.presence
     if account_id.present?
-      account = policy_scope(EpistulariumAccount).for_workspace(@workspace).find(account_id)
+      account = policy_scope(EpistulariumAccount).visible_in_workspace(@workspace).find(account_id)
       authorize account, :update?
     else
       policy_probe = EpistulariumAccount.new(
@@ -264,6 +271,7 @@ class EpistulariumAccountsController < ApplicationController
       "user_id" => current_user.id,
       "account_id" => account&.id,
       "owner_scope" => requested_owner_scope,
+      "workspace_scope" => requested_workspace_scope,
       "label" => params[:label].to_s.strip.presence || "Gmail mailbox"
     }
   end
@@ -280,11 +288,11 @@ class EpistulariumAccountsController < ApplicationController
   def upsert_google_account_from_oauth!(oauth_payload:, token_data:)
     account_id = oauth_payload["account_id"].to_s.presence
     if account_id.present?
-      account = policy_scope(EpistulariumAccount).for_workspace(@workspace).find(account_id)
+      account = policy_scope(EpistulariumAccount).visible_in_workspace(@workspace).find(account_id)
       authorize account, :update?
     else
       owner = oauth_payload["owner_scope"].to_s == "workspace" ? @workspace : current_user
-      account = policy_scope(EpistulariumAccount).for_workspace(@workspace).find_or_initialize_by(
+      account = policy_scope(EpistulariumAccount).where(workspace_id: @workspace.id).find_or_initialize_by(
         owner: owner,
         provider: "gmail",
         label: oauth_payload["label"].to_s.presence || "Gmail mailbox"
@@ -300,11 +308,11 @@ class EpistulariumAccountsController < ApplicationController
       end
     end
 
-    apply_google_token_data!(account: account, token_data: token_data)
+    apply_google_token_data!(account: account, token_data: token_data, workspace_scope: oauth_payload["workspace_scope"])
     account
   end
 
-  def apply_google_token_data!(account:, token_data:)
+  def apply_google_token_data!(account:, token_data:, workspace_scope:)
     account.access_token = token_data[:access_token]
     account.refresh_token = token_data[:refresh_token] if token_data[:refresh_token].present?
     account.scopes_json = token_data[:scope].to_s.split(/\s+/).reject(&:blank?)
@@ -314,6 +322,7 @@ class EpistulariumAccountsController < ApplicationController
     account.status = "connected"
     account.last_error = nil
     account.settings_json = account.settings_json.to_h.merge(
+      "workspace_scope" => workspace_scope.to_s == "all_workspaces" ? "all_workspaces" : "this_workspace",
       "google_token_type" => token_data[:token_type].to_s.presence,
       "google_access_token_expires_at" => (
         token_data[:expires_in].to_i.positive? ? (Time.current + token_data[:expires_in].to_i.seconds).iso8601 : nil

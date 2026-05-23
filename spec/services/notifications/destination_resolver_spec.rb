@@ -77,4 +77,47 @@ RSpec.describe Notifications::DestinationResolver do
 
     expect(destination).to eq("/w/#{workspace.slug}/library")
   end
+
+  it "falls back when a codex completion notification stored a filesystem path" do
+    workspace = Workspace.create!(name: "Resolver Codex Bad Path", slug: "resolver-codex-bad-path")
+    user = User.create!(email: "resolver-codex-bad-path@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "Codex request completed",
+        "path" => "/Users/errolschmidt/Documents/tabulae"
+      }
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq("/w/#{workspace.slug}/notifications")
+  end
+
+  it "keeps codex completion paths with query strings and anchors when the route is valid" do
+    workspace = Workspace.create!(name: "Resolver Codex Query", slug: "resolver-codex-query")
+    user = User.create!(email: "resolver-codex-query@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    destination_path = "/w/#{workspace.slug}/kalendarium?view=week#today"
+
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "Codex request completed",
+        "path" => destination_path
+      }
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq(destination_path)
+  end
 end

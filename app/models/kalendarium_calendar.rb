@@ -26,6 +26,15 @@ class KalendariumCalendar < ApplicationRecord
   validate :time_zone_supported
 
   scope :for_workspace, ->(workspace) { where(workspace_id: workspace.id) }
+  scope :visible_in_workspace, ->(workspace) {
+    left_outer_joins(:kalendarium_connection)
+      .where(workspace_id: workspace.id)
+      .or(
+        left_outer_joins(:kalendarium_connection)
+          .where(kalendarium_connections: { enabled: true })
+          .where("kalendarium_connections.settings_json ->> 'workspace_scope' = ?", "all_workspaces")
+      )
+  }
   scope :enabled, -> { where(enabled: true) }
   scope :user_writable, -> { where(ICLOUD_WRITABLE_SQL) }
 

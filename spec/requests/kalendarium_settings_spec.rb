@@ -230,7 +230,7 @@ RSpec.describe "Kalendarium settings", type: :request do
     expect(Kalendarium::ConnectionSyncService).to have_received(:new).with(connection: copied_connection)
   end
 
-  it "creates connections for all accessible workspaces when all-workspaces scope is selected" do
+  it "stores all-workspaces visibility on one connection instead of creating workspace copies" do
     user, workspace = build_stack(suffix: "all-workspaces-target")
     second_workspace = Workspace.create!(name: "Kal Settings all-workspaces-second", slug: "kal-settings-all-workspaces-second")
     Membership.create!(workspace: second_workspace, user: user, role: :owner)
@@ -248,20 +248,21 @@ RSpec.describe "Kalendarium settings", type: :request do
       sync_now: "0"
     }
 
-    primary_connection = KalendariumConnection.find_by!(
+    connection = KalendariumConnection.find_by!(
       workspace: workspace,
       owner: workspace,
       provider: "ics",
       label: "All workspaces feed"
     )
-    secondary_connection = KalendariumConnection.find_by!(
-      workspace: second_workspace,
-      owner: second_workspace,
-      provider: "ics",
-      label: "All workspaces feed"
-    )
-    expect(primary_connection.settings_json["workspace_scope"]).to eq("all_workspaces")
-    expect(secondary_connection.settings_json["workspace_scope"]).to eq("all_workspaces")
+    expect(connection.settings_json["workspace_scope"]).to eq("all_workspaces")
+    expect(KalendariumConnection.where(provider: "ics", label: "All workspaces feed").count).to eq(1)
+
+    get workspace_kalendarium_settings_path(workspace_slug: second_workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("All workspaces feed")
+    expect(response.body).to include("Visible in:")
+    expect(response.body).to include("All workspaces")
   end
 
   it "deletes a connection from one workspace without affecting another workspace copy" do

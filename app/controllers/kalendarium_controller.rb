@@ -41,7 +41,7 @@ class KalendariumController < ApplicationController
       index[project.kalendarium_calendar_id] = project.id if project.kalendarium_calendar_id.present?
     end
 
-    @all_calendars = policy_scope(KalendariumCalendar).for_workspace(@workspace).order(:name).to_a
+    @all_calendars = policy_scope(KalendariumCalendar).visible_in_workspace(@workspace).order(:name).to_a
     @project_calendars = @all_calendars.select { |calendar| calendar.source_kind == "project" && visible_project_calendar_ids.include?(calendar.id) }
     @calendar_filter_calendars = @all_calendars.reject { |calendar| calendar.source_kind == "project" }
     @selected_calendar_ids = resolve_selected_calendar_ids(@calendar_filter_calendars)
@@ -57,7 +57,6 @@ class KalendariumController < ApplicationController
 
     range_start, range_end = range_for_view
     @events = policy_scope(KalendariumEvent)
-                .for_workspace(@workspace)
                 .includes(:kalendarium_calendar, :kalendarium_project, :linked_page)
                 .where(kalendarium_calendar_id: @visible_event_calendars.map(&:id))
                 .where.not(status: "cancelled")
@@ -100,7 +99,7 @@ class KalendariumController < ApplicationController
     range_start, range_end = range_for_view
 
     refreshable_connections = policy_scope(KalendariumConnection)
-                                .for_workspace(@workspace)
+                                .visible_in_workspace(@workspace)
                                 .active
                                 .order(:created_at)
                                 .to_a
@@ -395,7 +394,7 @@ class KalendariumController < ApplicationController
     return [] if connection_ids.empty?
 
     scope = policy_scope(KalendariumCalendar)
-              .for_workspace(@workspace)
+              .visible_in_workspace(@workspace)
               .where(source_kind: "provider", kalendarium_connection_id: connection_ids)
               .order(:name)
 

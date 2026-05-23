@@ -29,7 +29,7 @@ class KalendariumConnectionsController < ApplicationController
   def update
     authorize @connection
 
-    if @connection.update(connection_params)
+    if @connection.update(connection_update_attributes)
       flash_type, message = sync_connections_if_requested(
         [ @connection ],
         success_message: "Connection updated and synced.",
@@ -130,7 +130,7 @@ class KalendariumConnectionsController < ApplicationController
   end
 
   def set_connection
-    @connection = policy_scope(KalendariumConnection).for_workspace(@workspace).find(params[:id])
+    @connection = policy_scope(KalendariumConnection).visible_in_workspace(@workspace).find(params[:id])
   end
 
   def connection_params
@@ -143,13 +143,20 @@ class KalendariumConnectionsController < ApplicationController
       :refresh_token,
       :provider_username,
       :provider_password,
-      :ics_url
+      :ics_url,
+      :workspace_scope
+    )
+  end
+
+  def connection_update_attributes
+    connection_params.to_h.except("workspace_scope").merge(
+      settings_json: @connection.settings_json.to_h.merge("workspace_scope" => requested_workspace_scope)
     )
   end
 
   def create_connections_from_form!
     owner_scope = requested_owner_scope
-    params_hash = connection_params.to_h
+    params_hash = connection_params.to_h.except("workspace_scope")
     metadata = { "workspace_scope" => requested_workspace_scope }
 
     target_workspaces_for(owner_scope: owner_scope).map do |workspace|
@@ -287,7 +294,7 @@ class KalendariumConnectionsController < ApplicationController
     connection = nil
     connection_id = params[:connection_id].to_s.presence
     if connection_id.present?
-      connection = policy_scope(KalendariumConnection).for_workspace(@workspace).find(connection_id)
+      connection = policy_scope(KalendariumConnection).visible_in_workspace(@workspace).find(connection_id)
       authorize connection, :update?
     end
 
@@ -296,18 +303,16 @@ class KalendariumConnectionsController < ApplicationController
     label = params[:label].to_s.strip.presence || "Google calendar"
 
     if connection.nil?
-      target_workspaces_for(owner_scope: owner_scope, workspace_scope: workspace_scope).each do |workspace|
-        owner = owner_for_scope(workspace: workspace, owner_scope: owner_scope)
-        policy_probe = KalendariumConnection.new(
-          workspace: workspace,
-          owner: owner,
-          created_by: current_user,
-          provider: "google",
-          label: label,
-          access_token: "oauth-pending"
-        )
-        authorize policy_probe, :create?
-      end
+      owner = owner_for_scope(workspace: @workspace, owner_scope: owner_scope)
+      policy_probe = KalendariumConnection.new(
+        workspace: @workspace,
+        owner: owner,
+        created_by: current_user,
+        provider: "google",
+        label: label,
+        access_token: "oauth-pending"
+      )
+      authorize policy_probe, :create?
     end
 
     {
@@ -335,7 +340,7 @@ class KalendariumConnectionsController < ApplicationController
   def upsert_google_connections_from_oauth!(oauth_payload:, token_data:)
     connection_id = oauth_payload["connection_id"].to_s.presence
     if connection_id.present?
-      connection = policy_scope(KalendariumConnection).for_workspace(@workspace).find(connection_id)
+      connection = policy_scope(KalendariumConnection).visible_in_workspace(@workspace).find(connection_id)
       authorize connection, :update?
       apply_google_token_data!(connection: connection, token_data: token_data, workspace_scope: oauth_payload["workspace_scope"])
       return [ connection ]
@@ -345,32 +350,30 @@ class KalendariumConnectionsController < ApplicationController
     workspace_scope = oauth_payload["workspace_scope"].to_s == "all_workspaces" ? "all_workspaces" : "this_workspace"
     label = oauth_payload["label"].to_s.presence || "Google calendar"
 
-    target_workspaces_for(owner_scope: owner_scope, workspace_scope: workspace_scope).map do |workspace|
-      owner = owner_for_scope(workspace: workspace, owner_scope: owner_scope)
-      connection = policy_scope(KalendariumConnection).for_workspace(workspace).find_by(
+    owner = owner_for_scope(workspace: @workspace, owner_scope: owner_scope)
+    connection = policy_scope(KalendariumConnection).where(workspace_id: @workspace.id).find_by(
+      owner: owner,
+      provider: "google",
+      label: label
+    )
+
+    if connection.present?
+      authorize connection, :update?
+    else
+      connection = KalendariumConnection.new(
+        workspace: @workspace,
         owner: owner,
+        created_by: current_user,
         provider: "google",
-        label: label
+        label: label,
+        enabled: true,
+        status: "disconnected"
       )
-
-      if connection.present?
-        authorize connection, :update?
-      else
-        connection = KalendariumConnection.new(
-          workspace: workspace,
-          owner: owner,
-          created_by: current_user,
-          provider: "google",
-          label: label,
-          enabled: true,
-          status: "disconnected"
-        )
-        authorize connection, :create?
-      end
-
-      apply_google_token_data!(connection: connection, token_data: token_data, workspace_scope: workspace_scope)
-      connection
+      authorize connection, :create?
     end
+
+    apply_google_token_data!(connection: connection, token_data: token_data, workspace_scope: workspace_scope)
+    [ connection ]
   end
 
   def apply_google_token_data!(connection:, token_data:, workspace_scope:)
@@ -393,11 +396,7 @@ class KalendariumConnectionsController < ApplicationController
   end
 
   def target_workspaces_for(owner_scope:, workspace_scope: requested_workspace_scope)
-    candidates = if workspace_scope == "all_workspaces"
-      policy_scope(Workspace).order(:name).to_a
-    else
-      [ @workspace ]
-    end
+    candidates = [ @workspace ]
 
     permitted = candidates.select do |workspace|
       owner = owner_for_scope(workspace: workspace, owner_scope: owner_scope)

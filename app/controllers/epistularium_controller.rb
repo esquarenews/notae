@@ -10,7 +10,7 @@ class EpistulariumController < ApplicationController
   def show
     authorize @workspace, :show?
 
-    @accounts = policy_scope(EpistulariumAccount).for_workspace(@workspace).includes(:owner).order(updated_at: :desc, created_at: :desc)
+    @accounts = policy_scope(EpistulariumAccount).visible_in_workspace(@workspace).includes(:owner).order(updated_at: :desc, created_at: :desc)
     @selected_account = resolve_selected_account
     @selected_mailbox = params[:mailbox].to_s == "sent" ? "sent" : "inbox"
     queue_due_syncs(@accounts) if queue_due_syncs_for_request?
@@ -57,7 +57,6 @@ class EpistulariumController < ApplicationController
     return EpistulariumMessage.none if @selected_account.blank?
 
     policy_scope(EpistulariumMessage)
-      .for_workspace(@workspace)
       .for_account(@selected_account)
       .for_mailbox(@selected_mailbox)
       .recent_first_for_mailbox(@selected_mailbox)
@@ -69,7 +68,7 @@ class EpistulariumController < ApplicationController
     return @messages.first if requested_id.blank?
 
     @messages.find { |message| message.id.to_s == requested_id.to_s } ||
-      policy_scope(EpistulariumMessage).for_workspace(@workspace).find_by(id: requested_id)
+      policy_scope(EpistulariumMessage).for_account(@selected_account).find_by(id: requested_id)
   end
 
   def resolve_thread_messages
@@ -77,7 +76,6 @@ class EpistulariumController < ApplicationController
 
     if @selected_message.provider_thread_id.present?
       policy_scope(EpistulariumMessage)
-        .for_workspace(@workspace)
         .for_account(@selected_account)
         .where(provider_thread_id: @selected_message.provider_thread_id)
         .recent_first
@@ -85,7 +83,6 @@ class EpistulariumController < ApplicationController
         .to_a
     elsif @selected_message.thread_key.present?
       policy_scope(EpistulariumMessage)
-        .for_workspace(@workspace)
         .for_account(@selected_account)
         .where(thread_key: @selected_message.thread_key)
         .recent_first
@@ -100,7 +97,6 @@ class EpistulariumController < ApplicationController
     return {} if @accounts.empty?
 
     counts = policy_scope(EpistulariumMessage)
-             .for_workspace(@workspace)
              .where(epistularium_account_id: @accounts.map(&:id))
              .group(:epistularium_account_id, :mailbox)
              .count
