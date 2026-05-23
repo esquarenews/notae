@@ -4,6 +4,7 @@ class EpistulariumAccount < ApplicationRecord
   PROVIDERS = %w[gmail imap amazon_workmail].freeze
   STATUSES = %w[connected sync_error disconnected].freeze
   OWNER_TYPES = %w[User Workspace].freeze
+  ACCOUNT_COLOR_PATTERN = /\A#[0-9a-f]{6}\z/i
   DEFAULT_SYNC_ACTIVITY_TIMEOUT = 20.minutes
 
   encrypts :access_token
@@ -27,6 +28,7 @@ class EpistulariumAccount < ApplicationRecord
   validate :imap_host_is_not_an_smtp_endpoint
   validate :imap_host_is_public
   validate :amazon_workmail_username_looks_like_email
+  validate :account_color_is_hex
 
   before_validation :normalize_account_fields
 
@@ -51,6 +53,10 @@ class EpistulariumAccount < ApplicationRecord
 
   def all_workspaces_scope?
     workspace_scope == "all_workspaces"
+  end
+
+  def account_color
+    settings_json.to_h["account_color"].to_s.strip.presence
   end
 
   def google_tokens_configured?
@@ -220,6 +226,14 @@ class EpistulariumAccount < ApplicationRecord
     errors.add(:base, "Amazon WorkMail username must be the full email address for the mailbox, not a short name.")
   end
 
+  def account_color_is_hex
+    color = settings_json.to_h["account_color"].to_s.strip
+    return if color.blank?
+    return if color.match?(ACCOUNT_COLOR_PATTERN)
+
+    errors.add(:base, "Mailbox colour must be a hex colour code.")
+  end
+
   def normalize_account_fields
     self.provider_username = provider_username.to_s.strip.presence
     self.provider_password = provider_password.to_s.strip.presence
@@ -234,6 +248,7 @@ class EpistulariumAccount < ApplicationRecord
     normalized_settings["imap_port"] = normalized_settings["imap_port"].to_i if normalized_settings["imap_port"].present?
     normalized_settings["imap_ssl"] = ActiveModel::Type::Boolean.new.cast(normalized_settings["imap_ssl"]) unless normalized_settings["imap_ssl"].nil?
     normalized_settings["sent_mailbox"] = normalized_settings["sent_mailbox"].to_s.strip.presence
+    normalized_settings["account_color"] = normalized_settings["account_color"].to_s.strip.downcase.presence
     self.settings_json = normalized_settings.compact
   end
 

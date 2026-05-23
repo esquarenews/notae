@@ -392,6 +392,9 @@ module ApplicationHelper
   end
 
   def epistularium_account_accent(account)
+    configured_color = account.account_color.to_s
+    return configured_color if configured_color.match?(EpistulariumAccount::ACCOUNT_COLOR_PATTERN)
+
     seed = [
       account.id,
       account.provider,

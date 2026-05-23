@@ -35,6 +35,10 @@
                        options_for_select([["This workspace", "this_workspace"], ["All workspaces", "all_workspaces"]], "this_workspace"),
                        class: "notae-auth-input",
                        aria: { label: "Workspace visibility" } %>
+        <label class="notae-epistularium-color-field">
+          <span>Mailbox colour</span>
+          <%= color_field_tag "epistularium_account[account_color]", Workspace::DEFAULT_COLOR, class: "notae-epistularium-color-input" %>
+        </label>
         <%= submit_tag "Connect Gmail", class: "notae-chip-button" %>
       <% end %>
     </section>
@@ -60,6 +64,10 @@
         <%= form.text_field :provider_username, placeholder: "IMAP username", required: true, class: "notae-auth-input" %>
         <%= form.password_field :provider_password, placeholder: "IMAP password", required: true, class: "notae-auth-input" %>
         <%= form.text_field :sent_mailbox, placeholder: "Sent mailbox name (optional)", class: "notae-auth-input" %>
+        <label class="notae-epistularium-color-field">
+          <span>Mailbox colour</span>
+          <%= form.color_field :account_color, value: Workspace::DEFAULT_COLOR, class: "notae-epistularium-color-input" %>
+        </label>
         <label class="notae-options-checkbox"><%= form.check_box :imap_ssl, checked: true %><span>Use SSL/TLS</span></label>
         <label class="notae-options-checkbox"><%= form.check_box :enabled, checked: true %><span>Enabled</span></label>
         <label class="notae-options-checkbox"><%= check_box_tag :sync_now, "1", true %><span>Queue initial backfill</span></label>
@@ -114,6 +122,10 @@
                                     {},
                                     class: "notae-auth-input",
                                     aria: { label: "Workspace visibility" } %>
+                    <label class="notae-epistularium-color-field">
+                      <span>Mailbox colour</span>
+                      <%= form.color_field :account_color, value: epistularium_account_accent(account), class: "notae-epistularium-color-input" %>
+                    </label>
                     <label class="notae-options-checkbox"><%= form.check_box :enabled, checked: account.enabled? %><span>Enabled</span></label>
                     <%= form.submit "Save", class: "notae-chip-button" %>
                   <% end %>
@@ -133,6 +145,10 @@
                     <%= form.text_field :provider_username, value: account.provider_username, class: "notae-auth-input", placeholder: "IMAP username" %>
                     <%= form.password_field :provider_password, class: "notae-auth-input", placeholder: "Leave blank to keep current password" %>
                     <%= form.text_field :sent_mailbox, value: account.sent_mailbox_name, class: "notae-auth-input", placeholder: "Sent mailbox name" %>
+                    <label class="notae-epistularium-color-field">
+                      <span>Mailbox colour</span>
+                      <%= form.color_field :account_color, value: epistularium_account_accent(account), class: "notae-epistularium-color-input" %>
+                    </label>
                     <label class="notae-options-checkbox"><%= form.check_box :imap_ssl, checked: account.imap_ssl? %><span>Use SSL/TLS</span></label>
                     <label class="notae-options-checkbox"><%= form.check_box :enabled, checked: account.enabled? %><span>Enabled</span></label>
                     <%= form.submit "Save", class: "notae-chip-button" %>

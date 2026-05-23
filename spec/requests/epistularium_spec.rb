@@ -332,6 +332,11 @@ RSpec.describe "Epistularium", type: :request do
     expect(response.body).to include("data-controller=\"google-oauth-launch\"")
     expect(response.body).to include("submit-&gt;google-oauth-launch#submit")
     expect(response.body).to include("data-google-oauth-launch=\"true\"")
+
+    document = Nokogiri::HTML(response.body)
+    colour_inputs = document.css("input[type='color'][name='epistularium_account[account_color]']")
+    expect(colour_inputs.size).to be >= 2
+    expect(colour_inputs.map { |input| input["value"] }).to include(Workspace::DEFAULT_COLOR)
   end
 
   it "auto-recovers a stalled queued sync when settings is opened" do
@@ -668,7 +673,8 @@ RSpec.describe "Epistularium", type: :request do
           imap_ssl: "1",
           provider_username: "support@example.com",
           provider_password: "secret",
-          sent_mailbox: "Sent"
+          sent_mailbox: "Sent",
+          account_color: "#F97316"
         },
         sync_now: "1"
       }
@@ -676,8 +682,43 @@ RSpec.describe "Epistularium", type: :request do
 
     expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
     created_account = EpistulariumAccount.order(:created_at).last
+    expect(created_account.account_color).to eq("#f97316")
     expect(Epistularium::SyncConnectionJob).to have_received(:perform_now).with(created_account.id, mode: "bootstrap")
     expect(Epistularium::ConnectionSyncService).not_to have_received(:new)
+  end
+
+  it "updates a mailbox colour from settings and uses it as the Epistularium accent" do
+    user, workspace, account, message = build_stack(suffix: "colour-update")
+    sign_in user
+
+    patch epistularium_account_path(workspace_slug: workspace.slug, id: account.id), params: {
+      epistularium_account: {
+        label: "Priority inbox",
+        enabled: "1",
+        workspace_scope: "this_workspace",
+        provider_username: "me@example.com",
+        account_color: "#F97316"
+      }
+    }
+
+    expect(response).to redirect_to(workspace_epistularium_settings_path(workspace_slug: workspace.slug))
+    expect(account.reload.label).to eq("Priority inbox")
+    expect(account.account_color).to eq("#f97316")
+
+    get workspace_epistularium_path(
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox",
+      message_id: message.id
+    )
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    active_item = document.at_css(".notae-epistularium-account-item.is-active")
+    message_list_pane = document.at_css(".notae-epistularium-pane-list.has-account-accent")
+
+    expect(active_item["style"]).to include("--notae-epistularium-accent: #f97316")
+    expect(message_list_pane["style"]).to include("--notae-epistularium-accent: #f97316")
   end
 
   it "does not queue a sync when sync_now is unchecked during IMAP account creation" do

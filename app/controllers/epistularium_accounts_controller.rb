@@ -118,6 +118,7 @@ class EpistulariumAccountsController < ApplicationController
       :provider_password,
       :owner_scope,
       :workspace_scope,
+      :account_color,
       :imap_host,
       :imap_port,
       :imap_ssl,
@@ -142,7 +143,10 @@ class EpistulariumAccountsController < ApplicationController
       provider_username: attributes[:provider_username],
       provider_password: attributes[:provider_password],
       settings_json: imap_settings_from(attributes)
-        .merge("workspace_scope" => requested_workspace_scope)
+        .merge(
+          "workspace_scope" => requested_workspace_scope,
+          "account_color" => attributes[:account_color]
+        ).compact
     }
   end
 
@@ -152,7 +156,10 @@ class EpistulariumAccountsController < ApplicationController
       label: attributes.fetch(:label),
       enabled: attributes.fetch(:enabled),
       remote_account_id: attributes[:remote_account_id],
-      settings_json: @account.settings_json.to_h.merge("workspace_scope" => requested_workspace_scope)
+      settings_json: @account.settings_json.to_h.merge(
+        "workspace_scope" => requested_workspace_scope,
+        "account_color" => attributes[:account_color]
+      ).compact
     }
 
     if %w[imap amazon_workmail].include?(@account.provider)
@@ -173,6 +180,7 @@ class EpistulariumAccountsController < ApplicationController
       remote_account_id: raw[:remote_account_id].to_s.strip.presence,
       provider_username: raw[:provider_username].to_s.strip.presence,
       provider_password: raw[:provider_password].to_s.strip.presence,
+      account_color: raw[:account_color].to_s.strip.presence,
       imap_host: raw[:imap_host].to_s.strip.presence,
       imap_port: raw[:imap_port].to_i.positive? ? raw[:imap_port].to_i : nil,
       imap_ssl: raw[:imap_ssl].nil? ? true : ActiveModel::Type::Boolean.new.cast(raw[:imap_ssl]),
@@ -272,7 +280,8 @@ class EpistulariumAccountsController < ApplicationController
       "account_id" => account&.id,
       "owner_scope" => requested_owner_scope,
       "workspace_scope" => requested_workspace_scope,
-      "label" => params[:label].to_s.strip.presence || "Gmail mailbox"
+      "label" => params[:label].to_s.strip.presence || "Gmail mailbox",
+      "account_color" => account_params[:account_color].to_s.strip.presence
     }
   end
 
@@ -308,11 +317,16 @@ class EpistulariumAccountsController < ApplicationController
       end
     end
 
-    apply_google_token_data!(account: account, token_data: token_data, workspace_scope: oauth_payload["workspace_scope"])
+    apply_google_token_data!(
+      account: account,
+      token_data: token_data,
+      workspace_scope: oauth_payload["workspace_scope"],
+      account_color: oauth_payload["account_color"]
+    )
     account
   end
 
-  def apply_google_token_data!(account:, token_data:, workspace_scope:)
+  def apply_google_token_data!(account:, token_data:, workspace_scope:, account_color: nil)
     account.access_token = token_data[:access_token]
     account.refresh_token = token_data[:refresh_token] if token_data[:refresh_token].present?
     account.scopes_json = token_data[:scope].to_s.split(/\s+/).reject(&:blank?)
@@ -323,12 +337,20 @@ class EpistulariumAccountsController < ApplicationController
     account.last_error = nil
     account.settings_json = account.settings_json.to_h.merge(
       "workspace_scope" => workspace_scope.to_s == "all_workspaces" ? "all_workspaces" : "this_workspace",
+      "account_color" => account_color_for_google_account(account, requested_color: account_color),
       "google_token_type" => token_data[:token_type].to_s.presence,
       "google_access_token_expires_at" => (
         token_data[:expires_in].to_i.positive? ? (Time.current + token_data[:expires_in].to_i.seconds).iso8601 : nil
       )
     ).compact
     account.save!
+  end
+
+  def account_color_for_google_account(account, requested_color: nil)
+    requested_color.to_s.strip.presence ||
+      account_params[:account_color].to_s.strip.presence ||
+      account.settings_json.to_h["account_color"].to_s.strip.presence ||
+      nil
   end
 
   def google_oauth_service

@@ -56,6 +56,26 @@ RSpec.describe EpistulariumAccount, type: :model do
     expect(account.imap_ssl?).to eq(true)
   end
 
+  it "normalizes mailbox colour codes and rejects invalid values" do
+    user, workspace = build_workspace_stack(suffix: "colour")
+    account = described_class.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "imap",
+      label: "Inbox",
+      provider_username: "me@example.com",
+      provider_password: "secret",
+      settings_json: { "imap_host" => "imap.example.com", "account_color" => " #F97316 " }
+    )
+
+    expect(account.reload.account_color).to eq("#f97316")
+
+    account.settings_json = account.settings_json.to_h.merge("account_color" => "orange")
+    expect(account).not_to be_valid
+    expect(account.errors.full_messages.join).to include("Mailbox colour must be a hex colour code")
+  end
+
   it "rejects SMTP endpoints for IMAP-backed accounts with a clearer validation error" do
     user, workspace = build_workspace_stack(suffix: "smtp-host-validation")
     account = described_class.new(

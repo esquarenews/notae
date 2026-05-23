@@ -16627,6 +16627,37 @@ button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button:ho
   color: var(--notae-text, #1c1917);
 }
 
+.notae-epistularium-color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.62rem;
+  width: fit-content;
+  max-width: 100%;
+  color: var(--notae-muted, #57534e);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.notae-epistularium-color-input {
+  width: 3rem;
+  height: 2rem;
+  padding: 0.16rem;
+  border: 1px solid var(--notae-border, #d6d3d1);
+  border-radius: 0.55rem;
+  background: var(--notae-panel-elevated, #fff);
+  cursor: pointer;
+}
+
+.notae-epistularium-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.notae-epistularium-color-input::-webkit-color-swatch,
+.notae-epistularium-color-input::-moz-color-swatch {
+  border: 0;
+  border-radius: 0.36rem;
+}
+
 .notae-kalendarium-connection-form > *,
 .notae-kalendarium-calendar-row > * {
   min-width: 0;
