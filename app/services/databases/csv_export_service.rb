@@ -3,19 +3,21 @@ require "csv"
 module Databases
   class CsvExportService
     class << self
-      def call(database:, include_archived_rows: false, include_archived_metadata: false)
+      def call(database:, include_archived_rows: false, include_archived_metadata: false, rows: nil)
         new(
           database:,
           include_archived_rows:,
-          include_archived_metadata:
+          include_archived_metadata:,
+          rows:
         ).call
       end
     end
 
-    def initialize(database:, include_archived_rows: false, include_archived_metadata: false)
+    def initialize(database:, include_archived_rows: false, include_archived_metadata: false, rows: nil)
       @database = database
       @include_archived_rows = include_archived_rows
       @include_archived_metadata = include_archived_metadata
+      @rows = rows
     end
 
     def call
@@ -29,7 +31,7 @@ module Databases
 
     private
 
-    attr_reader :database, :include_archived_rows, :include_archived_metadata
+    attr_reader :database, :include_archived_rows, :include_archived_metadata, :rows
 
     def column_headers
       headers = [ "Name" ]
@@ -49,6 +51,8 @@ module Databases
 
     def active_rows
       @active_rows ||= begin
+        return Array(rows) unless rows.nil?
+
         scope = database.db_rows
         scope = scope.active unless include_archived_rows
         scope.ordered.to_a
@@ -58,7 +62,11 @@ module Databases
     def cell_lookup
       @cell_lookup ||= begin
         scope = DbCell.joins(:db_row).where(db_rows: { database_id: database.id })
-        scope = scope.where(db_rows: { archived_at: nil }) unless include_archived_rows
+        unless rows.nil?
+          scope = scope.where(db_row_id: Array(rows).map(&:id))
+        else
+          scope = scope.where(db_rows: { archived_at: nil }) unless include_archived_rows
+        end
 
         scope.each_with_object({}) do |db_cell, memo|
           memo[[ db_cell.db_row_id, db_cell.db_property_id ]] = db_cell.value_text.to_s

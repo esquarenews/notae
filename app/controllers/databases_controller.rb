@@ -5,7 +5,7 @@ class DatabasesController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_database, only: %i[show update duplicate archive export_csv export_gantt_pdf export_graph_pdf gantt_embed graph_embed permissions move_workspace taskify statsify stats_setup stats_entries save_as_template apply_template kanbanize panel]
+  before_action :set_database, only: %i[show update duplicate archive export_csv export_pdf export_gantt_pdf export_graph_pdf gantt_embed graph_embed permissions move_workspace taskify timesheetify statsify stats_setup stats_entries save_as_template apply_template kanbanize panel]
   before_action :set_archived_database, only: %i[restore destroy]
   track_request_performance_for :show, :update
 
@@ -37,8 +37,11 @@ class DatabasesController < ApplicationController
 
     @db_properties = policy_scope(DbProperty).for_database(@database).ordered.to_a
     @can_apply_tasks_template = tasks_template_convertible?(properties: @db_properties)
+    @can_apply_timesheet_template = timesheet_template_convertible?(properties: @db_properties)
     @can_apply_stats_template = stats_template_convertible?(properties: @db_properties)
     @tasks_template_ready = tasks_template_ready?(properties: @db_properties)
+    @timesheet_template_ready = Databases::TimesheetTemplateService.ready?(properties: @db_properties)
+    @timesheet_template_active = Databases::TimesheetTemplateService.active?(@database)
     @stats_template_active = Databases::StatsTemplateService.stats_database?(@database)
     @database_templates = policy_scope(DatabaseTemplate).for_workspace(@workspace).recent_first.limit(20).to_a
     @current_database_template_label = current_database_template_label
@@ -283,6 +286,35 @@ class DatabasesController < ApplicationController
 
     redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: table_view.id),
                 notice: "Switched to Tasks view."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
+                alert: error.record.errors.full_messages.to_sentence
+  end
+
+  def timesheetify
+    authorize @database, :update?
+
+    if @database.locked?
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id), alert: "Grid is locked. Unlock to make changes."
+      return
+    end
+
+    unless timesheet_template_convertible?
+      redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
+                  alert: "This grid already has custom fields. Open a blank grid or new tab before using the Time sheets template."
+      return
+    end
+
+    table_view = nil
+
+    ActiveRecord::Base.transaction do
+      table_view = resolve_or_create_table_view!
+      Databases::TimesheetTemplateService.apply!(database: @database, table_view:)
+      log_database_audit_event!(action: "update", kind: "database_timesheet_template_applied")
+    end
+
+    redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id, view_id: table_view.id),
+                notice: "Switched to Time sheets view."
   rescue ActiveRecord::RecordInvalid => error
     redirect_to database_path(workspace_slug: @workspace.slug, id: @database.id),
                 alert: error.record.errors.full_messages.to_sentence
@@ -570,9 +602,21 @@ class DatabasesController < ApplicationController
   def export_csv
     authorize @database, :show?
 
-    send_data Databases::CsvExportService.call(database: @database),
+    rows = timesheet_export_rows
+    send_data Databases::CsvExportService.call(database: @database, rows: rows),
               filename: "#{@database.name.parameterize.presence || "grid"}-#{Time.zone.today}.csv",
               type: "text/csv; charset=utf-8"
+  end
+
+  def export_pdf
+    authorize @database, :show?
+
+    rows = timesheet_export_rows
+    range = Databases::TimesheetTemplateService.date_range_from_params(params)
+    send_data Databases::GridPdfExportService.call(database: @database, rows:, date_range: range).pdf,
+              filename: "#{@database.name.parameterize.presence || "grid"}-#{Time.zone.today}.pdf",
+              type: "application/pdf",
+              disposition: "attachment"
   end
 
   def export_gantt_pdf
@@ -1568,6 +1612,7 @@ class DatabasesController < ApplicationController
   def normalize_template(raw_template)
     template = raw_template.to_s
     return "tasks" if template == "tasks"
+    return "time_sheets" if %w[time_sheets timesheets].include?(template)
     return "stats" if template == "stats"
 
     "blank"
@@ -1579,6 +1624,7 @@ class DatabasesController < ApplicationController
     @database.name =
       case template
       when "tasks" then "Tasks grid"
+      when "time_sheets" then "Time sheets grid"
       when "stats" then "Stats grid"
       else "Untitled grid"
       end
@@ -1589,6 +1635,8 @@ class DatabasesController < ApplicationController
     when "tasks"
       build_tasks_template!(table_view:)
       @database.update!(database_template: nil, applied_template_name: "Tasks")
+    when "time_sheets"
+      Databases::TimesheetTemplateService.apply!(database: @database, table_view:)
     when "stats"
       Databases::StatsTemplateService.apply!(database: @database, table_view:)
     end
@@ -1732,6 +1780,10 @@ class DatabasesController < ApplicationController
     Array(properties || @database.db_properties.ordered.to_a).empty?
   end
 
+  def timesheet_template_convertible?(properties: nil)
+    Databases::TimesheetTemplateService.convertible?(@database, properties:)
+  end
+
   def tasks_template_ready?(properties: nil)
     normalized_types = Array(properties || @database.db_properties.ordered.to_a).each_with_object({}) do |property, index|
       index[normalize_task_template_property_name(property.name)] = property.property_type
@@ -1809,9 +1861,17 @@ class DatabasesController < ApplicationController
   end
 
   def current_database_template_label
-    @database.applied_template_name.presence ||
+      @database.applied_template_name.presence ||
       @database.database_template&.name.presence ||
+      (@timesheet_template_ready ? "Time sheets" : nil) ||
       (@tasks_template_ready ? "Tasks" : "Grid")
+  end
+
+  def timesheet_export_rows
+    return nil unless Databases::TimesheetTemplateService.active?(@database)
+
+    range = Databases::TimesheetTemplateService.date_range_from_params(params)
+    Databases::TimesheetTemplateService.filtered_rows(database: @database, **range)
   end
 
   def resolve_template_source_view

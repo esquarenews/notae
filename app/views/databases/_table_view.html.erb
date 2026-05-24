@@ -171,7 +171,7 @@ end %>
             <div class="notae-db-grid-property-header">
               <div class="notae-db-grid-property-main">
                 <% if can_persist_sort %>
-                  <%= button_to db_property.name,
+                  <%= button_to database_property_heading(db_property),
                                 database_database_view_path(
                                   workspace_slug: @workspace.slug,
                                   database_id: @database.id,
@@ -201,7 +201,7 @@ end %>
                                 class: "notae-db-grid-property-link",
                                 title: "Sort by #{db_property.name}" %>
                 <% else %>
-                  <%= link_to db_property.name,
+                  <%= link_to database_property_heading(db_property),
                               database_path(
                                 workspace_slug: @workspace.slug,
                                 id: @database.id,

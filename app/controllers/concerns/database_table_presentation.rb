@@ -18,7 +18,7 @@ module DatabaseTablePresentation
   }.freeze
 
   included do
-    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for, :column_style_classes_for, :name_column_style_classes_for
+    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for, :column_style_classes_for, :name_column_style_classes_for, :database_property_heading
   end
 
   private
@@ -141,6 +141,28 @@ module DatabaseTablePresentation
     background_color = database.name_column_background_color
     classes << "is-column-bg-#{background_color}" unless background_color == "default"
     classes.join(" ")
+  end
+
+  def database_property_heading(property)
+    name = property&.name.to_s
+    normalized = name.strip.downcase
+    icon_class =
+      case normalized
+      when "date/time clock started"
+        "is-start"
+      when "date/time clock stopped"
+        "is-stop"
+      end
+
+    return name if icon_class.blank?
+
+    helpers.safe_join(
+      [
+        helpers.content_tag(:span, "⏱", class: "notae-db-grid-heading-icon notae-timesheet-clock-icon #{icon_class}", aria: { hidden: true }),
+        helpers.content_tag(:span, name)
+      ],
+      " "
+    )
   end
 
   def task_status_property?(property)

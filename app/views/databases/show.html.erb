@@ -472,6 +472,18 @@
                              disabled: !can_edit_database || !@can_apply_stats_template,
                              title: (!can_edit_database || @can_apply_stats_template) ? nil : "Open a blank grid or new tab before using the Stats template." %>
             <% end %>
+            <%= form_with url: timesheetify_database_path(workspace_slug: @workspace.slug, id: @database.id),
+                          method: :post,
+                          class: "notae-db-split-view-form" do %>
+              <% toolbar_state_params.each do |key, value| %>
+                <%= hidden_field_tag key, value %>
+              <% end %>
+              <%= button_tag "Time sheets",
+                             type: "submit",
+                             class: [ "notae-db-split-view-option", ("is-active" if current_template_label == "Time sheets") ].compact.join(" "),
+                             disabled: !can_edit_database || !@can_apply_timesheet_template,
+                             title: (!can_edit_database || @can_apply_timesheet_template) ? nil : "Open a blank grid or new tab before using the Time sheets template." %>
+            <% end %>
             <% @database_templates.each do |template| %>
               <%= form_with url: apply_template_database_path(workspace_slug: @workspace.slug, id: @database.id),
                             method: :post,
@@ -656,6 +668,10 @@
     <%= render "databases/gallery_view" %>
   <% else %>
     <%= render "databases/table_view" %>
+  <% end %>
+
+  <% if @timesheet_template_active %>
+    <%= render "databases/timesheet_footer", workspace: @workspace, database: @database, view_params: view_params %>
   <% end %>
 
   <section class="notae-doc-backlinks">

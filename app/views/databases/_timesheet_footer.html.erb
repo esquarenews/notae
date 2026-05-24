@@ -1,0 +1,30 @@
+<section class="notae-timesheet-footer" aria-label="Time sheet exports">
+  <div class="notae-timesheet-footer-head">
+    <h2>Time sheet export</h2>
+    <p>Filter by clock-start date before exporting.</p>
+  </div>
+
+  <%= form_with url: export_csv_database_path(view_params.merge(workspace_slug: workspace.slug, id: database.id)),
+                method: :get,
+                class: "notae-timesheet-export-form" do %>
+    <% view_params.except(:workspace_slug, :id).each do |key, value| %>
+      <%= hidden_field_tag key, value %>
+    <% end %>
+    <label class="notae-timesheet-export-field">
+      <span>Date range</span>
+      <%= date_field_tag :timesheet_start_date, params[:timesheet_start_date], class: "notae-options-input" %>
+    </label>
+    <label class="notae-timesheet-export-field">
+      <span>To</span>
+      <%= date_field_tag :timesheet_end_date, params[:timesheet_end_date], class: "notae-options-input" %>
+    </label>
+    <div class="notae-timesheet-export-actions">
+      <button type="submit" class="notae-chip-button">Export CSV</button>
+      <button type="submit"
+              formaction="<%= export_pdf_database_path(view_params.merge(workspace_slug: workspace.slug, id: database.id)) %>"
+              class="notae-chip-button">
+        Export PDF
+      </button>
+    </div>
+  <% end %>
+</section>

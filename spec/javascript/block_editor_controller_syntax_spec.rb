@@ -93,6 +93,19 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("editorElement.focus({ preventScroll: true })")
   end
 
+  it "focuses prehydrated mobile editors when tapping the block shell" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("if (this.editor) {")
+    expect(source).to include("if (this.eventInsideEditorSurface(event)) return")
+    expect(source).to include("this.focusEditor({ immediate: true })")
+    expect(source).to include("eventInsideEditorSurface(event)")
+    expect(source).to include('event?.target?.closest?.(".ProseMirror")')
+    expect(source).to include("focusEditor({ immediate = false } = {})")
+    expect(source).to include("if (immediate) {")
+    expect(source).to include("requestAnimationFrame(focus)")
+  end
+
   it "fails closed when deferred editor content cannot be loaded" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 

@@ -245,6 +245,70 @@ RSpec.describe "Databases", type: :request do
     expect(status_dropdown.at_css("option[selected]")&.[]("value")).to eq("not started")
   end
 
+  it "creates a time sheets template with stopwatch headers and date-range exports" do
+    owner = User.create!(email: "database-timesheet-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Timesheet tables", slug: "timesheet-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    sign_in owner
+
+    post databases_path(workspace_slug: workspace.slug),
+         params: { quick_create: "1", template: "time_sheets", database: { name: "Time sheets grid" } }
+
+    database = workspace.databases.order(:created_at).last
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.applied_template_name).to eq("Time sheets")
+    expect(database.db_properties.order(:position).pluck(:name, :property_type)).to eq(
+      [
+        [ "Date/time clock started", "text" ],
+        [ "Date/time clock stopped", "text" ],
+        [ "Calculated total time", "number" ],
+        [ "Notes", "text" ],
+        [ "Done by", "text" ]
+      ]
+    )
+
+    post database_db_rows_path(workspace_slug: workspace.slug, database_id: database.id),
+         params: { db_row: { title: "Print Decor" } }
+
+    row = database.db_rows.order(:created_at).last
+    started = row.db_cells.joins(:db_property).find_by!(db_properties: { name: "Date/time clock started" })
+    stopped = row.db_cells.joins(:db_property).find_by!(db_properties: { name: "Date/time clock stopped" })
+    total = row.db_cells.joins(:db_property).find_by!(db_properties: { name: "Calculated total time" })
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: started.id),
+          params: { db_cell: { value_text: "2026-05-24 09:00" } }
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: stopped.id),
+          params: { db_cell: { value_text: "2026-05-24 11:30" } }
+
+    expect(total.reload.value_text).to eq("2.5")
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Time sheets")
+    expect(response.body).to include("notae-timesheet-clock-icon is-start")
+    expect(response.body).to include("notae-timesheet-clock-icon is-stop")
+    expect(response.body).to include("Export CSV")
+    expect(response.body).to include("Export PDF")
+    expect(response.body).to include("timesheet_start_date")
+
+    get export_csv_database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      timesheet_start_date: "2026-05-24",
+      timesheet_end_date: "2026-05-24"
+    )
+    expect(response.body).to include("Print Decor")
+    expect(response.body).to include("2.5")
+
+    get export_pdf_database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      timesheet_start_date: "2026-05-24",
+      timesheet_end_date: "2026-05-24"
+    )
+    expect(response.body.byteslice(0, 4)).to eq("%PDF")
+  end
+
   it "turns the current blank grid into a tasks grid instead of creating a new database" do
     owner = User.create!(email: "database-taskify-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Taskify tables", slug: "taskify-tables")

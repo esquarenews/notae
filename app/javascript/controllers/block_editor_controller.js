@@ -184,8 +184,15 @@ export default class extends Controller {
   }
 
   activateAndFocus(event) {
-    if (this.editor) return
     if (this.staticLinkActivation(event)) return
+
+    if (this.editor) {
+      if (this.eventInsideEditorSurface(event)) return
+
+      event?.preventDefault()
+      this.focusEditor({ immediate: true })
+      return
+    }
 
     event?.preventDefault()
     this.hydrate({ focus: true })
@@ -206,6 +213,10 @@ export default class extends Controller {
 
   staticLinkActivation(event) {
     return event?.target?.closest?.("a[href]") instanceof HTMLAnchorElement
+  }
+
+  eventInsideEditorSurface(event) {
+    return event?.target?.closest?.(".ProseMirror") instanceof HTMLElement
   }
 
   shouldPrepareTouchTextEntry() {
@@ -407,8 +418,8 @@ export default class extends Controller {
     this.globalHandlersInstalled = false
   }
 
-  focusEditor() {
-    requestAnimationFrame(() => {
+  focusEditor({ immediate = false } = {}) {
+    const focus = () => {
       if (!this.editor) return
 
       this.editor.commands.focus("end")
@@ -417,7 +428,14 @@ export default class extends Controller {
         editorElement.focus({ preventScroll: true })
         this.editor.commands.focus("end")
       }
-    })
+    }
+
+    if (immediate) {
+      focus()
+      return
+    }
+
+    requestAnimationFrame(focus)
   }
 
   parseContent() {

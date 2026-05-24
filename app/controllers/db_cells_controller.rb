@@ -13,6 +13,7 @@ class DbCellsController < ApplicationController
     authorize @db_cell
 
     if @db_cell.update(db_cell_params)
+      Databases::TimesheetTemplateService.maybe_update_total_for!(@db_cell)
       apply_task_status_row_style!(@db_cell)
       respond_to do |format|
         format.turbo_stream do

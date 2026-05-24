@@ -148,6 +148,7 @@ Rails.application.routes.draw do
       member do
         post :duplicate
         post :taskify
+        post :timesheetify
         post :statsify
         patch :stats_setup
         patch :stats_entries
@@ -163,6 +164,7 @@ Rails.application.routes.draw do
         patch :permissions
         patch :move_workspace
         get :export_csv
+        get :export_pdf
         get "panels/:panel", action: :panel, as: :panel
       end
       resource :favorite, only: %i[create destroy], controller: "database_favorites"

@@ -4536,6 +4536,46 @@ turbo-frame#notae_sidebar_sections {
   box-shadow: 0 10px 22px rgba(24, 24, 27, 0.04);
 }
 
+.notae-timesheet-footer {
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--notae-border) 88%, transparent);
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--notae-surface-raised) 94%, transparent);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.notae-timesheet-footer-head h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.notae-timesheet-footer-head p {
+  margin: 0.18rem 0 0;
+  color: var(--notae-muted);
+  font-size: 0.78rem;
+}
+
+.notae-timesheet-export-form,
+.notae-timesheet-export-actions {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.notae-timesheet-export-field {
+  display: grid;
+  gap: 0.22rem;
+  color: var(--notae-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 .notae-db-grid {
   width: 100%;
   min-width: 760px;
@@ -4584,6 +4624,26 @@ turbo-frame#notae_sidebar_sections {
 
 .notae-db-grid-heading-icon {
   opacity: 0.8;
+}
+
+.notae-timesheet-clock-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.notae-timesheet-clock-icon.is-start {
+  background: #16a34a;
+}
+
+.notae-timesheet-clock-icon.is-stop {
+  background: #dc2626;
 }
 
 .notae-db-grid-property-link {

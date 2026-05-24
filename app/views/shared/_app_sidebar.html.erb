@@ -144,6 +144,17 @@
                     </button>
                   <% end %>
                 </li>
+                <li class="notae-create-menu-item">
+                  <%= form_with model: Database.new, url: databases_path(workspace_slug: workspace.slug), class: "notae-create-menu-form" do |form| %>
+                    <%= hidden_field_tag :quick_create, "1" %>
+                    <%= hidden_field_tag :template, "time_sheets" %>
+                    <%= form.hidden_field :name, value: "Time sheets grid" %>
+                    <button type="submit" class="notae-create-menu-button" data-action="click->shell#closeCreateMenu">
+                      <%= notae_icon_svg(:grid, css_class: "notae-create-menu-icon notae-create-menu-icon-database") %>
+                      <span>Time sheets template</span>
+                    </button>
+                  <% end %>
+                </li>
                 <% if current_database_id.present? %>
                   <li class="notae-create-menu-item">
                     <%= form_with url: kanbanize_database_path(workspace_slug: workspace.slug, id: current_database_id),
