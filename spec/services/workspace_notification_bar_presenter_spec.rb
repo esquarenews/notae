@@ -108,7 +108,7 @@ RSpec.describe WorkspaceNotificationBarPresenter do
 
     expect(presenter.active_timesheet_timer).to include(
       label: "Client support",
-      started_at: "2026-04-11T19:15",
+      started_at: "2026-04-11T19:15:00",
       elapsed_label: "00:45:00"
     )
   end

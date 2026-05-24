@@ -64,7 +64,7 @@ class WorkspaceNotificationBarPresenter
     local_started_at = started_at.in_time_zone(resolved_time_zone)
     {
       label: timer.fetch(:row).title.presence || timer.fetch(:database).name.presence || "Time sheet",
-      started_at: local_started_at.strftime("%Y-%m-%dT%H:%M"),
+      started_at: local_started_at.strftime("%Y-%m-%dT%H:%M:%S"),
       elapsed_label: format_timesheet_elapsed(reference_time - started_at)
     }
   end
