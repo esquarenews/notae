@@ -112,6 +112,6 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("timesheetTotalInput(row)")
     expect(source).to include("localDateTimeValue(date)")
     expect(source).to include('pad(date.getMonth() + 1)')
-    expect(source).to include('`T${pad(date.getHours())}:${pad(date.getMinutes())}`')
+    expect(source).to include('`T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`')
   end
 end

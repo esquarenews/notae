@@ -74,7 +74,7 @@ class DbCellsController < ApplicationController
     parsed_time = Time.zone.parse(value.to_s)
     return value if parsed_time.blank?
 
-    parsed_time.strftime("%Y-%m-%d %H:%M")
+    parsed_time.strftime("%Y-%m-%d %H:%M:%S")
   rescue ArgumentError
     value
   end

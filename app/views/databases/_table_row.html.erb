@@ -272,6 +272,7 @@
                      name="db_cell[value_text]"
                      id="<%= field_id %>"
                      value="<%= datetime_local_cell_value(db_cell.value_text) %>"
+                     step="1"
                      class="<%= field_classes %> notae-timesheet-clock-input"
                      data-action="input->auto-submit#submitDebounced <%= cell_autosubmit_attributes[:action] %>"
                      data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"

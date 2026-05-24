@@ -197,7 +197,7 @@ module DatabaseTablePresentation
     parsed_time = Time.zone.parse(raw)
     return raw if parsed_time.blank?
 
-    parsed_time.strftime("%Y-%m-%dT%H:%M")
+    parsed_time.strftime("%Y-%m-%dT%H:%M:%S")
   rescue ArgumentError
     raw
   end
