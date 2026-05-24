@@ -58,7 +58,25 @@ class DbCellsController < ApplicationController
   end
 
   def db_cell_params
-    params.require(:db_cell).permit(:value_text)
+    permitted = params.require(:db_cell).permit(:value_text)
+    if timesheet_clock_cell? && permitted[:value_text].present?
+      permitted[:value_text] = normalized_timesheet_clock_value(permitted[:value_text])
+    end
+    permitted
+  end
+
+  def timesheet_clock_cell?
+    @db_cell.db_property&.text? &&
+      @db_cell.db_property.name.to_s.strip.downcase.in?([ "date/time clock started", "date/time clock stopped" ])
+  end
+
+  def normalized_timesheet_clock_value(value)
+    parsed_time = Time.zone.parse(value.to_s)
+    return value if parsed_time.blank?
+
+    parsed_time.strftime("%Y-%m-%d %H:%M")
+  rescue ArgumentError
+    value
   end
 
   def cell_redirect_location

@@ -18,7 +18,7 @@ module DatabaseTablePresentation
   }.freeze
 
   included do
-    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for, :column_style_classes_for, :name_column_style_classes_for, :database_property_heading
+    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for, :column_style_classes_for, :name_column_style_classes_for, :database_property_heading, :timesheet_clock_property?, :datetime_local_cell_value
   end
 
   private
@@ -163,6 +163,23 @@ module DatabaseTablePresentation
       ],
       " "
     )
+  end
+
+  def timesheet_clock_property?(property)
+    property&.text? &&
+      property.name.to_s.strip.downcase.in?([ "date/time clock started", "date/time clock stopped" ])
+  end
+
+  def datetime_local_cell_value(value)
+    raw = value.to_s.strip
+    return "" if raw.blank?
+
+    parsed_time = Time.zone.parse(raw)
+    return raw if parsed_time.blank?
+
+    parsed_time.strftime("%Y-%m-%dT%H:%M")
+  rescue ArgumentError
+    raw
   end
 
   def task_status_property?(property)

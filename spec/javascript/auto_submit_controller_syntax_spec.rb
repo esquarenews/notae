@@ -88,4 +88,17 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("target.closest(\"input, textarea, select, [contenteditable='true']\")")
     expect(source).to include("this.clearPendingFocusTarget()")
   end
+
+  it "sets timesheet clock cells to the local current datetime" do
+    source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
+
+    expect(source).to include("setNow(event)")
+    expect(source).to include('closest(".notae-timesheet-clock-cell")')
+    expect(source).to include("input[type='datetime-local']")
+    expect(source).to include("input.value = this.localDateTimeValue(new Date())")
+    expect(source).to include("this.submit({ target: input })")
+    expect(source).to include("localDateTimeValue(date)")
+    expect(source).to include('pad(date.getMonth() + 1)')
+    expect(source).to include('`T${pad(date.getHours())}:${pad(date.getMinutes())}`')
+  end
 end

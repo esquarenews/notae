@@ -166,6 +166,25 @@ export default class extends Controller {
     window.location.assign(destination)
   }
 
+  setNow(event) {
+    event.preventDefault()
+    const input = event.target?.closest(".notae-timesheet-clock-cell")?.querySelector("input[type='datetime-local']")
+    if (!(input instanceof HTMLInputElement)) return
+
+    input.value = this.localDateTimeValue(new Date())
+    this.clearDebounceTimerFor(input)
+    this.submit({ target: input })
+  }
+
+  localDateTimeValue(date) {
+    const pad = (value) => value.toString().padStart(2, "0")
+    return [
+      date.getFullYear(),
+      pad(date.getMonth() + 1),
+      pad(date.getDate())
+    ].join("-") + `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
   applyTaskStatusVisualState(target) {
     if (!(target instanceof HTMLSelectElement)) return
     if (!target.classList.contains("notae-db-cell-select-status")) return

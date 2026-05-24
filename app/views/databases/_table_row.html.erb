@@ -254,6 +254,25 @@
                    data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>"
                    data-gantt-grid-row-id="<%= row.id %>"
                    data-gantt-grid-property-id="<%= db_property.id %>">
+          <% elsif timesheet_clock_property?(db_property) %>
+            <div class="notae-timesheet-clock-cell">
+              <input type="datetime-local"
+                     name="db_cell[value_text]"
+                     id="<%= field_id %>"
+                     value="<%= datetime_local_cell_value(db_cell.value_text) %>"
+                     class="<%= field_classes %> notae-timesheet-clock-input"
+                     data-action="input->auto-submit#submitDebounced <%= cell_autosubmit_attributes[:action] %>"
+                     data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"
+                     data-auto-submit-method="<%= cell_autosubmit_attributes[:auto_submit_method] %>"
+                     data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>">
+              <button type="button"
+                      class="notae-timesheet-now-button <%= db_property.name.to_s.strip.downcase.ends_with?("started") ? "is-start" : "is-stop" %>"
+                      data-action="auto-submit#setNow"
+                      aria-label="Set <%= db_property.name %> to now"
+                      title="Set to now">
+                Now
+              </button>
+            </div>
           <% else %>
             <input type="text"
                    name="db_cell[value_text]"
