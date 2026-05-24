@@ -19280,6 +19280,21 @@ body.notae-theme-system .notae-account-delete-button {
   box-shadow: inset 0 1px 0 var(--notae-glass-highlight);
 }
 
+.notae-shell-status-bar-timesheet {
+  transition: opacity 420ms ease, transform 420ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.notae-shell-status-bar-timesheet.is-stopped,
+.notae-shell-status-bar-calendar-timesheet.is-stopped {
+  border-color: color-mix(in srgb, #dc2626 42%, var(--notae-glass-border-soft));
+  background: color-mix(in srgb, #dc2626 14%, var(--notae-glass-surface-soft));
+}
+
+.notae-shell-status-bar-timesheet.is-fading {
+  opacity: 0;
+  transform: translateY(0.35rem);
+}
+
 .notae-shell-status-bar-timesheet[hidden],
 .notae-shell-status-bar-calendar-timesheet[hidden] {
   display: none;
@@ -19297,6 +19312,11 @@ body.notae-theme-system .notae-account-delete-button {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.9rem;
   font-weight: 900;
+}
+
+.notae-shell-status-bar-timesheet.is-stopped .notae-shell-status-bar-timesheet-elapsed,
+.notae-shell-status-bar-calendar-timesheet.is-stopped strong {
+  color: #b91c1c;
 }
 
 .notae-shell-status-bar-timesheet-label,

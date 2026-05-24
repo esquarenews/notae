@@ -5,7 +5,7 @@ const BAR_GUTTER_PX = 20
 const DRAG_THRESHOLD_PX = 4
 
 export default class extends Controller {
-  static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel", "calendarFrame", "timesheetTimer", "timesheetTimerLabel", "timesheetTimerElapsed", "timesheetTimerCalendar"]
+  static targets = ["clock", "clockButton", "alerts", "alert", "calendarPanel", "calendarFrame", "timesheetTimer", "timesheetTimerStatus", "timesheetTimerLabel", "timesheetTimerElapsed", "timesheetTimerCalendar"]
   static values = { timeZone: String, workspaceKey: String, refreshPath: String, calendarSrc: String }
 
   connect() {
@@ -19,13 +19,15 @@ export default class extends Controller {
     this.visibilityChangeHandler = () => this.syncAlertPolling({ immediate: document.visibilityState === "visible" })
     this.calendarFrameLoadHandler = () => this.requestCalendarRecenter()
     this.timesheetStartedHandler = (event) => this.showTimesheetTimer(event.detail)
-    this.timesheetStoppedHandler = () => this.hideTimesheetTimer()
+    this.timesheetStoppedHandler = (event) => this.showStoppedTimesheetTimer(event.detail)
     this.pointerMoveHandler = (event) => this.drag(event)
     this.pointerUpHandler = () => this.stopDrag()
     this.resizeHandler = () => this.applyStoredBarPosition()
     this.pushReceivedHandler = () => this.pollAlerts({ force: true })
     this.alertPollTimer = null
     this.alertPollRequest = null
+    this.timesheetStoppedFadeTimer = null
+    this.timesheetStoppedHideTimer = null
     this.dragPointerId = null
     this.dragOriginX = null
     this.dragOriginLeft = null
@@ -62,6 +64,7 @@ export default class extends Controller {
     }
     this.stopAlertPolling()
     this.stopTimesheetTimer()
+    this.clearTimesheetStoppedTimers()
   }
 
   startClock() {
@@ -112,6 +115,11 @@ export default class extends Controller {
   showTimesheetTimer(detail = {}) {
     if (!this.hasTimesheetTimerTarget) return
 
+    this.clearTimesheetStoppedTimers()
+    this.timesheetTimerTarget.classList.remove("is-stopped", "is-fading")
+    if (this.hasTimesheetTimerCalendarTarget) this.timesheetTimerCalendarTarget.classList.remove("is-stopped")
+    this.setTimesheetStatus("Time sheet running")
+
     const startedAt = detail.startedAt?.toString().trim()
     if (startedAt) this.timesheetTimerTarget.dataset.startedAt = startedAt
     if (this.hasTimesheetTimerLabelTarget && detail.label) {
@@ -124,17 +132,53 @@ export default class extends Controller {
     this.refreshVisibility()
   }
 
+  showStoppedTimesheetTimer(detail = {}) {
+    if (!this.hasTimesheetTimerTarget) return
+
+    this.clearTimesheetStoppedTimers()
+    this.stopTimesheetTimer()
+
+    const label = detail.label?.toString().trim() || this.currentTimesheetLabel()
+    const elapsed = this.stoppedTimesheetElapsed(detail)
+
+    this.timesheetTimerTarget.hidden = false
+    this.timesheetTimerTarget.classList.remove("is-fading")
+    this.timesheetTimerTarget.classList.add("is-stopped")
+    if (this.hasTimesheetTimerCalendarTarget) this.timesheetTimerCalendarTarget.classList.add("is-stopped")
+    if (this.hasTimesheetTimerCalendarTarget) this.timesheetTimerCalendarTarget.hidden = false
+    if (this.hasTimesheetTimerLabelTarget) this.timesheetTimerLabelTarget.textContent = label
+    this.setTimesheetStatus("Time sheet stopped")
+    this.timesheetTimerElapsedTargets.forEach((target) => {
+      target.textContent = elapsed
+    })
+    this.refreshVisibility()
+
+    this.timesheetStoppedFadeTimer = window.setTimeout(() => {
+      this.timesheetTimerTarget.classList.add("is-fading")
+    }, 3200)
+    this.timesheetStoppedHideTimer = window.setTimeout(() => {
+      this.hideTimesheetTimer()
+    }, 4600)
+  }
+
   hideTimesheetTimer() {
     if (!this.hasTimesheetTimerTarget) return
 
+    this.clearTimesheetStoppedTimers()
     this.timesheetTimerTarget.hidden = true
+    this.timesheetTimerTarget.classList.remove("is-stopped", "is-fading")
+    if (this.hasTimesheetTimerCalendarTarget) this.timesheetTimerCalendarTarget.classList.remove("is-stopped")
+    this.setTimesheetStatus("Time sheet running")
     if (this.hasTimesheetTimerCalendarTarget) this.timesheetTimerCalendarTarget.hidden = true
     this.refreshVisibility()
   }
 
   renderTimesheetTimer() {
     if (!this.hasTimesheetTimerTarget || !this.hasTimesheetTimerElapsedTarget) return
-    if (this.timesheetTimerTarget.hidden) return
+    if (this.timesheetTimerTarget.hidden) {
+      this.syncTimesheetTimerFromPage()
+      if (this.timesheetTimerTarget.hidden) return
+    }
 
     const startedAt = this.timesheetTimerStartedAt()
     if (!startedAt) return
@@ -145,7 +189,34 @@ export default class extends Controller {
     })
   }
 
+  syncTimesheetTimerFromPage() {
+    const activeClock = this.activeTimesheetClockInput()
+    if (!activeClock) return
+
+    const row = activeClock.closest("tr.notae-db-grid-data-row")
+    const rowTitle = row?.querySelector(".notae-db-title-input, .notae-db-title-text")?.value ||
+      row?.querySelector(".notae-db-title-input, .notae-db-title-text")?.textContent ||
+      "Time sheet"
+    this.showTimesheetTimer({
+      startedAt: activeClock.value,
+      label: rowTitle.toString().trim() || "Time sheet"
+    })
+  }
+
+  activeTimesheetClockInput() {
+    return Array.from(document.querySelectorAll(".notae-timesheet-clock-cell input[data-timesheet-clock-role='start']")).find((input) => {
+      if (!(input instanceof HTMLInputElement)) return false
+      if (!input.value) return false
+
+      const row = input.closest("tr.notae-db-grid-data-row")
+      const stopInput = row?.querySelector(".notae-timesheet-clock-cell input[data-timesheet-clock-role='stop']")
+      return !(stopInput instanceof HTMLInputElement) || !stopInput.value
+    }) || null
+  }
+
   updateTimesheetTimerFromPayload(timer) {
+    if (this.hasTimesheetTimerTarget && this.timesheetTimerTarget.classList.contains("is-stopped")) return
+
     if (timer?.started_at) {
       this.showTimesheetTimer({
         startedAt: timer.started_at,
@@ -154,6 +225,34 @@ export default class extends Controller {
     } else {
       this.hideTimesheetTimer()
     }
+  }
+
+  stoppedTimesheetElapsed(detail = {}) {
+    const elapsedLabel = detail.elapsedLabel?.toString().trim()
+    if (elapsedLabel) return elapsedLabel
+
+    const startedAt = detail.startedAt ? new Date(detail.startedAt) : this.timesheetTimerStartedAt()
+    const stoppedAt = detail.stoppedAt ? new Date(detail.stoppedAt) : new Date()
+    if (!startedAt || Number.isNaN(startedAt.getTime()) || Number.isNaN(stoppedAt.getTime())) return "00:00:00"
+
+    return this.formatElapsed(stoppedAt.getTime() - startedAt.getTime())
+  }
+
+  clearTimesheetStoppedTimers() {
+    if (this.timesheetStoppedFadeTimer) window.clearTimeout(this.timesheetStoppedFadeTimer)
+    if (this.timesheetStoppedHideTimer) window.clearTimeout(this.timesheetStoppedHideTimer)
+    this.timesheetStoppedFadeTimer = null
+    this.timesheetStoppedHideTimer = null
+  }
+
+  setTimesheetStatus(label) {
+    this.timesheetTimerStatusTargets.forEach((target) => {
+      target.textContent = label
+    })
+  }
+
+  currentTimesheetLabel() {
+    return this.hasTimesheetTimerLabelTarget ? this.timesheetTimerLabelTarget.textContent.trim() || "Time sheet" : "Time sheet"
   }
 
   timesheetTimerStartedAt() {
@@ -502,7 +601,7 @@ export default class extends Controller {
   }
 
   syncAlertPolling({ immediate = false } = {}) {
-    if (!this.hasAlertsTarget || !this.hasRefreshPathValue || !this.refreshPathValue || document.visibilityState !== "visible") {
+    if (!this.hasRefreshPathValue || !this.refreshPathValue || document.visibilityState !== "visible") {
       this.stopAlertPolling()
       return
     }
@@ -540,9 +639,9 @@ export default class extends Controller {
         if (!response.ok) return
 
         const payload = await response.json()
-        if (!this.hasAlertsTarget) return
-
-        this.alertsTarget.innerHTML = payload?.data?.html?.toString() || ""
+        if (this.hasAlertsTarget) {
+          this.alertsTarget.innerHTML = payload?.data?.html?.toString() || ""
+        }
         this.updateTimesheetTimerFromPayload(payload?.data?.active_timesheet_timer)
         window.requestAnimationFrame(() => this.applyStoredAlertState())
       } catch (_error) {

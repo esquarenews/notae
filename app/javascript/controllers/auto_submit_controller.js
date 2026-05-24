@@ -189,15 +189,91 @@ export default class extends Controller {
       row?.querySelector(".notae-db-title-input, .notae-db-title-text")?.textContent ||
       "Time sheet"
 
+    const startedAt = role === "start" ? target.value : this.timesheetStartInput(row)?.value
+    const stoppedAt = role === "stop" ? target.value : this.timesheetStopInput(row)?.value
+
     window.dispatchEvent(new CustomEvent(
       role === "start" ? "notae:timesheet-timer-started" : "notae:timesheet-timer-stopped",
       {
         detail: {
-          startedAt: target.value,
+          startedAt,
+          stoppedAt,
+          elapsedLabel: role === "stop" ? this.timesheetElapsedLabel(row) : null,
           label: rowTitle.toString().trim() || "Time sheet"
         }
       }
     ))
+
+    if (role === "start") {
+      this.ensureLiveTimesheetTotal(row, target.value)
+    } else {
+      this.removeLiveTimesheetTotal(row)
+    }
+  }
+
+  ensureLiveTimesheetTotal(row, startedAt) {
+    if (!(row instanceof HTMLElement) || !startedAt) return
+
+    const totalInput = this.timesheetTotalInput(row)
+    if (!(totalInput instanceof HTMLInputElement)) return
+
+    let shell = totalInput.closest(".notae-timesheet-total-cell")
+    if (!(shell instanceof HTMLElement)) {
+      shell = document.createElement("div")
+      shell.className = "notae-timesheet-total-cell is-live"
+      totalInput.parentNode?.insertBefore(shell, totalInput)
+      shell.appendChild(totalInput)
+    }
+
+    shell.classList.add("is-live")
+    shell.dataset.controller = "timesheet-timer"
+    shell.dataset.timesheetTimerStartedAtValue = startedAt
+
+    if (!shell.querySelector("[data-timesheet-timer-target='elapsed']")) {
+      const badge = document.createElement("span")
+      badge.className = "notae-timesheet-live-count"
+      badge.dataset.timesheetTimerTarget = "elapsed"
+      badge.setAttribute("aria-label", "Live elapsed time")
+      badge.textContent = "00:00:00"
+      shell.appendChild(badge)
+    }
+  }
+
+  removeLiveTimesheetTotal(row) {
+    if (!(row instanceof HTMLElement)) return
+
+    const shell = row.querySelector(".notae-timesheet-total-cell.is-live")
+    if (!(shell instanceof HTMLElement)) return
+
+    shell.classList.remove("is-live")
+    delete shell.dataset.controller
+    delete shell.dataset.timesheetTimerStartedAtValue
+    shell.querySelector(".notae-timesheet-live-count")?.remove()
+  }
+
+  timesheetTotalInput(row) {
+    return Array.from(row.querySelectorAll("input[type='number']")).find((input) => {
+      const cell = input.closest("td")
+      const columnIndex = cell?.cellIndex
+      const table = row.closest("table")
+      const header = Number.isInteger(columnIndex) ? table?.querySelectorAll("thead th")[columnIndex] : null
+      return header?.textContent?.toLowerCase().includes("calculated total time")
+    }) || null
+  }
+
+  timesheetStartInput(row) {
+    return row?.querySelector(".notae-timesheet-clock-cell input[data-timesheet-clock-role='start']") || null
+  }
+
+  timesheetStopInput(row) {
+    return row?.querySelector(".notae-timesheet-clock-cell input[data-timesheet-clock-role='stop']") || null
+  }
+
+  timesheetElapsedLabel(row) {
+    const rowElapsed = row?.querySelector(".notae-timesheet-live-count")?.textContent?.trim()
+    if (rowElapsed) return rowElapsed
+
+    return document.querySelector(".notae-shell-status-bar-timesheet-elapsed")?.textContent?.trim() || null
   }
 
   localDateTimeValue(date) {

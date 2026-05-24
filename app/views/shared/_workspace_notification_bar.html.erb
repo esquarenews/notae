@@ -29,7 +29,7 @@ end %>
              data-notification-bar-target="timesheetTimer"
              data-started-at="<%= active_timesheet_timer&.fetch(:started_at, nil) %>">
       <div class="notae-shell-status-bar-timesheet-top">
-        <span class="notae-shell-status-bar-item-kind">Time sheet running</span>
+        <span class="notae-shell-status-bar-item-kind" data-notification-bar-target="timesheetTimerStatus">Time sheet running</span>
         <span class="notae-shell-status-bar-timesheet-elapsed"
               data-notification-bar-target="timesheetTimerElapsed"><%= active_timesheet_timer&.fetch(:elapsed_label, "00:00:00") || "00:00:00" %></span>
       </div>
@@ -43,7 +43,7 @@ end %>
       <article class="notae-shell-status-bar-calendar-timesheet"
                <%= "hidden" if active_timesheet_timer.blank? %>
                data-notification-bar-target="timesheetTimerCalendar">
-        <span>Active time sheet</span>
+        <span data-notification-bar-target="timesheetTimerStatus">Active time sheet</span>
         <strong data-notification-bar-target="timesheetTimerElapsed"><%= active_timesheet_timer&.fetch(:elapsed_label, "00:00:00") || "00:00:00" %></strong>
       </article>
       <iframe title="Kalendārium quick calendar"

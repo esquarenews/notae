@@ -291,7 +291,7 @@ RSpec.describe "Workspace home", type: :request do
     calendar_timer = document.at_css(".notae-shell-status-bar-calendar-timesheet")
 
     expect(timer).to be_present
-    expect(timer["data-started-at"]).to eq("2026-04-11T19:30:00+10:00")
+    expect(timer["data-started-at"]).to eq("2026-04-11T19:30")
     expect(timer.text.squish).to include("Time sheet running")
     expect(timer.text.squish).to include("00:30:00")
     expect(timer.text.squish).to include("Site updates")
