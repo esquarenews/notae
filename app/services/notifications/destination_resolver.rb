@@ -59,6 +59,7 @@ module Notifications
       workspace_path(
         notification.workspace.slug,
         show_home: 1,
+        knowledge_suggestion_id: suggestion.id,
         anchor: "knowledge-suggestion-#{suggestion.id}"
       )
     end

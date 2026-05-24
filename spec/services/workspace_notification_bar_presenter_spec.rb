@@ -154,7 +154,7 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.recent_ai_update_present?).to be(true)
     expect(presenter.recent_ai_update_headline).to eq("New AI suggestion")
     expect(presenter.recent_ai_update_detail).to include("Review the launch note")
-    expect(presenter.recent_ai_update_path).to eq("/w/#{workspace.slug}?show_home=1#knowledge-suggestion-#{suggestion.id}")
+    expect(presenter.recent_ai_update_path).to eq("/w/#{workspace.slug}?knowledge_suggestion_id=#{suggestion.id}&show_home=1#knowledge-suggestion-#{suggestion.id}")
     expect(presenter.recent_update_count).to eq(1)
     expect(presenter.recent_update_headline).to eq("1 new workspace update")
   end

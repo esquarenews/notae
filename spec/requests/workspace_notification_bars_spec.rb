@@ -41,7 +41,8 @@ RSpec.describe "Workspace notification bar", type: :request do
     expect(payload.dig("data", "html")).to include("Notae AI")
     expect(payload.dig("data", "html")).to include("New AI suggestion")
     expect(payload.dig("data", "html")).to include("Follow up with the design team")
-    expect(payload.dig("data", "html")).to include(workspace_path(workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(payload.dig("data", "html")).to include("knowledge_suggestion_id=#{suggestion.id}")
+    expect(payload.dig("data", "html")).to include("#knowledge-suggestion-#{suggestion.id}")
   end
 
   it "renders codex completion cards in the AI alert stream" do

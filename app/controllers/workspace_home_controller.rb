@@ -39,7 +39,10 @@ class WorkspaceHomeController < ApplicationController
     @display_daily_knowledge_suggestion = @daily_knowledge_suggestion || @latest_daily_knowledge_suggestion
     @show_latest_daily_knowledge_suggestion = @display_daily_knowledge_suggestion.present? && @daily_knowledge_suggestion.blank?
     @next_daily_brief_at = next_daily_brief_at
-    @active_proactive_knowledge_suggestion = resolve_active_proactive_knowledge_suggestion
+    @target_knowledge_suggestion = resolve_target_knowledge_suggestion
+    @display_daily_knowledge_suggestion = @target_knowledge_suggestion if @target_knowledge_suggestion&.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY
+    @show_latest_daily_knowledge_suggestion = false if @target_knowledge_suggestion&.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY
+    @active_proactive_knowledge_suggestion = @target_knowledge_suggestion&.kind == KnowledgeSuggestion::KIND_PROACTIVE ? @target_knowledge_suggestion : resolve_active_proactive_knowledge_suggestion
     @knowledge_task_databases = knowledge_task_databases_for_home
     @pending_agent_actions = resolve_pending_agent_actions
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
@@ -169,6 +172,17 @@ class WorkspaceHomeController < ApplicationController
     @active_proactive_knowledge_suggestion_pending =
       queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
     nil
+  end
+
+  def resolve_target_knowledge_suggestion
+    suggestion_id = params[:knowledge_suggestion_id].to_s.strip
+    return nil if suggestion_id.blank?
+    return nil unless data_source_available?("knowledge_suggestions")
+
+    policy_scope(KnowledgeSuggestion)
+      .for_workspace(@workspace)
+      .where.not(status: KnowledgeSuggestion::STATUS_DISMISSED)
+      .find_by(id: suggestion_id)
   end
 
   def redirect_to_last_visited_page

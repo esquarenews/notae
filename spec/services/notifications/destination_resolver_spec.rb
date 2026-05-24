@@ -120,4 +120,36 @@ RSpec.describe Notifications::DestinationResolver do
 
     expect(destination).to eq(destination_path)
   end
+
+  it "routes knowledge suggestion notifications to the exact home card" do
+    workspace = Workspace.create!(name: "Resolver Suggestion", slug: "resolver-suggestion")
+    user = User.create!(email: "resolver-suggestion@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Review stalled task",
+      summary: "The clicked suggestion should render directly. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: {}
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq("/w/#{workspace.slug}?knowledge_suggestion_id=#{suggestion.id}&show_home=1#knowledge-suggestion-#{suggestion.id}")
+  end
 end

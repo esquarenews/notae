@@ -519,6 +519,51 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Open full window")
   end
 
+  it "renders the clicked proactive suggestion when opened from a notification" do
+    user = User.create!(email: "home-clicked-suggestion@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Clicked Knowledge", slug: "clicked-knowledge")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    clicked_suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Clicked suggestion detail",
+      summary: "This is the exact suggestion opened from the notification. [1]",
+      insights_json: [ "The clicked suggestion has specific supporting detail. [1]" ],
+      task_suggestions_json: [
+        { "title" => "Act on clicked suggestion", "owner" => "Errol", "rationale" => "This belongs to the clicked notification. [1]" }
+      ],
+      sources_json: [ { "index" => 1, "title" => "Clicked source", "url" => "/w/#{workspace.slug}/pages/clicked" } ],
+      generated_at: 30.minutes.ago,
+      expires_at: 6.hours.from_now
+    )
+    KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Newest suggestion",
+      summary: "This newer suggestion should not replace the clicked one. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: 5.minutes.ago,
+      expires_at: 6.hours.from_now
+    )
+
+    sign_in user
+    get workspace_path(workspace.slug, show_home: 1, knowledge_suggestion_id: clicked_suggestion.id, anchor: "knowledge-suggestion-#{clicked_suggestion.id}")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Clicked suggestion detail")
+    expect(response.body).to include("This is the exact suggestion opened from the notification. [1]")
+    expect(response.body).to include("Act on clicked suggestion")
+    expect(response.body).not_to include("Newest suggestion")
+  end
+
   it "queues a daily brief in the background and shows pending state instead of blocking the page load" do
     user = User.create!(email: "home-knowledge-daily-pending@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge daily pending", slug: "knowledge-daily-pending")

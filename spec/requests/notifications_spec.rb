@@ -227,7 +227,8 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include("New AI suggestion")
     expect(response.body).to include("Escalate invoice delay")
     expect(response.body).to include("Open suggestion")
-    expect(response.body).to include(workspace_path(workspace.slug, show_home: 1, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(response.body).to include("knowledge_suggestion_id=#{suggestion.id}")
+    expect(response.body).to include("#knowledge-suggestion-#{suggestion.id}")
   end
 
   it "renders codex notifications with unavailable destinations as workspace links" do
