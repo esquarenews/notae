@@ -14,6 +14,7 @@ end %>
        data-notification-bar-refresh-path-value="<%= workspace_notification_bar_path(workspace_slug: workspace.slug) %>"
        <% if calendar_widget_path.present? %>data-notification-bar-calendar-src-value="<%= calendar_widget_path %>"<% end %>>
   <% if presenter.show_clock? %>
+    <% active_timesheet_timer = presenter.active_timesheet_timer %>
     <button type="button"
             class="notae-shell-status-bar-clock-button"
             aria-label="Open compact Kalendārium"
@@ -23,9 +24,28 @@ end %>
       <div class="notae-shell-status-bar-clock"
            data-notification-bar-target="clock"><%= presenter.initial_clock_label %></div>
     </button>
+    <article class="notae-shell-status-bar-timesheet"
+             <%= "hidden" if active_timesheet_timer.blank? %>
+             data-notification-bar-target="timesheetTimer"
+             data-started-at="<%= active_timesheet_timer&.fetch(:started_at, nil) %>">
+      <div class="notae-shell-status-bar-timesheet-top">
+        <span class="notae-shell-status-bar-item-kind">Time sheet running</span>
+        <span class="notae-shell-status-bar-timesheet-elapsed"
+              data-notification-bar-target="timesheetTimerElapsed"><%= active_timesheet_timer&.fetch(:elapsed_label, "00:00:00") || "00:00:00" %></span>
+      </div>
+      <div class="notae-shell-status-bar-timesheet-label" data-notification-bar-target="timesheetTimerLabel">
+        <%= active_timesheet_timer&.fetch(:label, "Time sheet") || "Time sheet" %>
+      </div>
+    </article>
     <section class="notae-shell-status-bar-calendar"
              hidden
              data-notification-bar-target="calendarPanel">
+      <article class="notae-shell-status-bar-calendar-timesheet"
+               <%= "hidden" if active_timesheet_timer.blank? %>
+               data-notification-bar-target="timesheetTimerCalendar">
+        <span>Active time sheet</span>
+        <strong data-notification-bar-target="timesheetTimerElapsed"><%= active_timesheet_timer&.fetch(:elapsed_label, "00:00:00") || "00:00:00" %></strong>
+      </article>
       <iframe title="Kalendārium quick calendar"
               class="notae-shell-status-bar-calendar-frame"
               data-notification-bar-target="calendarFrame"

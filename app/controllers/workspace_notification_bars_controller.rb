@@ -18,6 +18,7 @@ class WorkspaceNotificationBarsController < ApplicationController
     render json: {
       data: {
         has_alerts: presenter.has_alerts?,
+        active_timesheet_timer: presenter.active_timesheet_timer,
         html: render_to_string(
           partial: "shared/workspace_notification_bar_alerts",
           formats: [ :html ],

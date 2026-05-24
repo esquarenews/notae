@@ -4611,6 +4611,26 @@ turbo-frame#notae_sidebar_sections {
   filter: brightness(1.08);
 }
 
+.notae-timesheet-total-cell.is-live {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.notae-timesheet-live-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+  color: #166534;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .notae-db-grid {
   width: 100%;
   min-width: 760px;
@@ -19233,6 +19253,7 @@ body.notae-theme-system .notae-account-delete-button {
 
 .notae-shell-status-bar-calendar {
   display: grid;
+  gap: 0.55rem;
 }
 
 .notae-shell-status-bar-calendar[hidden] {
@@ -19246,6 +19267,47 @@ body.notae-theme-system .notae-account-delete-button {
   border-radius: 1rem;
   background: color-mix(in srgb, var(--notae-panel-bg) 92%, transparent);
   box-shadow: inset 0 1px 0 var(--notae-glass-highlight);
+}
+
+.notae-shell-status-bar-timesheet,
+.notae-shell-status-bar-calendar-timesheet {
+  display: grid;
+  gap: 0.26rem;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid color-mix(in srgb, #16a34a 30%, var(--notae-glass-border-soft));
+  border-radius: 0.92rem;
+  background: color-mix(in srgb, #16a34a 10%, var(--notae-glass-surface-soft));
+  box-shadow: inset 0 1px 0 var(--notae-glass-highlight);
+}
+
+.notae-shell-status-bar-timesheet[hidden],
+.notae-shell-status-bar-calendar-timesheet[hidden] {
+  display: none;
+}
+
+.notae-shell-status-bar-timesheet-top,
+.notae-shell-status-bar-calendar-timesheet {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.notae-shell-status-bar-timesheet-elapsed,
+.notae-shell-status-bar-calendar-timesheet strong {
+  color: #166534;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.notae-shell-status-bar-timesheet-label,
+.notae-shell-status-bar-calendar-timesheet span {
+  min-width: 0;
+  color: var(--notae-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notae-shell-status-bar-alerts {

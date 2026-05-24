@@ -257,6 +257,7 @@ RSpec.describe "Workspace home", type: :request do
       links = payload_document.css(".notae-shell-status-bar-link").map { |node| [ node.text.squish, node["href"] ] }
 
       expect(payload.dig("data", "has_alerts")).to eq(true)
+      expect(payload.dig("data", "active_timesheet_timer")).to be_nil
       expect(payload_document.text).to include("Client review")
       expect(payload_document.text).to include("Starts in 10 min")
       expect(payload_document.text).to include("1 email just came in")
@@ -267,6 +268,36 @@ RSpec.describe "Workspace home", type: :request do
       expect(links).to include([ a_string_including("1 email just came in"), workspace_epistularium_path(workspace_slug: workspace.slug) ])
       expect(links).to include([ a_string_including("1 new workspace update"), workspace_notifications_path(workspace_slug: workspace.slug) ])
     end
+  end
+
+  it "renders an active time sheet timer in the floating clock and calendar pop-up" do
+    user = User.create!(email: "home-status-bar-timesheet@example.com", password: "password123", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "Timesheet widget", slug: "timesheet-widget", shell_status_bar_mode: "all")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    database = Database.create!(workspace: workspace, created_by: user, name: "Timer grid", applied_template_name: "Time sheets")
+    started_property = DbProperty.create!(workspace: workspace, database: database, name: "Date/time clock started", property_type: :text)
+    stopped_property = DbProperty.create!(workspace: workspace, database: database, name: "Date/time clock stopped", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Site updates")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: started_property, value_text: "2026-04-11 09:30 UTC")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: stopped_property, value_text: "")
+    sign_in user
+
+    travel_to Time.zone.parse("2026-04-11 10:00:00") do
+      get workspace_path(workspace.slug)
+    end
+
+    document = Nokogiri::HTML(response.body)
+    timer = document.at_css(".notae-shell-status-bar-timesheet")
+    calendar_timer = document.at_css(".notae-shell-status-bar-calendar-timesheet")
+
+    expect(timer).to be_present
+    expect(timer["data-started-at"]).to eq("2026-04-11T19:30:00+10:00")
+    expect(timer.text.squish).to include("Time sheet running")
+    expect(timer.text.squish).to include("00:30:00")
+    expect(timer.text.squish).to include("Site updates")
+    expect(calendar_timer).to be_present
+    expect(calendar_timer.text.squish).to include("Active time sheet")
+    expect(calendar_timer.text.squish).to include("00:30:00")
   end
 
   it "styles the notification bar and alert cards with the same exaggerated glass treatment" do

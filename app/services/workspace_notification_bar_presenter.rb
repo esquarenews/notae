@@ -56,6 +56,18 @@ class WorkspaceNotificationBarPresenter
     reference_time.in_time_zone(resolved_time_zone).to_date.iso8601
   end
 
+  def active_timesheet_timer
+    timer = active_timesheet_timer_record
+    return nil if timer.blank?
+
+    started_at = timer.fetch(:started_at)
+    {
+      label: timer.fetch(:row).title.presence || timer.fetch(:database).name.presence || "Time sheet",
+      started_at: started_at.iso8601,
+      elapsed_label: format_timesheet_elapsed(reference_time - started_at)
+    }
+  end
+
   def event_alert
     return unless show_alerts?
     return unless data_source_available?("kalendarium_events")
@@ -233,6 +245,18 @@ class WorkspaceNotificationBarPresenter
   end
 
   private
+
+  def active_timesheet_timer_record
+    @active_timesheet_timer_record ||= Databases::TimesheetTemplateService.active_timer(workspace:)
+  end
+
+  def format_timesheet_elapsed(seconds)
+    total_seconds = [ seconds.to_i, 0 ].max
+    hours = total_seconds / 3600
+    minutes = (total_seconds % 3600) / 60
+    remaining_seconds = total_seconds % 60
+    format("%02d:%02d:%02d", hours, minutes, remaining_seconds)
+  end
 
   def resolved_time_zone
     @resolved_time_zone ||= ActiveSupport::TimeZone[user&.time_zone.presence] || Time.zone || ActiveSupport::TimeZone["UTC"]

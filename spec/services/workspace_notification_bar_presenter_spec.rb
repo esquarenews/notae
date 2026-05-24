@@ -94,6 +94,25 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.has_alerts?).to be(true)
   end
 
+  it "surfaces an active time sheet timer for the shell calendar pop-up" do
+    user = User.create!(email: "notification-bar-timesheet@example.com", password: "password123", time_zone: "Australia/Melbourne")
+    workspace = Workspace.create!(name: "Timesheet status workspace", slug: "timesheet-status-workspace", shell_status_bar_mode: "all")
+    database = Database.create!(workspace: workspace, created_by: user, name: "Time sheets", applied_template_name: "Time sheets")
+    started_property = DbProperty.create!(workspace: workspace, database: database, name: "Date/time clock started", property_type: :text)
+    stopped_property = DbProperty.create!(workspace: workspace, database: database, name: "Date/time clock stopped", property_type: :text)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Client support")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: started_property, value_text: "2026-04-11 09:15")
+    DbCell.create!(workspace: workspace, db_row: row, db_property: stopped_property, value_text: "")
+
+    presenter = described_class.new(workspace: workspace, user: user, reference_time: Time.zone.parse("2026-04-11 10:00:00"))
+
+    expect(presenter.active_timesheet_timer).to include(
+      label: "Client support",
+      started_at: "2026-04-11T09:15:00Z",
+      elapsed_label: "00:45:00"
+    )
+  end
+
   it "routes alert-grade AI notifications into the shell widget separately from generic updates" do
     user = User.create!(email: "notification-bar-ai@example.com", password: "password123", time_zone: "Australia/Melbourne")
     workspace = Workspace.create!(name: "AI status workspace", slug: "ai-status-workspace", shell_status_bar_mode: "all")

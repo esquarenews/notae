@@ -102,6 +102,20 @@ module Databases
         total_cell.save! if total_cell.changed?
       end
 
+      def active_timer(workspace:)
+        return nil if workspace.blank?
+
+        workspace.databases.active
+          .where(applied_template_name: TEMPLATE_NAME)
+          .includes(:db_properties, db_rows: :db_cells)
+          .find_each do |database|
+          timer = active_timer_for_database(database)
+          return timer if timer.present?
+        end
+
+        nil
+      end
+
       def parse_time(value)
         raw = value.to_s.strip
         return nil if raw.blank?
@@ -159,6 +173,26 @@ module Databases
 
       def property_by_name(database, name)
         database.db_properties.ordered.find { |property| normalize_property_name(property.name) == normalize_property_name(name) }
+      end
+
+      def active_timer_for_database(database)
+        started_property = property_by_name(database, STARTED_AT_PROPERTY)
+        stopped_property = property_by_name(database, STOPPED_AT_PROPERTY)
+        return nil if started_property.blank? || stopped_property.blank?
+
+        database.db_rows.active.ordered.each do |row|
+          started_at = parse_time(cell_value(row:, property: started_property))
+          next if started_at.blank?
+          next if cell_value(row:, property: stopped_property).to_s.present?
+
+          return {
+            database: database,
+            row: row,
+            started_at: started_at
+          }
+        end
+
+        nil
       end
 
       def cell_value(row:, property:)

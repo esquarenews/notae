@@ -18,7 +18,7 @@ module DatabaseTablePresentation
   }.freeze
 
   included do
-    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for, :column_style_classes_for, :name_column_style_classes_for, :database_property_heading, :timesheet_clock_property?, :datetime_local_cell_value
+    helper_method :cell_value_for, :select_options_for, :conditional_color_class_for_row, :select_input_classes_for, :task_status_badge_classes_for, :column_style_classes_for, :name_column_style_classes_for, :database_property_heading, :timesheet_clock_property?, :timesheet_total_property?, :timesheet_row_started_at, :timesheet_row_active?, :datetime_local_cell_value
   end
 
   private
@@ -168,6 +168,26 @@ module DatabaseTablePresentation
   def timesheet_clock_property?(property)
     property&.text? &&
       property.name.to_s.strip.downcase.in?([ "date/time clock started", "date/time clock stopped" ])
+  end
+
+  def timesheet_total_property?(property)
+    property&.number? && property.name.to_s.strip.downcase == "calculated total time"
+  end
+
+  def timesheet_row_started_at(row, properties, cells_by_key)
+    started_property = Array(properties).find { |property| property.name.to_s.strip.downcase == "date/time clock started" }
+    return "" if started_property.blank?
+
+    cells_by_key[[ row.id, started_property.id ]]&.value_text.to_s
+  end
+
+  def timesheet_row_active?(row, properties, cells_by_key)
+    started_at = timesheet_row_started_at(row, properties, cells_by_key)
+    return false if started_at.blank?
+
+    stopped_property = Array(properties).find { |property| property.name.to_s.strip.downcase == "date/time clock stopped" }
+    stopped_at = stopped_property.present? ? cells_by_key[[ row.id, stopped_property.id ]]&.value_text.to_s : ""
+    stopped_at.blank?
   end
 
   def datetime_local_cell_value(value)

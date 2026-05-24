@@ -67,5 +67,13 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
     expect(source).to include("notae:kalendarium-widget:center-current-time")
     expect(source).to include("window.addEventListener(\"message\", this.handleWidgetMessage)")
     expect(source).to include("messageType === \"notae:kalendarium-widget:minimize\"")
+    expect(source).to include("timesheetTimer")
+    expect(source).to include("notae:timesheet-timer-started")
+    expect(source).to include("notae:timesheet-timer-stopped")
+    expect(source).to include("showTimesheetTimer(detail = {})")
+    expect(source).to include("hideTimesheetTimer()")
+    expect(source).to include("renderTimesheetTimer()")
+    expect(source).to include("updateTimesheetTimerFromPayload(payload?.data?.active_timesheet_timer)")
+    expect(source).to include("formatElapsed(milliseconds)")
   end
 end

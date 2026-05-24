@@ -277,6 +277,13 @@ RSpec.describe "Databases", type: :request do
 
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: started.id),
           params: { db_cell: { value_text: "2026-05-24 09:00" } }
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+    active_document = Nokogiri::HTML(response.body)
+    expect(active_document.at_css(".notae-timesheet-total-cell.is-live")).to be_present
+    expect(active_document.at_css("[data-controller='timesheet-timer']")["data-timesheet-timer-started-at-value"]).to eq("2026-05-24T09:00")
+    expect(active_document.at_css(".notae-timesheet-live-count")&.text&.squish).to eq("00:00:00")
+
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: stopped.id),
           params: { db_cell: { value_text: "2026-05-24 11:30" } }
 
@@ -291,7 +298,7 @@ RSpec.describe "Databases", type: :request do
     clock_inputs = document.css(".notae-timesheet-clock-cell input[type='datetime-local']")
     expect(clock_inputs.length).to eq(2)
     expect(clock_inputs.map { |input| input["value"] }).to include("2026-05-24T09:00", "2026-05-24T11:30")
-    expect(document.css(".notae-timesheet-now-button").map(&:text).map(&:squish)).to eq([ "Now", "Now" ])
+    expect(document.css(".notae-timesheet-now-button").map(&:text).map(&:squish)).to eq([ "Start", "Stop" ])
     expect(document.css(".notae-timesheet-now-button").map { |button| button["data-action"] }).to all(eq("auto-submit#setNow"))
     expect(response.body).to include("Export CSV")
     expect(response.body).to include("Export PDF")

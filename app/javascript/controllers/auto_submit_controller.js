@@ -110,6 +110,7 @@ export default class extends Controller {
   submit(event) {
     this.clearDebounceTimerFor(event.target)
     this.applyTaskStatusVisualState(event.target)
+    this.dispatchTimesheetClockState(event.target)
 
     const form = this.formFor(event)
     if (!form) {
@@ -174,6 +175,29 @@ export default class extends Controller {
     input.value = this.localDateTimeValue(new Date())
     this.clearDebounceTimerFor(input)
     this.submit({ target: input })
+  }
+
+  dispatchTimesheetClockState(target) {
+    if (!(target instanceof HTMLInputElement)) return
+    if (target.type !== "datetime-local") return
+
+    const role = target.dataset.timesheetClockRole
+    if (!["start", "stop"].includes(role)) return
+
+    const row = target.closest("tr.notae-db-grid-data-row")
+    const rowTitle = row?.querySelector(".notae-db-title-input, .notae-db-title-text")?.value ||
+      row?.querySelector(".notae-db-title-input, .notae-db-title-text")?.textContent ||
+      "Time sheet"
+
+    window.dispatchEvent(new CustomEvent(
+      role === "start" ? "notae:timesheet-timer-started" : "notae:timesheet-timer-stopped",
+      {
+        detail: {
+          startedAt: target.value,
+          label: rowTitle.toString().trim() || "Time sheet"
+        }
+      }
+    ))
   }
 
   localDateTimeValue(date) {
