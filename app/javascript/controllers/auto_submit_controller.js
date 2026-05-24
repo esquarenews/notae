@@ -252,7 +252,7 @@ export default class extends Controller {
   }
 
   timesheetTotalInput(row) {
-    return Array.from(row.querySelectorAll("input[type='number']")).find((input) => {
+    return Array.from(row.querySelectorAll("input")).find((input) => {
       const cell = input.closest("td")
       const columnIndex = cell?.cellIndex
       const table = row.closest("table")

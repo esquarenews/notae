@@ -231,18 +231,18 @@
                     data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>">
               <%= options_for_select([[blank_label, ""]] + select_options_for(db_property).map { |option| [option, option] }, db_cell.value_text) %>
             </select>
-          <% elsif db_property.number? %>
+          <% elsif db_property.number? || timesheet_total_property?(db_property) %>
             <% live_timesheet_total = timesheet_total_property?(db_property) && timesheet_row_active?(row, visible_properties, cells_by_key) %>
-            <div class="<%= live_timesheet_total ? "notae-timesheet-total-cell is-live" : nil %>"
+            <div class="<%= [ ("notae-timesheet-total-cell" if timesheet_total_property?(db_property)), ("is-live" if live_timesheet_total) ].compact.join(" ") %>"
                  <% if live_timesheet_total %>
                    data-controller="timesheet-timer"
                    data-timesheet-timer-started-at-value="<%= datetime_local_cell_value(timesheet_row_started_at(row, visible_properties, cells_by_key)) %>"
                  <% end %>>
-              <input type="number"
+              <input type="<%= timesheet_total_property?(db_property) ? "text" : "number" %>"
                      name="db_cell[value_text]"
                      id="<%= field_id %>"
                      value="<%= db_cell.value_text %>"
-                     step="any"
+                     <% unless timesheet_total_property?(db_property) %>step="any"<% end %>
                      class="<%= field_classes %>"
                      data-action="input->auto-submit#submitDebounced <%= cell_autosubmit_attributes[:action] %>"
                      data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"

@@ -261,7 +261,7 @@ RSpec.describe "Databases", type: :request do
       [
         [ "Date/time clock started", "text" ],
         [ "Date/time clock stopped", "text" ],
-        [ "Calculated total time", "number" ],
+        [ "Calculated total time", "text" ],
         [ "Notes", "text" ],
         [ "Done by", "text" ]
       ]
@@ -276,18 +276,18 @@ RSpec.describe "Databases", type: :request do
     total = row.db_cells.joins(:db_property).find_by!(db_properties: { name: "Calculated total time" })
 
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: started.id),
-          params: { db_cell: { value_text: "2026-05-24 09:00" } }
+          params: { db_cell: { value_text: "2026-05-25 07:13:11" } }
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
     active_document = Nokogiri::HTML(response.body)
     expect(active_document.at_css(".notae-timesheet-total-cell.is-live")).to be_present
-    expect(active_document.at_css("[data-controller='timesheet-timer']")["data-timesheet-timer-started-at-value"]).to eq("2026-05-24T09:00:00")
+    expect(active_document.at_css("[data-controller='timesheet-timer']")["data-timesheet-timer-started-at-value"]).to eq("2026-05-25T07:13:11")
     expect(active_document.at_css(".notae-timesheet-live-count")&.text&.squish).to eq("00:00:00")
 
     patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: stopped.id),
-          params: { db_cell: { value_text: "2026-05-24 11:30" } }
+          params: { db_cell: { value_text: "2026-05-25 07:25:00" } }
 
-    expect(total.reload.value_text).to eq("2.5")
+    expect(total.reload.value_text).to eq("00:11:49")
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
     expect(response).to have_http_status(:ok)
@@ -296,8 +296,11 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("notae-timesheet-clock-icon is-stop")
     document = Nokogiri::HTML(response.body)
     clock_inputs = document.css(".notae-timesheet-clock-cell input[type='datetime-local']")
+    total_input = document.at_css(".notae-timesheet-total-cell input")
     expect(clock_inputs.length).to eq(2)
-    expect(clock_inputs.map { |input| input["value"] }).to include("2026-05-24T09:00:00", "2026-05-24T11:30:00")
+    expect(clock_inputs.map { |input| input["value"] }).to include("2026-05-25T07:13:11", "2026-05-25T07:25:00")
+    expect(total_input["type"]).to eq("text")
+    expect(total_input["value"]).to eq("00:11:49")
     expect(document.css(".notae-timesheet-now-button").map(&:text).map(&:squish)).to eq([ "Start", "Stop" ])
     expect(document.css(".notae-timesheet-now-button").map { |button| button["data-action"] }).to all(eq("auto-submit#setNow"))
     expect(clock_inputs.map { |input| input["step"] }).to all(eq("1"))
@@ -308,17 +311,17 @@ RSpec.describe "Databases", type: :request do
     get export_csv_database_path(
       workspace_slug: workspace.slug,
       id: database.id,
-      timesheet_start_date: "2026-05-24",
-      timesheet_end_date: "2026-05-24"
+      timesheet_start_date: "2026-05-25",
+      timesheet_end_date: "2026-05-25"
     )
     expect(response.body).to include("Print Decor")
-    expect(response.body).to include("2.5")
+    expect(response.body).to include("00:11:49")
 
     get export_pdf_database_path(
       workspace_slug: workspace.slug,
       id: database.id,
-      timesheet_start_date: "2026-05-24",
-      timesheet_end_date: "2026-05-24"
+      timesheet_start_date: "2026-05-25",
+      timesheet_end_date: "2026-05-25"
     )
     expect(response.body.byteslice(0, 4)).to eq("%PDF")
   end

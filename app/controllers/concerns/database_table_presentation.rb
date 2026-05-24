@@ -171,7 +171,7 @@ module DatabaseTablePresentation
   end
 
   def timesheet_total_property?(property)
-    property&.number? && property.name.to_s.strip.downcase == "calculated total time"
+    property.present? && property.name.to_s.strip.downcase == "calculated total time"
   end
 
   def timesheet_row_started_at(row, properties, cells_by_key)

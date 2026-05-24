@@ -10,7 +10,7 @@ module Databases
     PROPERTIES = [
       [ STARTED_AT_PROPERTY, "text" ],
       [ STOPPED_AT_PROPERTY, "text" ],
-      [ TOTAL_TIME_PROPERTY, "number" ],
+      [ TOTAL_TIME_PROPERTY, "text" ],
       [ NOTES_PROPERTY, "text" ],
       [ DONE_BY_PROPERTY, "text" ]
     ].freeze
@@ -31,9 +31,11 @@ module Databases
         grouped_properties = props.group_by { |property| normalize_property_name(property.name) }
         grouped_properties.all? do |property_name, matching_properties|
           expected_type = PROPERTY_TYPES[property_name]
-          expected_type.present? &&
-            matching_properties.one? &&
-            matching_properties.first.property_type == expected_type
+          next false if expected_type.blank? || !matching_properties.one?
+
+          matching_property = matching_properties.first
+          matching_property.property_type == expected_type ||
+            (property_name == normalize_property_name(TOTAL_TIME_PROPERTY) && matching_property.number?)
         end
       end
 
@@ -96,9 +98,9 @@ module Databases
         stopped_at = parse_time(cell_value(row:, property: stopped_property))
         return if started_at.blank? || stopped_at.blank? || stopped_at < started_at
 
-        total_hours = ((stopped_at - started_at) / 1.hour).round(2)
+        total_property.update!(property_type: :text) if total_property.number?
         total_cell = row.db_cells.find_or_initialize_by(db_property: total_property)
-        total_cell.value_text = format_total_hours(total_hours)
+        total_cell.value_text = format_elapsed_duration(stopped_at - started_at)
         total_cell.save! if total_cell.changed?
       end
 
@@ -131,6 +133,11 @@ module Databases
         existing_property = database.db_properties.ordered.find do |property|
           normalize_property_name(property.name) == normalize_property_name(name)
         end
+        if existing_property.present? && normalize_property_name(name) == normalize_property_name(TOTAL_TIME_PROPERTY)
+          existing_property.update!(property_type:) unless existing_property.property_type == property_type
+          return existing_property
+        end
+
         return existing_property if existing_property.present? && existing_property.property_type == property_type
 
         if existing_property.present?
@@ -208,8 +215,13 @@ module Databases
         nil
       end
 
-      def format_total_hours(value)
-        value.to_s.sub(/\.0\z/, "")
+      def format_elapsed_duration(seconds)
+        total_seconds = [ seconds.to_i, 0 ].max
+        hours = total_seconds / 3600
+        minutes = (total_seconds % 3600) / 60
+        remaining_seconds = total_seconds % 60
+
+        format("%02d:%02d:%02d", hours, minutes, remaining_seconds)
       end
 
       def normalize_property_name(name)
