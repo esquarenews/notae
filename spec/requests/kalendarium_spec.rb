@@ -2310,6 +2310,50 @@ RSpec.describe "Kalendarium", type: :request do
     expect(created_events.first.rrule).to start_with("FREQ=WEEKLY")
   end
 
+  it "renders recurring project event occurrences whose original start is outside the visible week" do
+    user, workspace, = build_stack(suffix: "recurring-project-occurrences")
+    sign_in user
+
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Project calendar",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Special repeated project",
+      slug: "special-repeated-project",
+      color_hex: "#10B981",
+      kalendarium_calendar: project_calendar
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Repeated project standup",
+      starts_at_utc: Time.zone.parse("2026-03-02 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-02 10:00:00"),
+      rrule: "FREQ=WEEKLY;BYDAY=MO,WE;COUNT=24"
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-16", project_scope_id: project.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    monday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-03-16']")
+    wednesday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-03-18']")
+    expect(monday_track&.text).to include("Repeated project standup")
+    expect(wednesday_track&.text).to include("Repeated project standup")
+    expect(document.css("article[id^='kalendarium_event_#{event.id}_']").size).to be >= 2
+    expect(document.at_css("#kalendarium_event_#{event.id}")).to be_nil
+  end
+
   it "updates and deletes events via kalendarium event endpoints" do
     user, workspace, calendar = build_stack(suffix: "event-edit-delete")
     sign_in user

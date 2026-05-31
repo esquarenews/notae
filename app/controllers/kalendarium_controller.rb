@@ -56,12 +56,7 @@ class KalendariumController < ApplicationController
     prepare_task_schedule_state!
 
     range_start, range_end = range_for_view
-    @events = policy_scope(KalendariumEvent)
-                .includes(:kalendarium_calendar, :kalendarium_project, :linked_page)
-                .where(kalendarium_calendar_id: @visible_event_calendars.map(&:id))
-                .where.not(status: "cancelled")
-                .for_range(range_start, range_end)
-                .order(:starts_at_utc)
+    @events = event_scope_for_range(range_start, range_end)
     if active_project_ids.any?
       @events = if @visible_project_ids.any?
         @events.where(
@@ -74,7 +69,7 @@ class KalendariumController < ApplicationController
     else
       @events = @events.where(kalendarium_project_id: nil)
     end
-    @events = (@events.to_a + cross_workspace_task_blockout_events(range_start:, range_end:)).uniq(&:id).sort_by(&:starts_at_utc)
+    @events = expand_recurring_events(@events.to_a + cross_workspace_task_blockout_events(range_start:, range_end:), range_start:, range_end:)
 
     prepare_current_view_state!
     @workspace_options = @widget_mode ? [] : policy_scope(Workspace).order(:name).to_a
@@ -387,6 +382,28 @@ class KalendariumController < ApplicationController
       .for_range(range_start, range_end)
       .order(:starts_at_utc)
       .to_a
+  end
+
+  def event_scope_for_range(range_start, range_end)
+    policy_scope(KalendariumEvent)
+      .includes(:kalendarium_calendar, :kalendarium_project, :linked_page)
+      .where(kalendarium_calendar_id: @visible_event_calendars.map(&:id))
+      .where.not(status: "cancelled")
+      .where(
+        "kalendarium_events.starts_at_utc < ? AND (kalendarium_events.ends_at_utc > ? OR kalendarium_events.rrule IS NOT NULL)",
+        range_end,
+        range_start
+      )
+      .order(:starts_at_utc)
+  end
+
+  def expand_recurring_events(events, range_start:, range_end:)
+    Kalendarium::RecurrenceExpander.new(
+      events: events,
+      range_start: range_start,
+      range_end: range_end,
+      time_zone: current_user.time_zone
+    ).call
   end
 
   def refresh_scope_calendars(connections)

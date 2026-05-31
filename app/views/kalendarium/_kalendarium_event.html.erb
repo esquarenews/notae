@@ -15,8 +15,9 @@
 <% meeting_join_url = event.meeting_join_url %>
 <% event_color = event.kalendarium_project&.color_hex.presence || event.kalendarium_calendar.color_hex %>
 <% event_workspace_slug = event.workspace.slug %>
+<% event_dom_id = event.respond_to?(:occurrence_dom_id) ? event.occurrence_dom_id : "kalendarium_event_#{event.id}" %>
 
-<article id="kalendarium_event_<%= event.id %>"
+<article id="<%= event_dom_id %>"
          class="notae-kalendarium-event-card <%= "is-timeline" if timeline %> <%= "is-compact" if compact %> <%= "is-all-day" if all_day_badge %>"
          style="--kal-color: <%= event_color %>;<%= " #{timeline_style}" if timeline_style.present? %>"
          data-start-minutes="<%= timeline_start_minutes if timeline %>"
