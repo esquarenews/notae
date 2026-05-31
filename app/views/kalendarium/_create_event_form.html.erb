@@ -4,7 +4,8 @@
               data: {
                 controller: "kalendarium-event-form",
                 kalendarium_event_form_enforce_future_end_value: true,
-                kalendarium_event_form_preview_enabled_value: preview_enabled
+                kalendarium_event_form_preview_enabled_value: preview_enabled,
+                turbo: false
               } do |form| %>
   <%= hidden_field_tag :view, view_name %>
   <%= hidden_field_tag :date, selected_date, data: { kalendarium_focus_target: "dateInput" } %>
@@ -58,10 +59,19 @@
     <%= form.check_box :meeting_capture_enabled %>
     <span>Prefer this event when the Google Meet extension starts a transcript</span>
   </label>
+  <%= render "event_recurrence_fields", form: form, event: new_event %>
   <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
   <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
   <%= form.hidden_field :linked_page_action, value: "" %>
   <div class="notae-kalendarium-form-actions">
+    <%= button_tag "Paste",
+                   type: "button",
+                   class: "notae-chip-button notae-chip-button-subtle",
+                   data: {
+                     kalendarium_event_form_target: "pasteButton",
+                     action: "kalendarium-event-form#pasteEvent"
+                   },
+                   disabled: true %>
     <%= button_tag cancel_label,
                    type: "button",
                    class: "notae-chip-button notae-chip-button-subtle",

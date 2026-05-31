@@ -15407,6 +15407,79 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   gap: 0.4rem;
 }
 
+.notae-kalendarium-recurrence,
+.notae-kalendarium-custom-recurrence {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.notae-kalendarium-form-field {
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.notae-kalendarium-form-field > span,
+.notae-kalendarium-recurrence-weekdays legend {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--notae-muted, #57534e);
+}
+
+.notae-kalendarium-recurrence-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.notae-kalendarium-recurrence-weekdays {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+}
+
+.notae-kalendarium-recurrence-weekdays legend {
+  flex-basis: 100%;
+  margin-bottom: 0.1rem;
+}
+
+.notae-kalendarium-recurrence-weekdays label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--notae-border, #d6d3d1);
+  background: var(--notae-surface-raised, #fff);
+  cursor: pointer;
+}
+
+.notae-kalendarium-recurrence-weekdays input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notae-kalendarium-recurrence-weekdays span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--notae-text-muted, #44403c);
+}
+
+.notae-kalendarium-recurrence-weekdays label:has(input:checked) {
+  border-color: var(--notae-accent, #2563eb);
+  background: color-mix(in srgb, var(--notae-accent, #2563eb) 16%, var(--notae-surface-raised, #fff) 84%);
+}
+
+.notae-kalendarium-recurrence-weekdays label:has(input:focus-visible) {
+  outline: 2px solid var(--notae-accent, #2563eb);
+  outline-offset: 2px;
+}
+
 .notae-kalendarium-timezones {
   display: grid;
   gap: 0.4rem;

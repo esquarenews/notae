@@ -169,7 +169,7 @@
                       url: kalendarium_event_path(workspace_slug: event_workspace_slug, id: event.id),
                       method: :patch,
                       class: "notae-kalendarium-event-modal-form",
-                      data: { controller: "kalendarium-event-form" } do |form| %>
+                      data: { controller: "kalendarium-event-form", turbo: false } do |form| %>
           <%= hidden_field_tag :view, view %>
           <%= hidden_field_tag :date, date %>
           <%= form.text_field :title, placeholder: "Event title", required: true, class: "notae-auth-input" %>
@@ -207,6 +207,7 @@
             <%= form.check_box :meeting_capture_enabled %>
             <span>Prefer this event when the Google Meet extension starts a transcript</span>
           </label>
+          <%= render "event_recurrence_fields", form: form, event: event %>
           <%= form.text_field :location, placeholder: "Location", class: "notae-auth-input" %>
           <%= form.text_area :description, rows: 3, placeholder: "Description", class: "notae-auth-input" %>
           <% if event.linked_page.present? %>
@@ -226,6 +227,9 @@
             </div>
           <% end %>
           <div class="notae-danger-modal-actions notae-kalendarium-event-edit-actions">
+            <button type="button"
+                    class="notae-chip-button notae-chip-button-subtle"
+                    data-action="kalendarium-event-form#copyEvent">Copy</button>
             <button type="button" class="notae-chip-button" data-action="kalendarium-event-modal#openView">Back</button>
             <button type="button" class="notae-chip-button" data-action="kalendarium-event-modal#close">Cancel</button>
             <%= form.submit "Save changes", class: "notae-chip-button" %>

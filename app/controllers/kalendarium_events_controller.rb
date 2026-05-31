@@ -4,8 +4,9 @@ class KalendariumEventsController < ApplicationController
   before_action :set_event, only: %i[update destroy]
 
   def create
-    project = find_event_project(event_params[:kalendarium_project_id])
-    if event_params[:kalendarium_project_id].present? && project.blank?
+    project_id = effective_event_project_id
+    project = find_event_project(project_id)
+    if project_id.present? && project.blank?
       skip_authorization
       redirect_to kalendarium_redirect_path,
                   alert: "Selected project could not be found."
@@ -67,11 +68,12 @@ class KalendariumEventsController < ApplicationController
     authorize @event
 
     project = if event_params.key?(:kalendarium_project_id)
-      find_event_project(event_params[:kalendarium_project_id])
+      find_event_project(effective_event_project_id)
     else
       @event.kalendarium_project
     end
-    if event_params.key?(:kalendarium_project_id) && event_params[:kalendarium_project_id].present? && project.blank?
+    project_id = effective_event_project_id
+    if event_params.key?(:kalendarium_project_id) && project_id.present? && project.blank?
       skip_authorization
       redirect_to kalendarium_redirect_path,
                   alert: "Selected project could not be found."
@@ -215,6 +217,13 @@ class KalendariumEventsController < ApplicationController
     return nil if project_id.blank?
 
     policy_scope(KalendariumProject).for_workspace(@workspace).find_by(id: project_id)
+  end
+
+  def effective_event_project_id
+    event_project_id = event_params[:kalendarium_project_id].to_s.presence
+    return event_project_id if event_project_id.present?
+
+    params[:project_scope_id].to_s.presence
   end
 
   def resolve_event_calendar(project:, selected_calendar_id:)

@@ -1,0 +1,81 @@
+<% selected_rrule = event.rrule.to_s %>
+<section class="notae-kalendarium-recurrence" aria-label="Event recurrence">
+  <%= form.hidden_field :rrule,
+                        value: selected_rrule,
+                        data: { kalendarium_event_form_target: "rruleInput" } %>
+  <label class="notae-kalendarium-form-field">
+    <span>Repeats</span>
+    <select class="notae-auth-input"
+            data-kalendarium-event-form-target="frequencySelect"
+            data-action="change->kalendarium-event-form#frequencyChanged">
+      <option value="never">Never</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Every week on selected day</option>
+      <option value="custom">Custom</option>
+    </select>
+  </label>
+
+  <div class="notae-kalendarium-custom-recurrence"
+       data-kalendarium-event-form-target="customPanel"
+       hidden>
+    <div class="notae-kalendarium-recurrence-row">
+      <label class="notae-kalendarium-form-field">
+        <span>Repeat every</span>
+        <input type="number"
+               min="1"
+               value="1"
+               class="notae-auth-input"
+               data-kalendarium-event-form-target="intervalInput"
+               data-action="input->kalendarium-event-form#customRecurrenceChanged">
+      </label>
+      <label class="notae-kalendarium-form-field">
+        <span>Unit</span>
+        <select class="notae-auth-input"
+                data-kalendarium-event-form-target="unitSelect"
+                data-action="change->kalendarium-event-form#customRecurrenceChanged">
+          <option value="DAILY">day</option>
+          <option value="WEEKLY" selected>week</option>
+          <option value="MONTHLY">month</option>
+        </select>
+      </label>
+    </div>
+
+    <fieldset class="notae-kalendarium-recurrence-weekdays">
+      <legend>Repeat on</legend>
+      <% [["MO", "M"], ["TU", "T"], ["WE", "W"], ["TH", "T"], ["FR", "F"], ["SA", "S"], ["SU", "S"]].each do |day_code, day_label| %>
+        <label>
+          <input type="checkbox"
+                 value="<%= day_code %>"
+                 data-kalendarium-event-form-target="weekdayCheckbox"
+                 data-action="change->kalendarium-event-form#customRecurrenceChanged">
+          <span><%= day_label %></span>
+        </label>
+      <% end %>
+    </fieldset>
+
+    <label class="notae-kalendarium-form-field">
+      <span>Ends</span>
+      <select class="notae-auth-input"
+              data-kalendarium-event-form-target="endsSelect"
+              data-action="change->kalendarium-event-form#customRecurrenceChanged">
+        <option value="never">Never</option>
+        <option value="until">On date</option>
+        <option value="count">After occurrences</option>
+      </select>
+    </label>
+    <div class="notae-kalendarium-recurrence-row">
+      <input type="date"
+             class="notae-auth-input"
+             data-kalendarium-event-form-target="untilInput"
+             data-action="change->kalendarium-event-form#customRecurrenceChanged"
+             hidden>
+      <input type="number"
+             min="1"
+             value="10"
+             class="notae-auth-input"
+             data-kalendarium-event-form-target="countInput"
+             data-action="input->kalendarium-event-form#customRecurrenceChanged"
+             hidden>
+    </div>
+  </div>
+</section>

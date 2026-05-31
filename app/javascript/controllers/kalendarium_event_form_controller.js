@@ -1,11 +1,27 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["titleInput", "startInput", "endInput", "allDayInput"]
+  static targets = [
+    "titleInput",
+    "startInput",
+    "endInput",
+    "allDayInput",
+    "rruleInput",
+    "frequencySelect",
+    "customPanel",
+    "intervalInput",
+    "unitSelect",
+    "weekdayCheckbox",
+    "endsSelect",
+    "untilInput",
+    "countInput",
+    "pasteButton"
+  ]
   static values = {
     enforceFutureEnd: { type: Boolean, default: false },
     previewEnabled: { type: Boolean, default: false }
   }
+  static copyStorageKey = "notae:kalendarium:event-copy"
 
   connect() {
     this.onAccordionToggle = () => this.accordionToggled()
@@ -20,6 +36,8 @@ export default class extends Controller {
     }
 
     this.syncEndConstraints()
+    this.initializeRecurrenceControls()
+    this.refreshPasteAvailability()
     this.publishPreview()
   }
 
@@ -72,6 +90,8 @@ export default class extends Controller {
     }
 
     this.syncEndConstraints()
+    this.updateWeeklyFrequencyLabel()
+    this.updateRruleFromFrequency()
     this.publishPreview()
   }
 
@@ -87,6 +107,66 @@ export default class extends Controller {
   toggleAllDay() {
     if (this.allDaySelected) {
       this.applyAllDayTimes()
+    }
+
+    this.syncEndConstraints()
+    this.publishPreview()
+  }
+
+  frequencyChanged() {
+    this.updateRruleFromFrequency()
+  }
+
+  customRecurrenceChanged() {
+    this.updateRruleFromFrequency()
+  }
+
+  copyEvent(event) {
+    event?.preventDefault()
+
+    const payload = {
+      title: this.namedValue("kalendarium_event[title]"),
+      calendarId: this.namedValue("kalendarium_event[kalendarium_calendar_id]"),
+      projectId: this.namedValue("kalendarium_event[kalendarium_project_id]"),
+      startsAtLocal: this.namedValue("kalendarium_event[starts_at_local]"),
+      endsAtLocal: this.namedValue("kalendarium_event[ends_at_local]"),
+      allDay: this.checkboxChecked("kalendarium_event[all_day]"),
+      meetingCaptureEnabled: this.checkboxChecked("kalendarium_event[meeting_capture_enabled]"),
+      location: this.namedValue("kalendarium_event[location]"),
+      description: this.namedValue("kalendarium_event[description]"),
+      rrule: this.hasRruleInputTarget ? this.rruleInputTarget.value : ""
+    }
+
+    window.localStorage?.setItem(this.constructor.copyStorageKey, JSON.stringify(payload))
+    this.refreshPasteAvailability()
+  }
+
+  pasteEvent(event) {
+    event?.preventDefault()
+
+    const payload = this.copiedEventPayload()
+    if (!payload) return
+
+    const startBeforePaste = this.hasStartInputTarget ? this.startInputTarget.value : ""
+    this.setNamedValue("kalendarium_event[title]", payload.title)
+    this.setNamedValue("kalendarium_event[kalendarium_calendar_id]", payload.calendarId)
+    this.setNamedValue("kalendarium_event[kalendarium_project_id]", payload.projectId)
+    this.setNamedValue("kalendarium_event[location]", payload.location)
+    this.setNamedValue("kalendarium_event[description]", payload.description)
+    this.setCheckboxValue("kalendarium_event[all_day]", payload.allDay)
+    this.setCheckboxValue("kalendarium_event[meeting_capture_enabled]", payload.meetingCaptureEnabled)
+
+    if (this.hasRruleInputTarget) {
+      this.rruleInputTarget.value = payload.rrule || ""
+      this.initializeRecurrenceControls()
+    }
+
+    if (startBeforePaste && this.hasStartInputTarget) {
+      this.startInputTarget.value = startBeforePaste
+      const durationMinutes = this.copiedDurationMinutes(payload)
+      if (this.hasEndInputTarget && durationMinutes > 0) {
+        this.endInputTarget.value = this.addMinutesToLocalValue(startBeforePaste, durationMinutes)
+      }
     }
 
     this.syncEndConstraints()
@@ -143,6 +223,132 @@ export default class extends Controller {
     }
 
     this.endInputTarget.removeAttribute("min")
+  }
+
+  initializeRecurrenceControls() {
+    if (!this.hasFrequencySelectTarget || !this.hasRruleInputTarget) return
+
+    const parsed = this.parseRrule(this.rruleInputTarget.value)
+    this.frequencySelectTarget.value = parsed.frequency
+
+    if (this.hasIntervalInputTarget) this.intervalInputTarget.value = parsed.interval
+    if (this.hasUnitSelectTarget) this.unitSelectTarget.value = parsed.unit
+    if (this.hasEndsSelectTarget) this.endsSelectTarget.value = parsed.ends
+    if (this.hasUntilInputTarget) this.untilInputTarget.value = parsed.until
+    if (this.hasCountInputTarget) this.countInputTarget.value = parsed.count
+    if (this.hasWeekdayCheckboxTarget) {
+      this.weekdayCheckboxTargets.forEach((checkbox) => {
+        checkbox.checked = parsed.weekdays.includes(checkbox.value)
+      })
+    }
+
+    this.updateWeeklyFrequencyLabel()
+    this.syncCustomPanelVisibility()
+    this.syncCustomEndControls()
+  }
+
+  updateRruleFromFrequency() {
+    if (!this.hasFrequencySelectTarget || !this.hasRruleInputTarget) return
+
+    const frequency = this.frequencySelectTarget.value
+    if (frequency === "never") {
+      this.rruleInputTarget.value = ""
+    } else if (frequency === "daily") {
+      this.rruleInputTarget.value = "FREQ=DAILY"
+    } else if (frequency === "weekly") {
+      this.rruleInputTarget.value = `FREQ=WEEKLY;BYDAY=${this.startWeekdayCode()}`
+    } else {
+      this.rruleInputTarget.value = this.customRruleValue()
+    }
+
+    this.syncCustomPanelVisibility()
+    this.syncCustomEndControls()
+  }
+
+  customRruleValue() {
+    const unit = this.hasUnitSelectTarget ? this.unitSelectTarget.value : "WEEKLY"
+    const interval = Math.max(Number.parseInt(this.hasIntervalInputTarget ? this.intervalInputTarget.value : "1", 10) || 1, 1)
+    const parts = [`FREQ=${unit}`, `INTERVAL=${interval}`]
+
+    if (unit === "WEEKLY") {
+      const days = this.selectedWeekdays()
+      parts.push(`BYDAY=${days.length > 0 ? days.join(",") : this.startWeekdayCode()}`)
+    }
+
+    const ends = this.hasEndsSelectTarget ? this.endsSelectTarget.value : "never"
+    if (ends === "until" && this.hasUntilInputTarget && this.untilInputTarget.value) {
+      parts.push(`UNTIL=${this.untilInputTarget.value.replaceAll("-", "")}T235959Z`)
+    } else if (ends === "count" && this.hasCountInputTarget) {
+      const count = Math.max(Number.parseInt(this.countInputTarget.value, 10) || 1, 1)
+      parts.push(`COUNT=${count}`)
+    }
+
+    return parts.join(";")
+  }
+
+  parseRrule(value) {
+    const parts = Object.fromEntries(
+      value.toString().split(";").filter(Boolean).map((entry) => {
+        const [key, ...rest] = entry.split("=")
+        return [key, rest.join("=")]
+      })
+    )
+    const frequency = parts.FREQ === "DAILY" && !parts.INTERVAL && !parts.COUNT && !parts.UNTIL ? "daily" :
+      parts.FREQ === "WEEKLY" && !parts.INTERVAL && !parts.COUNT && !parts.UNTIL ? "weekly" :
+        parts.FREQ ? "custom" : "never"
+
+    return {
+      frequency,
+      interval: parts.INTERVAL || "1",
+      unit: parts.FREQ || "WEEKLY",
+      weekdays: (parts.BYDAY || "").split(",").filter(Boolean),
+      ends: parts.UNTIL ? "until" : parts.COUNT ? "count" : "never",
+      until: parts.UNTIL ? `${parts.UNTIL.slice(0, 4)}-${parts.UNTIL.slice(4, 6)}-${parts.UNTIL.slice(6, 8)}` : "",
+      count: parts.COUNT || "10"
+    }
+  }
+
+  syncCustomPanelVisibility() {
+    if (!this.hasCustomPanelTarget || !this.hasFrequencySelectTarget) return
+
+    this.customPanelTarget.hidden = this.frequencySelectTarget.value !== "custom"
+  }
+
+  syncCustomEndControls() {
+    const ends = this.hasEndsSelectTarget ? this.endsSelectTarget.value : "never"
+    if (this.hasUntilInputTarget) this.untilInputTarget.hidden = ends !== "until"
+    if (this.hasCountInputTarget) this.countInputTarget.hidden = ends !== "count"
+  }
+
+  updateWeeklyFrequencyLabel() {
+    if (!this.hasFrequencySelectTarget) return
+
+    const option = Array.from(this.frequencySelectTarget.options).find((candidate) => candidate.value === "weekly")
+    if (option) option.textContent = `Every week on ${this.startWeekdayName()}`
+  }
+
+  selectedWeekdays() {
+    if (!this.hasWeekdayCheckboxTarget) return []
+
+    return this.weekdayCheckboxTargets.filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value)
+  }
+
+  startWeekdayCode() {
+    const codes = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
+    return codes[this.startDateObject().getDay()]
+  }
+
+  startWeekdayName() {
+    return new Intl.DateTimeFormat("en-AU", { weekday: "long" }).format(this.startDateObject())
+  }
+
+  startDateObject() {
+    if (this.hasStartInputTarget && this.startInputTarget.value) {
+      const parsed = new Date(this.startInputTarget.value)
+      if (!Number.isNaN(parsed.getTime())) return parsed
+    }
+
+    return new Date()
   }
 
   get allDaySelected() {
@@ -238,5 +444,67 @@ export default class extends Controller {
     if (selectedDate) return selectedDate
 
     return this.hasStartInputTarget ? this.datePortion(this.startInputTarget.value) : null
+  }
+
+  refreshPasteAvailability() {
+    if (!this.hasPasteButtonTarget) return
+
+    this.pasteButtonTarget.disabled = this.copiedEventPayload() === null
+  }
+
+  copiedEventPayload() {
+    const raw = window.localStorage?.getItem(this.constructor.copyStorageKey)
+    if (!raw) return null
+
+    try {
+      const payload = JSON.parse(raw)
+      return payload && typeof payload === "object" ? payload : null
+    } catch (_error) {
+      return null
+    }
+  }
+
+  copiedDurationMinutes(payload) {
+    const start = new Date(payload.startsAtLocal)
+    const end = new Date(payload.endsAtLocal)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 60
+
+    return Math.max(Math.round((end.getTime() - start.getTime()) / 60000), 1)
+  }
+
+  addMinutesToLocalValue(localValue, minutes) {
+    const date = new Date(localValue)
+    date.setMinutes(date.getMinutes() + minutes)
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    const hours = String(date.getHours()).padStart(2, "0")
+    const nextMinutes = String(date.getMinutes()).padStart(2, "0")
+    return `${year}-${month}-${day}T${hours}:${nextMinutes}`
+  }
+
+  namedValue(name) {
+    return this.element.querySelector(`[name='${name}']`)?.value || ""
+  }
+
+  setNamedValue(name, value) {
+    const field = this.element.querySelector(`[name='${name}']`)
+    if (!field) return
+
+    field.value = value || ""
+    field.dispatchEvent(new Event("change", { bubbles: true }))
+  }
+
+  checkboxChecked(name) {
+    return this.element.querySelector(`[name='${name}']`)?.checked || false
+  }
+
+  setCheckboxValue(name, value) {
+    const field = this.element.querySelector(`[name='${name}']`)
+    if (!field) return
+
+    field.checked = Boolean(value)
+    field.dispatchEvent(new Event("change", { bubbles: true }))
   }
 }

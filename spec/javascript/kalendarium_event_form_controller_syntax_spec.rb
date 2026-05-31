@@ -46,4 +46,17 @@ RSpec.describe "KalendariumEventFormController JavaScript syntax" do
     expect(source).to include("this.dialogElement?.open")
     expect(source).to include("this.dialogElement.close()")
   end
+
+  it "supports recurrence controls and calendar event copy paste" do
+    source = Rails.root.join("app/javascript/controllers/kalendarium_event_form_controller.js").read
+
+    expect(source).to include("frequencyChanged()")
+    expect(source).to include("customRecurrenceChanged()")
+    expect(source).to include("copyEvent(event)")
+    expect(source).to include("pasteEvent(event)")
+    expect(source).to include("notae:kalendarium:event-copy")
+    expect(source).to include("FREQ=DAILY")
+    expect(source).to include("FREQ=WEEKLY;BYDAY=")
+    expect(source).to include("customRruleValue()")
+  end
 end

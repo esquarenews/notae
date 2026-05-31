@@ -75,6 +75,13 @@ RSpec.describe "Kalendarium", type: :request do
     expect(create_form["data-kalendarium-event-form-preview-enabled-value"]).to eq("true")
     expect(create_form.at_css("[data-kalendarium-event-form-target='titleInput']")).to be_present
     expect(create_form.at_css("button[data-action='kalendarium-event-form#cancel']")&.text.to_s.strip).to eq("Cancel")
+    expect(create_form.at_css("input[name='kalendarium_event[rrule]'][data-kalendarium-event-form-target='rruleInput']")).to be_present
+    expect(create_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Never")
+    expect(create_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Daily")
+    expect(create_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Every week on selected day")
+    expect(create_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Custom")
+    expect(create_form.at_css("button[data-action='kalendarium-event-form#pasteEvent']")&.text.to_s.strip).to eq("Paste")
+    expect(create_form["data-turbo"]).to eq("false")
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
   end
@@ -2262,6 +2269,47 @@ RSpec.describe "Kalendarium", type: :request do
     expect(event_card["style"]).to include("--kal-color: #8B5CF6")
   end
 
+  it "creates repeated scoped project events on consecutive saves without losing the project calendar" do
+    user, workspace, calendar = build_stack(suffix: "scoped-project-repeat-save")
+    sign_in user
+
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Special project",
+      slug: "special-project",
+      color_hex: "#10B981"
+    )
+    first_start = 2.days.from_now.change(hour: 10, min: 0, sec: 0)
+    second_start = first_start + 1.day
+
+    expect do
+      [ first_start, second_start ].each_with_index do |start_time, index|
+        post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+          view: "day",
+          date: start_time.to_date.to_s,
+          project_scope_id: project.id,
+          kalendarium_event: {
+            kalendarium_calendar_id: calendar.id,
+            title: "Scoped save #{index + 1}",
+            starts_at_local: start_time.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+            ends_at_local: (start_time + 1.hour).in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+            rrule: "FREQ=WEEKLY;BYDAY=#{start_time.strftime("%a").upcase.first(2)}"
+          }
+        }
+
+        expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "day", date: start_time.to_date.to_s, project_scope_id: project.id))
+      end
+    end.to change(KalendariumEvent, :count).by(2)
+
+    created_events = KalendariumEvent.where(title: [ "Scoped save 1", "Scoped save 2" ]).order(:title).to_a
+    project_calendar = project.reload.kalendarium_calendar
+    expect(project_calendar).to be_present
+    expect(created_events.map(&:kalendarium_project_id)).to eq([ project.id, project.id ])
+    expect(created_events.map(&:kalendarium_calendar_id)).to eq([ project_calendar.id, project_calendar.id ])
+    expect(created_events.first.rrule).to start_with("FREQ=WEEKLY")
+  end
+
   it "updates and deletes events via kalendarium event endpoints" do
     user, workspace, calendar = build_stack(suffix: "event-edit-delete")
     sign_in user
@@ -2288,6 +2336,15 @@ RSpec.describe "Kalendarium", type: :request do
 
     expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01"))
     expect(event.reload.title).to eq("Final event")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01")
+    document = Nokogiri::HTML.parse(response.body)
+    edit_form = document.at_css("#kalendarium_event_#{event.id} form.notae-kalendarium-event-modal-form")
+    expect(edit_form).to be_present
+    expect(edit_form["data-turbo"]).to eq("false")
+    expect(edit_form.at_css("button[data-action='kalendarium-event-form#copyEvent']")&.text.to_s.strip).to eq("Copy")
+    expect(edit_form.at_css("input[name='kalendarium_event[rrule]'][data-kalendarium-event-form-target='rruleInput']")).to be_present
+    expect(edit_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Custom")
 
     expect do
       delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: { view: "day", date: "2026-03-01" }
