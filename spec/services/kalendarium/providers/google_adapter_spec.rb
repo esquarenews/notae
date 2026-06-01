@@ -296,6 +296,7 @@ RSpec.describe Kalendarium::Providers::GoogleAdapter do
       title: "Local provider event",
       starts_at_utc: Time.zone.parse("2026-03-12 09:00:00"),
       ends_at_utc: Time.zone.parse("2026-03-12 10:00:00"),
+      rrule: "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE;COUNT=24",
       source_kind: "local"
     )
     adapter = described_class.new(connection: connection)
@@ -317,13 +318,61 @@ RSpec.describe Kalendarium::Providers::GoogleAdapter do
     expect(adapter).to have_received(:request_json).with(
       hash_including(
         method: :post,
-        path: "/calendar/v3/calendars/primary/events"
+        path: "/calendar/v3/calendars/primary/events",
+        body: hash_including(
+          "recurrence" => [ "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE;COUNT=24" ]
+        )
       )
     )
     event.reload
     expect(event.remote_event_id).to eq("remote-created-1")
     expect(event.uid).to eq("remote-created-1@google.com")
     expect(event.source_kind).to eq("provider")
+  end
+
+  it "does not double-prefix recurrence rules that already include RRULE for Google writes" do
+    user, workspace, connection = build_stack(suffix: "write-prefixed-rrule")
+    calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "primary",
+      name: "Primary",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Prefixed local provider event",
+      starts_at_utc: Time.zone.parse("2026-03-12 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-12 10:00:00"),
+      rrule: "RRULE:FREQ=DAILY;COUNT=3",
+      source_kind: "local"
+    )
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:request_json).and_return(
+      {
+        "id" => "remote-created-prefixed",
+        "start" => { "dateTime" => "2026-03-12T09:00:00Z" },
+        "end" => { "dateTime" => "2026-03-12T10:00:00Z" }
+      }
+    )
+
+    adapter.upsert_remote_event!(calendar: calendar, event: event)
+
+    expect(adapter).to have_received(:request_json).with(
+      hash_including(
+        body: hash_including(
+          "recurrence" => [ "RRULE:FREQ=DAILY;COUNT=3" ]
+        )
+      )
+    )
   end
 
   it "updates an existing remote event when remote_event_id is present" do

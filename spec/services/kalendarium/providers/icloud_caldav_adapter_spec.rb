@@ -315,6 +315,7 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
       description: "Write this remotely",
       starts_at_utc: Time.zone.parse("2026-03-12 09:00:00"),
       ends_at_utc: Time.zone.parse("2026-03-12 10:00:00"),
+      rrule: "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE;COUNT=24",
       source_kind: "local"
     )
 
@@ -333,6 +334,7 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     expect(captured[:body]).to include("UID:#{event.id}@notae.local")
     expect(captured[:body]).to include("SUMMARY:Local provider event")
     expect(captured[:body]).to include("DESCRIPTION:Write this remotely")
+    expect(captured[:body]).to include("RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE;COUNT=24")
     expect(captured[:headers]).to eq({})
 
     event.reload
@@ -367,6 +369,7 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
       title: "Remote existing",
       starts_at_utc: Time.zone.parse("2026-03-13 09:00:00"),
       ends_at_utc: Time.zone.parse("2026-03-13 10:00:00"),
+      rrule: "RRULE:FREQ=DAILY;COUNT=3",
       source_kind: "provider",
       remote_event_id: "legacy-remote-id",
       uid: "remote-existing-uid",
@@ -389,6 +392,8 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     expect(captured[:headers]).to eq({ "If-Match" => "\"etag-old\"" })
     expect(captured[:body]).to include("UID:remote-existing-uid")
     expect(captured[:body]).to include("SEQUENCE:4")
+    expect(captured[:body]).to include("RRULE:FREQ=DAILY;COUNT=3")
+    expect(captured[:body]).not_to include("RRULE:RRULE")
 
     event.reload
     expect(event.remote_event_id).to eq("remote-existing-uid::#{event.starts_at_utc.utc.iso8601(6)}")

@@ -431,7 +431,7 @@ module Kalendarium
         visibility = ical_visibility(event.visibility)
         lines << "CLASS:#{visibility}" if visibility.present?
 
-        lines << "RRULE:#{event.rrule.to_s.strip}" if event.rrule.present?
+        lines << ical_rrule_line(event.rrule) if event.rrule.present?
         lines << "END:VEVENT"
         lines << "END:VCALENDAR"
         lines.join("\r\n") + "\r\n"
@@ -444,6 +444,11 @@ module Kalendarium
         end_date = ends_local.to_date
         end_date = start_date + 1.day if end_date <= start_date
         [ start_date, end_date ]
+      end
+
+      def ical_rrule_line(raw_rrule)
+        value = raw_rrule.to_s.strip.sub(/\ARRULE:/i, "")
+        "RRULE:#{value}"
       end
 
       def generated_event_uid(event)

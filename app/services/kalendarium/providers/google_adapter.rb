@@ -310,7 +310,7 @@ module Kalendarium
         end
 
         if event.rrule.present?
-          payload["recurrence"] = [ event.rrule.to_s ]
+          payload["recurrence"] = [ google_rrule(event.rrule) ]
         end
 
         reminder_offsets = Array(event.reminder_offsets_minutes).map(&:to_i).select { |offset| offset >= 0 }.uniq.sort
@@ -479,6 +479,13 @@ module Kalendarium
           end
 
         stable_id.length > 240 ? Digest::SHA256.hexdigest(stable_id) : stable_id
+      end
+
+      def google_rrule(raw_rrule)
+        value = raw_rrule.to_s.strip
+        return value if value.match?(/\ARRULE:/i)
+
+        "RRULE:#{value}"
       end
 
       def fetch_json(path:, params:, allow_refresh: true)
