@@ -132,7 +132,8 @@ module Kalendarium
     end
 
     def parse_rrule(raw_rrule)
-      raw_rrule.to_s.split(";").each_with_object({}) do |entry, index|
+      normalized_rrule = raw_rrule.to_s.sub(/\ARRULE:/i, "")
+      normalized_rrule.split(";").each_with_object({}) do |entry, index|
         key, value = entry.split("=", 2)
         next if key.blank? || value.blank?
 

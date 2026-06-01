@@ -2354,6 +2354,47 @@ RSpec.describe "Kalendarium", type: :request do
     expect(document.at_css("#kalendarium_event_#{event.id}")).to be_nil
   end
 
+  it "renders custom recurring project event occurrences saved with a provider-style RRULE prefix" do
+    user, workspace, = build_stack(suffix: "custom-prefixed-recurring-project")
+    sign_in user
+
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Custom project calendar",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Custom recurrence project",
+      slug: "custom-recurrence-project",
+      color_hex: "#10B981",
+      kalendarium_calendar: project_calendar
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: project_calendar,
+      kalendarium_project: project,
+      created_by: user,
+      updated_by: user,
+      title: "Custom prefixed recurrence",
+      starts_at_utc: Time.zone.parse("2026-03-02 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-02 10:00:00"),
+      rrule: "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE;COUNT=24"
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-23", project_scope_id: project.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-03-23']")&.text).to include("Custom prefixed recurrence")
+    expect(document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-03-25']")&.text).to include("Custom prefixed recurrence")
+    expect(document.css("article[id^='kalendarium_event_#{event.id}_']").size).to be >= 2
+  end
+
   it "updates and deletes events via kalendarium event endpoints" do
     user, workspace, calendar = build_stack(suffix: "event-edit-delete")
     sign_in user
