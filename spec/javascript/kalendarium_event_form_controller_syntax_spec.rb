@@ -58,5 +58,7 @@ RSpec.describe "KalendariumEventFormController JavaScript syntax" do
     expect(source).to include("FREQ=DAILY")
     expect(source).to include("FREQ=WEEKLY;BYDAY=")
     expect(source).to include("customRruleValue()")
+    expect(source).to include("localDateTimeObject(value)")
+    expect(source).to include("Number.parseInt(month, 10) - 1")
   end
 end

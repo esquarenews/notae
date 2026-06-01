@@ -344,11 +344,25 @@ export default class extends Controller {
 
   startDateObject() {
     if (this.hasStartInputTarget && this.startInputTarget.value) {
-      const parsed = new Date(this.startInputTarget.value)
+      const parsed = this.localDateTimeObject(this.startInputTarget.value)
       if (!Number.isNaN(parsed.getTime())) return parsed
     }
 
     return new Date()
+  }
+
+  localDateTimeObject(value) {
+    const match = value.toString().match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/)
+    if (!match) return new Date(value)
+
+    const [, year, month, day, hours = "0", minutes = "0"] = match
+    return new Date(
+      Number.parseInt(year, 10),
+      Number.parseInt(month, 10) - 1,
+      Number.parseInt(day, 10),
+      Number.parseInt(hours, 10),
+      Number.parseInt(minutes, 10)
+    )
   }
 
   get allDaySelected() {

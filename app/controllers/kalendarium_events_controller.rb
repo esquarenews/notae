@@ -177,7 +177,7 @@ class KalendariumEventsController < ApplicationController
   def parse_local_time(value)
     return nil if value.blank?
 
-    parsed = Time.zone.parse(value.to_s)
+    parsed = user_time_zone.parse(value.to_s)
     raise ArgumentError, "Invalid date/time" if parsed.blank?
 
     parsed.utc
@@ -190,7 +190,13 @@ class KalendariumEventsController < ApplicationController
   end
 
   def normalize_all_day_times(starts_at_utc:, ends_at_utc:)
-    [ starts_at_utc.beginning_of_day, ends_at_utc.end_of_day ]
+    starts_local = starts_at_utc.in_time_zone(user_time_zone)
+    ends_local = ends_at_utc.in_time_zone(user_time_zone)
+    [ starts_local.beginning_of_day.utc, ends_local.end_of_day.utc ]
+  end
+
+  def user_time_zone
+    ActiveSupport::TimeZone[current_user.time_zone] || Time.zone
   end
 
   def kalendarium_redirect_path

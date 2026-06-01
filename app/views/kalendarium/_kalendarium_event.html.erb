@@ -16,6 +16,7 @@
 <% event_color = event.kalendarium_project&.color_hex.presence || event.kalendarium_calendar.color_hex %>
 <% event_workspace_slug = event.workspace.slug %>
 <% event_dom_id = event.respond_to?(:occurrence_dom_id) ? event.occurrence_dom_id : "kalendarium_event_#{event.id}" %>
+<% recurring_event = event.rrule.present? %>
 
 <article id="<%= event_dom_id %>"
          class="notae-kalendarium-event-card <%= "is-timeline" if timeline %> <%= "is-compact" if compact %> <%= "is-all-day" if all_day_badge %>"
@@ -238,13 +239,13 @@
         <% end %>
 
         <div class="notae-kalendarium-event-modal-delete">
-          <%= button_to "Delete event",
+          <%= button_to recurring_event ? "Delete recurring series" : "Delete event",
                         kalendarium_event_path(workspace_slug: event_workspace_slug, id: event.id, view: view, date: date),
                         method: :delete,
                         class: "notae-chip-button notae-chip-danger notae-kalendarium-event-delete-button",
                         form: {
                           class: "notae-kalendarium-event-delete-form",
-                          data: { turbo_confirm: "Delete this event?" }
+                          data: { turbo_confirm: recurring_event ? "Delete this recurring series? This removes all occurrences." : "Delete this event?" }
                         } %>
         </div>
       </section>

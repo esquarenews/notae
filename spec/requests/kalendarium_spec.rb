@@ -2310,6 +2310,34 @@ RSpec.describe "Kalendarium", type: :request do
     expect(created_events.first.rrule).to start_with("FREQ=WEEKLY")
   end
 
+  it "parses event form times in the user's time zone so weekly recurrence days do not shift" do
+    user, workspace, calendar = build_stack(suffix: "recurrence-user-time-zone", time_zone: "Australia/Melbourne")
+    sign_in user
+
+    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+      view: "week",
+      date: "2026-07-06",
+      kalendarium_event: {
+        kalendarium_calendar_id: calendar.id,
+        title: "Monday evening recurring event",
+        starts_at_local: "2026-07-06T20:00",
+        ends_at_local: "2026-07-06T21:00",
+        rrule: "FREQ=WEEKLY;BYDAY=MO"
+      }
+    }
+
+    event = KalendariumEvent.find_by!(title: "Monday evening recurring event")
+    expect(event.starts_at_utc.in_time_zone(user.time_zone).strftime("%A %H:%M")).to eq("Monday 20:00")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-07-06")
+
+    document = Nokogiri::HTML.parse(response.body)
+    monday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-06']")
+    tuesday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-07']")
+    expect(monday_track&.text).to include("Monday evening recurring event")
+    expect(tuesday_track&.text).not_to include("Monday evening recurring event")
+  end
+
   it "renders recurring project event occurrences whose original start is outside the visible week" do
     user, workspace, = build_stack(suffix: "recurring-project-occurrences")
     sign_in user
@@ -2406,7 +2434,8 @@ RSpec.describe "Kalendarium", type: :request do
       updated_by: user,
       title: "Draft event",
       starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
-      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00"),
+      rrule: "FREQ=WEEKLY;BYDAY=SU"
     )
 
     patch kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: {
@@ -2430,6 +2459,8 @@ RSpec.describe "Kalendarium", type: :request do
     expect(edit_form.at_css("button[data-action='kalendarium-event-form#copyEvent']")&.text.to_s.strip).to eq("Copy")
     expect(edit_form.at_css("input[name='kalendarium_event[rrule]'][data-kalendarium-event-form-target='rruleInput']")).to be_present
     expect(edit_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Custom")
+    expect(response.body).to include("Delete recurring series")
+    expect(response.body).to include("Delete this recurring series? This removes all occurrences.")
 
     expect do
       delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: { view: "day", date: "2026-03-01" }
