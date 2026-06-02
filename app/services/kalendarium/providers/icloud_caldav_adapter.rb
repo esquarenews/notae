@@ -88,6 +88,33 @@ module Kalendarium
         raise
       end
 
+      def move_remote_event!(from_calendar:, to_calendar:, event:)
+        ensure_credentials!
+        ensure_calendar_belongs_to_connection!(from_calendar)
+        ensure_calendar_belongs_to_connection!(to_calendar)
+        raise "This iCloud calendar is read-only." unless to_calendar.user_writable?
+
+        metadata = event.metadata_json.to_h
+        previous_remote_href = metadata["previous_remote_href"].to_s.presence
+        previous_remote_event_id = metadata["previous_remote_event_id"].to_s.presence || event.remote_event_id
+        previous_etag = metadata["previous_remote_etag"].to_s.presence || event.etag
+        original_remote_event_id = event.remote_event_id
+        original_metadata = event.metadata_json.to_h
+
+        event.remote_event_id = nil
+        event.metadata_json = original_metadata.except("remote_href")
+        upsert_remote_event!(calendar: to_calendar, event: event)
+
+        old_href = previous_remote_href.presence || remote_href_from_event_id(from_calendar: from_calendar, remote_event_id: previous_remote_event_id)
+        delete_remote_href(href: old_href, etag: previous_etag) if old_href.present?
+        event
+      ensure
+        if event.present? && event.remote_event_id.blank? && original_remote_event_id.present?
+          event.remote_event_id = original_remote_event_id
+          event.metadata_json = original_metadata if original_metadata.present?
+        end
+      end
+
       private
 
       def sync_all_calendars(range_start:, range_end:)
@@ -351,7 +378,7 @@ module Kalendarium
       end
 
       def upsert_remote_event(calendar:, remote_event_id:, remote_href:, etag:, event_payload:)
-        event = calendar.kalendarium_events.find_or_initialize_by(remote_event_id: remote_event_id)
+        event = provider_event_for_remote_id(calendar: calendar, remote_event_id: remote_event_id)
         event.workspace = connection.workspace
         event.created_by ||= connection.created_by
         event.updated_by = connection.created_by
@@ -376,6 +403,14 @@ module Kalendarium
           "provider" => connection.provider
         ).compact
         event.save!
+      end
+
+      def provider_event_for_remote_id(calendar:, remote_event_id:)
+        connection_events = KalendariumEvent
+                              .joins(:kalendarium_calendar)
+                              .where(kalendarium_calendars: { kalendarium_connection_id: connection.id })
+        connection_events.find_by(remote_event_id: remote_event_id) ||
+          calendar.kalendarium_events.find_or_initialize_by(remote_event_id: remote_event_id)
       end
 
       def apply_remote_write_to_local_event!(event:, remote_href:, uid:, etag:, sequence:)
@@ -464,6 +499,28 @@ module Kalendarium
         safe_prefix = identifier.gsub(/[^A-Za-z0-9._-]+/, "-").gsub(/\A-+|-+\z/, "")[0, 80].presence || "event"
         digest = Digest::SHA256.hexdigest(identifier)[0, 12]
         "#{calendar_root}/#{safe_prefix}-#{digest}.ics"
+      end
+
+      def remote_href_from_event_id(from_calendar:, remote_event_id:)
+        raw = remote_event_id.to_s.split("::").first.presence
+        return nil if raw.blank?
+        return normalize_href(raw) if raw.start_with?("/")
+
+        calendar_root = normalize_href(from_calendar.remote_id).sub(%r{/\z}, "")
+        "#{calendar_root}/#{raw}.ics"
+      end
+
+      def delete_remote_href(href:, etag:)
+        perform_caldav_write_request(
+          method: "DELETE",
+          href: normalize_href(href),
+          headers: etag.present? ? { "If-Match" => etag } : {}
+        )
+        true
+      rescue RuntimeError => error
+        return true if error.message.include?("(404)")
+
+        raise
       end
 
       def next_remote_sequence(event)

@@ -51,4 +51,37 @@ RSpec.describe Kalendarium::ProviderEventSyncService do
     expect(adapter).to have_received(:upsert_remote_event!).with(calendar: calendar, event: event)
     expect(adapter).to have_received(:delete_remote_event!).with(calendar: calendar, event: event)
   end
+
+  it "moves provider events between calendars and clears pending move metadata" do
+    connection, source_calendar, event = build_stack(suffix: "move")
+    target_calendar = KalendariumCalendar.create!(
+      workspace: source_calendar.workspace,
+      kalendarium_connection: connection,
+      created_by: source_calendar.created_by,
+      provider: "google",
+      remote_id: "target",
+      name: "Target",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false
+    )
+    event.update!(
+      kalendarium_calendar: target_calendar,
+      metadata_json: {
+        "pending_provider_calendar_move" => true,
+        "previous_calendar_id" => source_calendar.id,
+        "previous_calendar_remote_id" => source_calendar.remote_id,
+        "previous_remote_event_id" => event.remote_event_id
+      }
+    )
+    adapter = instance_double(Kalendarium::Providers::GoogleAdapter, upsert_remote_event!: event, move_remote_event!: event)
+    allow(Kalendarium::Providers::GoogleAdapter).to receive(:new).with(connection: connection).and_return(adapter)
+
+    described_class.new(event: event).upsert_remote!
+
+    expect(adapter).to have_received(:move_remote_event!).with(from_calendar: source_calendar, to_calendar: target_calendar, event: event)
+    expect(event.reload.metadata_json["pending_provider_calendar_move"]).to be_nil
+    expect(event.metadata_json["previous_remote_event_id"]).to be_nil
+  end
 end

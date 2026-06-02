@@ -202,6 +202,74 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     expect(event.reload.status).to eq("confirmed")
   end
 
+  it "preserves a locally moved provider event when the original iCloud calendar syncs again" do
+    user, workspace, connection = build_stack(suffix: "preserve-moved-event")
+    source_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/source/",
+      name: "Source",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/target/",
+      name: "Target",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    moved_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: target_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Moved locally",
+      starts_at_utc: Time.zone.parse("2026-03-03 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-03 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "event-uid-1::2026-03-03T09:00:00.000000Z"
+    )
+
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:fetch_calendar_event_payloads).and_return(
+      [
+        {
+          href: "/123/calendars/source/event-uid-1.ics",
+          etag: "\"etag-1\"",
+          calendar_data: <<~ICS
+            BEGIN:VCALENDAR
+            BEGIN:VEVENT
+            UID:event-uid-1
+            SUMMARY:Remote still on source
+            DTSTART:20260303T090000Z
+            DTEND:20260303T100000Z
+            STATUS:CONFIRMED
+            END:VEVENT
+            END:VCALENDAR
+          ICS
+        }
+      ]
+    )
+
+    adapter.sync!(calendar: source_calendar)
+
+    expect(KalendariumEvent.where(remote_event_id: "event-uid-1::2026-03-03T09:00:00.000000Z").count).to eq(1)
+    expect(moved_event.reload.kalendarium_calendar_id).to eq(target_calendar.id)
+    expect(moved_event.title).to eq("Remote still on source")
+  end
+
   it "fails sync when calendar parsing returns no events for a populated provider calendar" do
     user, workspace, connection = build_stack(suffix: "empty-events")
     calendar = KalendariumCalendar.create!(
@@ -400,6 +468,75 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     expect(event.etag).to eq("\"etag-updated\"")
     expect(event.sequence).to eq(4)
     expect(event.metadata_json["remote_href"]).to eq("/123/calendars/home/existing.ics")
+  end
+
+  it "moves an existing iCloud event by writing it to the target calendar and deleting the source href" do
+    user, workspace, connection = build_stack(suffix: "write-move")
+    source_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/source/",
+      name: "Source",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false
+    )
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/target/",
+      name: "Target",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: target_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Moved iCloud",
+      starts_at_utc: Time.zone.parse("2026-03-13 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-13 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "/123/calendars/source/old-event.ics::2026-03-13T09:00:00.000000Z",
+      uid: "old-event",
+      etag: "\"old-etag\"",
+      metadata_json: {
+        "pending_provider_calendar_move" => true,
+        "previous_calendar_id" => source_calendar.id,
+        "previous_remote_event_id" => "/123/calendars/source/old-event.ics::2026-03-13T09:00:00.000000Z",
+        "previous_remote_href" => "/123/calendars/source/old-event.ics",
+        "previous_remote_etag" => "\"old-etag\"",
+        "remote_href" => "/123/calendars/source/old-event.ics"
+      }
+    )
+
+    adapter = described_class.new(connection: connection)
+    calls = []
+    allow(adapter).to receive(:perform_caldav_write_request) do |**args|
+      calls << args
+      case [ args[:method], args[:href] ]
+      when [ "PUT", "/123/calendars/target/old-event-7e0a12ff943f.ics" ]
+        http_response(code: 201, headers: { "Location" => "/123/calendars/target/new-event.ics", "ETag" => "\"new-etag\"" })
+      when [ "DELETE", "/123/calendars/source/old-event.ics" ]
+        http_response(code: 204)
+      else
+        raise "Unexpected #{args[:method]} #{args[:href]}"
+      end
+    end
+
+    adapter.move_remote_event!(from_calendar: source_calendar, to_calendar: target_calendar, event: event)
+
+    expect(calls).to include(hash_including(method: "PUT", href: "/123/calendars/target/old-event-7e0a12ff943f.ics"))
+    expect(calls).to include(hash_including(method: "DELETE", href: "/123/calendars/source/old-event.ics", headers: { "If-Match" => "\"old-etag\"" }))
+    expect(event.reload.metadata_json["remote_href"]).to eq("/123/calendars/target/new-event.ics")
   end
 
   it "deletes an existing remote event for writable iCloud calendars" do

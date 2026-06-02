@@ -223,6 +223,66 @@ RSpec.describe Kalendarium::Providers::GoogleAdapter do
     )
   end
 
+  it "preserves a locally moved provider event when the original calendar syncs again" do
+    user, workspace, connection = build_stack(suffix: "preserve-moved-event")
+    source_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "source",
+      name: "Source",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "target",
+      name: "Target",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    moved_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: target_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Moved locally",
+      starts_at_utc: Time.zone.parse("2026-03-03 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-03 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "remote-moved-1"
+    )
+
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:fetch_calendar_events).and_return(
+      [
+        {
+          "id" => "remote-moved-1",
+          "summary" => "Remote still on source",
+          "status" => "confirmed",
+          "start" => { "dateTime" => "2026-03-03T09:00:00Z" },
+          "end" => { "dateTime" => "2026-03-03T10:00:00Z" }
+        }
+      ]
+    )
+
+    adapter.sync!(calendar: source_calendar)
+
+    expect(KalendariumEvent.where(remote_event_id: "remote-moved-1").count).to eq(1)
+    expect(moved_event.reload.kalendarium_calendar_id).to eq(target_calendar.id)
+    expect(moved_event.title).to eq("Remote still on source")
+  end
+
   it "does not enqueue reindex jobs for unchanged provider events on repeat sync" do
     user, workspace, connection = build_stack(suffix: "repeat-sync-no-reindex")
     calendar = KalendariumCalendar.create!(
@@ -418,6 +478,71 @@ RSpec.describe Kalendarium::Providers::GoogleAdapter do
         path: "/calendar/v3/calendars/primary/events/remote-existing-1"
       )
     )
+  end
+
+  it "moves an existing remote event by creating it in the target calendar and deleting the source copy" do
+    user, workspace, connection = build_stack(suffix: "write-move")
+    source_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "source",
+      name: "Source",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false
+    )
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "target",
+      name: "Target",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: target_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Moved remote",
+      starts_at_utc: Time.zone.parse("2026-03-13 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-13 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "old-source-event",
+      metadata_json: {
+        "pending_provider_calendar_move" => true,
+        "previous_calendar_id" => source_calendar.id,
+        "previous_remote_event_id" => "old-source-event"
+      }
+    )
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:request_json) do |method:, path:, **_options|
+      if method == :post && path == "/calendar/v3/calendars/target/events"
+        {
+          "id" => "new-target-event",
+          "status" => "confirmed",
+          "start" => { "dateTime" => "2026-03-13T09:00:00Z" },
+          "end" => { "dateTime" => "2026-03-13T10:00:00Z" }
+        }
+      elsif method == :delete && path == "/calendar/v3/calendars/source/events/old-source-event"
+        {}
+      else
+        raise "Unexpected #{method} #{path}"
+      end
+    end
+
+    adapter.move_remote_event!(from_calendar: source_calendar, to_calendar: target_calendar, event: event)
+
+    expect(adapter).to have_received(:request_json).with(hash_including(method: :post, path: "/calendar/v3/calendars/target/events"))
+    expect(adapter).to have_received(:request_json).with(hash_including(method: :delete, path: "/calendar/v3/calendars/source/events/old-source-event"))
+    expect(event.reload.remote_event_id).to eq("new-target-event")
   end
 
   it "deletes an existing remote event for provider-backed events" do

@@ -74,6 +74,26 @@ module Kalendarium
         raise
       end
 
+      def move_remote_event!(from_calendar:, to_calendar:, event:)
+        ensure_credentials!
+        ensure_calendar_belongs_to_connection!(from_calendar)
+        ensure_calendar_belongs_to_connection!(to_calendar)
+
+        metadata = event.metadata_json.to_h
+        previous_remote_event_id = metadata["previous_remote_event_id"].to_s.presence || event.remote_event_id
+        original_remote_event_id = event.remote_event_id
+
+        event.remote_event_id = nil
+        upsert_remote_event!(calendar: to_calendar, event: event)
+
+        delete_remote_event_id(calendar: from_calendar, remote_event_id: previous_remote_event_id) if previous_remote_event_id.present?
+        event
+      ensure
+        if event.present? && event.remote_event_id.blank? && original_remote_event_id.present?
+          event.remote_event_id = original_remote_event_id
+        end
+      end
+
       private
 
       GOOGLE_CALENDAR_API_BASE_URL = "https://www.googleapis.com".freeze
@@ -144,6 +164,19 @@ module Kalendarium
           range_start: range_start,
           range_end: range_end
         )
+      end
+
+      def delete_remote_event_id(calendar:, remote_event_id:)
+        request_json(
+          method: :delete,
+          path: "/calendar/v3/calendars/#{CGI.escape(calendar.remote_id.to_s)}/events/#{CGI.escape(remote_event_id.to_s)}",
+          params: { sendUpdates: "none" }
+        )
+        true
+      rescue RuntimeError => error
+        return true if error.message.include?("Google Calendar request failed (404)")
+
+        raise
       end
 
       def ensure_credentials!
@@ -250,7 +283,7 @@ module Kalendarium
       end
 
       def upsert_remote_event(calendar:, remote_event_id:, remote_event:, starts_at_utc:, ends_at_utc:, all_day:)
-        event = calendar.kalendarium_events.find_or_initialize_by(remote_event_id: remote_event_id)
+        event = provider_event_for_remote_id(calendar: calendar, remote_event_id: remote_event_id)
         invitees = extract_google_invitees(remote_event)
         meeting_join_url = extract_google_meeting_join_url(remote_event)
         event.workspace = connection.workspace
@@ -282,6 +315,14 @@ module Kalendarium
           "provider" => connection.provider
         ).compact
         event.save!
+      end
+
+      def provider_event_for_remote_id(calendar:, remote_event_id:)
+        connection_events = KalendariumEvent
+                              .joins(:kalendarium_calendar)
+                              .where(kalendarium_calendars: { kalendarium_connection_id: connection.id })
+        connection_events.find_by(remote_event_id: remote_event_id) ||
+          calendar.kalendarium_events.find_or_initialize_by(remote_event_id: remote_event_id)
       end
 
       def build_google_event_write_payload(event:, calendar:)

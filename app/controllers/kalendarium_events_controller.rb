@@ -66,6 +66,7 @@ class KalendariumEventsController < ApplicationController
 
   def update
     authorize @event
+    previous_calendar = @event.kalendarium_calendar
 
     project = if event_params.key?(:kalendarium_project_id)
       find_event_project(effective_event_project_id)
@@ -126,6 +127,7 @@ class KalendariumEventsController < ApplicationController
 
       @event.kalendarium_calendar = calendar
     end
+    mark_provider_calendar_move!(previous_calendar: previous_calendar, event: @event)
     if all_day
       @event.starts_at_utc, @event.ends_at_utc = normalize_all_day_times(starts_at_utc: @event.starts_at_utc, ends_at_utc: @event.ends_at_utc)
     end
@@ -318,6 +320,24 @@ class KalendariumEventsController < ApplicationController
     when "clear"
       event.linked_page = nil
     end
+  end
+
+  def mark_provider_calendar_move!(previous_calendar:, event:)
+    current_calendar = event.kalendarium_calendar
+    return if previous_calendar.blank? || current_calendar.blank?
+    return if previous_calendar.id == current_calendar.id
+    return if event.remote_event_id.blank?
+    return if previous_calendar.kalendarium_connection_id.blank? || current_calendar.kalendarium_connection_id.blank?
+    return unless previous_calendar.kalendarium_connection_id == current_calendar.kalendarium_connection_id
+
+    event.metadata_json = event.metadata_json.to_h.merge(
+      "pending_provider_calendar_move" => true,
+      "previous_calendar_id" => previous_calendar.id,
+      "previous_calendar_remote_id" => previous_calendar.remote_id,
+      "previous_remote_event_id" => event.remote_event_id,
+      "previous_remote_href" => event.metadata_json.to_h["remote_href"],
+      "previous_remote_etag" => event.etag
+    ).compact
   end
 
   def event_success_flash(success_message, sync_warning)
