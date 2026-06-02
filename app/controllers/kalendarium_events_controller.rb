@@ -117,7 +117,14 @@ class KalendariumEventsController < ApplicationController
     if project.present?
       @event.kalendarium_calendar = ensure_project_calendar!(project)
     elsif event_params[:kalendarium_calendar_id].present?
-      @event.kalendarium_calendar = policy_scope(KalendariumCalendar).for_workspace(@workspace).find(event_params[:kalendarium_calendar_id])
+      calendar = policy_scope(KalendariumCalendar).for_workspace(@workspace).find_by(id: event_params[:kalendarium_calendar_id])
+      if calendar.blank?
+        redirect_to kalendarium_redirect_path,
+                    alert: "Selected calendar could not be found."
+        return
+      end
+
+      @event.kalendarium_calendar = calendar
     end
     if all_day
       @event.starts_at_utc, @event.ends_at_utc = normalize_all_day_times(starts_at_utc: @event.starts_at_utc, ends_at_utc: @event.ends_at_utc)

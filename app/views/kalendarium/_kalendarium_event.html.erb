@@ -1,4 +1,4 @@
-<% calendar_options = (Array(local_assigns[:calendars]) + [event.kalendarium_calendar]).compact.uniq(&:id) %>
+<% calendar_options = (Array(local_assigns[:calendars]).select { |calendar| calendar.workspace_id == event.workspace_id } + [event.kalendarium_calendar]).compact.uniq(&:id) %>
 <% project_options = (Array(local_assigns[:projects]) + [event.kalendarium_project]).compact.uniq(&:id) %>
 <% timeline = local_assigns.fetch(:timeline, false) %>
 <% timeline_style = local_assigns[:timeline_style] %>

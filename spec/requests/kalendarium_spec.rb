@@ -139,6 +139,14 @@ RSpec.describe "Kalendarium", type: :request do
     user, source_workspace, = build_stack(suffix: "all-workspaces-source")
     target_workspace = Workspace.create!(name: "Kal Request all-workspaces-target", slug: "kal-request-all-workspaces-target")
     Membership.create!(workspace: target_workspace, user: user, role: :owner)
+    target_calendar = KalendariumCalendar.create!(
+      workspace: target_workspace,
+      created_by: user,
+      name: "Target workspace calendar",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
     connection = KalendariumConnection.create!(
       workspace: source_workspace,
       owner: user,
@@ -161,7 +169,7 @@ RSpec.describe "Kalendarium", type: :request do
       time_zone: "UTC",
       enabled: true
     )
-    KalendariumEvent.create!(
+    event = KalendariumEvent.create!(
       workspace: source_workspace,
       kalendarium_calendar: calendar,
       created_by: user,
@@ -177,7 +185,25 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Shared calendar")
     expect(response.body).to include("Shared calendar event")
+    document = Nokogiri::HTML.parse(response.body)
+    edit_form = document.at_css("#kalendarium_event_#{event.id} form.notae-kalendarium-event-modal-form")
+    calendar_select_options = edit_form.css("select[name='kalendarium_event[kalendarium_calendar_id]'] option").map(&:text)
+    expect(calendar_select_options).to include("Shared calendar")
+    expect(calendar_select_options).not_to include("Target workspace calendar")
     expect(KalendariumConnection.where(provider: "google", label: "Shared Google").count).to eq(1)
+
+    patch kalendarium_event_path(workspace_slug: source_workspace.slug, id: event.id), params: {
+      view: "week",
+      date: "2026-05-24",
+      kalendarium_event: {
+        kalendarium_calendar_id: target_calendar.id,
+        title: "Shared calendar event"
+      }
+    }
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: source_workspace.slug, view: "week", date: "2026-05-24"))
+    expect(flash[:alert]).to eq("Selected calendar could not be found.")
+    expect(event.reload.kalendarium_calendar_id).to eq(calendar.id)
   end
 
   it "renders embedded task slot suggestions and hides the create event accordion" do
@@ -584,6 +610,58 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Tasks event")
     expect(response.body).to include("Roadmap event")
+  end
+
+  it "hides project-linked calendars from the calendar filter and respects project visibility" do
+    user, workspace, = build_stack(suffix: "legacy-project-calendar-filter")
+    tasks_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Tasks",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "local"
+    )
+    tasks_project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: tasks_calendar,
+      name: "Tasks",
+      slug: "tasks",
+      color_hex: "#10B981"
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: tasks_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Finish upload video",
+      starts_at_utc: Time.zone.parse("2026-06-02 09:15:00"),
+      ends_at_utc: Time.zone.parse("2026-06-02 09:35:00")
+    )
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    calendar_filter_labels = document.css(".notae-kalendarium-calendar-popover .notae-options-checkbox").map { |label| label.text.squish }
+    expect(calendar_filter_labels).to include("Main")
+    expect(calendar_filter_labels).not_to include("Tasks")
+    expect(response.body).to include("Projects (1)")
+    expect(response.body).to include("Finish upload video")
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "month",
+      date: "2026-06-02",
+      toggle_project_id: tasks_project.id,
+      project_visible: "0"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Projects (0)")
+    expect(response.body).not_to include("Finish upload video")
   end
 
   it "ships dark theme contrast overrides for kalendarium controls and cards" do

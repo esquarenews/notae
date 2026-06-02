@@ -40,10 +40,11 @@ class KalendariumController < ApplicationController
     @project_id_by_calendar_id = @projects.each_with_object({}) do |project, index|
       index[project.kalendarium_calendar_id] = project.id if project.kalendarium_calendar_id.present?
     end
+    project_calendar_ids = @project_id_by_calendar_id.keys
 
     @all_calendars = policy_scope(KalendariumCalendar).visible_in_workspace(@workspace).order(:name).to_a
-    @project_calendars = @all_calendars.select { |calendar| calendar.source_kind == "project" && visible_project_calendar_ids.include?(calendar.id) }
-    @calendar_filter_calendars = @all_calendars.reject { |calendar| calendar.source_kind == "project" }
+    @project_calendars = @all_calendars.select { |calendar| visible_project_calendar_ids.include?(calendar.id) }
+    @calendar_filter_calendars = @all_calendars.reject { |calendar| calendar.source_kind == "project" || project_calendar_ids.include?(calendar.id) }
     @selected_calendar_ids = resolve_selected_calendar_ids(@calendar_filter_calendars)
     @visible_calendars = @calendar_filter_calendars.select { |calendar| @selected_calendar_ids.include?(calendar.id.to_s) }
     @visible_event_calendars = if @view == "project"
