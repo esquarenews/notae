@@ -55,7 +55,7 @@ export default class extends Controller {
   }
 
   quickCreateDay(event) {
-    if (this.interactiveTarget(event.target)) return
+    if (this.interactiveTarget(event.target) && !this.dayFocusTarget(event.target)) return
 
     const dateString = event.currentTarget?.dataset?.dayDate
     if (!dateString) return
@@ -270,5 +270,11 @@ export default class extends Controller {
     if (!(target instanceof Element)) return false
 
     return target.closest("a, button, input, textarea, select, label, summary, details, form, .notae-kalendarium-event-card") !== null
+  }
+
+  dayFocusTarget(target) {
+    if (!(target instanceof Element)) return false
+
+    return target.closest("[data-kalendarium-day-focus='true']") !== null
   }
 }

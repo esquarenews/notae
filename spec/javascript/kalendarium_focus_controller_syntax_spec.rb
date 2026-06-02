@@ -29,6 +29,7 @@ RSpec.describe "kalendarium_focus_controller.js" do
     expect(source).to include("dispatchChange(this.createEndInputTarget)")
     expect(source).to include("openCreateModal(event)")
     expect(source).to include("quickCreateDay(event)")
+    expect(source).to include("dayFocusTarget(target)")
     expect(source).to include("minimizeWidget(event)")
     expect(source).to include("window.parent.postMessage")
   end

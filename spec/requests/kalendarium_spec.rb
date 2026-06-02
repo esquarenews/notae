@@ -105,10 +105,34 @@ RSpec.describe "Kalendarium", type: :request do
     expect(kalendarium_shell&.[]("class")).to include("is-planning-wide")
     expect(document.at_css("aside.notae-kalendarium-sidebar.is-pinned")).to be_nil
     expect(document.at_css(".notae-kalendarium-month-grid")).to be_present
+    expect(document.at_css("dialog[data-kalendarium-focus-target='createDialog']")).to be_present
     planning_toggle = document.at_css("a.notae-kalendarium-planning-toggle.is-active")
     expect(planning_toggle&.text.to_s.strip).to eq("Standard view")
     expect(planning_toggle["href"]).not_to include("planning=wide")
     expect(document.at_css("input[name='planning'][value='wide']")).to be_present
+  end
+
+  it "wires month and year date double clicks into the create event flow" do
+    user, workspace, = build_stack(suffix: "quick-create-date-double-click")
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    month_document = Nokogiri::HTML.parse(response.body)
+    month_cell = month_document.at_css(".notae-kalendarium-month-cell[data-day-date='2026-06-02']")
+    month_day_link = month_document.at_css(".notae-kalendarium-month-day-focus-link[data-day-date='2026-06-02']")
+    expect(month_cell["data-action"]).to include("dblclick->kalendarium-focus#quickCreateDay")
+    expect(month_day_link["data-action"]).to include("click->kalendarium-focus#selectDay")
+    expect(month_day_link["data-action"]).to include("dblclick->kalendarium-focus#quickCreateDay")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "year", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    year_document = Nokogiri::HTML.parse(response.body)
+    year_day_link = year_document.at_css(".notae-kalendarium-year-day[data-day-date='2026-06-02']")
+    expect(year_day_link["data-action"]).to include("click->kalendarium-focus#selectDay")
+    expect(year_day_link["data-action"]).to include("dblclick->kalendarium-focus#quickCreateDay")
   end
 
   it "shows one all-workspaces calendar connection from another workspace" do

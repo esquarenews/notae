@@ -658,7 +658,7 @@
                               ),
                               class: ["notae-kalendarium-day-focus-link", ("is-selected" if day == @selected_date)].compact.join(" "),
                               data: {
-                                action: "click->kalendarium-focus#selectDay",
+                                action: "click->kalendarium-focus#selectDay dblclick->kalendarium-focus#quickCreateDay",
                                 kalendarium_focus_target: "dayLink",
                                 kalendarium_day_focus: true,
                                 day_date: day.strftime("%Y-%m-%d")
@@ -827,7 +827,7 @@
                                 ("has-event-label" if first_day_event.present?)
                               ].compact.join(" "),
                               data: {
-                                action: "click->kalendarium-focus#selectDay",
+                                action: "click->kalendarium-focus#selectDay dblclick->kalendarium-focus#quickCreateDay",
                                 kalendarium_focus_target: "dayLink",
                                 kalendarium_day_focus: true,
                                 day_date: day.strftime("%Y-%m-%d")
@@ -971,9 +971,7 @@
             <% day_events = @events_by_day[day] || [] %>
             <section class="<%= ["notae-kalendarium-month-cell", ("is-today" if day == today_local), ("is-selected" if day == @selected_date)].compact.join(" ") %>"
                      data-kalendarium-focus-target="monthCell"
-                     <% if widget_view %>
                      data-action="dblclick->kalendarium-focus#quickCreateDay"
-                     <% end %>
                      data-day-date="<%= day.strftime("%Y-%m-%d") %>">
               <header>
                 <strong>
@@ -989,7 +987,7 @@
                               ),
                               class: ["notae-kalendarium-month-day-focus-link", ("is-today" if day == today_local), ("is-selected" if day == @selected_date)].compact.join(" "),
                               data: {
-                                action: "click->kalendarium-focus#selectDay",
+                                action: "click->kalendarium-focus#selectDay dblclick->kalendarium-focus#quickCreateDay",
                                 kalendarium_focus_target: "dayLink",
                                 kalendarium_day_focus: true,
                                 day_date: day.strftime("%Y-%m-%d")
@@ -1056,7 +1054,7 @@
     </div>
   </section>
 
-  <% if widget_view %>
+  <% if widget_view || wide_planning_view %>
     <dialog class="notae-danger-modal notae-kalendarium-event-modal"
             data-kalendarium-focus-target="createDialog"
             data-action="click->kalendarium-focus#backdropCloseCreateDialog">
