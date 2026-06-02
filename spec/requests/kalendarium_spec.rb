@@ -61,8 +61,10 @@ RSpec.describe "Kalendarium", type: :request do
     kalendarium_shell = document.at_css(".notae-kalendarium")
     expect(content&.[]("class")).to include("notae-content-wide")
     expect(content&.[]("class")).to include("notae-content-kalendarium")
+    expect(content&.[]("class")).not_to include("notae-content-kalendarium-planning-wide")
     expect(content&.[]("class")).not_to include("notae-content-overlay-page")
     expect(kalendarium_shell).to be_present
+    expect(kalendarium_shell["class"]).not_to include("is-planning-wide")
     expect(kalendarium_shell["data-action"]).to include("kalendarium:quick-create->kalendarium-focus#prepareNewEvent")
     expect(kalendarium_shell["data-action"]).to include("kalendarium:preview-event->kalendarium-preview#render")
     expect(kalendarium_shell["data-action"]).to include("kalendarium:preview-clear->kalendarium-preview#clear")
@@ -82,8 +84,31 @@ RSpec.describe "Kalendarium", type: :request do
     expect(create_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Custom")
     expect(create_form.at_css("button[data-action='kalendarium-event-form#pasteEvent']")&.text.to_s.strip).to eq("Paste")
     expect(create_form["data-turbo"]).to eq("false")
+    planning_toggle = document.at_css("a.notae-kalendarium-planning-toggle")
+    expect(planning_toggle&.text.to_s.strip).to eq("Wide view")
+    expect(planning_toggle["href"]).to include("planning=wide")
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
+  end
+
+  it "renders a wide planning mode that gives the calendar view the full content width" do
+    user, workspace, = build_stack(suffix: "wide-planning")
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02", planning: "wide")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    content = document.at_css("main.notae-content")
+    kalendarium_shell = document.at_css(".notae-kalendarium")
+    expect(content&.[]("class")).to include("notae-content-kalendarium-planning-wide")
+    expect(kalendarium_shell&.[]("class")).to include("is-planning-wide")
+    expect(document.at_css("aside.notae-kalendarium-sidebar.is-pinned")).to be_nil
+    expect(document.at_css(".notae-kalendarium-month-grid")).to be_present
+    planning_toggle = document.at_css("a.notae-kalendarium-planning-toggle.is-active")
+    expect(planning_toggle&.text.to_s.strip).to eq("Standard view")
+    expect(planning_toggle["href"]).not_to include("planning=wide")
+    expect(document.at_css("input[name='planning'][value='wide']")).to be_present
   end
 
   it "shows one all-workspaces calendar connection from another workspace" do
@@ -788,6 +813,46 @@ RSpec.describe "Kalendarium", type: :request do
     expect(month_card.text).to include("Design review")
     expect(visible_paragraphs).to eq([ "09:15 - 10:00" ])
     expect(visible_links).to eq([ "Join meeting" ])
+  end
+
+  it "renders multi-day all-day events on each covered calendar day" do
+    user, workspace, calendar = build_stack(suffix: "multi-day-all-day", time_zone: "Australia/Melbourne")
+    sign_in user
+
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Ballet Rehersals",
+      all_day: true,
+      starts_at_utc: Time.find_zone!("Australia/Melbourne").parse("2026-06-28 00:00:00").utc,
+      ends_at_utc: Time.find_zone!("Australia/Melbourne").parse("2026-07-04 23:59:00").utc
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    month_doc = Nokogiri::HTML.parse(response.body)
+    [ "2026-06-28", "2026-06-29", "2026-07-04" ].each do |date|
+      cell = month_doc.at_css(".notae-kalendarium-month-cell[data-day-date='#{date}']")
+      expect(cell&.text).to include(event.title)
+    end
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-06-30")
+
+    expect(response).to have_http_status(:ok)
+    day_doc = Nokogiri::HTML.parse(response.body)
+    day_card = day_doc.at_css("#kalendarium_event_#{event.id}")
+    expect(day_card&.text).to include(event.title)
+    expect(day_card["class"]).to include("is-all-day")
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-07-01")
+
+    expect(response).to have_http_status(:ok)
+    week_doc = Nokogiri::HTML.parse(response.body)
+    thursday_track = week_doc.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-02']")
+    expect(thursday_track&.text).to include(event.title)
   end
 
   it "shows optional daily event labels in year view when toggled on" do

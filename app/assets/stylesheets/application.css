@@ -15065,6 +15065,16 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   display: inline-block;
 }
 
+.notae-kalendarium-planning-toggle {
+  white-space: nowrap;
+}
+
+.notae-kalendarium-planning-toggle.is-active {
+  border-color: color-mix(in srgb, var(--notae-accent, #2563eb) 48%, var(--notae-border, #d6d3d1) 52%);
+  background: color-mix(in srgb, var(--notae-accent, #2563eb) 15%, var(--notae-surface-raised, #fff) 85%);
+  color: var(--notae-accent, #2563eb);
+}
+
 .notae-kalendarium-filter-controls summary.notae-chip-button {
   list-style: none;
   display: inline-flex;
@@ -15288,6 +15298,57 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
 
 .notae-content.notae-content-kalendarium {
   padding: var(--notae-topbar-content-clearance) clamp(0.6rem, 1.4vw, 1rem) 1.8rem;
+}
+
+.notae-content.notae-content-kalendarium-planning-wide {
+  padding-inline: clamp(0.7rem, 1vw, 1.25rem);
+}
+
+.notae-kalendarium.is-planning-wide {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-head,
+.notae-kalendarium.is-planning-wide .notae-kalendarium-main {
+  grid-column: 1;
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-sidebar {
+  display: none;
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-main {
+  padding: clamp(0.8rem, 1vw, 1.15rem);
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-head-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-filter-controls {
+  flex: 1 1 520px;
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-timeline-scroller {
+  max-height: calc(100dvh - 12.5rem);
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-timeline-scroller-week {
+  max-height: calc(100dvh - 13.5rem);
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-month-cell {
+  min-height: clamp(145px, calc((100dvh - 15rem) / 5), 240px);
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-year-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.notae-kalendarium.is-planning-wide .notae-kalendarium-project-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .notae-kalendarium-sidebar.is-pinned {
@@ -16857,6 +16918,11 @@ button[type="submit"].notae-chip-button.notae-kalendarium-event-delete-button:ho
 }
 
 @media (max-width: 920px) {
+  .notae-kalendarium.is-planning-wide .notae-kalendarium-year-grid,
+  .notae-kalendarium.is-planning-wide .notae-kalendarium-project-grid {
+    grid-template-columns: 1fr;
+  }
+
   .notae-kalendarium-timezone-grid {
     grid-template-columns: 1fr;
     max-height: min(260px, 34vh);

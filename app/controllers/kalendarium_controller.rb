@@ -490,7 +490,37 @@ class KalendariumController < ApplicationController
   end
 
   def events_grouped_by_day
-    @events.group_by { |event| event.starts_at_utc.in_time_zone(current_user.time_zone).to_date }
+    range_start, range_end = range_for_view
+
+    @events.each_with_object(Hash.new { |index, day| index[day] = [] }) do |event, index|
+      visible_calendar_dates_for_event(event, range_start: range_start, range_end: range_end).each do |day|
+        index[day] << event
+      end
+    end.transform_values { |day_events| prioritize_calendar_day_events(day_events) }
+  end
+
+  def visible_calendar_dates_for_event(event, range_start:, range_end:)
+    dates =
+      if event.all_day?
+        year_label_dates_for_all_day_event(event)
+      else
+        [ event.starts_at_utc.in_time_zone(current_user.time_zone).to_date ]
+      end
+
+    range_start_date = range_start.in_time_zone(current_user.time_zone).to_date
+    range_end_date = range_end.in_time_zone(current_user.time_zone).to_date
+    dates.select { |day| day >= range_start_date && day <= range_end_date }
+  end
+
+  def prioritize_calendar_day_events(events)
+    events.sort_by do |event|
+      starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone)
+      [
+        event.all_day? ? 0 : 1,
+        starts_local,
+        event.id
+      ]
+    end
   end
 
   def build_year_events_by_day(events)

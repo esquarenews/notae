@@ -6,7 +6,8 @@
 <% widget_view = @widget_mode %>
 <% requested_timeline_time_zone = Array(params[:tz]).map(&:to_s).reject(&:blank?).first %>
 <% timeline_time_zone = requested_timeline_time_zone || current_user.time_zone %>
-<% content_for :content_class, ["notae-content-wide", "notae-content-kalendarium", ("notae-content-kalendarium-widget" if widget_view)].compact.join(" ") %>
+<% wide_planning_view = params[:planning].to_s == "wide" && !widget_view %>
+<% content_for :content_class, ["notae-content-wide", "notae-content-kalendarium", ("notae-content-kalendarium-widget" if widget_view), ("notae-content-kalendarium-planning-wide" if wide_planning_view)].compact.join(" ") %>
 <% content_for :topbar_actions do %>
   <%= link_to "Settings", workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), class: "notae-chip-button" %>
 <% end %>
@@ -25,6 +26,7 @@
 <% task_schedule_params = @task_schedule_row.present? ? { task_row_id: @task_schedule_row.id } : {} %>
 <% window_start_value = params[:window_start].presence || (@view == "next_7_days" ? @next_seven_days_start.strftime("%Y-%m-%d") : nil) %>
 <% window_start_params = window_start_value.present? ? { window_start: window_start_value } : {} %>
+<% planning_params = wide_planning_view ? { planning: "wide" } : {} %>
 <% kalendarium_controllers = ["kalendarium-focus", "kalendarium-preview"] %>
 <% kalendarium_controllers << "kalendarium-task-slot" if @task_schedule_row.present? %>
 <% kalendarium_actions = [
@@ -47,9 +49,9 @@
   actions_menu: params[:actions_menu].presence,
   options_menu: params[:options_menu].presence
 }.compact %>
-<% kalendarium_base_params = { workspace_slug: @workspace.slug }.merge(embedded_params).merge(widget_params).merge(task_schedule_params).merge(window_start_params).merge(database_return_params) %>
+<% kalendarium_base_params = { workspace_slug: @workspace.slug }.merge(embedded_params).merge(widget_params).merge(task_schedule_params).merge(window_start_params).merge(planning_params).merge(database_return_params) %>
 
-<section class="<%= ["notae-kalendarium", ("is-embedded-split" if embedded_split_view), ("is-widget" if widget_view)].compact.join(" ") %>"
+<section class="<%= ["notae-kalendarium", ("is-embedded-split" if embedded_split_view), ("is-widget" if widget_view), ("is-planning-wide" if wide_planning_view)].compact.join(" ") %>"
          data-controller="<%= kalendarium_controllers.join(" ") %>"
          data-action="<%= kalendarium_actions.join(" ") %>"
          data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
@@ -88,6 +90,29 @@
                            else
                              @selected_date.strftime("%b %-d, %Y")
                            end %>
+  <% planning_toggle_base_params = kalendarium_base_params.merge(
+       view: @view,
+       date: @selected_date,
+       window_start: window_start_value,
+       project_id: @selected_project_id,
+       calendar_ids: @selected_calendar_ids,
+       year_daily_events: year_daily_events_param
+     ).merge(project_scope_params) %>
+  <% planning_toggle_params = wide_planning_view ? planning_toggle_base_params.except(:planning) : planning_toggle_base_params.merge(planning: "wide") %>
+  <% refresh_kalendarium_params = {
+       view: @view,
+       date: @selected_date,
+       window_start: window_start_value,
+       project_id: @selected_project_id,
+       calendar_ids: @selected_calendar_ids,
+       project_scope_id: @scoped_project_id,
+       calendar_filter_applied: "1",
+       year_daily_events: year_daily_events_param,
+       planning: planning_params[:planning],
+       embedded: embedded_params[:embedded],
+       widget: widget_params[:widget],
+       task_row_id: task_schedule_params[:task_row_id]
+     }.merge(database_return_params) %>
   <header class="notae-kalendarium-head notae-auth-card">
     <% if widget_view %>
       <div class="notae-kalendarium-widget-head">
@@ -233,27 +258,19 @@
         </div>
 
         <div class="notae-kalendarium-filter-controls">
-        <%= button_to refresh_kalendarium_path(workspace_slug: @workspace.slug),
-                      method: :post,
-                      params: {
-                        view: @view,
-                        date: @selected_date,
-                        window_start: window_start_value,
-                        project_id: @selected_project_id,
-                        calendar_ids: @selected_calendar_ids,
-                        project_scope_id: @scoped_project_id,
-                        calendar_filter_applied: "1",
-                        year_daily_events: year_daily_events_param,
-                        embedded: embedded_params[:embedded],
-                        widget: widget_params[:widget],
-                        task_row_id: task_schedule_params[:task_row_id],
-                        **database_return_params
-                      },
-                      class: "notae-chip-button notae-kalendarium-refresh-button",
-                      title: "Refresh calendars",
-                      aria: { label: "Refresh calendars" } do %>
-          <span class="notae-kalendarium-refresh-glyph" aria-hidden="true">↻</span>
-        <% end %>
+          <%= link_to wide_planning_view ? "Standard view" : "Wide view",
+                      kalendarium_path(planning_toggle_params),
+                      class: ["notae-chip-button", "notae-kalendarium-planning-toggle", ("is-active" if wide_planning_view)].compact.join(" "),
+                      aria: { pressed: wide_planning_view, label: wide_planning_view ? "Return Kalendārium to standard view" : "Expand Kalendārium planning view" },
+                      title: wide_planning_view ? "Return to standard calendar layout" : "Use more screen space for the current calendar view" %>
+          <%= button_to refresh_kalendarium_path(workspace_slug: @workspace.slug),
+                        method: :post,
+                        params: refresh_kalendarium_params,
+                        class: "notae-chip-button notae-kalendarium-refresh-button",
+                        title: "Refresh calendars",
+                        aria: { label: "Refresh calendars" } do %>
+            <span class="notae-kalendarium-refresh-glyph" aria-hidden="true">↻</span>
+          <% end %>
 
         <div class="notae-kalendarium-workspace-filter" data-controller="auto-submit">
           <% workspace_options = @workspace_options.map do |workspace_option|
@@ -263,6 +280,7 @@
                    { workspace_slug: workspace_option.slug }
                      .merge(embedded_params)
                      .merge(window_start_params)
+                     .merge(planning_params)
                      .merge(database_return_params)
                      .merge(
                        view: @view,
@@ -301,6 +319,9 @@
           <%= hidden_field_tag :date, @selected_date, data: { kalendarium_focus_target: "dateInput" } %>
           <%= hidden_field_tag :year_daily_events, year_daily_events_param %>
           <%= hidden_field_tag :calendar_filter_applied, "1" %>
+          <% if wide_planning_view %>
+            <%= hidden_field_tag :planning, "wide" %>
+          <% end %>
           <% if embedded_split_view %>
             <%= hidden_field_tag :embedded, "1" %>
           <% end %>
@@ -406,6 +427,9 @@
                         } do |form| %>
             <%= hidden_field_tag :view, @view %>
             <%= hidden_field_tag :date, @selected_date %>
+            <% if wide_planning_view %>
+              <%= hidden_field_tag :planning, "wide" %>
+            <% end %>
             <% if embedded_split_view %>
               <%= hidden_field_tag :embedded, "1" %>
             <% end %>
@@ -430,7 +454,7 @@
   </header>
 
   <section class="notae-kalendarium-grid">
-    <% unless embedded_compact_view %>
+    <% unless embedded_compact_view || wide_planning_view %>
       <aside class="notae-kalendarium-sidebar notae-auth-card is-pinned">
         <% if @task_schedule_row.present? %>
           <section class="notae-kalendarium-task-schedule-panel">
