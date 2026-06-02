@@ -2469,30 +2469,62 @@ RSpec.describe "Kalendarium", type: :request do
   end
 
   it "can delete every imported occurrence in a provider recurring event series" do
-    user, workspace, calendar = build_stack(suffix: "provider-recurring-delete")
+    user, workspace, = build_stack(suffix: "provider-recurring-delete")
     sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Google sync",
+      access_token: "token",
+      enabled: true,
+      status: "connected"
+    )
+    provider_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "primary",
+      name: "Google primary",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    deleted_remote_ids = []
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new) do |event:|
+      deleted_remote_ids << event.remote_event_id
+      instance_double(Kalendarium::ProviderEventSyncService, delete_remote!: true)
+    end
 
     shared_metadata = { "recurring_event_id" => "remote-series-1" }
     series_events = 3.times.map do |index|
       KalendariumEvent.create!(
         workspace: workspace,
-        kalendarium_calendar: calendar,
+        kalendarium_calendar: provider_calendar,
         created_by: user,
         updated_by: user,
         title: "Imported recurring shift",
         starts_at_utc: Time.zone.parse("2026-03-0#{index + 1} 09:00:00"),
         ends_at_utc: Time.zone.parse("2026-03-0#{index + 1} 10:00:00"),
+        source_kind: "provider",
+        remote_event_id: "remote-series-1::2026-03-0#{index + 1}T09:00:00Z",
         metadata_json: shared_metadata
       )
     end
     other_event = KalendariumEvent.create!(
       workspace: workspace,
-      kalendarium_calendar: calendar,
+      kalendarium_calendar: provider_calendar,
       created_by: user,
       updated_by: user,
       title: "Other imported shift",
       starts_at_utc: Time.zone.parse("2026-03-10 09:00:00"),
       ends_at_utc: Time.zone.parse("2026-03-10 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "remote-series-2::2026-03-10T09:00:00Z",
       metadata_json: { "recurring_event_id" => "remote-series-2" }
     )
 
@@ -2507,6 +2539,7 @@ RSpec.describe "Kalendarium", type: :request do
     end.to change(KalendariumEvent, :count).by(-3)
     expect(KalendariumEvent.where(id: series_events.map(&:id))).to be_empty
     expect(KalendariumEvent.find_by(id: other_event.id)).to be_present
+    expect(deleted_remote_ids).to eq([ "remote-series-1" ])
     expect(flash[:notice]).to eq("Recurring events deleted.")
   end
 

@@ -137,12 +137,10 @@ class KalendariumEventsController < ApplicationController
     authorize @event
 
     events_to_destroy = destroy_recurring_series? ? recurring_series_events_for(@event) : [ @event ]
-    events_to_destroy.each do |event|
-      delete_warning = delete_event_from_provider(event)
-      if delete_warning.present?
-        redirect_to kalendarium_redirect_path, alert: delete_warning
-        return
-      end
+    delete_warning = delete_events_from_provider(events_to_destroy)
+    if delete_warning.present?
+      redirect_to kalendarium_redirect_path, alert: delete_warning
+      return
     end
 
     KalendariumEvent.where(id: events_to_destroy.map(&:id)).destroy_all
@@ -251,6 +249,34 @@ class KalendariumEventsController < ApplicationController
     end
 
     [ event ]
+  end
+
+  def delete_events_from_provider(events)
+    events = Array(events).compact
+    return nil if events.empty?
+
+    return delete_recurring_series_from_provider(events) if destroy_recurring_series?
+
+    delete_event_from_provider(events.first)
+  end
+
+  def delete_recurring_series_from_provider(events)
+    representative = events.first
+    return nil if representative.kalendarium_calendar.kalendarium_connection.blank?
+
+    remote_series_id = recurring_series_remote_event_id(representative)
+    return delete_event_from_provider(representative) if remote_series_id.blank?
+
+    original_remote_event_id = representative.remote_event_id
+    representative.remote_event_id = remote_series_id
+    delete_event_from_provider(representative)
+  ensure
+    representative.remote_event_id = original_remote_event_id if representative.present?
+  end
+
+  def recurring_series_remote_event_id(event)
+    metadata = event.metadata_json.to_h
+    metadata["recurring_event_id"].to_s.presence || event.remote_event_id.to_s.presence
   end
 
   def resolve_event_calendar(project:, selected_calendar_id:)
