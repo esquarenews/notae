@@ -2850,6 +2850,100 @@ RSpec.describe "Kalendarium", type: :request do
     expect(event.metadata_json["previous_remote_event_id"]).to eq("source-event-1")
   end
 
+  it "merges an existing event move into a duplicate target-calendar remote event" do
+    user, workspace, = build_stack(suffix: "provider-event-calendar-move-duplicate")
+    sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Google sync",
+      access_token: "token",
+      enabled: true,
+      status: "connected"
+    )
+    source_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "source",
+      name: "Source calendar",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "target",
+      name: "Target calendar",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    remote_event_id = "existing-notae-event@notae.local::2026-06-28T00:00:00.000000Z"
+    source_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: source_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Source title",
+      starts_at_utc: Time.zone.parse("2026-06-28 00:00:00"),
+      ends_at_utc: Time.zone.parse("2026-06-29 00:00:00"),
+      all_day: true,
+      source_kind: "provider",
+      remote_event_id: remote_event_id,
+      metadata_json: { "source_note" => "keep from source" }
+    )
+    duplicate_target_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: target_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Duplicate target title",
+      starts_at_utc: Time.zone.parse("2026-06-28 00:00:00"),
+      ends_at_utc: Time.zone.parse("2026-06-29 00:00:00"),
+      all_day: true,
+      source_kind: "provider",
+      remote_event_id: remote_event_id,
+      etag: "target-etag",
+      metadata_json: { "remote_href" => "/target/existing.ics" }
+    )
+    sync_service = instance_double(Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).with(event: duplicate_target_event).and_return(sync_service)
+
+    expect do
+      patch kalendarium_event_path(workspace_slug: workspace.slug, id: source_event.id), params: {
+        view: "month",
+        date: "2026-06-28",
+        kalendarium_event: {
+          kalendarium_calendar_id: target_calendar.id,
+          title: "Moved title"
+        }
+      }
+    end.to change(KalendariumEvent, :count).by(-1)
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-28"))
+    expect(sync_service).to have_received(:upsert_remote!)
+    expect(KalendariumEvent.find_by(id: source_event.id)).to be_nil
+    duplicate_target_event.reload
+    expect(duplicate_target_event.title).to eq("Moved title")
+    expect(duplicate_target_event.kalendarium_calendar_id).to eq(target_calendar.id)
+    expect(duplicate_target_event.remote_event_id).to eq(remote_event_id)
+    expect(duplicate_target_event.etag).to eq("target-etag")
+    expect(duplicate_target_event.metadata_json["remote_href"]).to eq("/target/existing.ics")
+    expect(duplicate_target_event.metadata_json["source_note"]).to eq("keep from source")
+    expect(duplicate_target_event.metadata_json["pending_provider_calendar_move"]).to be_nil
+  end
+
   it "redirects instead of raising when an event calendar update fails during persistence" do
     user, workspace, source_calendar = build_stack(suffix: "event-calendar-update-save-failure")
     sign_in user

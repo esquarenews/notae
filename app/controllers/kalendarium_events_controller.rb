@@ -1,4 +1,33 @@
 class KalendariumEventsController < ApplicationController
+  EVENT_CONFLICT_MERGE_ATTRIBUTES = %w[
+    kalendarium_project_id
+    title
+    description
+    location
+    starts_at_utc
+    ends_at_utc
+    all_day
+    rrule
+    status
+    visibility
+    uid
+    sequence
+    source_kind
+    linked_page_id
+    linked_db_row_id
+    updated_by_id
+    reminder_offsets_minutes
+    meeting_capture_enabled
+  ].freeze
+  PROVIDER_CALENDAR_MOVE_METADATA_KEYS = %w[
+    pending_provider_calendar_move
+    previous_calendar_id
+    previous_calendar_remote_id
+    previous_remote_event_id
+    previous_remote_href
+    previous_remote_etag
+  ].freeze
+
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_event, only: %i[update destroy]
@@ -133,13 +162,34 @@ class KalendariumEventsController < ApplicationController
     end
     apply_linked_nota_action!(@event, event_params[:linked_page_action])
 
+    event_to_sync = nil
+    save_error = nil
     begin
-      if @event.save
-        sync_warning = sync_event_to_provider(@event)
+      KalendariumEvent.transaction do
+        duplicate_event = remote_event_calendar_conflict_for(@event)
+        if duplicate_event.present?
+          merge_remote_event_calendar_conflict!(source_event: @event, duplicate_event: duplicate_event)
+          if duplicate_event.save
+            @event.destroy!
+            event_to_sync = duplicate_event
+          else
+            save_error = duplicate_event.errors.full_messages.to_sentence
+            raise ActiveRecord::Rollback
+          end
+        elsif @event.save
+          event_to_sync = @event
+        else
+          save_error = @event.errors.full_messages.to_sentence
+          raise ActiveRecord::Rollback
+        end
+      end
+
+      if event_to_sync.present?
+        sync_warning = sync_event_to_provider(event_to_sync)
         redirect_to kalendarium_redirect_path,
                     flash: event_success_flash("Event updated.", sync_warning)
       else
-        redirect_to kalendarium_redirect_path, alert: @event.errors.full_messages.to_sentence
+        redirect_to kalendarium_redirect_path, alert: save_error
       end
     rescue StandardError => error
       Rails.logger.error("Kalendarium event update failed for event=#{@event.id}: #{error.class}: #{error.message}")
@@ -343,6 +393,30 @@ class KalendariumEventsController < ApplicationController
       "previous_remote_href" => event.metadata_json.to_h["remote_href"],
       "previous_remote_etag" => event.etag
     ).compact
+  end
+
+  def remote_event_calendar_conflict_for(event)
+    return if event.remote_event_id.blank? || event.kalendarium_calendar.blank?
+
+    event.kalendarium_calendar
+         .kalendarium_events
+         .where(remote_event_id: event.remote_event_id)
+         .where.not(id: event.id)
+         .first
+  end
+
+  def merge_remote_event_calendar_conflict!(source_event:, duplicate_event:)
+    duplicate_event.assign_attributes(source_event.attributes.slice(*EVENT_CONFLICT_MERGE_ATTRIBUTES))
+    duplicate_event.metadata_json = merged_event_metadata_for_calendar_conflict(
+      duplicate_metadata: duplicate_event.metadata_json,
+      source_metadata: source_event.metadata_json
+    )
+  end
+
+  def merged_event_metadata_for_calendar_conflict(duplicate_metadata:, source_metadata:)
+    duplicate_metadata.to_h
+                      .merge(source_metadata.to_h.except(*PROVIDER_CALENDAR_MOVE_METADATA_KEYS))
+                      .except(*PROVIDER_CALENDAR_MOVE_METADATA_KEYS)
   end
 
   def event_success_flash(success_message, sync_warning)
