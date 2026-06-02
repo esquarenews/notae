@@ -270,6 +270,64 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
     expect(moved_event.title).to eq("Remote still on source")
   end
 
+  it "does not cancel a target-calendar event while its remote calendar move is pending" do
+    user, workspace, connection = build_stack(suffix: "pending-move-not-stale")
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "icloud_caldav",
+      remote_id: "/123/calendars/target/",
+      name: "Target",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    pending_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: target_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Moved locally",
+      starts_at_utc: Time.zone.parse("2026-03-03 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-03 10:00:00"),
+      status: "confirmed",
+      source_kind: "provider",
+      remote_event_id: "pending-moved-1::2026-03-03T09:00:00.000000Z",
+      metadata_json: {
+        "pending_remote_sync" => true,
+        "pending_remote_sync_error" => "duplicate remote id"
+      }
+    )
+
+    adapter = described_class.new(connection: connection)
+    allow(adapter).to receive(:fetch_calendar_event_payloads).and_return(
+      [
+        {
+          href: "/123/calendars/target/other-event.ics",
+          etag: "\"etag-1\"",
+          calendar_data: <<~ICS
+            BEGIN:VCALENDAR
+            BEGIN:VEVENT
+            UID:other-event
+            SUMMARY:Other remote event
+            DTSTART:20260304T090000Z
+            DTEND:20260304T100000Z
+            STATUS:CONFIRMED
+            END:VEVENT
+            END:VCALENDAR
+          ICS
+        }
+      ]
+    )
+
+    adapter.sync!(calendar: target_calendar)
+
+    expect(pending_event.reload.status).to eq("confirmed")
+  end
+
   it "fails sync when calendar parsing returns no events for a populated provider calendar" do
     user, workspace, connection = build_stack(suffix: "empty-events")
     calendar = KalendariumCalendar.create!(

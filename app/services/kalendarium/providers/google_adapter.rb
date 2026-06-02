@@ -454,6 +454,7 @@ module Kalendarium
         scope = seen_remote_event_ids.any? ? scope.where.not(remote_event_id: seen_remote_event_ids) : scope
         scope.find_each do |event|
           next if event.status == "cancelled"
+          next if pending_remote_sync?(event)
 
           event.update!(
             status: "cancelled",

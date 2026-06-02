@@ -17,6 +17,12 @@ module Kalendarium
       private
 
       attr_reader :connection
+
+      def pending_remote_sync?(event)
+        metadata = event.metadata_json.to_h
+        ActiveModel::Type::Boolean.new.cast(metadata["pending_remote_sync"]) ||
+          ActiveModel::Type::Boolean.new.cast(metadata["pending_provider_calendar_move"])
+      end
     end
   end
 end
