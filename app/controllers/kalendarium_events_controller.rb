@@ -135,14 +135,18 @@ class KalendariumEventsController < ApplicationController
 
   def destroy
     authorize @event
-    delete_warning = delete_event_from_provider(@event)
-    if delete_warning.present?
-      redirect_to kalendarium_redirect_path, alert: delete_warning
-      return
+
+    events_to_destroy = destroy_recurring_series? ? recurring_series_events_for(@event) : [ @event ]
+    events_to_destroy.each do |event|
+      delete_warning = delete_event_from_provider(event)
+      if delete_warning.present?
+        redirect_to kalendarium_redirect_path, alert: delete_warning
+        return
+      end
     end
 
-    @event.destroy!
-    redirect_to kalendarium_redirect_path, notice: "Event deleted."
+    KalendariumEvent.where(id: events_to_destroy.map(&:id)).destroy_all
+    redirect_to kalendarium_redirect_path, notice: destroy_recurring_series? ? "Recurring events deleted." : "Event deleted."
   end
 
   private
@@ -230,6 +234,23 @@ class KalendariumEventsController < ApplicationController
     return event_project_id if event_project_id.present?
 
     params[:project_scope_id].to_s.presence
+  end
+
+  def destroy_recurring_series?
+    params[:delete_scope].to_s == "series"
+  end
+
+  def recurring_series_events_for(event)
+    scope = policy_scope(KalendariumEvent).for_workspace(@workspace).where(kalendarium_calendar_id: event.kalendarium_calendar_id)
+    google_series_id = event.metadata_json.to_h["recurring_event_id"].to_s.presence
+    return scope.where("metadata_json ->> 'recurring_event_id' = ?", google_series_id).to_a if google_series_id.present?
+
+    if event.uid.present? && event.remote_event_id.to_s.include?("::")
+      uid_matches = scope.where(uid: event.uid).to_a
+      return uid_matches if uid_matches.many?
+    end
+
+    [ event ]
   end
 
   def resolve_event_calendar(project:, selected_calendar_id:)

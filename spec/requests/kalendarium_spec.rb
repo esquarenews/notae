@@ -2459,12 +2459,55 @@ RSpec.describe "Kalendarium", type: :request do
     expect(edit_form.at_css("button[data-action='kalendarium-event-form#copyEvent']")&.text.to_s.strip).to eq("Copy")
     expect(edit_form.at_css("input[name='kalendarium_event[rrule]'][data-kalendarium-event-form-target='rruleInput']")).to be_present
     expect(edit_form.at_css("select[data-kalendarium-event-form-target='frequencySelect']")&.text).to include("Custom")
-    expect(response.body).to include("Delete recurring series")
-    expect(response.body).to include("Delete this recurring series? This removes all occurrences.")
+    expect(response.body).to include("Delete all recurring events")
+    expect(response.body).to include("Delete all events in this recurring series?")
 
     expect do
-      delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: { view: "day", date: "2026-03-01" }
+      delete kalendarium_event_path(workspace_slug: workspace.slug, id: event.id, delete_scope: "series"), params: { view: "day", date: "2026-03-01" }
     end.to change(KalendariumEvent, :count).by(-1)
+    expect(flash[:notice]).to eq("Recurring events deleted.")
+  end
+
+  it "can delete every imported occurrence in a provider recurring event series" do
+    user, workspace, calendar = build_stack(suffix: "provider-recurring-delete")
+    sign_in user
+
+    shared_metadata = { "recurring_event_id" => "remote-series-1" }
+    series_events = 3.times.map do |index|
+      KalendariumEvent.create!(
+        workspace: workspace,
+        kalendarium_calendar: calendar,
+        created_by: user,
+        updated_by: user,
+        title: "Imported recurring shift",
+        starts_at_utc: Time.zone.parse("2026-03-0#{index + 1} 09:00:00"),
+        ends_at_utc: Time.zone.parse("2026-03-0#{index + 1} 10:00:00"),
+        metadata_json: shared_metadata
+      )
+    end
+    other_event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Other imported shift",
+      starts_at_utc: Time.zone.parse("2026-03-10 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-10 10:00:00"),
+      metadata_json: { "recurring_event_id" => "remote-series-2" }
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Delete this event")
+    expect(response.body).to include("Delete all recurring events")
+
+    expect do
+      delete kalendarium_event_path(workspace_slug: workspace.slug, id: series_events.first.id, delete_scope: "series"), params: { view: "week", date: "2026-03-01" }
+    end.to change(KalendariumEvent, :count).by(-3)
+    expect(KalendariumEvent.where(id: series_events.map(&:id))).to be_empty
+    expect(KalendariumEvent.find_by(id: other_event.id)).to be_present
+    expect(flash[:notice]).to eq("Recurring events deleted.")
   end
 
   it "syncs provider-backed events to remote on create, update and delete" do
