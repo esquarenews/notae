@@ -2779,6 +2779,113 @@ RSpec.describe "Kalendarium", type: :request do
     expect(delete_sync_service).to have_received(:delete_remote!)
   end
 
+  it "updates an existing provider event to a different provider calendar without raising" do
+    user, workspace, = build_stack(suffix: "provider-event-calendar-move")
+    sign_in user
+    connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Google sync",
+      access_token: "token",
+      enabled: true,
+      status: "connected"
+    )
+    source_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "source",
+      name: "Source calendar",
+      color_hex: "#3B82F6",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      remote_id: "target",
+      name: "Target calendar",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      read_only: false,
+      enabled: true
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: source_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Move me",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00"),
+      source_kind: "provider",
+      remote_event_id: "source-event-1"
+    )
+    sync_service = instance_double(Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).with(event: event).and_return(sync_service)
+
+    patch kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: {
+      view: "day",
+      date: "2026-03-01",
+      kalendarium_event: {
+        kalendarium_calendar_id: target_calendar.id,
+        title: "Move me"
+      }
+    }
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01"))
+    expect(sync_service).to have_received(:upsert_remote!)
+    event.reload
+    expect(event.kalendarium_calendar_id).to eq(target_calendar.id)
+    expect(event.metadata_json["pending_provider_calendar_move"]).to eq(true)
+    expect(event.metadata_json["previous_calendar_id"]).to eq(source_calendar.id)
+    expect(event.metadata_json["previous_remote_event_id"]).to eq("source-event-1")
+  end
+
+  it "redirects instead of raising when an event calendar update fails during persistence" do
+    user, workspace, source_calendar = build_stack(suffix: "event-calendar-update-save-failure")
+    sign_in user
+    target_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Target calendar",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "local",
+      enabled: true
+    )
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: source_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Move with callback failure",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+    )
+    allow_any_instance_of(KalendariumEvent).to receive(:save).and_raise(RuntimeError, "persistence exploded")
+
+    patch kalendarium_event_path(workspace_slug: workspace.slug, id: event.id), params: {
+      view: "day",
+      date: "2026-03-01",
+      kalendarium_event: {
+        kalendarium_calendar_id: target_calendar.id,
+        title: "Move with callback failure"
+      }
+    }
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "day", date: "2026-03-01"))
+    expect(flash[:alert]).to eq("Event could not be updated: persistence exploded")
+  end
+
   it "allows event creation for legacy writable iCloud calendars that were previously marked read-only" do
     user, workspace, = build_stack(suffix: "legacy-icloud-writable")
     sign_in user

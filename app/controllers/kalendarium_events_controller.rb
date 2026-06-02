@@ -133,12 +133,17 @@ class KalendariumEventsController < ApplicationController
     end
     apply_linked_nota_action!(@event, event_params[:linked_page_action])
 
-    if @event.save
-      sync_warning = sync_event_to_provider(@event)
-      redirect_to kalendarium_redirect_path,
-                  flash: event_success_flash("Event updated.", sync_warning)
-    else
-      redirect_to kalendarium_redirect_path, alert: @event.errors.full_messages.to_sentence
+    begin
+      if @event.save
+        sync_warning = sync_event_to_provider(@event)
+        redirect_to kalendarium_redirect_path,
+                    flash: event_success_flash("Event updated.", sync_warning)
+      else
+        redirect_to kalendarium_redirect_path, alert: @event.errors.full_messages.to_sentence
+      end
+    rescue StandardError => error
+      Rails.logger.error("Kalendarium event update failed for event=#{@event.id}: #{error.class}: #{error.message}")
+      redirect_to kalendarium_redirect_path, alert: "Event could not be updated: #{error.message}"
     end
   end
 
