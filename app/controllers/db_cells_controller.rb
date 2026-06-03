@@ -149,19 +149,29 @@ class DbCellsController < ApplicationController
     row = db_cell.db_row
     load_table_row_render_context!(rows: [ row ])
 
-    [
+    streams = [
       turbo_stream.update(
         "database_topbar_edited_at",
         partial: "databases/topbar_edited_meta",
         locals: { database: reloaded_database }
-      ),
-      turbo_stream.replace(
+      )
+    ]
+
+    if turbo_inline_cell_update_replaces_row?(db_cell)
+      streams << turbo_stream.replace(
         "row_#{row.id}",
         partial: "databases/table_row",
         locals: table_row_locals(row: row)
-      ),
+      )
+    end
+
+    streams.concat([
       database_flash_stream("notice", "Cell updated.")
-    ]
+    ])
+  end
+
+  def turbo_inline_cell_update_replaces_row?(db_cell)
+    !db_cell.db_property&.text?
   end
 
   def current_database_view_for_response

@@ -1274,6 +1274,34 @@ RSpec.describe "Databases", type: :request do
     expect(database.reload.updated_at).to be > previous_database_updated_at
   end
 
+  it "updates text cells inline without replacing the active row during autosave" do
+    owner = User.create!(email: "database-inline-text-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Tables Inline Text", slug: "tables-inline-text")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Tasks Inline Text")
+    db_property = DbProperty.create!(workspace: workspace, database: database, name: "Notes", property_type: :text)
+    db_row = DbRow.create!(workspace: workspace, database: database, title: "Inline text row")
+    db_cell = DbCell.create!(workspace: workspace, db_row: db_row, db_property: db_property, value_text: "Started")
+    database.update_column(:updated_at, 2.days.ago)
+    previous_database_updated_at = database.reload.updated_at
+    sign_in owner
+
+    patch database_db_cell_path(workspace_slug: workspace.slug, database_id: database.id, id: db_cell.id),
+          params: { db_cell: { value_text: "Started writing a longer note" } },
+          as: :turbo_stream
+
+    expect(response).to have_http_status(:ok)
+    expect(response).not_to be_redirect
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('turbo-stream action="update" target="database_topbar_edited_at"')
+    expect(response.body).not_to include(%(turbo-stream action="replace" target="row_#{db_row.id}"))
+    expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
+    expect(response.body).to include("Cell updated.")
+    expect(db_cell.reload.value_text).to eq("Started writing a longer note")
+    expect(db_row.reload.data_json["Notes"]).to eq("Started writing a longer note")
+    expect(database.reload.updated_at).to be > previous_database_updated_at
+  end
+
   it "removes columns and dependent cells" do
     owner = User.create!(email: "database-remove-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Tables Remove", slug: "tables-remove")
