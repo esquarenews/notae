@@ -36,6 +36,14 @@ class KalendariumCalendar < ApplicationRecord
       )
   }
   scope :enabled, -> { where(enabled: true) }
+  scope :shown_in_kalendarium, -> {
+    left_outer_joins(:kalendarium_connection)
+      .enabled
+      .where(
+        "kalendarium_calendars.kalendarium_connection_id IS NULL OR kalendarium_connections.enabled = ?",
+        true
+      )
+  }
   scope :user_writable, -> { where(ICLOUD_WRITABLE_SQL) }
 
   def user_writable?

@@ -42,7 +42,7 @@ class KalendariumController < ApplicationController
     end
     project_calendar_ids = @project_id_by_calendar_id.keys
 
-    @all_calendars = policy_scope(KalendariumCalendar).visible_in_workspace(@workspace).order(:name).to_a
+    @all_calendars = policy_scope(KalendariumCalendar).visible_in_workspace(@workspace).shown_in_kalendarium.order(:name).to_a
     @project_calendars = @all_calendars.select { |calendar| visible_project_calendar_ids.include?(calendar.id) }
     @calendar_filter_calendars = @all_calendars.reject { |calendar| calendar.source_kind == "project" || project_calendar_ids.include?(calendar.id) }
     @selected_calendar_ids = resolve_selected_calendar_ids(@calendar_filter_calendars)
@@ -413,6 +413,7 @@ class KalendariumController < ApplicationController
 
     scope = policy_scope(KalendariumCalendar)
               .visible_in_workspace(@workspace)
+              .shown_in_kalendarium
               .where(source_kind: "provider", kalendarium_connection_id: connection_ids)
               .order(:name)
 

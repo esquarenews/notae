@@ -1579,6 +1579,85 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).not_to include("Secondary event")
   end
 
+  it "omits calendars disabled in settings or hidden by a disabled connection from the calendar filter and event scope" do
+    user, workspace, calendar = build_stack(suffix: "disabled-calendar-filter")
+    sign_in user
+
+    disabled_connection = KalendariumConnection.create!(
+      workspace: workspace,
+      owner: user,
+      created_by: user,
+      provider: "ics",
+      label: "Removed provider account",
+      ics_url: "https://example.com/removed.ics",
+      enabled: false,
+      status: "disconnected"
+    )
+    disabled_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Removed provider calendar",
+      color_hex: "#10B981",
+      time_zone: "UTC",
+      source_kind: "provider",
+      enabled: false
+    )
+    disabled_connection_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      kalendarium_connection: disabled_connection,
+      created_by: user,
+      name: "Calendar from removed account",
+      color_hex: "#F59E0B",
+      time_zone: "UTC",
+      source_kind: "provider",
+      enabled: true
+    )
+
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Visible event",
+      starts_at_utc: Time.zone.parse("2026-03-01 09:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 10:00:00")
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: disabled_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Hidden disabled calendar event",
+      starts_at_utc: Time.zone.parse("2026-03-01 11:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 12:00:00")
+    )
+    KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: disabled_connection_calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Hidden removed account event",
+      starts_at_utc: Time.zone.parse("2026-03-01 13:00:00"),
+      ends_at_utc: Time.zone.parse("2026-03-01 14:00:00")
+    )
+
+    get kalendarium_path(
+      workspace_slug: workspace.slug,
+      view: "day",
+      date: "2026-03-01",
+      calendar_filter_applied: "1",
+      calendar_ids: [ disabled_calendar.id.to_s, disabled_connection_calendar.id.to_s ]
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Calendars (0)")
+    expect(response.body).not_to include("Removed provider calendar")
+    expect(response.body).not_to include("Calendar from removed account")
+    expect(response.body).not_to include("Visible event")
+    expect(response.body).not_to include("Hidden disabled calendar event")
+    expect(response.body).not_to include("Hidden removed account event")
+  end
+
   it "self-heals stale calendar selections after calendars are recreated" do
     user, workspace, calendar = build_stack(suffix: "stale-calendar-selection")
     user.update!(time_zone: "UTC")
