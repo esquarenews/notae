@@ -7,6 +7,8 @@ class DatabaseShareLink < ApplicationRecord
   belongs_to :database
   belongs_to :created_by, class_name: "User"
 
+  enum :access_level, { read_only: 0, comment: 1, edit: 2 }, default: :read_only
+
   validates :token, presence: true, uniqueness: true
   validate :token_entropy_is_sufficient
 
@@ -36,6 +38,25 @@ class DatabaseShareLink < ApplicationRecord
 
   def active?
     !revoked? && !expired?
+  end
+
+  def access_level_label
+    self.class.access_level_label(access_level)
+  end
+
+  def self.access_level_options
+    access_levels.keys.map { |level| [ access_level_label(level), level ] }
+  end
+
+  def self.access_level_label(level)
+    case level.to_s
+    when "comment"
+      "Comment"
+    when "edit"
+      "Edit"
+    else
+      "Read-only"
+    end
   end
 
   private

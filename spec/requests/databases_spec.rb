@@ -2467,6 +2467,7 @@ RSpec.describe "Databases", type: :request do
     workspace = Workspace.create!(name: "Table shell tables", slug: "table-shell-tables")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     database = Database.create!(workspace: workspace, name: "New database")
+    share_link = DatabaseShareLink.create!(workspace: workspace, database: database, created_by: owner, access_level: "edit")
     sign_in owner
 
     get database_path(workspace_slug: workspace.slug, id: database.id)
@@ -2548,6 +2549,12 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include("Permissions")
     expect(response.body).to include("Public share links")
     expect(response.body).to include("Archived rows")
+    expect(response.body).to include('name="database_share_link[access_level]"')
+    expect(response.body).to include("Read-only")
+    expect(response.body).to include("Comment")
+    expect(response.body).to include("Edit")
+    expect(response.body).to include(%(data-copy-text-value="#{public_database_share_url(token: share_link.token)}"))
+    expect(response.body).to include("aria-label=\"Copy link\"")
 
     get panel_database_path(workspace_slug: workspace.slug, id: database.id, panel: "view_settings")
     expect(response).to have_http_status(:ok)

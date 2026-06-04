@@ -13,9 +13,17 @@
     <% end %>
   </header>
 
+  <% public_share_notice_message =
+       if @share_link.edit?
+         "This link was created with edit access. This public preview is view-only; open Notae to change rows, properties, or views."
+       elsif @share_link.comment?
+         "This link was created with comment access. This public preview is view-only; open Notae to add comments."
+       else
+         "This shared grid is view-only here. Open Notae with edit access to change rows, properties, or views."
+       end %>
   <%= render "shared/read_only_notice",
-             label: "Read-only share",
-             message: "This shared grid is view-only here. Open Notae with edit access to change rows, properties, or views." %>
+             label: "#{@share_link.access_level_label} share",
+             message: public_share_notice_message %>
 
   <section class="overflow-x-auto rounded-lg border border-stone-200 bg-white">
     <table class="min-w-full border-collapse text-sm">

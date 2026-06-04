@@ -13,7 +13,8 @@ class DatabaseShareLinksController < ApplicationController
       log_public_share_event!(
         kind: "public_grid_share_link_created",
         share_link_id: @database_share_link.id,
-        expires_at: @database_share_link.expires_at
+        expires_at: @database_share_link.expires_at,
+        access_level: @database_share_link.access_level
       )
       redirect_to database_redirect_path, notice: "Public grid share link created."
     else
@@ -46,10 +47,10 @@ class DatabaseShareLinksController < ApplicationController
   end
 
   def database_share_link_params
-    params.fetch(:database_share_link, {}).permit(:expires_at)
+    params.fetch(:database_share_link, {}).permit(:expires_at, :access_level)
   end
 
-  def log_public_share_event!(kind:, share_link_id:, expires_at: nil)
+  def log_public_share_event!(kind:, share_link_id:, expires_at: nil, access_level: nil)
     AuditEvent.create!(
       workspace: @workspace,
       actor: current_user,
@@ -58,8 +59,9 @@ class DatabaseShareLinksController < ApplicationController
         kind: kind,
         database_id: @database.id,
         share_link_id: share_link_id,
-        expires_at: expires_at
-      },
+        expires_at: expires_at,
+        access_level: access_level
+      }.compact,
       auditable: @database
     )
   end

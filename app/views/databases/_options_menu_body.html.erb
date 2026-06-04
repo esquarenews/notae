@@ -64,6 +64,11 @@
         <%= form_with model: DatabaseShareLink.new,
                       url: database_share_links_path(share_link_route_params.merge(options_menu: "open")),
                       class: "notae-options-form-inline" do |form| %>
+          <%= form.select :access_level,
+                          DatabaseShareLink.access_level_options,
+                          {},
+                          class: "notae-options-input",
+                          aria: { label: "Link access" } %>
           <%= form.datetime_local_field :expires_at, class: "notae-options-input" %>
           <%= form.submit "Create link", class: "notae-chip-button" %>
         <% end %>
@@ -71,15 +76,28 @@
         <% if active_share_links.any? %>
           <ul class="notae-options-list">
             <% active_share_links.each do |share_link| %>
+              <% share_url = public_database_share_url(token: share_link.token) %>
               <li class="notae-options-list-item">
-                <%= link_to public_database_share_url(token: share_link.token),
-                            public_database_share_path(token: share_link.token),
+                <%= link_to share_url,
+                            share_url,
                             target: "_blank",
                             rel: "noopener" %>
-                <%= button_to "Revoke",
-                              database_share_link_path(share_link_route_params.merge(id: share_link.id, options_menu: "open")),
-                              method: :delete,
-                              class: "notae-chip-button" %>
+                <span class="notae-options-muted"><%= share_link.access_level_label %></span>
+                <div class="notae-options-inline-actions">
+                  <button type="button"
+                          class="notae-inline-icon-button notae-options-link-copy"
+                          title="Copy link"
+                          aria-label="Copy link"
+                          data-action="click->copy-text#copy"
+                          data-copy-text-value="<%= share_url %>">
+                    <span aria-hidden="true">⧉</span>
+                    <span class="notae-visually-hidden" data-copy-text-feedback>Copy link</span>
+                  </button>
+                  <%= button_to "Revoke",
+                                database_share_link_path(share_link_route_params.merge(id: share_link.id, options_menu: "open")),
+                                method: :delete,
+                                class: "notae-chip-button" %>
+                </div>
               </li>
             <% end %>
           </ul>

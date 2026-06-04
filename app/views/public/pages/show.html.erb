@@ -7,9 +7,17 @@
     <p class="text-sm text-stone-500">Shared from <%= @workspace.name %></p>
   </header>
 
+  <% public_share_notice_message =
+       if @share_link.edit?
+         "This link was created with edit access. This public preview is view-only; open Notae to change content or add comments."
+       elsif @share_link.comment?
+         "This link was created with comment access. This public preview is view-only; open Notae to add comments."
+       else
+         "This shared page is view-only here. Open Notae with edit access to change content or add comments."
+       end %>
   <%= render "shared/read_only_notice",
-             label: "Read-only share",
-             message: "This shared page is view-only here. Open Notae with edit access to change content or add comments." %>
+             label: "#{@share_link.access_level_label} share",
+             message: public_share_notice_message %>
 
   <section class="space-y-3">
     <%= render partial: "public/pages/block_tree",

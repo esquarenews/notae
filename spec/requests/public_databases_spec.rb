@@ -43,4 +43,18 @@ RSpec.describe "Public databases", type: :request do
     get public_database_share_path(token: revoked.token)
     expect(response).to have_http_status(:not_found)
   end
+
+  it "labels public grid shares with the selected access level" do
+    owner = User.create!(email: "public-grid-edit-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Public edit grid workspace", slug: "public-edit-grid-workspace")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Edit shared grid")
+    share_link = DatabaseShareLink.create!(workspace: workspace, database: database, created_by: owner, access_level: "edit")
+
+    get public_database_share_path(token: share_link.token)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Edit share")
+    expect(response.body).to include("This link was created with edit access.")
+  end
 end

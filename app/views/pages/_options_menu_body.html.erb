@@ -56,6 +56,11 @@
         <%= form_with model: ShareLink.new,
                       url: page_share_links_path(workspace_slug: workspace.slug, page_id: page.id, options_menu: "open"),
                       class: "notae-options-form-inline" do |form| %>
+          <%= form.select :access_level,
+                          ShareLink.access_level_options,
+                          {},
+                          class: "notae-options-input",
+                          aria: { label: "Link access" } %>
           <%= form.datetime_local_field :expires_at, class: "notae-options-input" %>
           <%= form.submit "Create link", class: "notae-chip-button" %>
         <% end %>
@@ -69,6 +74,7 @@
                             share_url,
                             target: "_blank",
                             rel: "noopener" %>
+                <span class="notae-options-muted"><%= share_link.access_level_label %></span>
                 <div class="notae-options-inline-actions">
                   <button type="button"
                           class="notae-inline-icon-button notae-options-link-copy"

@@ -9,6 +9,8 @@ class ShareLink < ApplicationRecord
 
   has_many :share_link_views, dependent: :destroy
 
+  enum :access_level, { read_only: 0, comment: 1, edit: 2 }, default: :read_only
+
   validates :token, presence: true, uniqueness: true
   validate :token_entropy_is_sufficient
 
@@ -38,6 +40,25 @@ class ShareLink < ApplicationRecord
 
   def active?
     !revoked? && !expired?
+  end
+
+  def access_level_label
+    self.class.access_level_label(access_level)
+  end
+
+  def self.access_level_options
+    access_levels.keys.map { |level| [ access_level_label(level), level ] }
+  end
+
+  def self.access_level_label(level)
+    case level.to_s
+    when "comment"
+      "Comment"
+    when "edit"
+      "Edit"
+    else
+      "Read-only"
+    end
   end
 
   private

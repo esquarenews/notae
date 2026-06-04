@@ -1445,6 +1445,10 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).to include("Permissions")
     expect(response.body).to include("Public share links")
     expect(response.body).to include("Templates")
+    expect(response.body).to include('name="share_link[access_level]"')
+    expect(response.body).to include("Read-only")
+    expect(response.body).to include("Comment")
+    expect(response.body).to include("Edit")
     expect(response.body).to include(%(data-copy-text-value="#{public_share_url(token: share_link.token)}"))
     expect(response.body).to include("aria-label=\"Copy link\"")
   end

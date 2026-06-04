@@ -133,4 +133,18 @@ RSpec.describe "Public pages", type: :request do
     get public_share_path(token: revoked.token)
     expect(response).to have_http_status(:not_found)
   end
+
+  it "labels public page shares with the selected access level" do
+    owner = User.create!(email: "public-page-comment-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Public comment workspace", slug: "public-comment-workspace")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Comment shared document")
+    share_link = ShareLink.create!(workspace: workspace, page: page, created_by: owner, access_level: "comment")
+
+    get public_share_path(token: share_link.token)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Comment share")
+    expect(response.body).to include("This link was created with comment access.")
+  end
 end
