@@ -82,6 +82,27 @@ RSpec.describe "Authentication", type: :request do
     expect(user.confirmation_token).to be_present
   end
 
+  it "keeps new signups on the sign-in confirmation screen after sending confirmation email" do
+    expect do
+      post user_registration_path, params: {
+        user: {
+          email: "new-confirmation-screen-user@example.com",
+          password: "password123",
+          password_confirmation: "password123"
+        }
+      }
+    end.to change(User, :count).by(1)
+      .and have_enqueued_mail(Devise::Mailer, :confirmation_instructions)
+
+    expect(response).to redirect_to(new_user_session_path(confirmation_sent: "1"))
+
+    follow_redirect!
+    expect(response.body).to include("Check your email")
+    expect(response.body).to include("A confirmation link has been sent to your email address.")
+    expect(response.body).not_to include('name="user[email]"')
+    expect(response.body).not_to include('name="user[password]"')
+  end
+
   it "captures the requested trial plan without failing registration" do
     expect do
       post user_registration_path(plan: User::SAAS_PLAN_STARTER), params: {
@@ -95,7 +116,7 @@ RSpec.describe "Authentication", type: :request do
     end.to change(User, :count).by(1)
       .and have_enqueued_mail(Devise::Mailer, :confirmation_instructions)
 
-    expect(response).to redirect_to(root_path)
+    expect(response).to redirect_to(new_user_session_path(confirmation_sent: "1"))
     user = User.find_by!(email: "new-trial-user@example.com")
     expect(user).not_to be_confirmed
     expect(user.saas_plan_key).to eq(User::SAAS_PLAN_FREE)
@@ -116,7 +137,7 @@ RSpec.describe "Authentication", type: :request do
       }
     end.to change(User, :count).by(1)
 
-    expect(response).to redirect_to(root_path)
+    expect(response).to redirect_to(new_user_session_path(confirmation_sent: "1"))
     expect(delivery).to have_received(:deliver_later)
     expect(delivery).not_to have_received(:deliver_now)
   end

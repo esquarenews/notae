@@ -85,6 +85,35 @@ RSpec.describe User, type: :model do
     expect(user.admin_free_tier_ends_at).to be_within(5.seconds).of(1.week.from_now)
   end
 
+  it "logs background Devise notification delivery failures" do
+    delivery = instance_double(ActionMailer::MessageDelivery)
+    allow(delivery).to receive(:deliver_now).and_raise(Net::SMTPFatalError, "SMTP unavailable")
+    allow(Rails.logger).to receive(:error)
+
+    thread = described_class.deliver_devise_notification_in_background(delivery, :confirmation_instructions)
+    thread.join
+
+    expect(Rails.logger).to have_received(:error).with(
+      "[DeviseMailDelivery] notification=confirmation_instructions error_class=Net::SMTPFatalError error_message=SMTP unavailable"
+    )
+  end
+
+  it "uses in-process background delivery for Devise notifications when configured" do
+    user = described_class.new(email: "in-process-confirmation-user@example.com", password: "password123")
+    delivery = instance_double(ActionMailer::MessageDelivery)
+    mailer = class_double(Devise::Mailer)
+
+    allow(mailer).to receive(:confirmation_instructions).with(user, "token", {}).and_return(delivery)
+    allow(user).to receive(:devise_mailer).and_return(mailer)
+    allow(described_class).to receive(:deliver_devise_notifications_in_process?).and_return(true)
+    allow(described_class).to receive(:deliver_devise_notification_in_background)
+
+    user.send_devise_notification(:confirmation_instructions, "token", {})
+
+    expect(described_class).to have_received(:deliver_devise_notification_in_background)
+      .with(delivery, :confirmation_instructions)
+  end
+
   it "requires complete SMTP settings when any SMTP field is provided" do
     user = described_class.new(email: "smtp-user@example.com", password: "password123", smtp_address: "smtp.example.com")
 

@@ -15,6 +15,10 @@ module Users
       resource.require_self_service_registration_confirmation! if action_name == "create"
     end
 
+    def after_inactive_sign_up_path_for(_resource)
+      new_user_session_path(confirmation_sent: "1")
+    end
+
     def reject_registration_honeypot
       return if params.dig(resource_name, :website).blank?
 

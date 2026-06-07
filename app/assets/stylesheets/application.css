@@ -6763,6 +6763,27 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   gap: 0.58rem;
 }
 
+.notae-auth-confirmation-panel {
+  display: grid;
+  gap: 0.32rem;
+  padding: 0.82rem;
+  border: 1px solid color-mix(in srgb, var(--notae-accent) 24%, var(--notae-border));
+  border-radius: 0.72rem;
+  background: color-mix(in srgb, var(--notae-accent-soft) 62%, var(--notae-surface) 38%);
+  color: var(--notae-text);
+  font-size: 0.8rem;
+  line-height: 1.48;
+}
+
+.notae-auth-confirmation-panel strong {
+  font-size: 0.88rem;
+  color: var(--notae-text-strong);
+}
+
+.notae-auth-confirmation-panel span {
+  color: var(--notae-muted);
+}
+
 .notae-onboarding-progress {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

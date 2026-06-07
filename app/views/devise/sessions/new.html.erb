@@ -10,28 +10,35 @@
   <section class="notae-auth-card">
     <h2>Sign in</h2>
 
-    <%= form_for(resource,
-                 as: resource_name,
-                 url: session_path(resource_name),
-                 html: { class: "notae-auth-form", data: { turbo: false } }) do |form| %>
-      <div class="notae-auth-field">
-        <%= form.label :email %>
-        <%= form.email_field :email, autofocus: true, autocomplete: "email", class: "notae-auth-input" %>
+    <% if params[:confirmation_sent].present? %>
+      <div class="notae-auth-confirmation-panel" role="status">
+        <strong>Check your email</strong>
+        <span>A confirmation link has been sent to your email address. Open that link to activate your account, then return here to sign in.</span>
       </div>
+    <% else %>
+      <%= form_for(resource,
+                   as: resource_name,
+                   url: session_path(resource_name),
+                   html: { class: "notae-auth-form", data: { turbo: false } }) do |form| %>
+        <div class="notae-auth-field">
+          <%= form.label :email %>
+          <%= form.email_field :email, autofocus: true, autocomplete: "email", class: "notae-auth-input" %>
+        </div>
 
-      <div class="notae-auth-field">
-        <%= form.label :password %>
-        <%= form.password_field :password, autocomplete: "current-password", class: "notae-auth-input" %>
-      </div>
+        <div class="notae-auth-field">
+          <%= form.label :password %>
+          <%= form.password_field :password, autocomplete: "current-password", class: "notae-auth-input" %>
+        </div>
 
-      <% if devise_mapping.rememberable? %>
-        <label class="notae-auth-remember">
-          <%= form.check_box :remember_me, checked: form.object.remember_me != false %>
-          <span>Remember me</span>
-        </label>
+        <% if devise_mapping.rememberable? %>
+          <label class="notae-auth-remember">
+            <%= form.check_box :remember_me, checked: form.object.remember_me != false %>
+            <span>Remember me</span>
+          </label>
+        <% end %>
+
+        <%= form.submit "Sign in", class: "notae-chip-button notae-auth-submit" %>
       <% end %>
-
-      <%= form.submit "Sign in", class: "notae-chip-button notae-auth-submit" %>
     <% end %>
 
     <div class="notae-auth-links">

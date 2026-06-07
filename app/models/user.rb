@@ -332,7 +332,31 @@ class User < ApplicationRecord
   end
 
   def send_devise_notification(notification, *args)
-    devise_mailer.send(notification, self, *args).deliver_later
+    message_delivery = devise_mailer.send(notification, self, *args)
+
+    if self.class.deliver_devise_notifications_in_process?
+      self.class.deliver_devise_notification_in_background(message_delivery, notification)
+    else
+      message_delivery.deliver_later
+    end
+  end
+
+  def self.deliver_devise_notifications_in_process?
+    return false if Rails.env.test?
+
+    ActiveModel::Type::Boolean.new.cast(ENV.fetch("NOTAE_DEVISE_MAIL_IN_PROCESS", "true"))
+  end
+
+  def self.deliver_devise_notification_in_background(message_delivery, notification)
+    Thread.new do
+      Rails.application.executor.wrap do
+        message_delivery.deliver_now
+      rescue StandardError => error
+        Rails.logger.error(
+          "[DeviseMailDelivery] notification=#{notification} error_class=#{error.class} error_message=#{error.message}"
+        )
+      end
+    end
   end
 
   def start_week_preference

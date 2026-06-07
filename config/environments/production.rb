@@ -76,7 +76,9 @@ Rails.application.configure do
     user_name: ENV["SMTP_USERNAME"].presence,
     password: ENV["SMTP_PASSWORD"].presence,
     authentication: ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym,
-    enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", default_starttls))
+    enable_starttls_auto: ActiveModel::Type::Boolean.new.cast(ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", default_starttls)),
+    open_timeout: ENV.fetch("SMTP_OPEN_TIMEOUT", "5").to_i,
+    read_timeout: ENV.fetch("SMTP_READ_TIMEOUT", "10").to_i
   }.compact
   config.action_mailer.default_url_options = {
     host: ENV["APP_HOST"] || "localhost",

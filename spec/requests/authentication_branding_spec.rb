@@ -23,6 +23,17 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include('data-turbo="false"')
   end
 
+  it "renders the confirmation-sent sign in page without login fields" do
+    get new_user_session_path(confirmation_sent: "1")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("notae-auth-confirmation-panel")
+    expect(response.body).to include("Check your email")
+    expect(response.body).to include("A confirmation link has been sent to your email address.")
+    expect(response.body).not_to include('name="user[email]"')
+    expect(response.body).not_to include('name="user[password]"')
+  end
+
   it "renders auth flow flash messages in the dedicated auth flash host" do
     User.create!(email: "auth-flash-host@example.com", password: "password123")
 
