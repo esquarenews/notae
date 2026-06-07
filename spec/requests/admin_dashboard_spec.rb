@@ -177,6 +177,9 @@ RSpec.describe "Admin dashboard", type: :request do
     document = Nokogiri::HTML(response.body)
     workspace_card = document.css(".notae-ai-analytics-card").find { |card| card.text.include?("Workspaces") }
     expect(workspace_card.text).to include("2 / 50")
+    expect(response.body).to include("Daily AI budget USD")
+    expect(response.body).to include("Semantic search requests / min")
+    expect(response.body).to include("Answer generation requests / min")
     expect(response.body).not_to include("Workspace memberships")
     expect(response.body).not_to include("Hidden Workspace One")
     expect(response.body).not_to include("Hidden Workspace Two")

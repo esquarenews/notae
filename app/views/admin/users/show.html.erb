@@ -94,9 +94,18 @@
             <p class="notae-pref-description">These account-level controls apply to AI search budgets and rate limits.</p>
           </div>
           <div class="notae-pref-controls">
-            <%= form.number_field :ai_search_daily_budget_usd, class: "notae-auth-input", min: 0, step: 0.01, placeholder: "Daily USD budget" %>
-            <%= form.number_field :ai_search_semantic_rate_limit_per_minute, class: "notae-auth-input", min: 1, step: 1, placeholder: "Semantic req/min" %>
-            <%= form.number_field :ai_search_answer_rate_limit_per_minute, class: "notae-auth-input", min: 1, step: 1, placeholder: "Answer req/min" %>
+            <label class="notae-admin-limit-field">
+              <span>Daily AI budget USD</span>
+              <%= form.number_field :ai_search_daily_budget_usd, class: "notae-auth-input", min: 0, step: 0.01, placeholder: "Daily USD budget" %>
+            </label>
+            <label class="notae-admin-limit-field">
+              <span>Semantic search requests / min</span>
+              <%= form.number_field :ai_search_semantic_rate_limit_per_minute, class: "notae-auth-input", min: 1, step: 1, placeholder: "Semantic req/min" %>
+            </label>
+            <label class="notae-admin-limit-field">
+              <span>Answer generation requests / min</span>
+              <%= form.number_field :ai_search_answer_rate_limit_per_minute, class: "notae-auth-input", min: 1, step: 1, placeholder: "Answer req/min" %>
+            </label>
           </div>
         </div>
 
