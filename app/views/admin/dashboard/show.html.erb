@@ -1,12 +1,13 @@
 <% content_for :title, "SaaS Admin" %>
 <% content_for :topbar_page_icon, "🛡️" %>
 <% content_for :topbar_privacy, "Platform" %>
+<% content_for :content_class, "notae-admin-content" %>
 <% content_for :topbar_actions do %>
   <%= link_to "Workspaces", admin_workspaces_path, class: "notae-chip-button" %>
   <%= link_to "Users", admin_users_path, class: "notae-chip-button notae-chip-button-subtle" %>
 <% end %>
 
-<section class="notae-settings-shell">
+<section class="notae-settings-shell notae-admin-shell">
   <div class="notae-settings-content">
     <section class="notae-settings-section">
       <h2>SaaS admin dashboard</h2>

@@ -1,12 +1,13 @@
 <% content_for :title, @workspace.name %>
 <% content_for :topbar_page_icon, "🏢" %>
 <% content_for :topbar_privacy, "Platform" %>
+<% content_for :content_class, "notae-admin-content" %>
 <% content_for :topbar_actions do %>
   <%= link_to "All workspaces", admin_workspaces_path, class: "notae-chip-button" %>
   <%= link_to "Open app", workspace_path(@workspace.slug), class: "notae-chip-button notae-chip-button-subtle" unless @workspace.suspended? %>
 <% end %>
 
-<section class="notae-settings-shell">
+<section class="notae-settings-shell notae-admin-shell">
   <div class="notae-settings-content">
     <section class="notae-settings-section">
       <h2><%= @workspace.name %></h2>

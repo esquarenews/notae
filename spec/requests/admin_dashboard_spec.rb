@@ -28,6 +28,9 @@ RSpec.describe "Admin dashboard", type: :request do
     get admin_root_path
 
     expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css("main.notae-content.notae-admin-content")).to be_present
+    expect(document.at_css(".notae-settings-shell.notae-admin-shell > .notae-settings-content")).to be_present
     expect(response.body).to include("SaaS admin dashboard")
     expect(response.body).to include("Stripe")
     expect(response.body).to include("/webhooks/stripe")
