@@ -58,6 +58,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(document.at_css(".notae-shell.notae-shell-admin")).to be_present
     expect(document.at_css("main.notae-content.notae-admin-content")).to be_present
     expect(document.at_css(".notae-admin-dashboard-shell .notae-admin-table")).to be_present
+    expect(document.at_css(".notae-admin-user-tier-row.notae-admin-user-tier-team")).to be_present
     expect(response.body).to include("SaaS admin dashboard")
     expect(response.body).to include("Stripe")
     expect(response.body).to include("Registered users")
@@ -159,6 +160,26 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(user.ai_search_semantic_rate_limit_per_minute).to eq(30)
     expect(user.ai_search_answer_rate_limit_per_minute).to eq(15)
     expect(AdminAuditEvent.last.action).to eq("user_limits_updated")
+  end
+
+  it "shows user workspace usage as a count without listing memberships on the user detail page" do
+    user = User.create!(email: "workspace-summary-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
+    first_workspace = Workspace.create!(name: "Hidden Workspace One", slug: "hidden-workspace-one")
+    second_workspace = Workspace.create!(name: "Hidden Workspace Two", slug: "hidden-workspace-two")
+    Membership.create!(workspace: first_workspace, user: user, role: :owner)
+    Membership.create!(workspace: second_workspace, user: user, role: :member)
+    admin = User.create!(email: "workspace-summary-admin@example.com", password: "password123", super_admin: true)
+    sign_in admin
+
+    get admin_user_path(user)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    workspace_card = document.css(".notae-ai-analytics-card").find { |card| card.text.include?("Workspaces") }
+    expect(workspace_card.text).to include("2 / 50")
+    expect(response.body).not_to include("Workspace memberships")
+    expect(response.body).not_to include("Hidden Workspace One")
+    expect(response.body).not_to include("Hidden Workspace Two")
   end
 
   it "lets a platform admin grant the free tier without Stripe references" do

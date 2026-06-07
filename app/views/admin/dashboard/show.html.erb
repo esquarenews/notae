@@ -65,7 +65,7 @@
           <% @user_admin_rows.each do |row| %>
             <% user = row.fetch(:user) %>
             <% summary = row.fetch(:summary) %>
-            <tr>
+            <tr class="notae-admin-user-tier-row notae-admin-user-tier-<%= user.saas_plan_key %>">
               <td>
                 <strong><%= link_to user.display_name, admin_user_path(user) %></strong>
                 <span><%= user.email %><%= " · platform admin" if user.platform_admin? %></span>
