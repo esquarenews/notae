@@ -27,15 +27,58 @@
 
         <article class="notae-ai-analytics-card">
           <p class="notae-pref-label">Billing provider</p>
-          <p class="notae-utility-title">Fat Zebra</p>
+          <p class="notae-utility-title">Stripe</p>
           <p class="notae-pref-description"><%= @billing_provider_ready ? "Credentials configured." : "Credentials not configured yet." %></p>
         </article>
 
         <article class="notae-ai-analytics-card">
           <p class="notae-pref-label">Webhook endpoint</p>
-          <p class="notae-utility-title"><%= @fat_zebra_webhook_path %></p>
-          <p class="notae-pref-description"><%= @fat_zebra_webhook_auth_ready ? "Webhook token configured." : "Set FAT_ZEBRA_WEBHOOK_SECRET before registering in production." %></p>
+          <p class="notae-utility-title"><%= @stripe_webhook_path %></p>
+          <p class="notae-pref-description"><%= @stripe_webhook_auth_ready ? "Webhook secret configured." : "Set STRIPE_WEBHOOK_SECRET before registering in production." %></p>
         </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">MRR</p>
+          <p class="notae-utility-title">$<%= number_with_precision(@mrr_aud_cents / 100.0, precision: 0) %></p>
+          <p class="notae-pref-description"><%= number_with_delimiter(@trial_count) %> trials, <%= number_with_delimiter(@past_due_count) %> past due, <%= number_with_delimiter(@canceled_count) %> cancelled.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">AI cost risk</p>
+          <p class="notae-utility-title">$<%= number_with_precision(@ai_cost_this_month_usd, precision: 2) %></p>
+          <p class="notae-pref-description">Estimated AI spend this month. <%= number_with_delimiter(@failed_stripe_webhook_count) %> failed Stripe webhooks.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Plan distribution</h2>
+      <div class="notae-ai-analytics-grid">
+        <% WorkspaceSubscription::PLAN_KEYS.each do |plan_key| %>
+          <article class="notae-ai-analytics-card">
+            <p class="notae-pref-label"><%= Billing::PlanCatalog.name_for(plan_key) %></p>
+            <p class="notae-utility-title"><%= number_with_delimiter(@plan_counts.fetch(plan_key, 0)) %></p>
+            <p class="notae-pref-description"><%= Billing::PlanCatalog.monthly_price_label_for(plan_key) %></p>
+          </article>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>High AI cost workspaces</h2>
+      <div class="notae-general-backup-list">
+        <% if @high_ai_cost_workspaces.any? %>
+          <% @high_ai_cost_workspaces.each do |workspace| %>
+            <article class="notae-general-backup-item">
+              <div class="notae-general-backup-item-copy">
+                <p class="notae-general-backup-item-title"><%= link_to workspace.name, admin_workspace_path(workspace) %></p>
+                <p class="notae-general-backup-item-meta"><%= workspace.slug %> · $<%= number_with_precision(workspace.monthly_ai_cost_usd.to_f, precision: 2) %> estimated AI cost this month</p>
+              </div>
+            </article>
+          <% end %>
+        <% else %>
+          <p class="notae-page-subtle">No AI usage logged this month.</p>
+        <% end %>
       </div>
     </section>
 

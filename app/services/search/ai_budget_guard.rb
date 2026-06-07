@@ -12,6 +12,7 @@ module Search
     end
 
     def within_daily_budget?
+      return false unless TenantLimits::Enforcer.allowed?(workspace: workspace, feature: :ai).allowed?
       return true if daily_budget_usd <= 0
 
       spent_today < daily_budget_usd

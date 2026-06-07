@@ -26,16 +26,19 @@ RSpec.describe TenantLimits::Snapshot do
     expect(snapshot[:usage]).to include(
       members: 2,
       ai_requests_this_month: 1,
+      ai_cost_usd_this_month: 0.01,
       exports_this_month: 1
     )
     expect(snapshot[:limits]).to include(
       members: 3,
-      ai_requests_per_month: 1_000,
-      exports_per_month: 100
+      ai_requests_per_month: 300,
+      ai_monthly_budget_usd: 2.0,
+      exports_per_month: 25
     )
     expect(snapshot[:exceeded]).to include(
       members: false,
       ai_requests_per_month: false,
+      ai_monthly_budget_usd: false,
       exports_per_month: false
     )
   end

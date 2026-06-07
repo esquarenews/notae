@@ -601,6 +601,7 @@ class DatabasesController < ApplicationController
 
   def export_csv
     authorize @database, :show?
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :exports)
 
     rows = timesheet_export_rows
     send_data Databases::CsvExportService.call(database: @database, rows: rows),
@@ -610,6 +611,7 @@ class DatabasesController < ApplicationController
 
   def export_pdf
     authorize @database, :show?
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :exports)
 
     rows = timesheet_export_rows
     range = Databases::TimesheetTemplateService.date_range_from_params(params)
@@ -621,6 +623,7 @@ class DatabasesController < ApplicationController
 
   def export_gantt_pdf
     authorize @database, :show?
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :exports)
 
     prepare_gantt_export_context!
     send_data Databases::GanttPdfExportService.call(database: @database, gantt_data: @gantt_split).pdf,
@@ -631,6 +634,7 @@ class DatabasesController < ApplicationController
 
   def export_graph_pdf
     authorize @database, :show?
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :exports)
 
     prepare_graph_export_context!
     send_data Databases::GraphPdfExportService.call(database: @database, graph_data: @graph_split).pdf,

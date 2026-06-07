@@ -29,8 +29,10 @@ RSpec.describe "Admin dashboard", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("SaaS admin dashboard")
-    expect(response.body).to include("Fat Zebra")
-    expect(response.body).to include("/webhooks/fat_zebra")
+    expect(response.body).to include("Stripe")
+    expect(response.body).to include("/webhooks/stripe")
+    expect(response.body).to include("MRR")
+    expect(response.body).to include("AI cost risk")
     expect(response.body).to include("Admin Visible")
   end
 
@@ -57,9 +59,9 @@ RSpec.describe "Admin dashboard", type: :request do
               workspace_subscription: {
                 plan_key: WorkspaceSubscription::PLAN_TEAM,
                 status: WorkspaceSubscription::STATUS_ACTIVE,
-                billing_provider: WorkspaceSubscription::PROVIDER_FAT_ZEBRA,
+                billing_provider: WorkspaceSubscription::PROVIDER_STRIPE,
                 provider_customer_id: "cus_123",
-                provider_subscription_id: "plan_456"
+                provider_subscription_id: "sub_456"
               }
             }
     end.to change(AdminAuditEvent, :count).by(1)
@@ -69,7 +71,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(subscription.plan_key).to eq(WorkspaceSubscription::PLAN_TEAM)
     expect(subscription.status).to eq(WorkspaceSubscription::STATUS_ACTIVE)
     expect(subscription.provider_customer_id).to eq("cus_123")
-    expect(subscription.provider_subscription_id).to eq("plan_456")
+    expect(subscription.provider_subscription_id).to eq("sub_456")
     expect(AdminAuditEvent.last.action).to eq("subscription_updated")
   end
 

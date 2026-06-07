@@ -6,6 +6,7 @@ class PageExportsController < ApplicationController
 
   def markdown
     authorize @page, :show?
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :exports)
 
     result = Pages::MarkdownExportService.call(page: @page)
     send_data result.markdown,
@@ -16,6 +17,7 @@ class PageExportsController < ApplicationController
 
   def pdf
     authorize @page, :show?
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :exports)
 
     result = Pages::PdfExportService.call(page: @page)
     send_data result.pdf,

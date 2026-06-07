@@ -5,9 +5,11 @@ class KalendariumConnectionsController < ApplicationController
   GOOGLE_STATE_VERIFIER_KEY = "kalendarium_google_oauth_state".freeze
 
   def create
+    authorize @workspace, :show?
     connections = if source_connection_id.present?
       create_connections_from_source!
     else
+      TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :integrations)
       create_connections_from_form!
     end
 
@@ -23,6 +25,8 @@ class KalendariumConnectionsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
   rescue ActiveRecord::RecordNotFound => error
+    redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: error.message
+  rescue TenantLimits::Enforcer::LimitExceeded => error
     redirect_to workspace_kalendarium_settings_path(workspace_slug: @workspace.slug), alert: error.message
   end
 

@@ -57,6 +57,7 @@ class BlocksController < ApplicationController
 
   def attach
     authorize @block, :attach?
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :storage)
     file = params.dig(:block, :file)
     if file.present?
       Notae::UploadPolicy.validate_block_upload!(file, block_type: @block.block_type)
@@ -86,6 +87,8 @@ class BlocksController < ApplicationController
       render_attach_error("Please choose a file.")
     end
   rescue Notae::UploadPolicy::InvalidUpload => error
+    render_attach_error(error.message)
+  rescue TenantLimits::Enforcer::LimitExceeded => error
     render_attach_error(error.message)
   end
 

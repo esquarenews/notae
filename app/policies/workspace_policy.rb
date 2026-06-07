@@ -4,7 +4,11 @@ class WorkspacePolicy < ApplicationPolicy
   end
 
   def show?
-    membership.present? && !record.archived? && !record.suspended?
+    membership.present? && !record.archived? && !record.suspended? && subscription_accessible?
+  end
+
+  def manage_billing?
+    membership&.admin_or_owner? && !record.archived? && !record.suspended?
   end
 
   def create?
@@ -12,15 +16,15 @@ class WorkspacePolicy < ApplicationPolicy
   end
 
   def update?
-    !record.archived? && !record.suspended? && (membership&.admin? || membership&.owner?)
+    !record.archived? && !record.suspended? && subscription_accessible? && (membership&.admin? || membership&.owner?)
   end
 
   def destroy?
-    !record.archived? && !record.suspended? && membership&.owner?
+    !record.archived? && !record.suspended? && subscription_accessible? && membership&.owner?
   end
 
   def join_via_link?
-    user.present? && !record.archived? && record.join_link_enabled?
+    user.present? && !record.archived? && subscription_accessible? && record.join_link_enabled?
   end
 
   class Scope < Scope
@@ -37,5 +41,10 @@ class WorkspacePolicy < ApplicationPolicy
     return nil unless user
 
     @membership ||= membership_for_workspace(record.id)
+  end
+
+  def subscription_accessible?
+    subscription = record.workspace_subscription
+    subscription.blank? || subscription.workspace_accessible?
   end
 end

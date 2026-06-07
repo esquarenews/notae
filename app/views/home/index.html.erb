@@ -33,17 +33,96 @@
     </section>
   </section>
 <% else %>
-  <section class="notae-home-page">
-    <header class="notae-auth-brand notae-home-brand">
-      <%= image_tag notae_auth_brand_icon_path, alt: "Notae icon", class: "notae-auth-brand-icon" %>
-      <div>
-        <h1>Notae</h1>
-        <p>Sign in to continue to your workspace.</p>
-      </div>
+  <section class="notae-public-landing">
+    <header class="notae-public-nav">
+      <%= link_to root_path, class: "notae-public-brand" do %>
+        <%= image_tag notae_auth_brand_icon_path, alt: "Notae icon", class: "notae-auth-brand-icon" %>
+        <span>Notae</span>
+      <% end %>
+      <nav>
+        <%= link_to "Sign in", new_user_session_path %>
+        <%= link_to "Start free trial", new_user_registration_path(plan: WorkspaceSubscription::PLAN_STARTER), class: "notae-chip-button notae-chip-button-primary" %>
+      </nav>
     </header>
-    <section class="notae-auth-card notae-home-card">
-      <p class="notae-page-subtle">Capture ideas, keep docs nested, and manage tables in one calm workspace.</p>
-      <%= link_to "Sign in", new_user_session_path, class: "notae-chip-button notae-auth-submit" %>
+
+    <section class="notae-public-hero">
+      <div class="notae-public-hero-copy">
+        <p class="notae-public-kicker">Notes, grids, calendars, mail, and AI in one workspace</p>
+        <h1>Run the work without scattering the work.</h1>
+        <p>
+          Notae brings structured notes, project grids, meetings, calendars, mail, and practical AI assistance into a single workspace
+          that stays organised as the team moves.
+        </p>
+        <div class="notae-public-actions">
+          <%= link_to "Start a 7-day trial", new_user_registration_path(plan: WorkspaceSubscription::PLAN_STARTER), class: "notae-chip-button notae-chip-button-primary" %>
+          <%= link_to "View pricing", "#pricing", class: "notae-chip-button notae-chip-button-subtle" %>
+        </div>
+      </div>
+
+      <div class="notae-public-product" aria-label="Notae workspace preview">
+        <div class="notae-public-product-toolbar">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="notae-public-product-grid">
+          <div class="notae-public-product-sidebar">
+            <strong>Work</strong>
+            <span>Kalendārium</span>
+            <span>Epistularium</span>
+            <span>Meetings</span>
+            <span>Library</span>
+          </div>
+          <div class="notae-public-product-main">
+            <div class="notae-public-product-row is-wide"></div>
+            <div class="notae-public-product-row"></div>
+            <div class="notae-public-product-board">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="notae-public-section">
+      <div class="notae-public-feature-grid">
+        <article>
+          <h2>Write and structure</h2>
+          <p>Nested notas, tabs, comments, exports, and reusable workspace patterns.</p>
+        </article>
+        <article>
+          <h2>Plan and coordinate</h2>
+          <p>Project grids, calendars, reminders, meetings, and shared operational context.</p>
+        </article>
+        <article>
+          <h2>Use AI with limits</h2>
+          <p>AI assistance is tracked and capped by plan so costs stay predictable.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="pricing" class="notae-public-section">
+      <div class="notae-public-section-head">
+        <p class="notae-public-kicker">Pricing</p>
+        <h2>Start with a card-backed 7-day trial.</h2>
+        <p>Plans are monthly in AUD. Upgrade when your workspace needs more members, integrations, exports, storage, or AI capacity.</p>
+      </div>
+
+      <div class="notae-public-pricing-grid">
+        <% @public_plans.each do |plan_key| %>
+          <% plan = Billing::PlanCatalog.plan_for(plan_key) %>
+          <% limits = plan.fetch(:limits) %>
+          <article class="notae-public-price-card <%= "is-featured" if plan_key == WorkspaceSubscription::PLAN_TEAM %>">
+            <h3><%= plan.fetch(:name) %></h3>
+            <p class="notae-public-price"><%= Billing::PlanCatalog.monthly_price_label_for(plan_key) %></p>
+            <ul>
+              <li><%= limits.fetch(:members) %> members</li>
+              <li><%= number_with_delimiter(limits.fetch(:storage_mb)) %> MB storage</li>
+              <li><%= number_with_delimiter(limits.fetch(:ai_requests_per_month)) %> AI requests/month</li>
+              <li><%= number_with_delimiter(limits.fetch(:exports_per_month)) %> exports/month</li>
+            </ul>
+            <%= link_to "Start trial", new_user_registration_path(plan: plan_key), class: "notae-chip-button notae-chip-button-primary" %>
+          </article>
+        <% end %>
+      </div>
     </section>
   </section>
 <% end %>

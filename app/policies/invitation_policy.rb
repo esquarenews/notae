@@ -6,7 +6,8 @@ class InvitationPolicy < ApplicationPolicy
   def create?
     return false unless user
 
-    workspace_membership&.admin_or_owner?
+    workspace_membership&.admin_or_owner? &&
+      TenantLimits::Enforcer.allowed?(workspace: record.workspace, feature: :members).allowed?
   end
 
   def accept?

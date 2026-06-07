@@ -28,8 +28,10 @@ module TenantLimits
         members: workspace.memberships.count,
         storage_mb: storage_megabytes,
         ai_requests_this_month: workspace.ai_usage_logs.where(created_at: Time.current.beginning_of_month..Time.current).count,
+        ai_cost_usd_this_month: workspace.ai_usage_logs.where(created_at: Time.current.beginning_of_month..Time.current).sum(:estimated_cost_usd).to_f.round(4),
         integrations: workspace.kalendarium_connections.count + workspace.epistularium_accounts.count,
-        exports_this_month: workspace.workspace_exports.where(created_at: Time.current.beginning_of_month..Time.current).count
+        exports_this_month: workspace.workspace_exports.where(created_at: Time.current.beginning_of_month..Time.current).count +
+          workspace.page_exports.where(created_at: Time.current.beginning_of_month..Time.current).count
       }
     end
 
@@ -38,6 +40,7 @@ module TenantLimits
         members: current_usage.fetch(:members) > limits.fetch(:members),
         storage_mb: current_usage.fetch(:storage_mb) > limits.fetch(:storage_mb),
         ai_requests_per_month: current_usage.fetch(:ai_requests_this_month) > limits.fetch(:ai_requests_per_month),
+        ai_monthly_budget_usd: current_usage.fetch(:ai_cost_usd_this_month) > limits.fetch(:ai_monthly_budget_usd),
         integrations: current_usage.fetch(:integrations) > limits.fetch(:integrations),
         exports_per_month: current_usage.fetch(:exports_this_month) > limits.fetch(:exports_per_month)
       }

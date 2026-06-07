@@ -27,6 +27,7 @@
         <%= form.label :website, "Website" %>
         <%= form.text_field :website, tabindex: -1, autocomplete: "off" %>
       </div>
+      <%= form.hidden_field :plan, value: session[:notae_signup_plan] if session[:notae_signup_plan].present? %>
 
       <div class="notae-auth-field">
         <%= form.label :password %>

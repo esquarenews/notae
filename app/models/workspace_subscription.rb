@@ -10,10 +10,11 @@ class WorkspaceSubscription < ApplicationRecord
   STATUS_PAST_DUE = "past_due".freeze
   STATUS_CANCELED = "canceled".freeze
   STATUS_SUSPENDED = "suspended".freeze
-  STATUSES = [ STATUS_TRIALING, STATUS_ACTIVE, STATUS_PAST_DUE, STATUS_CANCELED, STATUS_SUSPENDED ].freeze
+  STATUS_INCOMPLETE = "incomplete".freeze
+  STATUSES = [ STATUS_INCOMPLETE, STATUS_TRIALING, STATUS_ACTIVE, STATUS_PAST_DUE, STATUS_CANCELED, STATUS_SUSPENDED ].freeze
 
-  PROVIDER_FAT_ZEBRA = "fat_zebra".freeze
-  PROVIDERS = [ PROVIDER_FAT_ZEBRA ].freeze
+  PROVIDER_STRIPE = "stripe".freeze
+  PROVIDERS = [ PROVIDER_STRIPE ].freeze
 
   belongs_to :workspace
 
@@ -34,5 +35,39 @@ class WorkspaceSubscription < ApplicationRecord
 
   def effective_limits
     Billing::PlanCatalog.limits_for(plan_key).merge(limits_json.to_h.symbolize_keys)
+  end
+
+  STATUSES.each do |status_value|
+    define_method("#{status_value}?") do
+      status.to_s == status_value
+    end
+  end
+
+  def stripe_customer_id
+    provider_customer_id
+  end
+
+  def stripe_subscription_id
+    provider_subscription_id
+  end
+
+  def workspace_accessible?(at: Time.current)
+    return false if suspended? || canceled? || past_due? || incomplete?
+    return true if active?
+
+    trialing? && (trial_ends_at.blank? || trial_ends_at > at)
+  end
+
+  def billing_restricted?(at: Time.current)
+    !workspace_accessible?(at: at)
+  end
+
+  def trial_days_remaining(at: Time.current)
+    return nil if trial_ends_at.blank?
+
+    seconds = trial_ends_at - at
+    return 0 if seconds <= 0
+
+    (seconds / 1.day).ceil
   end
 end

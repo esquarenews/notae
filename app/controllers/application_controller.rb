@@ -30,6 +30,7 @@ class ApplicationController < ActionController::Base
   after_action :store_last_workspace_slug!, if: :should_store_last_workspace_slug?
 
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
+  rescue_from TenantLimits::Enforcer::LimitExceeded, with: :handle_tenant_limit_exceeded
   rescue_from ActionController::InvalidAuthenticityToken, with: :handle_invalid_authenticity_token
   rescue_from ActionDispatch::Cookies::CookieOverflow, with: :handle_cookie_overflow
   rescue_from ActiveRecord::Encryption::Errors::Configuration, with: :handle_encryption_configuration_error
@@ -48,6 +49,10 @@ class ApplicationController < ActionController::Base
 
   def handle_not_authorized
     redirect_back fallback_location: root_path, alert: "You are not authorized to perform this action."
+  end
+
+  def handle_tenant_limit_exceeded(error)
+    redirect_back fallback_location: root_path, alert: error.message
   end
 
   def after_sign_in_path_for(resource_or_scope)

@@ -19,7 +19,12 @@
         <article class="notae-ai-analytics-card">
           <p class="notae-pref-label">Current plan</p>
           <p class="notae-utility-title"><%= @subscription.display_plan %></p>
-          <p class="notae-pref-description"><%= @subscription.display_status %> via <%= Billing::FatZebraGateway.display_name %>.</p>
+          <p class="notae-pref-description">
+            <%= @subscription.display_status %> via <%= Billing::StripeGateway.display_name %>.
+            <% if @subscription.trialing? && @subscription.trial_days_remaining.present? %>
+              <%= pluralize(@subscription.trial_days_remaining, "trial day") %> remaining.
+            <% end %>
+          </p>
         </article>
 
         <article class="notae-ai-analytics-card">
@@ -33,18 +38,36 @@
           <p class="notae-utility-title"><%= @tenant_snapshot.dig(:usage, :ai_requests_this_month) %> / <%= @tenant_snapshot.dig(:limits, :ai_requests_per_month) %></p>
           <p class="notae-pref-description">Usage this calendar month.</p>
         </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">AI cost cap</p>
+          <p class="notae-utility-title">$<%= number_with_precision(@tenant_snapshot.dig(:usage, :ai_cost_usd_this_month), precision: 2) %> / $<%= number_with_precision(@tenant_snapshot.dig(:limits, :ai_monthly_budget_usd), precision: 2) %></p>
+          <p class="notae-pref-description">Estimated OpenAI spend this month.</p>
+        </article>
       </div>
 
       <div class="notae-pref-row">
         <div class="notae-pref-copy">
           <p class="notae-pref-label">Plan changes</p>
           <p class="notae-pref-description">
-            Self-serve billing will use <%= Billing::FatZebraGateway.display_name %>.
-            <%= @billing_provider_ready ? "Gateway credentials are configured." : "Gateway credentials are not configured yet." %>
+            Self-serve billing uses <%= Billing::StripeGateway.display_name %>.
+            <%= @billing_provider_ready ? "Stripe is configured." : "Stripe environment variables are not configured yet." %>
           </p>
         </div>
 
-        <button type="button" class="notae-chip-button notae-chip-button-subtle" disabled>Change plan</button>
+        <div class="notae-pref-controls">
+          <%= button_to "Manage billing",
+                        workspace_subscription_portal_path(workspace_slug: @workspace.slug),
+                        method: :post,
+                        class: "notae-chip-button",
+                        disabled: @subscription.provider_customer_id.blank? %>
+          <%= button_to "Cancel subscription",
+                        workspace_subscription_cancel_path(workspace_slug: @workspace.slug),
+                        method: :post,
+                        class: "notae-chip-button notae-chip-danger",
+                        data: { turbo_confirm: "Cancel this subscription at the end of the current period?" },
+                        disabled: @subscription.provider_subscription_id.blank? || @subscription.canceled? %>
+        </div>
       </div>
     </section>
   </div>

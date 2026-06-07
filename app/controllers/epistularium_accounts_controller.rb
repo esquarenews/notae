@@ -8,6 +8,7 @@ class EpistulariumAccountsController < ApplicationController
   def create
     account = EpistulariumAccount.new(new_account_attributes)
     authorize account
+    TenantLimits::Enforcer.enforce!(workspace: @workspace, feature: :integrations)
     account.save!
     if sync_requested?
       start_sync!(account)
@@ -16,6 +17,8 @@ class EpistulariumAccountsController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid => error
     redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), alert: error.record.errors.full_messages.to_sentence
+  rescue TenantLimits::Enforcer::LimitExceeded => error
+    redirect_to workspace_epistularium_settings_path(workspace_slug: @workspace.slug), alert: error.message
   end
 
   def update

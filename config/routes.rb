@@ -18,7 +18,10 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
-  post "webhooks/fat_zebra", to: "webhooks/fat_zebra#create", as: :fat_zebra_webhook
+  post "webhooks/stripe", to: "webhooks/stripe#create", as: :stripe_webhook
+  get "billing/checkout/success", to: "billing/checkout#success", as: :billing_checkout_success
+  get "billing/checkout/cancel", to: "billing/checkout#cancel", as: :billing_checkout_cancel
+  get "email/unsubscribe/:token", to: "email_unsubscribes#show", as: :email_unsubscribe
 
   namespace :admin do
     root "dashboard#show"
@@ -76,6 +79,8 @@ Rails.application.routes.draw do
     post "settings/notifications/test-push", to: "notification_settings#send_test_push", as: :workspace_notification_settings_test_push
     get "settings/operations", to: "operations_settings#show", as: :workspace_operations_settings
     get "settings/subscription", to: "subscription_settings#show", as: :workspace_subscription_settings
+    post "settings/subscription/portal", to: "subscription_settings#portal", as: :workspace_subscription_portal
+    post "settings/subscription/cancel", to: "subscription_settings#cancel", as: :workspace_subscription_cancel
     get "settings/kalendarium", to: "kalendarium_settings#show", as: :workspace_kalendarium_settings
     patch "settings/kalendarium", to: "kalendarium_settings#update"
     get "settings/epistularium", to: "epistularium_settings#show", as: :workspace_epistularium_settings

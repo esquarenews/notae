@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_04_093000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_07_011500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -508,26 +508,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_093000) do
     t.index ["workspace_id", "thread_key"], name: "index_epistularium_messages_on_workspace_and_thread_key"
   end
 
-  create_table "fat_zebra_webhook_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.string "event_name", null: false
-    t.jsonb "headers_json", default: {}, null: false
-    t.jsonb "payload_json", default: {}, null: false
-    t.datetime "processed_at"
-    t.text "processing_error"
-    t.string "provider_event_id", null: false
-    t.string "provider_object_id"
-    t.string "provider_object_type"
-    t.string "raw_body_sha256", null: false
-    t.string "status", default: "received", null: false
-    t.datetime "updated_at", null: false
-    t.boolean "verified", default: false, null: false
-    t.index ["event_name", "created_at"], name: "index_fat_zebra_webhook_events_on_event_name_and_created_at"
-    t.index ["provider_event_id"], name: "index_fat_zebra_webhook_events_on_provider_event_id", unique: true
-    t.index ["provider_object_type", "provider_object_id"], name: "idx_fat_zebra_webhook_events_on_provider_object"
-    t.index ["status", "created_at"], name: "index_fat_zebra_webhook_events_on_status_and_created_at"
-  end
-
   create_table "favorites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.uuid "favoritable_id", null: false
@@ -1007,6 +987,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_093000) do
     t.index ["key_hash"], name: "index_solid_cache_entries_on_key_hash", unique: true
   end
 
+  create_table "stripe_webhook_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_name", null: false
+    t.jsonb "payload_json", default: {}, null: false
+    t.datetime "processed_at"
+    t.text "processing_error"
+    t.string "provider_event_id", null: false
+    t.string "provider_object_id"
+    t.string "provider_object_type"
+    t.string "status", default: "received", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_name", "created_at"], name: "index_stripe_webhook_events_on_event_name_and_created_at"
+    t.index ["provider_event_id"], name: "index_stripe_webhook_events_on_provider_event_id", unique: true
+    t.index ["provider_object_type", "provider_object_id"], name: "idx_stripe_webhook_events_on_provider_object"
+    t.index ["status", "created_at"], name: "index_stripe_webhook_events_on_status_and_created_at"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "ai_loader_style", default: "disco_orbit", null: false
     t.integer "ai_search_answer_rate_limit_per_minute", default: 12, null: false
@@ -1200,7 +1197,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_093000) do
   end
 
   create_table "workspace_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "billing_provider", default: "fat_zebra", null: false
+    t.string "billing_provider", default: "stripe", null: false
     t.datetime "created_at", null: false
     t.datetime "current_period_ends_at"
     t.jsonb "limits_json", default: {}, null: false

@@ -1,8 +1,16 @@
 require "rails_helper"
 
 RSpec.describe "Workspaces", type: :request do
+  CheckoutSession = Struct.new(:id, :url, keyword_init: true)
+
   def missing_table_error(table_name)
     ActiveRecord::StatementInvalid.new("PG::UndefinedTable: ERROR: relation \"#{table_name}\" does not exist")
+  end
+
+  def stub_stripe_checkout(url: "https://checkout.stripe.test/session")
+    allow_any_instance_of(Billing::StripeGateway)
+      .to receive(:create_checkout_session!)
+      .and_return(CheckoutSession.new(id: "cs_test_123", url: url))
   end
 
   it "renders new workspace when optional AI tables are unavailable" do
@@ -35,6 +43,7 @@ RSpec.describe "Workspaces", type: :request do
   it "lets an authenticated user create a workspace and become owner" do
     user = User.create!(email: "owner@example.com", password: "password123")
     sign_in user
+    stub_stripe_checkout
 
     expect do
       post workspaces_path,
@@ -42,7 +51,8 @@ RSpec.describe "Workspaces", type: :request do
              workspace: {
                name: "Product",
                slug: "product-team",
-               workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value)
+               workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value),
+               plan_key: WorkspaceSubscription::PLAN_TEAM
              }
            }
     end.to change(Workspace, :count).by(1)
@@ -50,24 +60,25 @@ RSpec.describe "Workspaces", type: :request do
 
     workspace = Workspace.find_by!(slug: "product-team")
 
-    expect(response).to redirect_to(workspace_path("product-team"))
+    expect(response).to redirect_to("https://checkout.stripe.test/session")
     expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
     expect(workspace.workspace_color).to eq(Workspace::WORKSPACE_COLOR_OPTIONS.third.fetch(:value))
-    expect(workspace.workspace_subscription.plan_key).to eq(WorkspaceSubscription::PLAN_FREE)
-    expect(workspace.workspace_subscription.status).to eq(WorkspaceSubscription::STATUS_TRIALING)
-    expect(workspace.workspace_subscription.billing_provider).to eq(WorkspaceSubscription::PROVIDER_FAT_ZEBRA)
+    expect(workspace.workspace_subscription.plan_key).to eq(WorkspaceSubscription::PLAN_TEAM)
+    expect(workspace.workspace_subscription.status).to eq(WorkspaceSubscription::STATUS_INCOMPLETE)
+    expect(workspace.workspace_subscription.billing_provider).to eq(WorkspaceSubscription::PROVIDER_STRIPE)
   end
 
   it "derives the workspace slug from the name when slug is omitted" do
     user = User.create!(email: "workspace-slug-derived@example.com", password: "password123")
     sign_in user
+    stub_stripe_checkout
 
     expect do
       post workspaces_path, params: { workspace: { name: "Growth Team", slug: "" } }
     end.to change(Workspace, :count).by(1)
 
     workspace = Workspace.find_by!(slug: "growth-team")
-    expect(response).to redirect_to(workspace_path("growth-team"))
+    expect(response).to redirect_to("https://checkout.stripe.test/session")
     expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
     expect(workspace.workspace_color).to eq(Workspace::DEFAULT_COLOR)
   end

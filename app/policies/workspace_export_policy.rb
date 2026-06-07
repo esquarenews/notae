@@ -1,6 +1,7 @@
 class WorkspaceExportPolicy < ApplicationPolicy
   def create?
-    workspace_policy.update?
+    workspace_policy.update? &&
+      TenantLimits::Enforcer.allowed?(workspace: record.workspace, feature: :exports).allowed?
   end
 
   def download?

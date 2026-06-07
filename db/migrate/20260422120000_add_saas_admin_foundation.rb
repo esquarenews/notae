@@ -11,7 +11,7 @@ class AddSaasAdminFoundation < ActiveRecord::Migration[8.1]
       t.references :workspace, null: false, type: :uuid, foreign_key: true, index: { unique: true }
       t.string :plan_key, null: false, default: "free"
       t.string :status, null: false, default: "trialing"
-      t.string :billing_provider, null: false, default: "fat_zebra"
+      t.string :billing_provider, null: false, default: "stripe"
       t.string :provider_customer_id
       t.string :provider_subscription_id
       t.datetime :trial_ends_at

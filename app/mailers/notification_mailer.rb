@@ -14,6 +14,7 @@ class NotificationMailer < ApplicationMailer
       from: mail_from_value
     }
 
+    add_list_unsubscribe_headers_for(@recipient)
     mail(mail_attributes)
   end
 
@@ -36,6 +37,7 @@ class NotificationMailer < ApplicationMailer
       from: mail_from_value
     }
 
+    add_list_unsubscribe_headers_for(@recipient)
     mail(mail_attributes)
   end
 

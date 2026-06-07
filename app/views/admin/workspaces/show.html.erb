@@ -23,7 +23,7 @@
         <article class="notae-ai-analytics-card">
           <p class="notae-pref-label">Plan</p>
           <p class="notae-utility-title"><%= @subscription.display_plan %></p>
-          <p class="notae-pref-description"><%= @subscription.display_status %> via <%= Billing::FatZebraGateway.display_name %>.</p>
+          <p class="notae-pref-description"><%= @subscription.display_status %> via <%= Billing::StripeGateway.display_name %>.</p>
         </article>
 
         <article class="notae-ai-analytics-card">
@@ -37,6 +37,12 @@
           <p class="notae-utility-title"><%= @tenant_snapshot.dig(:usage, :ai_requests_this_month) %> / <%= @tenant_snapshot.dig(:limits, :ai_requests_per_month) %></p>
           <p class="notae-pref-description">Usage this calendar month.</p>
         </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">AI cost cap</p>
+          <p class="notae-utility-title">$<%= number_with_precision(@tenant_snapshot.dig(:usage, :ai_cost_usd_this_month), precision: 2) %> / $<%= number_with_precision(@tenant_snapshot.dig(:limits, :ai_monthly_budget_usd), precision: 2) %></p>
+          <p class="notae-pref-description">Estimated OpenAI spend this month.</p>
+        </article>
       </div>
     </section>
 
@@ -46,7 +52,7 @@
         <div class="notae-pref-row">
           <div class="notae-pref-copy">
             <p class="notae-pref-label">Plan and status</p>
-            <p class="notae-pref-description">Update billing state after Fat Zebra customer/payment-plan changes.</p>
+            <p class="notae-pref-description">Update billing state after Stripe customer/subscription changes.</p>
           </div>
           <div class="notae-pref-controls">
             <%= form.select :plan_key, WorkspaceSubscription::PLAN_KEYS.map { |plan| [ Billing::PlanCatalog.name_for(plan), plan ] }, {}, class: "notae-pref-select" %>
@@ -56,8 +62,8 @@
 
         <div class="notae-pref-row">
           <div class="notae-pref-copy">
-            <p class="notae-pref-label">Fat Zebra references</p>
-            <p class="notae-pref-description">Store provider customer and subscription/payment-plan IDs for support reconciliation.</p>
+            <p class="notae-pref-label">Stripe references</p>
+            <p class="notae-pref-description">Store Stripe customer and subscription IDs for support reconciliation.</p>
           </div>
           <div class="notae-pref-controls">
             <%= form.text_field :provider_customer_id, class: "notae-auth-input", placeholder: "Customer ID" %>
@@ -65,7 +71,7 @@
           </div>
         </div>
 
-        <%= form.hidden_field :billing_provider, value: WorkspaceSubscription::PROVIDER_FAT_ZEBRA %>
+        <%= form.hidden_field :billing_provider, value: WorkspaceSubscription::PROVIDER_STRIPE %>
         <%= form.submit "Save subscription", class: "notae-chip-button" %>
       <% end %>
     </section>

@@ -7,6 +7,10 @@ RSpec.describe "Home", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("<title>Notae</title>")
     expect(response.body).to include("Sign in")
+    expect(response.body).to include("Start a 7-day trial")
+    expect(response.body).to include("Starter")
+    expect(response.body).to include("Team")
+    expect(response.body).to include("Business")
     expect(response.headers["Content-Security-Policy"]).to include("default-src 'self'")
     expect(response.headers["Content-Security-Policy"]).to include("frame-ancestors 'self'")
     expect(response.headers["X-Frame-Options"]).to eq("SAMEORIGIN")
@@ -29,7 +33,7 @@ RSpec.describe "Home", type: :request do
     expect(asset_stylesheets).not_to include(a_string_matching(%r{\A/assets/app(?:-[0-9a-f]+)?\.css\z}))
   end
 
-  it "shows only policy-scoped workspaces for an authenticated user" do
+  it "redirects authenticated users to their first policy-scoped workspace" do
     user = User.create!(email: "member@example.com", password: "password123")
     other_user = User.create!(email: "other@example.com", password: "password123")
     visible_workspace = Workspace.create!(name: "Visible", slug: "visible")
@@ -41,10 +45,6 @@ RSpec.describe "Home", type: :request do
     sign_in user
     get root_path
 
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Visible")
-    expect(response.body).not_to include("Hidden")
-    expect(response.body).to include("New workspace")
-    expect(response.body).to include("Kalendārium")
+    expect(response).to redirect_to(workspace_path(visible_workspace.slug))
   end
 end

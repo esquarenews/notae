@@ -6,6 +6,7 @@ module Users
     before_action :reject_registration_honeypot, only: :create
     before_action :throttle_registration, only: :create
     before_action :reject_platform_admin_allowlisted_email, only: :create
+    before_action :capture_signup_plan, only: %i[new create]
 
     private
 
@@ -43,6 +44,13 @@ module Users
       clean_up_passwords(resource)
       set_minimum_password_length
       respond_with(resource)
+    end
+
+    def capture_signup_plan
+      requested = params[:plan].presence || params.dig(resource_name, :plan).presence
+      return unless Billing::PlanCatalog.public_plan_keys.include?(requested.to_s)
+
+      session[:notae_signup_plan] = requested.to_s
     end
   end
 end
