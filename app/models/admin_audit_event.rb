@@ -7,6 +7,9 @@ class AdminAuditEvent < ApplicationRecord
     subscription_canceled
     stripe_webhook_processed
     user_limits_updated
+    user_suspended
+    user_removed
+    user_reinstated
   ].freeze
 
   belongs_to :actor, class_name: "User"

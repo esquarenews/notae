@@ -31,7 +31,13 @@ Rails.application.routes.draw do
         patch :reactivate
       end
     end
-    resources :users, only: %i[index show update]
+    resources :users, only: %i[index show update] do
+      member do
+        patch :suspend
+        patch :remove
+        patch :reinstate
+      end
+    end
   end
 
   resources :workspaces, only: %i[new create]

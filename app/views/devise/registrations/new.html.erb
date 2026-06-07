@@ -14,10 +14,34 @@
       <p class="notae-flash alert"><%= resource.errors.full_messages.to_sentence %></p>
     <% end %>
 
+    <ol class="notae-onboarding-progress" aria-label="Onboarding progress">
+      <li class="is-current">
+        <span>1</span>
+        <strong>Account</strong>
+      </li>
+      <li>
+        <span>2</span>
+        <strong>Email confirmation</strong>
+      </li>
+      <li>
+        <span>3</span>
+        <strong>Workspace & trial</strong>
+      </li>
+    </ol>
+
     <%= form_for(resource,
                  as: resource_name,
                  url: registration_path(resource_name),
-                 html: { class: "notae-auth-form", data: { turbo: false } }) do |form| %>
+                 html: {
+                   class: "notae-auth-form",
+                   data: {
+                     controller: "auth-submit",
+                     action: "submit->auth-submit#submit",
+                     turbo: false,
+                     auth_submit_busy_text_value: "Creating account...",
+                     auth_submit_status_text_value: "Creating your account and preparing the next onboarding step."
+                   }
+                 }) do |form| %>
       <div class="notae-auth-field">
         <%= form.label :email %>
         <%= form.email_field :email, autofocus: true, autocomplete: "email", class: "notae-auth-input" %>
@@ -42,7 +66,18 @@
         <%= form.password_field :password_confirmation, autocomplete: "new-password", class: "notae-auth-input" %>
       </div>
 
-      <%= form.submit "Create account", class: "notae-chip-button notae-auth-submit" %>
+      <div class="notae-auth-submit-zone">
+        <%= form.submit "Create account",
+                        class: "notae-chip-button notae-auth-submit",
+                        data: { auth_submit_target: "submit" } %>
+        <div class="notae-auth-submit-progress" data-auth-submit-target="progress" hidden>
+          <span class="notae-auth-submit-spinner" aria-hidden="true"></span>
+          <div>
+            <strong data-auth-submit-target="status">Creating your account. This can take a moment.</strong>
+            <span>Keep this tab open. We will move you to the next step as soon as the account is ready.</span>
+          </div>
+        </div>
+      </div>
     <% end %>
 
     <div class="notae-auth-links">

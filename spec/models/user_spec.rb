@@ -45,6 +45,46 @@ RSpec.describe User, type: :model do
     expect(user).to be_valid
   end
 
+  it "blocks authentication while suspended or removed by an admin" do
+    user = described_class.create!(email: "admin-state-user@example.com", password: "password123")
+
+    expect(user).to be_active_for_authentication
+
+    user.suspend_for_week!
+
+    expect(user).to be_admin_suspended
+    expect(user).not_to be_active_for_authentication
+    expect(user.inactive_message).to eq(:admin_suspended)
+
+    user.update!(admin_suspended_until: 1.minute.ago)
+
+    expect(user).to be_active_for_authentication
+
+    user.remove_account!
+
+    expect(user).to be_removed
+    expect(user).not_to be_active_for_authentication
+    expect(user.inactive_message).to eq(:removed_account)
+  end
+
+  it "reinstates removed users on the free tier for one week" do
+    user = described_class.create!(
+      email: "reinstated-user@example.com",
+      password: "password123",
+      saas_plan_key: described_class::SAAS_PLAN_TEAM,
+      workspace_limit_override: 8,
+      removed_at: Time.current
+    )
+
+    user.reinstate_free_tier_for_week!
+
+    expect(user).not_to be_removed
+    expect(user).not_to be_admin_suspended
+    expect(user.saas_plan_key).to eq(described_class::SAAS_PLAN_FREE)
+    expect(user.workspace_limit_override).to be_nil
+    expect(user.admin_free_tier_ends_at).to be_within(5.seconds).of(1.week.from_now)
+  end
+
   it "requires complete SMTP settings when any SMTP field is provided" do
     user = described_class.new(email: "smtp-user@example.com", password: "password123", smtp_address: "smtp.example.com")
 

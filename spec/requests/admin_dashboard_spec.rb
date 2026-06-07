@@ -162,6 +162,38 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(AdminAuditEvent.last.action).to eq("user_limits_updated")
   end
 
+  it "does not change existing billing subscription pricing when an admin manually changes user tier" do
+    workspace, user = create_workspace_with_owner(
+      name: "Manual Tier Billing",
+      slug: "manual-tier-billing",
+      owner_email: "manual-tier-billing-user@example.com"
+    )
+    subscription = workspace.workspace_subscription
+    subscription.update!(
+      plan_key: WorkspaceSubscription::PLAN_STARTER,
+      status: WorkspaceSubscription::STATUS_ACTIVE,
+      provider_customer_id: "cus_manual_tier",
+      provider_subscription_id: "sub_manual_tier"
+    )
+    admin = User.create!(email: "manual-tier-billing-admin@example.com", password: "password123", super_admin: true)
+    sign_in admin
+
+    patch admin_user_path(user),
+          params: {
+            user: {
+              saas_plan_key: User::SAAS_PLAN_BUSINESS,
+              workspace_limit_override: ""
+            }
+          }
+
+    expect(response).to redirect_to(admin_user_path(user))
+    expect(user.reload.saas_plan_key).to eq(User::SAAS_PLAN_BUSINESS)
+    subscription.reload
+    expect(subscription.plan_key).to eq(WorkspaceSubscription::PLAN_STARTER)
+    expect(subscription.provider_customer_id).to eq("cus_manual_tier")
+    expect(subscription.provider_subscription_id).to eq("sub_manual_tier")
+  end
+
   it "shows user workspace usage as a count without listing memberships on the user detail page" do
     user = User.create!(email: "workspace-summary-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
     first_workspace = Workspace.create!(name: "Hidden Workspace One", slug: "hidden-workspace-one")
@@ -183,6 +215,69 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).not_to include("Workspace memberships")
     expect(response.body).not_to include("Hidden Workspace One")
     expect(response.body).not_to include("Hidden Workspace Two")
+  end
+
+  it "suspends, removes, and reinstates user accounts from the admin user detail page" do
+    user = User.create!(email: "account-control-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
+    api_token = user.api_tokens.create!(name: "Admin control token", scopes_json: [ ApiToken::SCOPE_PAGES_READ ])
+    admin = User.create!(email: "account-control-admin@example.com", password: "password123", super_admin: true)
+    sign_in admin
+
+    get admin_user_path(user)
+
+    expect(response.body).to include("Account controls")
+    expect(response.body).to include("Suspend for one week")
+    expect(response.body).to include("Delete user")
+    expect(response.body).to include("Manual admin tier changes update Notae entitlements only")
+    expect(response.body).to include("They do not change the user's existing Stripe subscription price")
+
+    expect do
+      patch suspend_admin_user_path(user)
+    end.to change(AdminAuditEvent.where(action: "user_suspended"), :count).by(1)
+
+    expect(response).to redirect_to(admin_user_path(user))
+    expect(user.reload).to be_admin_suspended
+    expect(user.admin_suspended_until).to be_within(5.seconds).of(1.week.from_now)
+    expect(user).not_to be_active_for_authentication
+
+    expect do
+      patch remove_admin_user_path(user)
+    end.to change(AdminAuditEvent.where(action: "user_removed"), :count).by(1)
+
+    expect(response).to redirect_to(admin_user_path(user))
+    user.reload
+    expect(user).to be_removed
+    expect(user).not_to be_admin_suspended
+    expect(user).not_to be_active_for_authentication
+    expect(api_token.reload).to be_revoked
+
+    get admin_user_path(user)
+
+    expect(response.body).to include("Reinstate on Free tier")
+    expect(response.body).not_to include("Suspend for one week")
+
+    expect do
+      patch reinstate_admin_user_path(user)
+    end.to change(AdminAuditEvent.where(action: "user_reinstated"), :count).by(1)
+
+    expect(response).to redirect_to(admin_user_path(user))
+    user.reload
+    expect(user).not_to be_removed
+    expect(user.saas_plan_key).to eq(User::SAAS_PLAN_FREE)
+    expect(user.admin_free_tier_ends_at).to be_within(5.seconds).of(1.week.from_now)
+    expect(user).to be_active_for_authentication
+  end
+
+  it "does not reinstate users unless they have been removed" do
+    user = User.create!(email: "active-reinstate-user@example.com", password: "password123")
+    admin = User.create!(email: "active-reinstate-admin@example.com", password: "password123", super_admin: true)
+    sign_in admin
+
+    patch reinstate_admin_user_path(user)
+
+    expect(response).to redirect_to(admin_user_path(user))
+    follow_redirect!
+    expect(response.body).to include("Only removed users can be reinstated.")
   end
 
   it "lets a platform admin grant the free tier without Stripe references" do

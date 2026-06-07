@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_07_031500) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_07_062000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1005,6 +1005,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_031500) do
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "admin_free_tier_ends_at"
+    t.datetime "admin_suspended_until"
     t.string "ai_loader_style", default: "disco_orbit", null: false
     t.integer "ai_search_answer_rate_limit_per_minute", default: 12, null: false
     t.decimal "ai_search_daily_budget_usd", precision: 12, scale: 4, default: "1.5", null: false
@@ -1043,6 +1045,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_031500) do
     t.string "push_quiet_hours_starts_at", default: "22:00", null: false
     t.boolean "reduce_ai_loader_motion", default: false, null: false
     t.datetime "remember_created_at"
+    t.datetime "removed_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
     t.string "saas_plan_key", default: "free", null: false
@@ -1066,8 +1069,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_031500) do
     t.string "unlock_token"
     t.datetime "updated_at", null: false
     t.integer "workspace_limit_override"
+    t.index ["admin_suspended_until"], name: "index_users_on_admin_suspended_until"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["removed_at"], name: "index_users_on_removed_at"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["saas_plan_key"], name: "index_users_on_saas_plan_key"
     t.index ["super_admin"], name: "index_users_on_super_admin"

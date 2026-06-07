@@ -6,6 +6,9 @@ RSpec.describe "Authentication branding", type: :request do
 
     expect(stylesheet).to include(".notae-theme .notae-auth-submit,\n.notae-theme a.notae-auth-submit,\n.notae-theme button.notae-auth-submit,\n.notae-theme input[type=\"submit\"].notae-auth-submit {\n  color: #f8fbfc;\n  text-shadow: 0 1px 1px rgba(15, 23, 42, 0.22);")
     expect(stylesheet).to include(".notae-theme .notae-auth-submit:hover,\n.notae-theme .notae-auth-submit:focus-visible,\n.notae-theme a.notae-auth-submit:hover,\n.notae-theme a.notae-auth-submit:focus-visible {\n  color: #ffffff;\n}")
+    expect(stylesheet).to include(".notae-onboarding-progress {")
+    expect(stylesheet).to include(".notae-auth-submit-progress {")
+    expect(stylesheet).to include("@keyframes notae-auth-submit-spin")
   end
 
   it "renders a branded login page with icon and streamlined form" do
@@ -44,6 +47,13 @@ RSpec.describe "Authentication branding", type: :request do
     expect(response.body).to include("notae-auth-form")
     expect(response.body).to include("notae-auth-input")
     expect(response.body).to include("notae-auth-submit")
+    expect(response.body).to include("notae-onboarding-progress")
+    expect(response.body).to include("Account")
+    expect(response.body).to include("Email confirmation")
+    expect(response.body).to include("Workspace & trial")
+    expect(response.body).to include("Creating your account and preparing the next onboarding step.")
+    expect(response.body).to include("notae-auth-submit-progress")
+    expect(response.body).to include("data-controller=\"auth-submit\"")
     expect(response.body).to include('data-turbo="false"')
   end
 

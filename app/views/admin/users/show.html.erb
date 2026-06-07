@@ -20,6 +20,22 @@
         </article>
 
         <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Account status</p>
+          <p class="notae-utility-title"><%= @user.admin_account_status %></p>
+          <p class="notae-pref-description">
+            <% if @user.removed? %>
+              Cancelled <%= time_ago_in_words(@user.removed_at) %> ago.
+            <% elsif @user.admin_suspended? %>
+              Suspended until <%= l(@user.admin_suspended_until, format: :long) %>.
+            <% elsif @user.admin_free_tier_ends_at.present? %>
+              Free tier reinstatement ends <%= l(@user.admin_free_tier_ends_at, format: :long) %>.
+            <% else %>
+              Account access is active.
+            <% end %>
+          </p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
           <p class="notae-pref-label">Workspaces</p>
           <p class="notae-utility-title">
             <%= number_with_delimiter(@usage_summary.fetch(:workspace_count)) %> / <%= @user.workspace_limit_unlimited? ? "Unlimited" : number_with_delimiter(@user.workspace_limit) %>
@@ -71,7 +87,7 @@
         <div class="notae-pref-row">
           <div class="notae-pref-copy">
             <p class="notae-pref-label">User tier</p>
-            <p class="notae-pref-description">Subscriptions apply at the user level. Workspace count limits are derived from this tier unless overridden below.</p>
+            <p class="notae-pref-description">Manual admin tier changes update Notae entitlements only. They do not change the user's existing Stripe subscription price; self-service upgrades use Stripe and change the paid plan price.</p>
           </div>
           <div class="notae-pref-controls">
             <%= form.select :saas_plan_key, User::SAAS_PLAN_KEYS.map { |plan| [ User::SAAS_PLAN_NAMES.fetch(plan), plan ] }, {}, class: "notae-pref-select" %>
@@ -111,6 +127,43 @@
 
         <%= form.submit "Save user limits", class: "notae-chip-button" %>
       <% end %>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Account controls</h2>
+      <div class="notae-pref-form">
+        <% unless @user.removed? %>
+          <div class="notae-pref-row">
+            <div class="notae-pref-copy">
+              <p class="notae-pref-label">Suspend user</p>
+              <p class="notae-pref-description">Blocks sign-in for one week. The account and data remain in place.</p>
+            </div>
+            <div class="notae-pref-controls">
+              <%= button_to "Suspend for one week", suspend_admin_user_path(@user), method: :patch, class: "notae-chip-button notae-chip-button-subtle" %>
+            </div>
+          </div>
+
+          <div class="notae-pref-row">
+            <div class="notae-pref-copy">
+              <p class="notae-pref-label">Cancel user account</p>
+              <p class="notae-pref-description">Marks the account as removed and blocks sign-in. User data stays in the database for future reinstatement.</p>
+            </div>
+            <div class="notae-pref-controls">
+              <%= button_to "Delete user", remove_admin_user_path(@user), method: :patch, class: "notae-account-delete-button" %>
+            </div>
+          </div>
+        <% else %>
+          <div class="notae-pref-row">
+            <div class="notae-pref-copy">
+              <p class="notae-pref-label">Reinstate user</p>
+              <p class="notae-pref-description">Restores sign-in and places the removed user on the Free tier for one week.</p>
+            </div>
+            <div class="notae-pref-controls">
+              <%= button_to "Reinstate on Free tier", reinstate_admin_user_path(@user), method: :patch, class: "notae-chip-button" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
     </section>
 
   </div>

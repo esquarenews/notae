@@ -62,6 +62,8 @@ class User < ApplicationRecord
     SAAS_PLAN_TEAM => 50,
     SAAS_PLAN_BUSINESS => nil
   }.freeze
+  ADMIN_SUSPENSION_PERIOD = 1.week
+  ADMIN_FREE_TIER_REINSTATEMENT_PERIOD = 1.week
 
   START_WEEK_OPTIONS = [
     [ "Monday", "monday" ],
@@ -306,6 +308,18 @@ class User < ApplicationRecord
     column_names.include?("workspace_limit_override")
   end
 
+  def self.admin_suspended_until_column_available?
+    column_names.include?("admin_suspended_until")
+  end
+
+  def self.removed_at_column_available?
+    column_names.include?("removed_at")
+  end
+
+  def self.admin_free_tier_ends_at_column_available?
+    column_names.include?("admin_free_tier_ends_at")
+  end
+
   def self.platform_admin_email_allowlist
     ENV.fetch("NOTAE_PLATFORM_ADMIN_EMAILS", "")
        .split(",")
@@ -315,6 +329,10 @@ class User < ApplicationRecord
 
   def require_self_service_registration_confirmation!
     self.self_service_registration_confirmation_required = true
+  end
+
+  def send_devise_notification(notification, *args)
+    devise_mailer.send(notification, self, *args).deliver_later
   end
 
   def start_week_preference
@@ -378,6 +396,63 @@ class User < ApplicationRecord
 
   def workspace_limit_label
     workspace_limit_unlimited? ? "Unlimited" : workspace_limit.to_s
+  end
+
+  def admin_suspended?
+    return false unless self.class.admin_suspended_until_column_available?
+
+    admin_suspended_until.present? && admin_suspended_until > Time.current
+  end
+
+  def removed?
+    return false unless self.class.removed_at_column_available?
+
+    removed_at.present?
+  end
+
+  def admin_account_status
+    return "Removed" if removed?
+    return "Suspended" if admin_suspended?
+
+    "Active"
+  end
+
+  def suspend_for_week!
+    update!(
+      admin_suspended_until: ADMIN_SUSPENSION_PERIOD.from_now,
+      removed_at: nil
+    )
+  end
+
+  def remove_account!
+    transaction do
+      update!(
+        removed_at: Time.current,
+        admin_suspended_until: nil
+      )
+      api_tokens.active.find_each(&:revoke!)
+    end
+  end
+
+  def reinstate_free_tier_for_week!
+    update!(
+      removed_at: nil,
+      admin_suspended_until: nil,
+      saas_plan_key: SAAS_PLAN_FREE,
+      workspace_limit_override: nil,
+      admin_free_tier_ends_at: ADMIN_FREE_TIER_REINSTATEMENT_PERIOD.from_now
+    )
+  end
+
+  def active_for_authentication?
+    super && !removed? && !admin_suspended?
+  end
+
+  def inactive_message
+    return :removed_account if removed?
+    return :admin_suspended if admin_suspended?
+
+    super
   end
 
   def platform_admin?

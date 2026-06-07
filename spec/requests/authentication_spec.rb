@@ -1,9 +1,15 @@
 require "rails_helper"
 
 RSpec.describe "Authentication", type: :request do
+  include ActiveJob::TestHelper
+
   around do |example|
     Rails.cache.clear
+    clear_enqueued_jobs
+    clear_performed_jobs
     example.run
+    clear_enqueued_jobs
+    clear_performed_jobs
     Rails.cache.clear
   end
 
@@ -69,7 +75,7 @@ RSpec.describe "Authentication", type: :request do
         }
       }
     end.to change(User, :count).by(1)
-      .and change { ActionMailer::Base.deliveries.count }.by(1)
+      .and have_enqueued_mail(Devise::Mailer, :confirmation_instructions)
 
     user = User.find_by!(email: "new-confirmation-user@example.com")
     expect(user).not_to be_confirmed
@@ -77,8 +83,6 @@ RSpec.describe "Authentication", type: :request do
   end
 
   it "captures the requested trial plan without failing registration" do
-    ActionMailer::Base.deliveries.clear
-
     expect do
       post user_registration_path(plan: User::SAAS_PLAN_STARTER), params: {
         user: {
@@ -89,12 +93,32 @@ RSpec.describe "Authentication", type: :request do
         }
       }
     end.to change(User, :count).by(1)
-      .and change { ActionMailer::Base.deliveries.count }.by(1)
+      .and have_enqueued_mail(Devise::Mailer, :confirmation_instructions)
 
     expect(response).to redirect_to(root_path)
     user = User.find_by!(email: "new-trial-user@example.com")
     expect(user).not_to be_confirmed
     expect(user.saas_plan_key).to eq(User::SAAS_PLAN_FREE)
+  end
+
+  it "does not deliver confirmation email synchronously during signup" do
+    delivery = instance_double(ActionMailer::MessageDelivery, deliver_later: true)
+    allow(delivery).to receive(:deliver_now).and_raise(Net::SMTPFatalError, "SMTP unavailable")
+    allow(Devise::Mailer).to receive(:confirmation_instructions).and_return(delivery)
+
+    expect do
+      post user_registration_path, params: {
+        user: {
+          email: "async-confirmation-user@example.com",
+          password: "password123",
+          password_confirmation: "password123"
+        }
+      }
+    end.to change(User, :count).by(1)
+
+    expect(response).to redirect_to(root_path)
+    expect(delivery).to have_received(:deliver_later)
+    expect(delivery).not_to have_received(:deliver_now)
   end
 
   it "rejects signup submissions that fill the hidden honeypot" do
