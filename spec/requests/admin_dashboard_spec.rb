@@ -75,6 +75,40 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(AdminAuditEvent.last.action).to eq("subscription_updated")
   end
 
+  it "lets a platform admin grant the free tier without Stripe references" do
+    workspace, = create_workspace_with_owner(name: "Free Grant", slug: "free-grant", owner_email: "free-grant-owner@example.com")
+    workspace.workspace_subscription.update!(
+      plan_key: WorkspaceSubscription::PLAN_TEAM,
+      status: WorkspaceSubscription::STATUS_ACTIVE,
+      provider_customer_id: "cus_existing",
+      provider_subscription_id: "sub_existing",
+      trial_ends_at: 2.days.from_now,
+      current_period_ends_at: 1.month.from_now
+    )
+    admin = User.create!(email: "free-grant-admin@example.com", password: "password123", super_admin: true)
+    sign_in admin
+
+    patch admin_workspace_path(workspace),
+          params: {
+            workspace_subscription: {
+              plan_key: WorkspaceSubscription::PLAN_FREE,
+              status: WorkspaceSubscription::STATUS_PAST_DUE,
+              billing_provider: WorkspaceSubscription::PROVIDER_STRIPE,
+              provider_customer_id: "cus_should_clear",
+              provider_subscription_id: "sub_should_clear"
+            }
+          }
+
+    subscription = workspace.reload.workspace_subscription
+    expect(response).to redirect_to(admin_workspace_path(workspace))
+    expect(subscription.plan_key).to eq(WorkspaceSubscription::PLAN_FREE)
+    expect(subscription.status).to eq(WorkspaceSubscription::STATUS_ACTIVE)
+    expect(subscription.provider_customer_id).to be_blank
+    expect(subscription.provider_subscription_id).to be_blank
+    expect(subscription.trial_ends_at).to be_blank
+    expect(subscription.current_period_ends_at).to be_blank
+  end
+
   it "suspends and reactivates workspace access from the admin console" do
     workspace, owner = create_workspace_with_owner(name: "Suspendable", slug: "suspendable", owner_email: "suspendable-owner@example.com")
     admin = User.create!(email: "suspension-admin@example.com", password: "password123", super_admin: true)

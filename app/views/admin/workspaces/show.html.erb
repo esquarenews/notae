@@ -52,7 +52,7 @@
         <div class="notae-pref-row">
           <div class="notae-pref-copy">
             <p class="notae-pref-label">Plan and status</p>
-            <p class="notae-pref-description">Update billing state after Stripe customer/subscription changes.</p>
+            <p class="notae-pref-description">Only platform admins can grant the Free tier. Free subscriptions bypass Stripe and are saved as active.</p>
           </div>
           <div class="notae-pref-controls">
             <%= form.select :plan_key, WorkspaceSubscription::PLAN_KEYS.map { |plan| [ Billing::PlanCatalog.name_for(plan), plan ] }, {}, class: "notae-pref-select" %>

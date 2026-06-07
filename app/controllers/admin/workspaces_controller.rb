@@ -19,6 +19,7 @@ module Admin
     def update
       subscription = @workspace.subscription_record
       subscription.assign_attributes(subscription_params)
+      normalize_free_subscription!(subscription)
       subscription.save!
 
       record_admin_audit!(
@@ -75,6 +76,16 @@ module Admin
         :trial_ends_at,
         :current_period_ends_at
       )
+    end
+
+    def normalize_free_subscription!(subscription)
+      return unless subscription.plan_key == WorkspaceSubscription::PLAN_FREE
+
+      subscription.status = WorkspaceSubscription::STATUS_ACTIVE
+      subscription.provider_customer_id = nil
+      subscription.provider_subscription_id = nil
+      subscription.trial_ends_at = nil
+      subscription.current_period_ends_at = nil
     end
   end
 end

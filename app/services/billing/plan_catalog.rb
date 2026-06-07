@@ -2,7 +2,7 @@ module Billing
   class PlanCatalog
     PLANS = {
       WorkspaceSubscription::PLAN_FREE => {
-        name: "Trial",
+        name: "Free",
         monthly_price_aud_cents: 0,
         stripe_price_env: nil,
         limits: {
@@ -69,6 +69,10 @@ module Billing
 
     def self.public_plan_keys
       [ WorkspaceSubscription::PLAN_STARTER, WorkspaceSubscription::PLAN_TEAM, WorkspaceSubscription::PLAN_BUSINESS ]
+    end
+
+    def self.admin_grantable_plan_keys
+      WorkspaceSubscription::PLAN_KEYS
     end
 
     def self.monthly_price_aud_cents_for(plan_key)

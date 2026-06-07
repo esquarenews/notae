@@ -8,7 +8,8 @@ class SubscriptionSettingsController < ApplicationController
     authorize @user, :update?
     @subscription = @workspace.subscription_record
     @tenant_snapshot = TenantLimits::Snapshot.new(workspace: @workspace).call
-    @billing_provider_ready = Billing::StripeGateway.configured?
+    @billing_provider_status = billing_provider_status_for(@subscription)
+    @billing_provider_ready = @billing_provider_status.fetch(:configured, false)
   end
 
   def portal
@@ -46,5 +47,17 @@ class SubscriptionSettingsController < ApplicationController
 
   def set_user
     @user = policy_scope(User).find(current_user.id)
+  end
+
+  def billing_provider_status_for(subscription)
+    if subscription.plan_key == WorkspaceSubscription::PLAN_FREE
+      return {
+        configured: true,
+        missing: [],
+        message: "This workspace is on a super-admin granted free tier. Stripe billing is not required."
+      }
+    end
+
+    Billing::StripeGateway.configuration_status
   end
 end

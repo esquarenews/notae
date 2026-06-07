@@ -13,6 +13,27 @@ module Billing
         secret_key.present? && public_plan_price_ids_configured?
       end
 
+      def configuration_status
+        missing = []
+        missing << "STRIPE_SECRET_KEY" if secret_key.blank?
+        PlanCatalog.public_plan_keys.each do |plan_key|
+          env_key = PlanCatalog.stripe_price_env_for(plan_key)
+          missing << env_key if env_key.present? && PlanCatalog.stripe_price_id_for(plan_key).blank?
+        end
+
+        {
+          configured: missing.empty?,
+          missing: missing,
+          message: missing.empty? ? "Stripe is configured." : "Stripe billing setup is incomplete. Ask a platform admin to finish configuring Stripe before using self-serve billing."
+        }
+      rescue StandardError => error
+        {
+          configured: false,
+          missing: [],
+          message: "Stripe configuration could not be checked: #{error.message}"
+        }
+      end
+
       def secret_key
         ENV["STRIPE_SECRET_KEY"].to_s.strip
       end
