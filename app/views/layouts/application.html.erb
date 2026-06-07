@@ -34,6 +34,7 @@
 
   <% layout_workspace_slug = params[:workspace_slug].to_s.strip.presence %>
   <% layout_reuse_workspace_shell = same_workspace_turbo_navigation?(layout_workspace_slug) %>
+  <% layout_admin_shell = controller_path.start_with?("admin/") %>
   <% layout_ai_rail_current_page_id = controller_name == "pages" && action_name == "show" ? params[:id].to_s.presence : nil %>
   <% layout_ai_rail_panel_src = if layout_workspace_slug.present?
                                   workspace_ai_assistant_panel_path(
@@ -52,7 +53,7 @@
         data-ai-rail-panel-src-value="<%= layout_ai_rail_panel_src %>">
     <% if user_signed_in? %>
       <% embedded_shell = params[:embedded].to_s == "1" %>
-      <div class="notae-shell is-layout-hydrating <%= "notae-shell-embedded" if embedded_shell %>"
+      <div class="notae-shell is-layout-hydrating <%= "notae-shell-embedded" if embedded_shell %> <%= "notae-shell-admin" if layout_admin_shell %>"
            style="<%= "--notae-workspace-color: #{current_workspace_color};" if current_workspace_color.present? && !embedded_shell %>"
            data-controller="<%= embedded_shell ? "shell" : "shell global-shortcuts" %>">
         <% unless embedded_shell %>
@@ -100,7 +101,9 @@
             <%= render "shared/workspace_notification_bar", presenter: notification_bar, workspace: notification_bar.workspace, defer_alerts: true %>
           <% end %>
           <%= render "shared/app_mobile_tabbar" %>
-          <% if layout_workspace_slug.present? %>
+          <% if layout_admin_shell %>
+            <%# Admin screens use dense operational tables and should not reserve AI rail space. %>
+          <% elsif layout_workspace_slug.present? %>
             <% if layout_reuse_workspace_shell %>
               <%= render "shared/app_ai_rail_shell_placeholder", workspace_slug: layout_workspace_slug %>
             <% else %>

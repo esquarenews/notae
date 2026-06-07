@@ -14,9 +14,45 @@
 
       <div class="notae-ai-analytics-grid">
         <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Tier</p>
+          <p class="notae-utility-title"><%= @user.saas_plan_name %></p>
+          <p class="notae-pref-description"><%= @user.workspace_limit_unlimited? ? "Unlimited workspaces." : "#{number_with_delimiter(@user.workspace_limit)} workspace limit." %></p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
           <p class="notae-pref-label">Workspaces</p>
-          <p class="notae-utility-title"><%= @user.memberships.size %></p>
+          <p class="notae-utility-title"><%= @usage_summary.fetch(:workspace_count) %></p>
           <p class="notae-pref-description">Memberships across the platform.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Documents</p>
+          <p class="notae-utility-title"><%= number_with_delimiter(@usage_summary.fetch(:document_count)) %></p>
+          <p class="notae-pref-description">Pages and databases in joined workspaces.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">AI requests</p>
+          <p class="notae-utility-title"><%= number_with_delimiter(@usage_summary.fetch(:total_ai_requests)) %></p>
+          <p class="notae-pref-description"><%= number_with_delimiter(@usage_summary.fetch(:monthly_ai_requests)) %> this month, across chat, proactive summaries, meetings, and agentic actions.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Total spend</p>
+          <p class="notae-utility-title">$<%= number_with_precision(@usage_summary.fetch(:total_spend_usd), precision: 2) %></p>
+          <p class="notae-pref-description">$<%= number_with_precision(@usage_summary.fetch(:monthly_spend_usd), precision: 2) %> this month.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">Storage used</p>
+          <p class="notae-utility-title"><%= number_to_human_size(@usage_summary.fetch(:storage_bytes)) %></p>
+          <p class="notae-pref-description">Attached files in joined workspaces and account avatar.</p>
+        </article>
+
+        <article class="notae-ai-analytics-card">
+          <p class="notae-pref-label">First signed</p>
+          <p class="notae-utility-title"><%= @usage_summary.fetch(:first_signed_at).to_date.to_fs(:long) %></p>
+          <p class="notae-pref-description"><%= time_ago_in_words(@usage_summary.fetch(:first_signed_at)) %> ago.</p>
         </article>
 
         <article class="notae-ai-analytics-card">
@@ -25,6 +61,45 @@
           <p class="notae-pref-description">Recent account tokens.</p>
         </article>
       </div>
+    </section>
+
+    <section class="notae-settings-section">
+      <h2>Plan and limits</h2>
+      <%= form_with model: @user, url: admin_user_path(@user), method: :patch, class: "notae-pref-form" do |form| %>
+        <div class="notae-pref-row">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">User tier</p>
+            <p class="notae-pref-description">Subscriptions apply at the user level. Workspace count limits are derived from this tier unless overridden below.</p>
+          </div>
+          <div class="notae-pref-controls">
+            <%= form.select :saas_plan_key, User::SAAS_PLAN_KEYS.map { |plan| [ User::SAAS_PLAN_NAMES.fetch(plan), plan ] }, {}, class: "notae-pref-select" %>
+          </div>
+        </div>
+
+        <div class="notae-pref-row">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">Workspace limit override</p>
+            <p class="notae-pref-description">Leave blank to use the tier default: Free and Business unlimited, Team 50, Starter 10.</p>
+          </div>
+          <div class="notae-pref-controls">
+            <%= form.number_field :workspace_limit_override, class: "notae-auth-input", min: 0, step: 1, placeholder: @user.workspace_limit_label %>
+          </div>
+        </div>
+
+        <div class="notae-pref-row">
+          <div class="notae-pref-copy">
+            <p class="notae-pref-label">AI usage controls</p>
+            <p class="notae-pref-description">These account-level controls apply to AI search budgets and rate limits.</p>
+          </div>
+          <div class="notae-pref-controls">
+            <%= form.number_field :ai_search_daily_budget_usd, class: "notae-auth-input", min: 0, step: 0.01, placeholder: "Daily USD budget" %>
+            <%= form.number_field :ai_search_semantic_rate_limit_per_minute, class: "notae-auth-input", min: 1, step: 1, placeholder: "Semantic req/min" %>
+            <%= form.number_field :ai_search_answer_rate_limit_per_minute, class: "notae-auth-input", min: 1, step: 1, placeholder: "Answer req/min" %>
+          </div>
+        </div>
+
+        <%= form.submit "Save user limits", class: "notae-chip-button" %>
+      <% end %>
     </section>
 
     <section class="notae-settings-section">

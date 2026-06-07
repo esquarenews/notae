@@ -787,6 +787,14 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   grid-template-columns: 3.4rem minmax(0, 1fr) 2.8rem;
 }
 
+.notae-shell.notae-shell-admin {
+  grid-template-columns: 238px minmax(0, 1fr);
+}
+
+.notae-shell.notae-shell-admin.is-sidebar-collapsed {
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+}
+
 .notae-shell.notae-shell-embedded {
   --notae-workspace-color: transparent;
   grid-template-columns: minmax(0, 1fr);

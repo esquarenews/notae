@@ -14,6 +14,24 @@ RSpec.describe User, type: :model do
     expect(association.macro).to eq(:has_many)
   end
 
+  it "resolves SaaS workspace limits from the user tier with optional overrides" do
+    free_user = described_class.new(email: "free-tier@example.com", password: "password123", saas_plan_key: described_class::SAAS_PLAN_FREE)
+    starter_user = described_class.new(email: "starter-tier@example.com", password: "password123", saas_plan_key: described_class::SAAS_PLAN_STARTER)
+    team_user = described_class.new(email: "team-tier@example.com", password: "password123", saas_plan_key: described_class::SAAS_PLAN_TEAM)
+    business_user = described_class.new(email: "business-tier@example.com", password: "password123", saas_plan_key: described_class::SAAS_PLAN_BUSINESS)
+
+    expect(free_user.workspace_limit).to be_nil
+    expect(free_user).to be_workspace_limit_unlimited
+    expect(starter_user.workspace_limit).to eq(10)
+    expect(team_user.workspace_limit).to eq(50)
+    expect(business_user.workspace_limit).to be_nil
+    expect(business_user).to be_workspace_limit_unlimited
+
+    starter_user.workspace_limit_override = 12
+
+    expect(starter_user.workspace_limit).to eq(12)
+  end
+
   it "requires complete SMTP settings when any SMTP field is provided" do
     user = described_class.new(email: "smtp-user@example.com", password: "password123", smtp_address: "smtp.example.com")
 

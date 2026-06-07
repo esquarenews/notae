@@ -40,6 +40,29 @@ class User < ApplicationRecord
     [ "Last page visited", "last_visited_page" ]
   ].freeze
 
+  SAAS_PLAN_FREE = "free"
+  SAAS_PLAN_STARTER = "starter"
+  SAAS_PLAN_TEAM = "team"
+  SAAS_PLAN_BUSINESS = "business"
+  SAAS_PLAN_KEYS = [
+    SAAS_PLAN_FREE,
+    SAAS_PLAN_STARTER,
+    SAAS_PLAN_TEAM,
+    SAAS_PLAN_BUSINESS
+  ].freeze
+  SAAS_PLAN_NAMES = {
+    SAAS_PLAN_FREE => "Free",
+    SAAS_PLAN_STARTER => "Starter",
+    SAAS_PLAN_TEAM => "Team",
+    SAAS_PLAN_BUSINESS => "Business"
+  }.freeze
+  SAAS_WORKSPACE_LIMITS = {
+    SAAS_PLAN_FREE => nil,
+    SAAS_PLAN_STARTER => 10,
+    SAAS_PLAN_TEAM => 50,
+    SAAS_PLAN_BUSINESS => nil
+  }.freeze
+
   START_WEEK_OPTIONS = [
     [ "Monday", "monday" ],
     [ "Sunday", "sunday" ]
@@ -230,6 +253,13 @@ class User < ApplicationRecord
   validates :push_quiet_hours_starts_at, format: { with: CLOCK_TIME_PATTERN }, if: -> { self.class.column_names.include?("push_quiet_hours_starts_at") }
   validates :push_quiet_hours_ends_at, format: { with: CLOCK_TIME_PATTERN }, if: -> { self.class.column_names.include?("push_quiet_hours_ends_at") }
   validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
+  validates :saas_plan_key, inclusion: { in: SAAS_PLAN_KEYS }
+  validates :workspace_limit_override,
+            numericality: {
+              only_integer: true,
+              greater_than_or_equal_to: 0
+            },
+            allow_nil: true
   validates :smtp_address, length: { maximum: 255 }, allow_blank: true
   validates :full_name, length: { maximum: 120 }, allow_blank: true
   validates :backup_email, length: { maximum: 255 }, allow_blank: true
@@ -284,6 +314,24 @@ class User < ApplicationRecord
 
   def display_name
     full_name.to_s.strip.presence || email.to_s
+  end
+
+  def saas_plan_name
+    SAAS_PLAN_NAMES.fetch(saas_plan_key, saas_plan_key.to_s.humanize)
+  end
+
+  def workspace_limit
+    return workspace_limit_override if workspace_limit_override.present? || workspace_limit_override == 0
+
+    SAAS_WORKSPACE_LIMITS.fetch(saas_plan_key)
+  end
+
+  def workspace_limit_unlimited?
+    workspace_limit.nil?
+  end
+
+  def workspace_limit_label
+    workspace_limit_unlimited? ? "Unlimited" : workspace_limit.to_s
   end
 
   def platform_admin?

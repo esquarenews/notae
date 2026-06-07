@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_07_011500) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_07_031500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1045,6 +1045,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_011500) do
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
+    t.string "saas_plan_key", default: "free", null: false
     t.boolean "show_text_direction_controls", default: false, null: false
     t.boolean "show_view_history", default: true, null: false
     t.string "slack_notification_preference", default: "off", null: false
@@ -1064,9 +1065,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_011500) do
     t.string "unconfirmed_email"
     t.string "unlock_token"
     t.datetime "updated_at", null: false
+    t.integer "workspace_limit_override"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["saas_plan_key"], name: "index_users_on_saas_plan_key"
     t.index ["super_admin"], name: "index_users_on_super_admin"
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end

@@ -41,7 +41,7 @@
     <div class="notae-admin-section-head">
       <div>
         <h3>Registered users and billing</h3>
-        <p class="notae-pref-description">Review customer workspaces, owners, plan state, usage against limits, and drill in for overrides.</p>
+        <p class="notae-pref-description">Review customer plans, workspace limits, AI operations, documents, spend, storage, and drill in for overrides.</p>
       </div>
       <span class="notae-general-backup-status is-ready"><%= Billing::StripeGateway.display_name %></span>
     </div>
@@ -50,56 +50,56 @@
       <table class="notae-admin-table">
         <thead>
           <tr>
-            <th>Workspace</th>
-            <th>Registered users</th>
-            <th>Plan</th>
-            <th>Billing status</th>
-            <th>Usage this month</th>
-            <th>Limits</th>
+            <th>User</th>
+            <th>Tier</th>
+            <th>Workspaces</th>
+            <th>AI requests</th>
+            <th>Documents</th>
+            <th>Total spend</th>
+            <th>Storage</th>
+            <th>First signed</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <% @workspace_admin_rows.each do |row| %>
-            <% workspace = row.fetch(:workspace) %>
-            <% subscription = row.fetch(:subscription) %>
-            <% usage = row.fetch(:usage) %>
-            <% limits = row.fetch(:limits) %>
-            <% exceeded = row.fetch(:exceeded) %>
-            <% owner_emails = row.fetch(:owners).map(&:email) %>
-            <% user_emails = row.fetch(:users).map(&:email) %>
+          <% @user_admin_rows.each do |row| %>
+            <% user = row.fetch(:user) %>
+            <% summary = row.fetch(:summary) %>
             <tr>
               <td>
-                <strong><%= link_to workspace.name, admin_workspace_path(workspace) %></strong>
-                <span><%= workspace.slug %></span>
+                <strong><%= link_to user.display_name, admin_user_path(user) %></strong>
+                <span><%= user.email %><%= " · platform admin" if user.platform_admin? %></span>
               </td>
               <td>
-                <strong><%= pluralize(user_emails.size, "user") %></strong>
-                <span><%= (owner_emails.presence || user_emails).first(3).join(", ") %></span>
+                <strong><%= user.saas_plan_name %></strong>
+                <span><%= Billing::PlanCatalog.monthly_price_label_for(user.saas_plan_key) %></span>
               </td>
               <td>
-                <strong><%= subscription.display_plan %></strong>
-                <span><%= Billing::PlanCatalog.monthly_price_label_for(subscription.plan_key) %></span>
+                <strong class="<%= "is-over-limit" if summary.fetch(:over_workspace_limit) %>"><%= pluralize(summary.fetch(:workspace_count), "workspace") %></strong>
+                <span><%= user.workspace_limit_unlimited? ? "Unlimited workspace limit" : "#{number_with_delimiter(user.workspace_limit)} workspace limit" %></span>
               </td>
               <td>
-                <span class="notae-admin-status-pill <%= subscription.status %>"><%= subscription.display_status %></span>
-                <span><%= workspace.suspended? ? "Workspace suspended" : subscription.billing_provider.humanize %></span>
+                <strong><%= pluralize(summary.fetch(:total_ai_requests), "AI request") %></strong>
+                <span><%= number_with_delimiter(summary.fetch(:monthly_ai_requests)) %> this month</span>
               </td>
               <td>
-                <span><%= number_with_delimiter(usage.fetch(:members)) %> members</span>
-                <span class="<%= "is-over-limit" if exceeded.fetch(:ai_requests_per_month) %>"><%= pluralize(usage.fetch(:ai_requests_this_month), "AI request") %></span>
-                <span class="<%= "is-over-limit" if exceeded.fetch(:ai_monthly_budget_usd) %>">$<%= number_with_precision(usage.fetch(:ai_cost_usd_this_month), precision: 2) %> AI cost</span>
+                <strong><%= number_with_delimiter(summary.fetch(:document_count)) %></strong>
+                <span>Pages and databases</span>
               </td>
               <td>
-                <span class="<%= "is-over-limit" if exceeded.fetch(:members) %>"><%= number_with_delimiter(limits.fetch(:members)) %> members</span>
-                <span><%= number_with_delimiter(limits.fetch(:ai_requests_per_month)) %> AI req</span>
-                <span>$<%= number_with_precision(limits.fetch(:ai_monthly_budget_usd), precision: 2) %> AI cap</span>
+                <strong>$<%= number_with_precision(summary.fetch(:total_spend_usd), precision: 2) %></strong>
+                <span>$<%= number_with_precision(summary.fetch(:monthly_spend_usd), precision: 2) %> this month</span>
               </td>
               <td>
-                <%= link_to "Workspace", admin_workspace_path(workspace), class: "notae-chip-button" %>
-                <% row.fetch(:users).first(2).each do |user| %>
-                  <%= link_to "User", admin_user_path(user), class: "notae-chip-button notae-chip-button-subtle" %>
-                <% end %>
+                <strong><%= number_to_human_size(summary.fetch(:storage_bytes)) %></strong>
+                <span>Attached files</span>
+              </td>
+              <td>
+                <strong><%= summary.fetch(:first_signed_at).to_date.to_fs(:long) %></strong>
+                <span><%= time_ago_in_words(summary.fetch(:first_signed_at)) %> ago</span>
+              </td>
+              <td>
+                <%= link_to "User", admin_user_path(user), class: "notae-chip-button" %>
               </td>
             </tr>
           <% end %>

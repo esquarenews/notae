@@ -23,7 +23,12 @@ RSpec.describe "Admin dashboard", type: :request do
   it "allows super admins to view platform tenancy and billing state" do
     admin = User.create!(email: "platform-admin@example.com", password: "password123", super_admin: true)
     workspace, owner = create_workspace_with_owner(name: "Admin Visible", slug: "admin-visible", owner_email: "admin-visible-owner@example.com")
+    second_workspace = Workspace.create!(name: "Second Membership", slug: "second-membership")
+    Membership.create!(workspace: second_workspace, user: owner, role: :member)
+    owner.update!(saas_plan_key: User::SAAS_PLAN_TEAM)
     workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
+    Page.create!(workspace: workspace, created_by: owner, title: "Admin Page")
+    Database.create!(workspace: second_workspace, name: "Admin Database")
     AiUsageLog.create!(
       user: owner,
       workspace: workspace,
@@ -34,26 +39,42 @@ RSpec.describe "Admin dashboard", type: :request do
       total_tokens: 15,
       estimated_cost_usd: 0.25
     )
+    AiUsageLog.create!(
+      user: owner,
+      workspace: workspace,
+      operation: AiUsageLog::OP_MEETING_SUMMARY,
+      model: "gpt-test",
+      prompt_tokens: 20,
+      completion_tokens: 10,
+      total_tokens: 30,
+      estimated_cost_usd: 0.50
+    )
     sign_in admin
 
     get admin_root_path
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
+    expect(document.at_css(".notae-shell.notae-shell-admin")).to be_present
     expect(document.at_css("main.notae-content.notae-admin-content")).to be_present
     expect(document.at_css(".notae-admin-dashboard-shell .notae-admin-table")).to be_present
     expect(response.body).to include("SaaS admin dashboard")
     expect(response.body).to include("Stripe")
     expect(response.body).to include("Registered users")
-    expect(response.body).to include("Billing status")
-    expect(response.body).to include("Usage this month")
+    expect(response.body).to include("Workspaces")
+    expect(response.body).to include("AI requests")
+    expect(response.body).to include("Documents")
+    expect(response.body).to include("Total spend")
+    expect(response.body).to include("Storage")
+    expect(response.body).to include("First signed")
     expect(response.body).to include("MRR")
     expect(response.body).to include("AI cost")
-    expect(response.body).to include("Admin Visible")
     expect(response.body).to include("admin-visible-owner@example.com")
     expect(response.body).to include("Team")
-    expect(response.body).to include("Active")
-    expect(response.body).to include("1 AI request")
+    expect(response.body).to include("2 workspaces")
+    expect(response.body).to include("50 workspace limit")
+    expect(response.body).to include("2 AI requests")
+    expect(response.body).to include("$0.75")
   end
 
   it "allows env-allowlisted admins without changing the user row" do
@@ -102,6 +123,42 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(subscription.limits_json).not_to have_key("ai_requests_per_month")
     expect(subscription.limits_json).not_to have_key("storage_mb")
     expect(AdminAuditEvent.last.action).to eq("subscription_updated")
+  end
+
+  it "updates user tier and account-level limits from the user drill-in" do
+    user = User.create!(
+      email: "limit-user@example.com",
+      password: "password123",
+      saas_plan_key: User::SAAS_PLAN_FREE,
+      ai_search_daily_budget_usd: 1.50,
+      ai_search_semantic_rate_limit_per_minute: 24,
+      ai_search_answer_rate_limit_per_minute: 12
+    )
+    admin = User.create!(email: "user-limit-admin@example.com", password: "password123", super_admin: true)
+    sign_in admin
+
+    expect do
+      patch admin_user_path(user),
+            params: {
+              user: {
+                saas_plan_key: User::SAAS_PLAN_STARTER,
+                workspace_limit_override: "12",
+                ai_search_daily_budget_usd: "5.25",
+                ai_search_semantic_rate_limit_per_minute: "30",
+                ai_search_answer_rate_limit_per_minute: "15"
+              }
+            }
+    end.to change(AdminAuditEvent, :count).by(1)
+
+    expect(response).to redirect_to(admin_user_path(user))
+    user.reload
+    expect(user.saas_plan_key).to eq(User::SAAS_PLAN_STARTER)
+    expect(user.workspace_limit_override).to eq(12)
+    expect(user.workspace_limit).to eq(12)
+    expect(user.ai_search_daily_budget_usd).to eq(5.25)
+    expect(user.ai_search_semantic_rate_limit_per_minute).to eq(30)
+    expect(user.ai_search_answer_rate_limit_per_minute).to eq(15)
+    expect(AdminAuditEvent.last.action).to eq("user_limits_updated")
   end
 
   it "lets a platform admin grant the free tier without Stripe references" do
