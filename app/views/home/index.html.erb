@@ -40,61 +40,188 @@
         <span>Notae</span>
       <% end %>
       <nav>
+        <%= link_to "Capabilities", "#capabilities" %>
+        <%= link_to "Pricing", "#pricing" %>
         <%= link_to "Sign in", new_user_session_path %>
-        <%= link_to "Start free trial", new_user_registration_path(plan: WorkspaceSubscription::PLAN_STARTER), class: "notae-chip-button notae-chip-button-primary" %>
+        <%= link_to "Start trial", new_user_registration_path(plan: WorkspaceSubscription::PLAN_STARTER), class: "notae-public-button" %>
       </nav>
     </header>
 
     <section class="notae-public-hero">
       <div class="notae-public-hero-copy">
-        <p class="notae-public-kicker">Notes, grids, calendars, mail, and AI in one workspace</p>
-        <h1>Run the work without scattering the work.</h1>
+        <p class="notae-public-kicker">Workspace operating system</p>
+        <h1>The command center for knowledge work.</h1>
         <p>
-          Notae brings structured notes, project grids, meetings, calendars, mail, and practical AI assistance into a single workspace
-          that stays organised as the team moves.
+          Notae brings documents, databases, meetings, calendar planning, mail, and accountable AI into one workspace.
+          Capture what happened, decide what matters, and move the next action forward without spreading work across tabs.
         </p>
         <div class="notae-public-actions">
-          <%= link_to "Start a 7-day trial", new_user_registration_path(plan: WorkspaceSubscription::PLAN_STARTER), class: "notae-chip-button notae-chip-button-primary" %>
-          <%= link_to "View pricing", "#pricing", class: "notae-chip-button notae-chip-button-subtle" %>
+          <%= link_to "Start a 7-day trial", new_user_registration_path(plan: WorkspaceSubscription::PLAN_STARTER), class: "notae-public-button" %>
+          <%= link_to "See what Notae does", "#capabilities", class: "notae-public-button notae-public-button-secondary" %>
+        </div>
+        <div class="notae-public-proof-row" aria-label="Notae platform highlights">
+          <span>Notes</span>
+          <span>Grids</span>
+          <span>Calendar</span>
+          <span>Mail</span>
+          <span>Meetings</span>
+          <span>AI agents</span>
         </div>
       </div>
+    </section>
 
-      <div class="notae-public-product" aria-label="Notae workspace preview">
-        <div class="notae-public-product-toolbar">
-          <span></span><span></span><span></span>
+    <section class="notae-public-product" aria-label="Notae workspace preview">
+      <div class="notae-public-product-topbar">
+        <div class="notae-public-product-brand">
+          <span></span>
+          <strong>Work</strong>
         </div>
-        <div class="notae-public-product-grid">
-          <div class="notae-public-product-sidebar">
-            <strong>Work</strong>
-            <span>Kalendārium</span>
-            <span>Epistularium</span>
-            <span>Meetings</span>
-            <span>Library</span>
+        <div class="notae-public-product-pills">
+          <span>Live notes</span>
+          <span>AI ready</span>
+        </div>
+      </div>
+      <div class="notae-public-product-grid">
+        <aside class="notae-public-product-sidebar">
+          <strong>Notae</strong>
+          <span class="is-active">Home</span>
+          <span>Notarum</span>
+          <span>Tabulae</span>
+          <span>Kalendārium</span>
+          <span>Epistularium</span>
+          <span>Meetings</span>
+        </aside>
+        <div class="notae-public-product-main">
+          <div class="notae-public-product-head">
+            <p>Today</p>
+            <h2>Launch plan and operating rhythm</h2>
           </div>
-          <div class="notae-public-product-main">
-            <div class="notae-public-product-row is-wide"></div>
-            <div class="notae-public-product-row"></div>
-            <div class="notae-public-product-board">
-              <span></span><span></span><span></span><span></span><span></span><span></span>
+          <div class="notae-public-product-layout">
+            <div class="notae-public-product-panel is-document">
+              <div class="notae-public-window-head">
+                <span></span><span></span><span></span>
+              </div>
+              <h3>Customer onboarding brief</h3>
+              <p>Convert the call transcript into decisions, risks, owners, and next steps.</p>
+              <div class="notae-public-doc-lines">
+                <span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+            <div class="notae-public-product-panel is-grid">
+              <div class="notae-public-grid-row is-head"><span>Task</span><span>Owner</span><span>Status</span></div>
+              <div class="notae-public-grid-row"><span>Confirm trial terms</span><span>Errol</span><span>Today</span></div>
+              <div class="notae-public-grid-row"><span>Summarise meeting</span><span>AI</span><span>Queued</span></div>
+              <div class="notae-public-grid-row"><span>Send follow-up</span><span>Ops</span><span>Ready</span></div>
+            </div>
+            <div class="notae-public-product-panel is-ai">
+              <strong>AI rail</strong>
+              <p>Drafted a follow-up, found missing project context, and flagged one billing risk.</p>
+              <span>Ready for review</span>
             </div>
           </div>
         </div>
       </div>
     </section>
 
+    <section class="notae-public-principles">
+      <article>
+        <span>01</span>
+        <h2>Built for work that changes shape</h2>
+        <p>Notes become tables. Meetings become action lists. Mail becomes context. Notae keeps the thread intact as work moves.</p>
+      </article>
+      <article>
+        <span>02</span>
+        <h2>Powered by accountable AI</h2>
+        <p>AI helps summarize, retrieve, draft, and propose. Usage is visible, bounded, and tied to real workspace activity.</p>
+      </article>
+      <article>
+        <span>03</span>
+        <h2>Designed for operational speed</h2>
+        <p>One place for the team’s documents, calendars, inboxes, meetings, decisions, and handoffs.</p>
+      </article>
+    </section>
+
+    <section id="capabilities" class="notae-public-section">
+      <div class="notae-public-section-head">
+        <p class="notae-public-kicker">Capabilities</p>
+        <h2>Everything important stays connected.</h2>
+      </div>
+
+      <div class="notae-public-capability-stack">
+        <article>
+          <div class="notae-public-capability-copy">
+            <span>1.0 Capture</span>
+            <h3>Turn messy work into structured knowledge.</h3>
+            <p>Write notes, create rich documents, split tabs, comment, export, and keep team context in a shared library.</p>
+          </div>
+          <div class="notae-public-mini-surface">
+            <strong>Meeting notes</strong>
+            <span>Decision: approve starter plan rollout</span>
+            <span>Risk: confirmation email delivery</span>
+            <span>Owner: customer operations</span>
+          </div>
+        </article>
+
+        <article>
+          <div class="notae-public-capability-copy">
+            <span>2.0 Organize</span>
+            <h3>Use databases when work needs structure.</h3>
+            <p>Track projects, onboarding, content, support, billing operations, and internal workflows with flexible Tabulae grids.</p>
+          </div>
+          <div class="notae-public-mini-table">
+            <div><b>Workspace</b><b>Plan</b><b>Usage</b></div>
+            <div><span>Marketing</span><span>Team</span><span>42%</span></div>
+            <div><span>Operations</span><span>Business</span><span>18%</span></div>
+            <div><span>Personal</span><span>Free</span><span>6%</span></div>
+          </div>
+        </article>
+
+        <article>
+          <div class="notae-public-capability-copy">
+            <span>3.0 Coordinate</span>
+            <h3>Calendar, mail, and meetings share the same context.</h3>
+            <p>Kalendārium, Epistularium, and Meetings bring scheduling, messages, transcripts, and summaries into the workspace.</p>
+          </div>
+          <div class="notae-public-timeline">
+            <span>09:30 Customer call</span>
+            <span>10:00 AI summary ready</span>
+            <span>11:15 Follow-up email drafted</span>
+            <span>14:00 Project grid updated</span>
+          </div>
+        </article>
+
+        <article>
+          <div class="notae-public-capability-copy">
+            <span>4.0 Automate</span>
+            <h3>Let AI handle the repeatable work, with limits.</h3>
+            <p>Use AI chat, proactive summaries, meeting intelligence, search, and agentic actions while keeping spend and requests visible.</p>
+          </div>
+          <div class="notae-public-ai-card">
+            <strong>AI actions</strong>
+            <p>Summarized 3 documents, prepared 2 meeting follow-ups, and queued 1 approval request.</p>
+            <small>$0.02 estimated this month</small>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="notae-public-section">
-      <div class="notae-public-feature-grid">
+      <div class="notae-public-section-head">
+        <p class="notae-public-kicker">Why teams use it</p>
+        <h2>Less context switching. More complete work.</h2>
+      </div>
+      <div class="notae-public-proof-grid">
         <article>
-          <h2>Write and structure</h2>
-          <p>Nested notas, tabs, comments, exports, and reusable workspace patterns.</p>
+          <p>“The workspace becomes the source of truth instead of another place to check.”</p>
+          <span>Operations teams</span>
         </article>
         <article>
-          <h2>Plan and coordinate</h2>
-          <p>Project grids, calendars, reminders, meetings, and shared operational context.</p>
+          <p>“AI summaries are useful because they sit beside the documents, meetings, and tasks they came from.”</p>
+          <span>Client delivery</span>
         </article>
         <article>
-          <h2>Use AI with limits</h2>
-          <p>AI assistance is tracked and capped by plan so costs stay predictable.</p>
+          <p>“Plans, limits, billing, and workspace usage stay visible without leaving the app.”</p>
+          <span>Administrators</span>
         </article>
       </div>
     </section>
@@ -102,8 +229,8 @@
     <section id="pricing" class="notae-public-section">
       <div class="notae-public-section-head">
         <p class="notae-public-kicker">Pricing</p>
-        <h2>Start with a card-backed 7-day trial.</h2>
-        <p>Plans are monthly in AUD. Upgrade when your workspace needs more members, integrations, exports, storage, or AI capacity.</p>
+        <h2>Start with a 7-day trial.</h2>
+        <p>Plans are monthly in AUD. Upgrade when you need more members, storage, exports, or AI capacity.</p>
       </div>
 
       <div class="notae-public-pricing-grid">
@@ -119,9 +246,18 @@
               <li><%= number_with_delimiter(limits.fetch(:ai_requests_per_month)) %> AI requests/month</li>
               <li><%= number_with_delimiter(limits.fetch(:exports_per_month)) %> exports/month</li>
             </ul>
-            <%= link_to "Start trial", new_user_registration_path(plan: plan_key), class: "notae-chip-button notae-chip-button-primary" %>
+            <%= link_to "Start trial", new_user_registration_path(plan: plan_key), class: "notae-public-button" %>
           </article>
         <% end %>
+      </div>
+    </section>
+
+    <section class="notae-public-final-cta">
+      <p class="notae-public-kicker">Available today</p>
+      <h2>Bring the work into one place.</h2>
+      <div class="notae-public-actions">
+        <%= link_to "Start a 7-day trial", new_user_registration_path(plan: WorkspaceSubscription::PLAN_STARTER), class: "notae-public-button" %>
+        <%= link_to "Sign in", new_user_session_path, class: "notae-public-button notae-public-button-secondary" %>
       </div>
     </section>
   </section>
