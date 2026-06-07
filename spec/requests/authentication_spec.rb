@@ -76,6 +76,27 @@ RSpec.describe "Authentication", type: :request do
     expect(user.confirmation_token).to be_present
   end
 
+  it "captures the requested trial plan without failing registration" do
+    ActionMailer::Base.deliveries.clear
+
+    expect do
+      post user_registration_path(plan: User::SAAS_PLAN_STARTER), params: {
+        user: {
+          email: "new-trial-user@example.com",
+          password: "password123",
+          password_confirmation: "password123",
+          plan: User::SAAS_PLAN_STARTER
+        }
+      }
+    end.to change(User, :count).by(1)
+      .and change { ActionMailer::Base.deliveries.count }.by(1)
+
+    expect(response).to redirect_to(root_path)
+    user = User.find_by!(email: "new-trial-user@example.com")
+    expect(user).not_to be_confirmed
+    expect(user.saas_plan_key).to eq(User::SAAS_PLAN_FREE)
+  end
+
   it "rejects signup submissions that fill the hidden honeypot" do
     expect do
       post user_registration_path, params: {

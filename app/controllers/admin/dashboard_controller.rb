@@ -6,7 +6,12 @@ module Admin
       @suspended_workspace_count = Workspace.where.not(suspended_at: nil).count
       @user_count = User.count
       @subscription_counts = WorkspaceSubscription.group(:status).count
-      @plan_counts = User.group(:saas_plan_key).count
+      @plan_counts =
+        if User.saas_plan_key_column_available?
+          User.group(:saas_plan_key).count
+        else
+          { User::SAAS_PLAN_FREE => @user_count }
+        end
       @trial_count = WorkspaceSubscription.where(status: WorkspaceSubscription::STATUS_TRIALING).count
       @past_due_count = WorkspaceSubscription.where(status: WorkspaceSubscription::STATUS_PAST_DUE).count
       @canceled_count = WorkspaceSubscription.where(status: WorkspaceSubscription::STATUS_CANCELED).count

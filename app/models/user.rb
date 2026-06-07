@@ -253,13 +253,14 @@ class User < ApplicationRecord
   validates :push_quiet_hours_starts_at, format: { with: CLOCK_TIME_PATTERN }, if: -> { self.class.column_names.include?("push_quiet_hours_starts_at") }
   validates :push_quiet_hours_ends_at, format: { with: CLOCK_TIME_PATTERN }, if: -> { self.class.column_names.include?("push_quiet_hours_ends_at") }
   validates :openai_api_key, length: { maximum: 255 }, allow_blank: true
-  validates :saas_plan_key, inclusion: { in: SAAS_PLAN_KEYS }
+  validates :saas_plan_key, inclusion: { in: SAAS_PLAN_KEYS }, if: -> { self.class.saas_plan_key_column_available? }
   validates :workspace_limit_override,
             numericality: {
               only_integer: true,
               greater_than_or_equal_to: 0
             },
-            allow_nil: true
+            allow_nil: true,
+            if: -> { self.class.workspace_limit_override_column_available? }
   validates :smtp_address, length: { maximum: 255 }, allow_blank: true
   validates :full_name, length: { maximum: 120 }, allow_blank: true
   validates :backup_email, length: { maximum: 255 }, allow_blank: true
@@ -297,6 +298,14 @@ class User < ApplicationRecord
     platform_admin_email_allowlist.include?(email_address.to_s.downcase)
   end
 
+  def self.saas_plan_key_column_available?
+    column_names.include?("saas_plan_key")
+  end
+
+  def self.workspace_limit_override_column_available?
+    column_names.include?("workspace_limit_override")
+  end
+
   def self.platform_admin_email_allowlist
     ENV.fetch("NOTAE_PLATFORM_ADMIN_EMAILS", "")
        .split(",")
@@ -314,6 +323,43 @@ class User < ApplicationRecord
 
   def display_name
     full_name.to_s.strip.presence || email.to_s
+  end
+
+  def saas_plan_key
+    if self.class.saas_plan_key_column_available?
+      self[:saas_plan_key].presence || SAAS_PLAN_FREE
+    else
+      @saas_plan_key.presence || SAAS_PLAN_FREE
+    end
+  end
+
+  def saas_plan_key=(value)
+    normalized_value = value.to_s.presence || SAAS_PLAN_FREE
+
+    if self.class.saas_plan_key_column_available?
+      self[:saas_plan_key] = normalized_value
+    else
+      @saas_plan_key = normalized_value
+    end
+  end
+
+  def workspace_limit_override
+    if self.class.workspace_limit_override_column_available?
+      self[:workspace_limit_override]
+    else
+      @workspace_limit_override
+    end
+  end
+
+  def workspace_limit_override=(value)
+    normalized_value = value.to_s.presence
+    normalized_value = normalized_value.to_i if normalized_value.present?
+
+    if self.class.workspace_limit_override_column_available?
+      self[:workspace_limit_override] = normalized_value
+    else
+      @workspace_limit_override = normalized_value
+    end
   end
 
   def saas_plan_name

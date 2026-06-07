@@ -32,6 +32,19 @@ RSpec.describe User, type: :model do
     expect(starter_user.workspace_limit).to eq(12)
   end
 
+  it "falls back to the free tier while SaaS plan columns are unavailable during deploys" do
+    user = described_class.new(email: "pre-migration-tier@example.com", password: "password123")
+    column_names_without_saas_plan = described_class.column_names - %w[saas_plan_key workspace_limit_override]
+    allow(described_class).to receive(:column_names).and_return(column_names_without_saas_plan)
+
+    user.saas_plan_key = described_class::SAAS_PLAN_TEAM
+    user.workspace_limit_override = "12"
+
+    expect(user.saas_plan_key).to eq(described_class::SAAS_PLAN_TEAM)
+    expect(user.workspace_limit_override).to eq(12)
+    expect(user).to be_valid
+  end
+
   it "requires complete SMTP settings when any SMTP field is provided" do
     user = described_class.new(email: "smtp-user@example.com", password: "password123", smtp_address: "smtp.example.com")
 
