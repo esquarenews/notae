@@ -81,4 +81,19 @@ RSpec.describe "API V1 Knowledge", type: :request do
     expect(json_body.dig("data", "summary")).to include("[1]")
     expect(json_body.dig("data", "sources", 0, "source_content_hash")).to eq("source-api-1")
   end
+
+  it "reports missing AI configuration without pointing users to settings" do
+    user = User.create!(email: "api-knowledge-missing-ai@example.com", password: "password123")
+    workspace = Workspace.create!(name: "API knowledge missing AI", slug: "api-knowledge-missing-ai")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    token = ApiToken.create!(user: user, name: "Knowledge missing AI API")
+
+    get "/api/v1/workspaces/#{workspace.slug}/knowledge/suggestions", headers: auth_headers(token)
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(json_body.dig("error", "code")).to eq("missing_api_key")
+    expect(json_body.dig("error", "message")).to eq("Notae AI is not configured. Ask an administrator to check the application environment.")
+    expect(response.body).not_to include("Settings")
+    expect(response.body).not_to include("OpenAI key")
+  end
 end

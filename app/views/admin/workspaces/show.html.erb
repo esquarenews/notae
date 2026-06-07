@@ -78,6 +78,40 @@
     </section>
 
     <section class="notae-settings-section">
+      <h2>Usage limit overrides</h2>
+      <p class="notae-pref-description">Overrides apply to this workspace only. Blank fields fall back to the selected plan limits.</p>
+      <% plan_limits = Billing::PlanCatalog.limits_for(@subscription.plan_key) %>
+      <%= form_with model: @subscription, url: admin_workspace_path(@workspace), method: :patch, class: "notae-pref-form" do |form| %>
+        <%= form.hidden_field :plan_key, value: @subscription.plan_key %>
+        <%= form.hidden_field :status, value: @subscription.status %>
+        <%= form.hidden_field :billing_provider, value: @subscription.billing_provider %>
+        <div class="notae-admin-limit-grid">
+          <% [
+            [ :members, "Members", @tenant_snapshot.dig(:usage, :members), 1 ],
+            [ :storage_mb, "Storage MB", @tenant_snapshot.dig(:usage, :storage_mb), 1 ],
+            [ :ai_requests_per_month, "AI requests / month", @tenant_snapshot.dig(:usage, :ai_requests_this_month), 1 ],
+            [ :ai_monthly_budget_usd, "AI budget USD / month", @tenant_snapshot.dig(:usage, :ai_cost_usd_this_month), 0.01 ],
+            [ :integrations, "Integrations", @tenant_snapshot.dig(:usage, :integrations), 1 ],
+            [ :exports_per_month, "Exports / month", @tenant_snapshot.dig(:usage, :exports_this_month), 1 ]
+          ].each do |key, label, usage_value, step| %>
+            <% override_value = @subscription.limits_json.to_h[key.to_s] %>
+            <label class="notae-admin-limit-field">
+              <span><%= label %></span>
+              <%= number_field_tag "workspace_subscription[limits_json][#{key}]",
+                                   override_value,
+                                   class: "notae-auth-input",
+                                   placeholder: plan_limits.fetch(key),
+                                   min: 0,
+                                   step: step %>
+              <em>Usage <%= usage_value %> · Plan <%= plan_limits.fetch(key) %></em>
+            </label>
+          <% end %>
+        </div>
+        <%= form.submit "Save limit overrides", class: "notae-chip-button" %>
+      <% end %>
+    </section>
+
+    <section class="notae-settings-section">
       <h2>Workspace controls</h2>
       <% if @workspace.suspended? %>
         <%= button_to "Reactivate workspace", reactivate_admin_workspace_path(@workspace), method: :patch, class: "notae-chip-button" %>

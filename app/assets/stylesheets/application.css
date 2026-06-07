@@ -22341,3 +22341,191 @@ body.notae-pwa-is-standalone .notae-pwa-install-card-ios {
     flex: 1 1 0;
   }
 }
+
+main.notae-content.notae-admin-content {
+  max-width: min(1480px, calc(100vw - 2rem));
+}
+
+.notae-admin-dashboard-shell {
+  width: 100%;
+  display: grid;
+  gap: 1rem;
+}
+
+.notae-admin-dashboard-head,
+.notae-admin-table-section {
+  border: 1px solid color-mix(in srgb, var(--notae-border-muted) 90%, transparent);
+  border-radius: 1.2rem;
+  background: color-mix(in srgb, var(--notae-panel-elevated) 88%, transparent);
+  box-shadow: var(--notae-shadow-card);
+  backdrop-filter: blur(18px);
+}
+
+.notae-admin-dashboard-head {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.9fr) minmax(0, 1.6fr);
+  gap: 1rem;
+  align-items: start;
+  padding: 1.2rem;
+}
+
+.notae-admin-dashboard-head h2,
+.notae-admin-section-head h3 {
+  margin: 0;
+  color: var(--notae-heading-ink);
+  line-height: 1.05;
+}
+
+.notae-admin-dashboard-head h2 {
+  font-size: 1.9rem;
+}
+
+.notae-admin-section-head h3 {
+  font-size: 1.1rem;
+}
+
+.notae-admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.notae-admin-summary-grid article {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+  border: 1px solid var(--notae-border);
+  border-radius: 0.78rem;
+  padding: 0.7rem;
+  background: var(--notae-surface);
+}
+
+.notae-admin-summary-grid span,
+.notae-admin-summary-grid em,
+.notae-admin-table td span,
+.notae-admin-limit-field em {
+  color: var(--notae-muted);
+  font-size: 0.76rem;
+  font-style: normal;
+}
+
+.notae-admin-summary-grid strong {
+  font-size: 1.45rem;
+  line-height: 1;
+  color: var(--notae-heading-ink);
+}
+
+.notae-admin-table-section {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+
+.notae-admin-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.notae-admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--notae-border);
+  border-radius: 0.82rem;
+  background: var(--notae-surface-raised);
+}
+
+.notae-admin-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.notae-admin-table th,
+.notae-admin-table td {
+  text-align: left;
+  padding: 0.72rem 0.78rem;
+  border-bottom: 1px solid var(--notae-border);
+  vertical-align: top;
+  font-size: 0.82rem;
+}
+
+.notae-admin-table th {
+  color: var(--notae-muted);
+  font-weight: 700;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--notae-surface-raised) 84%, var(--notae-surface-muted) 16%);
+}
+
+.notae-admin-table td {
+  color: var(--notae-text);
+}
+
+.notae-admin-table td > strong,
+.notae-admin-table td > span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.notae-admin-table td:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.notae-admin-status-pill {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.16rem 0.48rem;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.notae-admin-status-pill.active,
+.notae-admin-status-pill.trialing {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.notae-admin-status-pill.past_due,
+.notae-admin-status-pill.canceled,
+.notae-admin-status-pill.suspended,
+.notae-admin-table .is-over-limit {
+  color: #b91c1c;
+}
+
+.notae-admin-status-pill.past_due,
+.notae-admin-status-pill.canceled,
+.notae-admin-status-pill.suspended {
+  background: #fee2e2;
+}
+
+.notae-admin-limit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.notae-admin-limit-field {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--notae-text);
+}
+
+@media (max-width: 1100px) {
+  .notae-admin-dashboard-head,
+  .notae-admin-summary-grid,
+  .notae-admin-limit-grid {
+    grid-template-columns: 1fr;
+  }
+}

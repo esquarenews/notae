@@ -137,7 +137,11 @@ class AiAssistantController < ApplicationController
     when :provider_error
       "Notae AI request failed. Please retry."
     when :missing_api_key
-      "Configure an OpenAI key in Settings > Connections first."
+      if Rails.env.development?
+        "Configure an OpenAI key in Settings > Connections first."
+      else
+        "Notae AI is not configured. Ask an administrator to check the application environment."
+      end
     when :missing_prompt
       "Enter a prompt to ask Notae AI."
     when :unsupported_draft_request

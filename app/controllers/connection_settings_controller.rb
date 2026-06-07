@@ -2,6 +2,7 @@ class ConnectionSettingsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
   before_action :set_user
+  helper_method :openai_key_settings_enabled?
 
   def show
     authorize @workspace, :show?
@@ -11,6 +12,11 @@ class ConnectionSettingsController < ApplicationController
   def update
     authorize @workspace, :show?
     authorize @user, :update?
+
+    unless openai_key_settings_enabled?
+      render_connection_settings_response("notice", "Connection settings are managed by the application environment.")
+      return
+    end
 
     if clear_key_requested?
       persist_openai_api_key(nil, "OpenAI API key removed.")
@@ -33,6 +39,10 @@ class ConnectionSettingsController < ApplicationController
   end
 
   private
+
+  def openai_key_settings_enabled?
+    Rails.env.development?
+  end
 
   def set_workspace
     @workspace = policy_scope(Workspace).find_by!(slug: params[:workspace_slug])

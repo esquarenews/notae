@@ -22,7 +22,18 @@ RSpec.describe "Admin dashboard", type: :request do
 
   it "allows super admins to view platform tenancy and billing state" do
     admin = User.create!(email: "platform-admin@example.com", password: "password123", super_admin: true)
-    create_workspace_with_owner(name: "Admin Visible", slug: "admin-visible", owner_email: "admin-visible-owner@example.com")
+    workspace, owner = create_workspace_with_owner(name: "Admin Visible", slug: "admin-visible", owner_email: "admin-visible-owner@example.com")
+    workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
+    AiUsageLog.create!(
+      user: owner,
+      workspace: workspace,
+      operation: AiUsageLog::OP_ASSISTANT_QUERY,
+      model: "gpt-test",
+      prompt_tokens: 10,
+      completion_tokens: 5,
+      total_tokens: 15,
+      estimated_cost_usd: 0.25
+    )
     sign_in admin
 
     get admin_root_path
@@ -30,13 +41,19 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
     expect(document.at_css("main.notae-content.notae-admin-content")).to be_present
-    expect(document.at_css(".notae-settings-shell.notae-admin-shell > .notae-settings-content")).to be_present
+    expect(document.at_css(".notae-admin-dashboard-shell .notae-admin-table")).to be_present
     expect(response.body).to include("SaaS admin dashboard")
     expect(response.body).to include("Stripe")
-    expect(response.body).to include("/webhooks/stripe")
+    expect(response.body).to include("Registered users")
+    expect(response.body).to include("Billing status")
+    expect(response.body).to include("Usage this month")
     expect(response.body).to include("MRR")
-    expect(response.body).to include("AI cost risk")
+    expect(response.body).to include("AI cost")
     expect(response.body).to include("Admin Visible")
+    expect(response.body).to include("admin-visible-owner@example.com")
+    expect(response.body).to include("Team")
+    expect(response.body).to include("Active")
+    expect(response.body).to include("1 AI request")
   end
 
   it "allows env-allowlisted admins without changing the user row" do
@@ -64,7 +81,13 @@ RSpec.describe "Admin dashboard", type: :request do
                 status: WorkspaceSubscription::STATUS_ACTIVE,
                 billing_provider: WorkspaceSubscription::PROVIDER_STRIPE,
                 provider_customer_id: "cus_123",
-                provider_subscription_id: "sub_456"
+                provider_subscription_id: "sub_456",
+                limits_json: {
+                  members: "25",
+                  ai_monthly_budget_usd: "12.5",
+                  ai_requests_per_month: "",
+                  storage_mb: "10240"
+                }
               }
             }
     end.to change(AdminAuditEvent, :count).by(1)
@@ -75,6 +98,9 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(subscription.status).to eq(WorkspaceSubscription::STATUS_ACTIVE)
     expect(subscription.provider_customer_id).to eq("cus_123")
     expect(subscription.provider_subscription_id).to eq("sub_456")
+    expect(subscription.limits_json).to include("members" => 25, "ai_monthly_budget_usd" => 12.5)
+    expect(subscription.limits_json).not_to have_key("ai_requests_per_month")
+    expect(subscription.limits_json).not_to have_key("storage_mb")
     expect(AdminAuditEvent.last.action).to eq("subscription_updated")
   end
 

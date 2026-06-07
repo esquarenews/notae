@@ -19,6 +19,7 @@ module Admin
     def update
       subscription = @workspace.subscription_record
       subscription.assign_attributes(subscription_params)
+      subscription.limits_json = normalized_limits_json(subscription) if params[:workspace_subscription].key?(:limits_json)
       normalize_free_subscription!(subscription)
       subscription.save!
 
@@ -74,8 +75,36 @@ module Admin
         :provider_customer_id,
         :provider_subscription_id,
         :trial_ends_at,
-        :current_period_ends_at
+        :current_period_ends_at,
+        limits_json: [
+          :members,
+          :storage_mb,
+          :ai_requests_per_month,
+          :ai_monthly_budget_usd,
+          :integrations,
+          :exports_per_month
+        ]
       )
+    end
+
+    def normalized_limits_json(subscription)
+      plan_limits = Billing::PlanCatalog.limits_for(subscription.plan_key)
+      raw_limits = subscription_params.fetch(:limits_json, {}).to_h
+
+      plan_limits.each_with_object({}) do |(key, plan_value), overrides|
+        raw_value = raw_limits[key.to_s].to_s.strip
+        next if raw_value.blank?
+
+        normalized_value =
+          if key == :ai_monthly_budget_usd
+            BigDecimal(raw_value).to_f
+          else
+            Integer(raw_value)
+          end
+        overrides[key.to_s] = normalized_value if normalized_value != plan_value
+      rescue ArgumentError
+        next
+      end
     end
 
     def normalize_free_subscription!(subscription)

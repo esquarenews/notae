@@ -28,7 +28,12 @@ module Api
         def render_unavailable(reason)
           case reason
           when :missing_api_key
-            render_error(code: "missing_api_key", message: "Configure an OpenAI key first", status: :unprocessable_entity)
+            message = if Rails.env.development?
+              "Configure an OpenAI key in Settings > Connections first."
+            else
+              "Notae AI is not configured. Ask an administrator to check the application environment."
+            end
+            render_error(code: "missing_api_key", message: message, status: :unprocessable_entity)
           when :budget_exceeded
             render_error(code: "budget_exceeded", message: "AI budget reached", status: :too_many_requests)
           when :rate_limited

@@ -7,114 +7,104 @@
   <%= link_to "Users", admin_users_path, class: "notae-chip-button notae-chip-button-subtle" %>
 <% end %>
 
-<section class="notae-settings-shell notae-admin-shell">
-  <div class="notae-settings-content">
-    <section class="notae-settings-section">
+<section class="notae-admin-dashboard-shell">
+  <header class="notae-admin-dashboard-head">
+    <div>
       <h2>SaaS admin dashboard</h2>
-      <p class="notae-pref-description">Full-service platform controls for tenancy, billing state, limits, and support operations.</p>
+      <p class="notae-pref-description">Platform controls for customers, billing state, limits, and support operations.</p>
+    </div>
+    <div class="notae-admin-summary-grid">
+      <article>
+        <span>Workspaces</span>
+        <strong><%= number_with_delimiter(@workspace_count) %></strong>
+        <em><%= number_with_delimiter(@active_workspace_count) %> active</em>
+      </article>
+      <article>
+        <span>Users</span>
+        <strong><%= number_with_delimiter(@user_count) %></strong>
+        <em>registered</em>
+      </article>
+      <article>
+        <span>MRR</span>
+        <strong>$<%= number_with_precision(@mrr_aud_cents / 100.0, precision: 0) %></strong>
+        <em><%= number_with_delimiter(@trial_count) %> trials</em>
+      </article>
+      <article>
+        <span>AI cost</span>
+        <strong>$<%= number_with_precision(@ai_cost_this_month_usd, precision: 2) %></strong>
+        <em><%= number_with_delimiter(@failed_stripe_webhook_count) %> failed webhooks</em>
+      </article>
+    </div>
+  </header>
 
-      <div class="notae-ai-analytics-grid">
-        <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">Workspaces</p>
-          <p class="notae-utility-title"><%= number_with_delimiter(@workspace_count) %></p>
-          <p class="notae-pref-description"><%= number_with_delimiter(@active_workspace_count) %> active, <%= number_with_delimiter(@suspended_workspace_count) %> suspended.</p>
-        </article>
-
-        <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">Users</p>
-          <p class="notae-utility-title"><%= number_with_delimiter(@user_count) %></p>
-          <p class="notae-pref-description">Registered Notae accounts.</p>
-        </article>
-
-        <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">Billing provider</p>
-          <p class="notae-utility-title">Stripe</p>
-          <p class="notae-pref-description"><%= @billing_provider_ready ? "Credentials configured." : "Credentials not configured yet." %></p>
-        </article>
-
-        <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">Webhook endpoint</p>
-          <p class="notae-utility-title"><%= @stripe_webhook_path %></p>
-          <p class="notae-pref-description"><%= @stripe_webhook_auth_ready ? "Webhook secret configured." : "Set STRIPE_WEBHOOK_SECRET before registering in production." %></p>
-        </article>
-
-        <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">MRR</p>
-          <p class="notae-utility-title">$<%= number_with_precision(@mrr_aud_cents / 100.0, precision: 0) %></p>
-          <p class="notae-pref-description"><%= number_with_delimiter(@trial_count) %> trials, <%= number_with_delimiter(@past_due_count) %> past due, <%= number_with_delimiter(@canceled_count) %> cancelled.</p>
-        </article>
-
-        <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">AI cost risk</p>
-          <p class="notae-utility-title">$<%= number_with_precision(@ai_cost_this_month_usd, precision: 2) %></p>
-          <p class="notae-pref-description">Estimated AI spend this month. <%= number_with_delimiter(@failed_stripe_webhook_count) %> failed Stripe webhooks.</p>
-        </article>
+  <section class="notae-admin-table-section">
+    <div class="notae-admin-section-head">
+      <div>
+        <h3>Registered users and billing</h3>
+        <p class="notae-pref-description">Review customer workspaces, owners, plan state, usage against limits, and drill in for overrides.</p>
       </div>
-    </section>
+      <span class="notae-general-backup-status is-ready"><%= Billing::StripeGateway.display_name %></span>
+    </div>
 
-    <section class="notae-settings-section">
-      <h2>Plan distribution</h2>
-      <div class="notae-ai-analytics-grid">
-        <% WorkspaceSubscription::PLAN_KEYS.each do |plan_key| %>
-          <article class="notae-ai-analytics-card">
-            <p class="notae-pref-label"><%= Billing::PlanCatalog.name_for(plan_key) %></p>
-            <p class="notae-utility-title"><%= number_with_delimiter(@plan_counts.fetch(plan_key, 0)) %></p>
-            <p class="notae-pref-description"><%= Billing::PlanCatalog.monthly_price_label_for(plan_key) %></p>
-          </article>
-        <% end %>
-      </div>
-    </section>
-
-    <section class="notae-settings-section">
-      <h2>High AI cost workspaces</h2>
-      <div class="notae-general-backup-list">
-        <% if @high_ai_cost_workspaces.any? %>
-          <% @high_ai_cost_workspaces.each do |workspace| %>
-            <article class="notae-general-backup-item">
-              <div class="notae-general-backup-item-copy">
-                <p class="notae-general-backup-item-title"><%= link_to workspace.name, admin_workspace_path(workspace) %></p>
-                <p class="notae-general-backup-item-meta"><%= workspace.slug %> · $<%= number_with_precision(workspace.monthly_ai_cost_usd.to_f, precision: 2) %> estimated AI cost this month</p>
-              </div>
-            </article>
+    <div class="notae-admin-table-wrap">
+      <table class="notae-admin-table">
+        <thead>
+          <tr>
+            <th>Workspace</th>
+            <th>Registered users</th>
+            <th>Plan</th>
+            <th>Billing status</th>
+            <th>Usage this month</th>
+            <th>Limits</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @workspace_admin_rows.each do |row| %>
+            <% workspace = row.fetch(:workspace) %>
+            <% subscription = row.fetch(:subscription) %>
+            <% usage = row.fetch(:usage) %>
+            <% limits = row.fetch(:limits) %>
+            <% exceeded = row.fetch(:exceeded) %>
+            <% owner_emails = row.fetch(:owners).map(&:email) %>
+            <% user_emails = row.fetch(:users).map(&:email) %>
+            <tr>
+              <td>
+                <strong><%= link_to workspace.name, admin_workspace_path(workspace) %></strong>
+                <span><%= workspace.slug %></span>
+              </td>
+              <td>
+                <strong><%= pluralize(user_emails.size, "user") %></strong>
+                <span><%= (owner_emails.presence || user_emails).first(3).join(", ") %></span>
+              </td>
+              <td>
+                <strong><%= subscription.display_plan %></strong>
+                <span><%= Billing::PlanCatalog.monthly_price_label_for(subscription.plan_key) %></span>
+              </td>
+              <td>
+                <span class="notae-admin-status-pill <%= subscription.status %>"><%= subscription.display_status %></span>
+                <span><%= workspace.suspended? ? "Workspace suspended" : subscription.billing_provider.humanize %></span>
+              </td>
+              <td>
+                <span><%= number_with_delimiter(usage.fetch(:members)) %> members</span>
+                <span class="<%= "is-over-limit" if exceeded.fetch(:ai_requests_per_month) %>"><%= pluralize(usage.fetch(:ai_requests_this_month), "AI request") %></span>
+                <span class="<%= "is-over-limit" if exceeded.fetch(:ai_monthly_budget_usd) %>">$<%= number_with_precision(usage.fetch(:ai_cost_usd_this_month), precision: 2) %> AI cost</span>
+              </td>
+              <td>
+                <span class="<%= "is-over-limit" if exceeded.fetch(:members) %>"><%= number_with_delimiter(limits.fetch(:members)) %> members</span>
+                <span><%= number_with_delimiter(limits.fetch(:ai_requests_per_month)) %> AI req</span>
+                <span>$<%= number_with_precision(limits.fetch(:ai_monthly_budget_usd), precision: 2) %> AI cap</span>
+              </td>
+              <td>
+                <%= link_to "Workspace", admin_workspace_path(workspace), class: "notae-chip-button" %>
+                <% row.fetch(:users).first(2).each do |user| %>
+                  <%= link_to "User", admin_user_path(user), class: "notae-chip-button notae-chip-button-subtle" %>
+                <% end %>
+              </td>
+            </tr>
           <% end %>
-        <% else %>
-          <p class="notae-page-subtle">No AI usage logged this month.</p>
-        <% end %>
-      </div>
-    </section>
-
-    <section class="notae-settings-section">
-      <h2>Recent workspaces</h2>
-      <div class="notae-general-backup-list">
-        <% @recent_workspaces.each do |workspace| %>
-          <% subscription = workspace.subscription_record %>
-          <article class="notae-general-backup-item">
-            <div class="notae-general-backup-item-copy">
-              <p class="notae-general-backup-item-title"><%= link_to workspace.name, admin_workspace_path(workspace) %></p>
-              <p class="notae-general-backup-item-meta"><%= workspace.slug %> · <%= subscription.display_plan %> · <%= subscription.display_status %></p>
-            </div>
-            <% if workspace.suspended? %>
-              <span class="notae-general-backup-status is-failed">Suspended</span>
-            <% else %>
-              <span class="notae-general-backup-status is-ready">Active</span>
-            <% end %>
-          </article>
-        <% end %>
-      </div>
-    </section>
-
-    <section class="notae-settings-section">
-      <h2>Admin audit trail</h2>
-      <div class="notae-general-backup-list">
-        <% @recent_admin_events.each do |event| %>
-          <article class="notae-general-backup-item">
-            <div class="notae-general-backup-item-copy">
-              <p class="notae-general-backup-item-title"><%= event.action.humanize %></p>
-              <p class="notae-general-backup-item-meta"><%= event.actor.email %><%= " · #{event.workspace.name}" if event.workspace.present? %> · <%= time_ago_in_words(event.created_at) %> ago</p>
-            </div>
-          </article>
-        <% end %>
-      </div>
-    </section>
-  </div>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </section>

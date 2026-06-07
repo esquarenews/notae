@@ -72,7 +72,7 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.media_type).to eq("text/html")
     expect(response.body).to include('<turbo-frame id="ai_rail_panel">')
     expect(response.body).to include("Frame fallback prompt")
-    expect(response.body).to include("Configure an OpenAI key in Settings &gt; Connections first.")
+    expect(response.body).to include("Notae AI is not configured. Ask an administrator to check the application environment.")
   end
 
   it "renders the lazy-loaded ai rail panel on demand" do
