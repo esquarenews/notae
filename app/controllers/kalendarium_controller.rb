@@ -581,18 +581,7 @@ class KalendariumController < ApplicationController
   end
 
   def year_label_dates_for_all_day_event(event)
-    starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone)
-    ends_local = event.ends_at_utc.in_time_zone(current_user.time_zone)
-    end_date =
-      if ends_local == ends_local.beginning_of_day && ends_local > starts_local
-        (ends_local - 1.second).to_date
-      else
-        ends_local.to_date
-      end
-
-    start_date = starts_local.to_date
-    end_date = start_date if end_date < start_date
-    (start_date..end_date).to_a
+    event.all_day_range(current_user.time_zone).to_a
   end
 
   def prioritize_year_day_events(events)

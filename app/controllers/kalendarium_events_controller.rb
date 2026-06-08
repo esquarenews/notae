@@ -347,7 +347,10 @@ class KalendariumEventsController < ApplicationController
     return ensure_project_calendar!(project) if project.present?
     return nil if selected_calendar_id.blank?
 
-    policy_scope(KalendariumCalendar).for_workspace(@workspace).find(selected_calendar_id)
+    policy_scope(KalendariumCalendar)
+      .visible_in_workspace(@workspace)
+      .shown_in_kalendarium
+      .find_by(id: selected_calendar_id)
   end
 
   def ensure_project_calendar!(project)

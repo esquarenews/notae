@@ -36,6 +36,44 @@ RSpec.describe KalendariumEvent, type: :model do
     expect(event.errors[:ends_at_utc]).to include("must be after start time")
   end
 
+  it "treats exclusive midnight all-day ends as the previous visible day" do
+    user, workspace, calendar = build_workspace_stack(suffix: "exclusive-all-day-range")
+    zone = Time.find_zone!("Australia/Melbourne")
+    event = described_class.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "King's Birthday",
+      all_day: true,
+      starts_at_utc: zone.local(2026, 6, 8, 0, 0, 0).utc,
+      ends_at_utc: zone.local(2026, 6, 9, 0, 0, 0).utc,
+      created_by: user,
+      updated_by: user,
+      reminder_offsets_minutes: []
+    )
+
+    expect(event.all_day_range("Australia/Melbourne").to_a).to eq([ Date.new(2026, 6, 8) ])
+    expect(event.all_day_exclusive_end_date("Australia/Melbourne")).to eq(Date.new(2026, 6, 9))
+  end
+
+  it "keeps inclusive end-of-day all-day ranges on their stored visible dates" do
+    user, workspace, calendar = build_workspace_stack(suffix: "inclusive-all-day-range")
+    zone = Time.find_zone!("Australia/Melbourne")
+    event = described_class.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      title: "Long rehearsal",
+      all_day: true,
+      starts_at_utc: zone.local(2026, 6, 28, 0, 0, 0).utc,
+      ends_at_utc: zone.local(2026, 7, 4, 23, 59, 59).utc,
+      created_by: user,
+      updated_by: user,
+      reminder_offsets_minutes: []
+    )
+
+    expect(event.all_day_range("Australia/Melbourne").to_a).to include(Date.new(2026, 6, 28), Date.new(2026, 7, 4))
+    expect(event.all_day_exclusive_end_date("Australia/Melbourne")).to eq(Date.new(2026, 7, 5))
+  end
+
   it "queues chunk reindexing only for searchable changes" do
     user, workspace, calendar = build_workspace_stack(suffix: "reindex")
     allow(Search::IndexKalendariumEventJob).to receive(:perform_later)

@@ -206,6 +206,60 @@ RSpec.describe "Kalendarium", type: :request do
     expect(event.reload.kalendarium_calendar_id).to eq(calendar.id)
   end
 
+  it "creates events from a workspace view on a shared all-workspaces provider calendar" do
+    user, source_workspace, = build_stack(suffix: "all-workspaces-create-source")
+    target_workspace = Workspace.create!(name: "Kal Request all-workspaces-create-target", slug: "kal-request-all-workspaces-create-target")
+    Membership.create!(workspace: target_workspace, user: user, role: :owner)
+    connection = KalendariumConnection.create!(
+      workspace: source_workspace,
+      owner: user,
+      created_by: user,
+      provider: "google",
+      label: "Shared Google",
+      access_token: "token",
+      enabled: true,
+      status: "connected",
+      settings_json: { "workspace_scope" => "all_workspaces" }
+    )
+    shared_calendar = KalendariumCalendar.create!(
+      workspace: source_workspace,
+      kalendarium_connection: connection,
+      created_by: user,
+      provider: "google",
+      source_kind: "provider",
+      name: "Shared calendar",
+      color_hex: "#336699",
+      time_zone: "Australia/Melbourne",
+      enabled: true,
+      read_only: false
+    )
+    sync_service = instance_double(Kalendarium::ProviderEventSyncService, upsert_remote!: true)
+    allow(Kalendarium::ProviderEventSyncService).to receive(:new).and_return(sync_service)
+    sign_in user
+
+    start_time = 2.days.from_now.change(hour: 12, min: 0, sec: 0)
+    end_time = start_time + 1.hour
+    expect do
+      post kalendarium_events_path(workspace_slug: target_workspace.slug), params: {
+        view: "week",
+        date: start_time.to_date.to_s,
+        kalendarium_event: {
+          kalendarium_calendar_id: shared_calendar.id,
+          title: "Shared calendar create",
+          starts_at_local: start_time.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+          ends_at_local: end_time.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
+        }
+      }
+    end.to change(KalendariumEvent, :count).by(1)
+
+    event = KalendariumEvent.find_by!(title: "Shared calendar create")
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: target_workspace.slug, view: "week", date: start_time.to_date.to_s))
+    expect(event.workspace_id).to eq(target_workspace.id)
+    expect(event.kalendarium_calendar_id).to eq(shared_calendar.id)
+    expect(Kalendarium::ProviderEventSyncService).to have_received(:new).with(event: event)
+    expect(sync_service).to have_received(:upsert_remote!)
+  end
+
   it "renders embedded task slot suggestions and hides the create event accordion" do
     user, workspace, calendar = build_stack(suffix: "task-slots", time_zone: "UTC")
     database = Database.create!(workspace: workspace, created_by: user, name: "Task Grid")
@@ -955,6 +1009,33 @@ RSpec.describe "Kalendarium", type: :request do
     week_doc = Nokogiri::HTML.parse(response.body)
     thursday_track = week_doc.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-02']")
     expect(thursday_track&.text).to include(event.title)
+  end
+
+  it "renders a one-day all-day provider event only on its local start day" do
+    user, workspace, calendar = build_stack(suffix: "one-day-provider-all-day", time_zone: "Australia/Melbourne")
+    sign_in user
+    zone = Time.find_zone!("Australia/Melbourne")
+
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "King's Birthday",
+      all_day: true,
+      source_kind: "provider",
+      starts_at_utc: zone.local(2026, 6, 8, 0, 0, 0).utc,
+      ends_at_utc: zone.local(2026, 6, 9, 0, 0, 0).utc
+    )
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-06-08")
+
+    expect(response).to have_http_status(:ok)
+    week_doc = Nokogiri::HTML.parse(response.body)
+    monday_track = week_doc.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-06-08']")
+    tuesday_track = week_doc.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-06-09']")
+    expect(monday_track&.css("#kalendarium_event_#{event.id}").size).to eq(1)
+    expect(tuesday_track&.css("#kalendarium_event_#{event.id}").size).to eq(0)
   end
 
   it "shows optional daily event labels in year view when toggled on" do

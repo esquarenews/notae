@@ -151,11 +151,13 @@ RSpec.describe Kalendarium::Providers::IcloudCaldavAdapter do
       { "email" => "sam@example.com", "status" => "needs-action" }
     )
 
-    all_day_event = calendar.kalendarium_events.find_by(remote_event_id: "event-uid-2::2026-03-04T00:00:00.000000Z")
+    all_day_event = calendar.kalendarium_events.find_by(remote_event_id: "event-uid-2::2026-03-03T13:00:00.000000Z")
     expect(all_day_event).to be_present
     expect(all_day_event.all_day).to be(true)
     expect(all_day_event.status).to eq("tentative")
     expect(all_day_event.ends_at_utc - all_day_event.starts_at_utc).to eq(1.day)
+    expect(all_day_event.starts_at_utc.in_time_zone("Australia/Melbourne").strftime("%F %H:%M")).to eq("2026-03-04 00:00")
+    expect(all_day_event.ends_at_utc.in_time_zone("Australia/Melbourne").strftime("%F %H:%M")).to eq("2026-03-05 00:00")
 
     expect(stale_event.reload.status).to eq("cancelled")
     expect(stale_calendar.reload.enabled).to be(false)

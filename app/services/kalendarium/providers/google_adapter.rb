@@ -334,11 +334,8 @@ module Kalendarium
 
         if event.all_day?
           starts_local = event.starts_at_utc.in_time_zone(calendar.time_zone)
-          ends_local = event.ends_at_utc.in_time_zone(calendar.time_zone)
-          end_date = ends_local.to_date
-          end_date = starts_local.to_date + 1.day if end_date <= starts_local.to_date
           payload["start"] = { "date" => starts_local.to_date.iso8601 }
-          payload["end"] = { "date" => end_date.iso8601 }
+          payload["end"] = { "date" => event.all_day_exclusive_end_date(calendar.time_zone).iso8601 }
         else
           payload["start"] = {
             "dateTime" => event.starts_at_utc.utc.iso8601,
@@ -468,8 +465,9 @@ module Kalendarium
         data = entry.to_h
         date_value = data["date"].to_s.strip
         if date_value.present?
+          zone = resolve_time_zone(data["timeZone"], fallback_time_zone: fallback_time_zone)
           date = Date.iso8601(date_value)
-          return [ date.beginning_of_day.utc, true ]
+          return [ zone.local(date.year, date.month, date.day).utc, true ]
         end
 
         date_time_value = data["dateTime"].to_s.strip

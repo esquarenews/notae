@@ -52,8 +52,29 @@ class KalendariumEvent < ApplicationRecord
   after_commit :remove_search_chunks, on: :destroy
   before_validation :normalize_reminder_offsets
 
-  def all_day_range
-    starts_at_utc.to_date..ends_at_utc.to_date
+  def all_day_range(time_zone = Time.zone)
+    all_day_start_date(time_zone)..all_day_end_date(time_zone)
+  end
+
+  def all_day_start_date(time_zone = Time.zone)
+    starts_at_utc.in_time_zone(resolve_time_zone(time_zone)).to_date
+  end
+
+  def all_day_end_date(time_zone = Time.zone)
+    starts_local = starts_at_utc.in_time_zone(resolve_time_zone(time_zone))
+    ends_local = ends_at_utc.in_time_zone(resolve_time_zone(time_zone))
+    end_date =
+      if all_day? && ends_local == ends_local.beginning_of_day && ends_local > starts_local
+        (ends_local - 1.second).to_date
+      else
+        ends_local.to_date
+      end
+
+    [ end_date, starts_local.to_date ].max
+  end
+
+  def all_day_exclusive_end_date(time_zone = Time.zone)
+    all_day_end_date(time_zone) + 1.day
   end
 
   def meeting_join_url
@@ -102,6 +123,12 @@ class KalendariumEvent < ApplicationRecord
     uri.is_a?(URI::HTTP) && uri.host.present?
   rescue URI::InvalidURIError
     false
+  end
+
+  def resolve_time_zone(time_zone)
+    return time_zone if time_zone.respond_to?(:period_for_utc)
+
+    ActiveSupport::TimeZone[time_zone.to_s] || Time.zone
   end
 
   def ends_after_starts

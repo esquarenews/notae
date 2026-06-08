@@ -473,12 +473,7 @@ module Kalendarium
       end
 
       def all_day_write_dates(event:, calendar:)
-        starts_local = event.starts_at_utc.in_time_zone(calendar.time_zone)
-        ends_local = event.ends_at_utc.in_time_zone(calendar.time_zone)
-        start_date = starts_local.to_date
-        end_date = ends_local.to_date
-        end_date = start_date + 1.day if end_date <= start_date
-        [ start_date, end_date ]
+        [ event.all_day_start_date(calendar.time_zone), event.all_day_exclusive_end_date(calendar.time_zone) ]
       end
 
       def ical_rrule_line(raw_rrule)
@@ -685,7 +680,8 @@ module Kalendarium
         value_type = params["VALUE"].to_s.upcase
         if value_type == "DATE" || raw_value.match?(/\A\d{8}\z/)
           date = Date.strptime(raw_value[0, 8], "%Y%m%d")
-          return [ date.beginning_of_day.utc, true ]
+          zone = resolve_time_zone(params["TZID"], fallback_time_zone: fallback_time_zone)
+          return [ zone.local(date.year, date.month, date.day).utc, true ]
         end
 
         if raw_value.match?(/\A\d{8}T\d{6}Z\z/)
