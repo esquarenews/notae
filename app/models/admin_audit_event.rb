@@ -7,6 +7,7 @@ class AdminAuditEvent < ApplicationRecord
     subscription_canceled
     stripe_webhook_processed
     user_limits_updated
+    user_archived
     user_suspended
     user_removed
     user_reinstated

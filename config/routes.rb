@@ -33,6 +33,7 @@ Rails.application.routes.draw do
     end
     resources :users, only: %i[index show update] do
       member do
+        patch :archive
         patch :suspend
         patch :remove
         patch :reinstate

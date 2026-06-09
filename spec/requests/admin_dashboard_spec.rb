@@ -217,6 +217,61 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).not_to include("Hidden Workspace Two")
   end
 
+  it "filters admin users by account state and archives users from the list" do
+    admin = User.create!(email: "user-filter-admin@example.com", password: "password123", super_admin: true)
+    trial_workspace, trial_user = create_workspace_with_owner(name: "Trial Account", slug: "trial-account", owner_email: "trial-account-user@example.com")
+    paid_workspace, paid_user = create_workspace_with_owner(name: "Paid Account", slug: "paid-account", owner_email: "paid-account-user@example.com")
+    suspended_workspace, suspended_user = create_workspace_with_owner(name: "Suspended Account", slug: "suspended-account", owner_email: "suspended-account-user@example.com")
+    canceled_workspace, canceled_user = create_workspace_with_owner(name: "Canceled Account", slug: "canceled-account", owner_email: "canceled-account-user@example.com")
+    manual_paid_user = User.create!(email: "manual-paid-account-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
+    archived_user = User.create!(email: "archived-account-user@example.com", password: "password123", removed_at: 1.day.ago)
+
+    trial_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_TRIALING)
+    paid_workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
+    suspended_user.suspend_for_week!
+    suspended_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_SUSPENDED)
+    canceled_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_CANCELED)
+    sign_in admin
+
+    get admin_users_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("User account filters")
+    expect(response.body).to include("Archive")
+    expect(response.body).to include(trial_user.email)
+    expect(response.body).to include(paid_user.email)
+    expect(response.body).to include(suspended_user.email)
+    expect(response.body).not_to include(archived_user.email)
+    expect(response.body).not_to include(canceled_user.email)
+
+    get admin_users_path(filter: "trial")
+    expect(response.body).to include(trial_user.email)
+    expect(response.body).not_to include(paid_user.email)
+
+    get admin_users_path(filter: "paid")
+    expect(response.body).to include(paid_user.email)
+    expect(response.body).to include(manual_paid_user.email)
+    expect(response.body).not_to include(trial_user.email)
+
+    get admin_users_path(filter: "suspended")
+    expect(response.body).to include(suspended_user.email)
+    expect(response.body).not_to include(paid_user.email)
+
+    get admin_users_path(filter: "archived")
+    expect(response.body).to include(archived_user.email)
+    expect(response.body).to include(canceled_user.email)
+    expect(response.body).not_to include(paid_user.email)
+
+    expect do
+      patch archive_admin_user_path(trial_user, filter: "trial")
+    end.to change(AdminAuditEvent.where(action: "user_archived"), :count).by(1)
+
+    expect(response).to redirect_to(admin_users_path(filter: "trial"))
+    trial_user.reload
+    expect(trial_user).to be_removed
+    expect(trial_user).not_to be_active_for_authentication
+  end
+
   it "suspends, removes, and reinstates user accounts from the admin user detail page" do
     user = User.create!(email: "account-control-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
     api_token = user.api_tokens.create!(name: "Admin control token", scopes_json: [ ApiToken::SCOPE_PAGES_READ ])
