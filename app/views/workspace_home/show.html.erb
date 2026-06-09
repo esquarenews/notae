@@ -17,9 +17,16 @@
       </header>
 
       <section class="notae-auth-card notae-home-card">
-        <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search" do |form| %>
+        <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug),
+                      method: :get,
+                      class: "notae-workspace-home-search",
+                      data: { controller: "search-feedback", action: "submit->search-feedback#start" } do |form| %>
           <%= form.text_field :q, placeholder: "Search Notarum, blocks, and rows", class: "notae-auth-input" %>
-          <%= form.submit "Search", class: "notae-chip-button" %>
+          <%= form.submit "Search", class: "notae-chip-button", data: { search_feedback_target: "submit" } %>
+          <span class="notae-search-feedback-status" role="status" aria-live="polite" hidden data-search-feedback-target="status">
+            <span class="notae-search-feedback-spinner" aria-hidden="true"></span>
+            <span>Searching...</span>
+          </span>
           <%= link_to "Notifications (#{@unread_notifications_count})",
                       workspace_notifications_path(workspace_slug: @workspace.slug),
                       class: "notae-chip-button" %>

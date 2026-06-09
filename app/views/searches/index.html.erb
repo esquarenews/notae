@@ -8,12 +8,19 @@
     <h1 class="notae-utility-title">Search</h1>
   </header>
 
-  <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug), method: :get, class: "notae-workspace-home-search notae-utility-search-form" do |form| %>
+  <%= form_with url: workspace_search_path(workspace_slug: @workspace.slug),
+                method: :get,
+                class: "notae-workspace-home-search notae-utility-search-form",
+                data: { controller: "search-feedback", action: "submit->search-feedback#start" } do |form| %>
     <%= form.text_field :q,
                         value: @query,
                         placeholder: "Find Notarum, blocks, rows",
                         class: "notae-auth-input notae-utility-input" %>
-    <%= form.submit "Search", class: "notae-auth-submit notae-utility-submit" %>
+    <%= form.submit "Search", class: "notae-auth-submit notae-utility-submit", data: { search_feedback_target: "submit" } %>
+    <span class="notae-search-feedback-status" role="status" aria-live="polite" hidden data-search-feedback-target="status">
+      <span class="notae-search-feedback-spinner" aria-hidden="true"></span>
+      <span>Searching...</span>
+    </span>
   <% end %>
 
   <% if @query.present? %>

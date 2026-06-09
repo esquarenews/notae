@@ -6927,6 +6927,37 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
   }
 }
 
+.notae-search-feedback-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 2.1rem;
+  color: var(--notae-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.notae-search-feedback-status[hidden] {
+  display: none;
+}
+
+.notae-search-feedback-spinner {
+  width: 0.92rem;
+  height: 0.92rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--notae-accent) 22%, transparent);
+  border-top-color: var(--notae-accent);
+  animation: notae-auth-submit-spin 0.8s linear infinite;
+}
+
+[data-controller~="search-feedback"].is-searching input[type="submit"],
+[data-controller~="search-feedback"].is-searching button[type="submit"] {
+  cursor: progress;
+  opacity: 0.78;
+}
+
 .notae-auth-links {
   display: flex;
   align-items: center;

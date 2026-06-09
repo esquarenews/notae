@@ -41,7 +41,8 @@
 
   <%= form_with url: workspace_library_path(workspace_slug: @workspace.slug),
                 method: :get,
-                class: "notae-library-toolbar" do %>
+                class: "notae-library-toolbar",
+                data: { controller: "search-feedback", action: "submit->search-feedback#start" } do %>
 	    <%= hidden_field_tag :tab, @tab %>
 	    <%= hidden_field_tag :view_mode, @view_mode %>
 
@@ -49,6 +50,10 @@
       <span class="notae-library-search-icon" aria-hidden="true">⌕</span>
       <%= text_field_tag :q, @search_query, placeholder: "Type to search...", class: "notae-library-search-input" %>
     </div>
+    <span class="notae-search-feedback-status" role="status" aria-live="polite" hidden data-search-feedback-target="status">
+      <span class="notae-search-feedback-spinner" aria-hidden="true"></span>
+      <span>Searching...</span>
+    </span>
 
     <div class="notae-library-workspace-filter">
       <%= label_tag :workspace_filter, "Workspace", class: "notae-library-inline-label" %>

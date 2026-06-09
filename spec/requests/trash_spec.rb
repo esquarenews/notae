@@ -19,6 +19,10 @@ RSpec.describe "Trash", type: :request do
     get workspace_trash_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("data-controller=\"search-feedback\"")
+    expect(response.body).to include("data-action=\"submit-&gt;search-feedback#start\"")
+    expect(response.body).to include("data-search-feedback-target=\"status\"")
+    expect(response.body).to include("Searching...")
     expect(response.body).to include("Old Spec")
     expect(response.body).not_to include("Outside Old Spec")
 

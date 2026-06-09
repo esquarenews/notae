@@ -4,8 +4,15 @@
 
 <section class="notae-trash-shell">
   <header class="notae-trash-header">
-    <%= form_with url: workspace_trash_path(workspace_slug: @workspace.slug), method: :get, class: "notae-trash-search-form" do |form| %>
+    <%= form_with url: workspace_trash_path(workspace_slug: @workspace.slug),
+                  method: :get,
+                  class: "notae-trash-search-form",
+                  data: { controller: "search-feedback", action: "submit->search-feedback#start" } do |form| %>
       <%= form.search_field :q, value: @query, placeholder: "Search Notarum in Trash", class: "notae-pref-select notae-trash-search" %>
+      <span class="notae-search-feedback-status" role="status" aria-live="polite" hidden data-search-feedback-target="status">
+        <span class="notae-search-feedback-spinner" aria-hidden="true"></span>
+        <span>Searching...</span>
+      </span>
     <% end %>
     <div class="notae-trash-filters">
       <span class="notae-trash-chip">Last edited by</span>
