@@ -316,6 +316,8 @@ RSpec.describe "Admin dashboard", type: :request do
     get admin_users_path
 
     expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css(".notae-admin-user-list-item .notae-admin-user-list-actions")).to be_present
     expect(response.body).to include("User account filters")
     expect(response.body).to include("Archive")
     expect(response.body).to include(trial_user.email)

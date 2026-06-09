@@ -21,7 +21,7 @@
       <div class="notae-general-backup-list">
         <% @users.each do |user| %>
           <% account_status = admin_user_account_status(user) %>
-          <article class="notae-general-backup-item">
+          <article class="notae-general-backup-item notae-admin-user-list-item">
             <div class="notae-general-backup-item-copy">
               <p class="notae-general-backup-item-title"><%= link_to user.email, admin_user_path(user) %></p>
               <p class="notae-general-backup-item-meta">
@@ -30,17 +30,19 @@
               </p>
             </div>
             <span class="notae-admin-status-pill <%= account_status.last %>"><%= account_status.first %></span>
-            <% if user.removed? %>
-              <span class="notae-general-backup-status is-failed">Deactivated</span>
-            <% elsif user == current_user || user.platform_admin? %>
-              <span class="notae-general-backup-status is-ready">Protected</span>
-            <% else %>
-              <%= button_to "Archive",
-                            archive_admin_user_path(user, filter: @user_filter),
-                            method: :patch,
-                            class: "notae-chip-button notae-chip-button-subtle",
-                            form: { data: { turbo_confirm: "Archive and deactivate #{user.email}?" } } %>
-            <% end %>
+            <div class="notae-admin-user-list-actions">
+              <% if user.removed? %>
+                <span class="notae-general-backup-status is-failed">Deactivated</span>
+              <% elsif user == current_user || user.platform_admin? %>
+                <span class="notae-general-backup-status is-ready">Protected</span>
+              <% else %>
+                <%= button_to "Archive",
+                              archive_admin_user_path(user, filter: @user_filter),
+                              method: :patch,
+                              class: "notae-chip-button notae-chip-button-subtle",
+                              form: { data: { turbo_confirm: "Archive and deactivate #{user.email}?" } } %>
+              <% end %>
+            </div>
           </article>
         <% end %>
       </div>
