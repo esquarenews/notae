@@ -40,6 +40,14 @@
       <span class="notae-general-backup-status is-ready"><%= Billing::StripeGateway.display_name %></span>
     </div>
 
+    <nav class="notae-library-tabs" aria-label="User account filters">
+      <% admin_user_filter_options.each do |filter_value, label| %>
+        <%= link_to label,
+                    admin_root_path(filter: filter_value),
+                    class: [ "notae-library-tab", ("active" if @user_filter == filter_value) ].compact.join(" ") %>
+      <% end %>
+    </nav>
+
     <div class="notae-admin-table-wrap">
       <table class="notae-admin-table">
         <thead>
@@ -51,6 +59,7 @@
             <th>Total spend</th>
             <th>Storage</th>
             <th>First signed</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -58,6 +67,7 @@
           <% @user_admin_rows.each do |row| %>
             <% user = row.fetch(:user) %>
             <% summary = row.fetch(:summary) %>
+            <% account_status = admin_user_account_status(user) %>
             <tr class="notae-admin-user-tier-row notae-admin-user-tier-<%= user.saas_plan_key %>">
               <td>
                 <strong><%= link_to user.display_name, admin_user_path(user) %></strong>
@@ -88,7 +98,21 @@
                 <span><%= time_ago_in_words(summary.fetch(:first_signed_at)) %> ago</span>
               </td>
               <td>
+                <span class="notae-admin-status-pill <%= account_status.last %>"><%= account_status.first %></span>
+              </td>
+              <td>
                 <%= link_to "User", admin_user_path(user), class: "notae-chip-button" %>
+                <% if user.removed? %>
+                  <span class="notae-general-backup-status is-failed">Deactivated</span>
+                <% elsif user == current_user || user.platform_admin? %>
+                  <span class="notae-general-backup-status is-ready">Protected</span>
+                <% else %>
+                  <%= button_to "Archive",
+                                archive_admin_user_path(user, filter: @user_filter, return_to: "dashboard"),
+                                method: :patch,
+                                class: "notae-chip-button notae-chip-button-subtle",
+                                form: { data: { turbo_confirm: "Archive and deactivate #{user.email}?" } } %>
+                <% end %>
               </td>
             </tr>
           <% end %>

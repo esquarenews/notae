@@ -11,13 +11,7 @@
     <section class="notae-settings-section">
       <h2>Users</h2>
       <nav class="notae-library-tabs" aria-label="User account filters">
-        <% {
-          "all" => "All",
-          "trial" => "Trial",
-          "paid" => "Paid",
-          "suspended" => "Suspended",
-          "archived" => "Archived"
-        }.each do |filter_value, label| %>
+        <% admin_user_filter_options.each do |filter_value, label| %>
           <%= link_to label,
                       admin_users_path(filter: filter_value),
                       class: [ "notae-library-tab", ("active" if @user_filter == filter_value) ].compact.join(" ") %>
@@ -26,25 +20,7 @@
 
       <div class="notae-general-backup-list">
         <% @users.each do |user| %>
-          <% subscriptions = user.memberships.map { |membership| membership.workspace.subscription_record } %>
-          <% paid_subscription = subscriptions.any? { |subscription| subscription.active? && subscription.plan_key != WorkspaceSubscription::PLAN_FREE } %>
-          <% trial_subscription = subscriptions.any?(&:trialing?) %>
-          <% canceled_subscription = subscriptions.any?(&:canceled?) %>
-          <% suspended_subscription = subscriptions.any?(&:suspended?) %>
-          <% account_status =
-            if user.removed?
-              [ "Archived", "canceled" ]
-            elsif canceled_subscription
-              [ "Cancelled", "canceled" ]
-            elsif user.admin_suspended? || suspended_subscription
-              [ "Suspended", "suspended" ]
-            elsif trial_subscription
-              [ "Trial", "trialing" ]
-            elsif paid_subscription
-              [ "Paid", "active" ]
-            else
-              [ user.saas_plan_name, user.saas_plan_key ]
-            end %>
+          <% account_status = admin_user_account_status(user) %>
           <article class="notae-general-backup-item">
             <div class="notae-general-backup-item-copy">
               <p class="notae-general-backup-item-title"><%= link_to user.email, admin_user_path(user) %></p>

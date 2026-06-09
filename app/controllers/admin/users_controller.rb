@@ -1,12 +1,10 @@
 module Admin
   class UsersController < BaseController
-    USER_FILTERS = %w[all trial paid suspended archived].freeze
-
     before_action :set_user, only: %i[show update archive suspend remove reinstate]
 
     def index
-      @user_filter = normalized_user_filter
-      @users = filtered_users_scope
+      @user_filter = Admin::UserAccountFilter.normalize(params[:filter])
+      @users = Admin::UserAccountFilter.new(filter: @user_filter).call
                .includes(memberships: { workspace: :workspace_subscription })
                .order(created_at: :desc)
                .limit(100)
@@ -33,10 +31,10 @@ module Admin
 
     def archive
       if @user == current_user
-        return redirect_to admin_users_path(filter: params[:filter].presence || "all"), alert: "You cannot archive your own admin account."
+        return redirect_to archive_redirect_path, alert: "You cannot archive your own admin account."
       end
       if @user.platform_admin?
-        return redirect_to admin_users_path(filter: params[:filter].presence || "all"), alert: "Platform admin accounts cannot be archived from the list."
+        return redirect_to archive_redirect_path, alert: "Platform admin accounts cannot be archived from the list."
       end
 
       @user.remove_account!
@@ -47,7 +45,7 @@ module Admin
         metadata: { removed_at: @user.removed_at&.iso8601 }
       )
 
-      redirect_to admin_users_path(filter: params[:filter].presence || "all"), notice: "User archived and deactivated."
+      redirect_to archive_redirect_path, notice: "User archived and deactivated."
     end
 
     def suspend
@@ -95,72 +93,11 @@ module Admin
 
     private
 
-    def normalized_user_filter
-      requested = params[:filter].to_s
-      USER_FILTERS.include?(requested) ? requested : "all"
-    end
+    def archive_redirect_path
+      filter = Admin::UserAccountFilter.normalize(params[:filter])
+      return admin_root_path(filter: filter) if params[:return_to] == "dashboard"
 
-    def filtered_users_scope
-      scope = User.all
-
-      case @user_filter
-      when "trial"
-        unarchived_users(scope).where(id: trial_user_ids)
-      when "paid"
-        unarchived_scope = unarchived_users(scope)
-        unarchived_scope
-          .where(saas_plan_key: paid_plan_keys)
-          .or(unarchived_scope.where(id: paid_user_ids))
-      when "suspended"
-        unarchived_scope = unarchived_users(scope)
-        unarchived_scope
-          .where("admin_suspended_until > ?", Time.current)
-          .or(unarchived_scope.where(id: workspace_suspended_user_ids))
-      when "archived"
-        scope.where.not(removed_at: nil).or(scope.where(id: canceled_user_ids))
-      else
-        unarchived_users(scope)
-      end
-    end
-
-    def unarchived_users(scope)
-      scope.where(removed_at: nil).where.not(id: canceled_user_ids)
-    end
-
-    def trial_user_ids
-      user_ids_for_subscription_statuses([ WorkspaceSubscription::STATUS_TRIALING ])
-    end
-
-    def paid_user_ids
-      user_ids_for_subscription_statuses([ WorkspaceSubscription::STATUS_ACTIVE ], paid_only: true)
-    end
-
-    def paid_plan_keys
-      [ User::SAAS_PLAN_STARTER, User::SAAS_PLAN_TEAM, User::SAAS_PLAN_BUSINESS ]
-    end
-
-    def workspace_suspended_user_ids
-      user_ids_for_subscription_statuses([ WorkspaceSubscription::STATUS_SUSPENDED ])
-    end
-
-    def canceled_user_ids
-      user_ids_for_subscription_statuses([ WorkspaceSubscription::STATUS_CANCELED ])
-    end
-
-    def user_ids_for_subscription_statuses(statuses, paid_only: false)
-      scope = Membership.joins(workspace: :workspace_subscription)
-                        .where(workspace_subscriptions: { status: statuses })
-      if paid_only
-        scope = scope.where(workspace_subscriptions: {
-          plan_key: [
-            WorkspaceSubscription::PLAN_STARTER,
-            WorkspaceSubscription::PLAN_TEAM,
-            WorkspaceSubscription::PLAN_BUSINESS
-          ]
-        })
-      end
-
-      scope.select(:user_id)
+      admin_users_path(filter: filter)
     end
 
     def set_user

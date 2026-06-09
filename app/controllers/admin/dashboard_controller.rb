@@ -30,8 +30,9 @@ module Admin
       @stripe_webhook_path = stripe_webhook_path
       @stripe_webhook_auth_ready = Billing::StripeGateway.webhook_configured?
       @failed_stripe_webhook_count = StripeWebhookEvent.where(status: StripeWebhookEvent::STATUS_FAILED).count
-      users = User
-        .includes(memberships: :workspace)
+      @user_filter = Admin::UserAccountFilter.normalize(params[:filter])
+      users = Admin::UserAccountFilter.new(filter: @user_filter).call
+        .includes(memberships: { workspace: :workspace_subscription })
         .order(created_at: :desc)
         .limit(100)
         .to_a

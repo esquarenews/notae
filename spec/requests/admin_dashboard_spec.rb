@@ -59,6 +59,12 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(document.at_css("main.notae-content.notae-admin-content")).to be_present
     expect(document.at_css(".notae-admin-dashboard-shell .notae-admin-table")).to be_present
     expect(document.at_css(".notae-admin-user-tier-row.notae-admin-user-tier-team")).to be_present
+    filter_links = document.css("nav[aria-label='User account filters'] a").map { |link| [ link.text.squish, link["href"] ] }
+    expect(filter_links).to include([ "All", admin_root_path(filter: "all") ])
+    expect(filter_links).to include([ "Trial", admin_root_path(filter: "trial") ])
+    expect(filter_links).to include([ "Paid", admin_root_path(filter: "paid") ])
+    expect(filter_links).to include([ "Suspended", admin_root_path(filter: "suspended") ])
+    expect(filter_links).to include([ "Archived", admin_root_path(filter: "archived") ])
     expect(response.body).to include("SaaS admin dashboard")
     expect(response.body).to include("Stripe")
     expect(response.body).to include("Registered users")
@@ -73,8 +79,54 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include("Team")
     expect(response.body).to include("2 AI requests")
     expect(response.body).to include("$0.75")
+    expect(response.body).to include("Archive")
     expect(response.body).not_to include("<th>Workspaces</th>")
     expect(response.body).not_to include("workspace limit")
+  end
+
+  it "filters and archives users from the admin dashboard" do
+    admin = User.create!(email: "dashboard-filter-admin@example.com", password: "password123", super_admin: true)
+    trial_workspace, trial_user = create_workspace_with_owner(name: "Dashboard Trial Account", slug: "dashboard-trial-account", owner_email: "dashboard-trial-user@example.com")
+    paid_workspace, paid_user = create_workspace_with_owner(name: "Dashboard Paid Account", slug: "dashboard-paid-account", owner_email: "dashboard-paid-user@example.com")
+    canceled_workspace, canceled_user = create_workspace_with_owner(name: "Dashboard Canceled Account", slug: "dashboard-canceled-account", owner_email: "dashboard-canceled-user@example.com")
+    archived_user = User.create!(email: "dashboard-archived-user@example.com", password: "password123", removed_at: 1.day.ago)
+
+    trial_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_TRIALING)
+    paid_workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
+    canceled_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_CANCELED)
+    sign_in admin
+
+    get admin_root_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("User account filters")
+    expect(response.body).to include("Archive")
+    expect(response.body).to include(trial_user.email)
+    expect(response.body).to include(paid_user.email)
+    expect(response.body).not_to include(canceled_user.email)
+    expect(response.body).not_to include(archived_user.email)
+
+    get admin_root_path(filter: "trial")
+    expect(response.body).to include(trial_user.email)
+    expect(response.body).not_to include(paid_user.email)
+
+    get admin_root_path(filter: "paid")
+    expect(response.body).to include(paid_user.email)
+    expect(response.body).not_to include(trial_user.email)
+
+    get admin_root_path(filter: "archived")
+    expect(response.body).to include(canceled_user.email)
+    expect(response.body).to include(archived_user.email)
+    expect(response.body).not_to include(paid_user.email)
+
+    expect do
+      patch archive_admin_user_path(trial_user, filter: "trial", return_to: "dashboard")
+    end.to change(AdminAuditEvent.where(action: "user_archived"), :count).by(1)
+
+    expect(response).to redirect_to(admin_root_path(filter: "trial"))
+    trial_user.reload
+    expect(trial_user).to be_removed
+    expect(trial_user).not_to be_active_for_authentication
   end
 
   it "allows env-allowlisted admins without changing the user row" do
