@@ -62,7 +62,6 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include("SaaS admin dashboard")
     expect(response.body).to include("Stripe")
     expect(response.body).to include("Registered users")
-    expect(response.body).to include("Workspaces")
     expect(response.body).to include("AI requests")
     expect(response.body).to include("Documents")
     expect(response.body).to include("Total spend")
@@ -72,10 +71,10 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include("AI cost")
     expect(response.body).to include("admin-visible-owner@example.com")
     expect(response.body).to include("Team")
-    expect(response.body).to include("2 workspaces")
-    expect(response.body).to include("50 workspace limit")
     expect(response.body).to include("2 AI requests")
     expect(response.body).to include("$0.75")
+    expect(response.body).not_to include("<th>Workspaces</th>")
+    expect(response.body).not_to include("workspace limit")
   end
 
   it "allows env-allowlisted admins without changing the user row" do
@@ -194,7 +193,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(subscription.provider_subscription_id).to eq("sub_manual_tier")
   end
 
-  it "shows user workspace usage as a count without listing memberships on the user detail page" do
+  it "does not show user workspace memberships on the user detail page" do
     user = User.create!(email: "workspace-summary-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
     first_workspace = Workspace.create!(name: "Hidden Workspace One", slug: "hidden-workspace-one")
     second_workspace = Workspace.create!(name: "Hidden Workspace Two", slug: "hidden-workspace-two")
@@ -207,14 +206,43 @@ RSpec.describe "Admin dashboard", type: :request do
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
-    workspace_card = document.css(".notae-ai-analytics-card").find { |card| card.text.include?("Workspaces") }
-    expect(workspace_card.text).to include("2 / 50")
+    topbar_links = document.css("header a").map { |link| [ link.text.squish, link["href"] ] }
+    expect(topbar_links).to include([ "Users", admin_users_path ])
+    expect(topbar_links).to include([ "Dashboard", admin_root_path ])
+    card_labels = document.css(".notae-ai-analytics-card .notae-pref-label").map { |label| label.text.squish }
+    expect(card_labels).not_to include("Workspaces")
     expect(response.body).to include("Daily AI budget USD")
     expect(response.body).to include("Semantic search requests / min")
     expect(response.body).to include("Answer generation requests / min")
+    expect(response.body).not_to include("Current workspace count")
     expect(response.body).not_to include("Workspace memberships")
     expect(response.body).not_to include("Hidden Workspace One")
     expect(response.body).not_to include("Hidden Workspace Two")
+  end
+
+  it "redirects the hidden workspace index to the filtered users page" do
+    admin = User.create!(email: "workspace-index-admin@example.com", password: "password123", super_admin: true)
+    create_workspace_with_owner(
+      name: "Hidden Admin Workspace",
+      slug: "hidden-admin-workspace",
+      owner_email: "hidden-admin-workspace-owner@example.com"
+    )
+    sign_in admin
+
+    get admin_workspaces_path
+
+    expect(response).to redirect_to(admin_users_path)
+
+    follow_redirect!
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("User account filters")
+    expect(response.body).to include("All")
+    expect(response.body).to include("Trial")
+    expect(response.body).to include("Paid")
+    expect(response.body).to include("Suspended")
+    expect(response.body).to include("Archived")
+    expect(response.body).not_to include("Hidden Admin Workspace")
   end
 
   it "filters admin users by account state and archives users from the list" do

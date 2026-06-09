@@ -3,10 +3,7 @@ module Admin
     before_action :set_workspace, only: %i[show update suspend reactivate]
 
     def index
-      @workspaces = Workspace
-        .includes(:workspace_subscription, :memberships)
-        .order(updated_at: :desc)
-        .limit(100)
+      redirect_to admin_users_path, notice: "Workspace listings are no longer shown in admin."
     end
 
     def show

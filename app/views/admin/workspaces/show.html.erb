@@ -3,7 +3,7 @@
 <% content_for :topbar_privacy, "Platform" %>
 <% content_for :content_class, "notae-admin-content" %>
 <% content_for :topbar_actions do %>
-  <%= link_to "All workspaces", admin_workspaces_path, class: "notae-chip-button" %>
+  <%= link_to "Users", admin_users_path, class: "notae-chip-button" %>
   <%= link_to "Open app", workspace_path(@workspace.slug), class: "notae-chip-button notae-chip-button-subtle" unless @workspace.suspended? %>
 <% end %>
 
