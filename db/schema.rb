@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_07_062000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_11_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -1065,6 +1065,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_062000) do
     t.boolean "super_admin", default: false, null: false
     t.string "theme_preference", default: "light", null: false
     t.string "time_zone", default: "UTC", null: false
+    t.datetime "trial_ends_at"
     t.string "unconfirmed_email"
     t.string "unlock_token"
     t.datetime "updated_at", null: false
@@ -1076,6 +1077,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_07_062000) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["saas_plan_key"], name: "index_users_on_saas_plan_key"
     t.index ["super_admin"], name: "index_users_on_super_admin"
+    t.index ["trial_ends_at"], name: "index_users_on_trial_ends_at"
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 

@@ -67,6 +67,27 @@ RSpec.describe User, type: :model do
     expect(user.inactive_message).to eq(:removed_account)
   end
 
+  it "blocks expired self-service trials unless the user has a paid active workspace subscription" do
+    user = described_class.create!(
+      email: "expired-trial-user@example.com",
+      password: "password123",
+      saas_plan_key: described_class::SAAS_PLAN_STARTER,
+      trial_ends_at: 1.hour.ago
+    )
+
+    expect(user).not_to be_active_for_authentication
+    expect(user.inactive_message).to eq(:trial_expired)
+
+    workspace = Workspace.create!(name: "Paid Trial Conversion", slug: "paid-trial-conversion")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    workspace.create_workspace_subscription!(
+      plan_key: WorkspaceSubscription::PLAN_STARTER,
+      status: WorkspaceSubscription::STATUS_ACTIVE
+    )
+
+    expect(user).to be_active_for_authentication
+  end
+
   it "reinstates removed users on the free tier for one week" do
     user = described_class.create!(
       email: "reinstated-user@example.com",

@@ -1,12 +1,30 @@
 require "rails_helper"
 
 RSpec.describe "Admin dashboard", type: :request do
+  include ActiveJob::TestHelper
+
   def create_workspace_with_owner(name:, slug:, owner_email:)
     owner = User.create!(email: owner_email, password: "password123")
     workspace = Workspace.create!(name: name, slug: slug)
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     workspace.create_workspace_subscription!
     [ workspace, owner ]
+  end
+
+  def create_pending_signup(email:)
+    User.new(email: email, password: "password123").tap do |user|
+      user.require_self_service_registration_confirmation!
+      user.start_self_service_trial!
+      user.save!
+    end
+  end
+
+  around do |example|
+    clear_enqueued_jobs
+    clear_performed_jobs
+    example.run
+    clear_enqueued_jobs
+    clear_performed_jobs
   end
 
   it "blocks signed-in users who are not platform admins" do
@@ -61,6 +79,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(document.at_css(".notae-admin-user-tier-row.notae-admin-user-tier-team")).to be_present
     filter_links = document.css("nav[aria-label='User account filters'] a").map { |link| [ link.text.squish, link["href"] ] }
     expect(filter_links).to include([ "All", admin_root_path(filter: "all") ])
+    expect(filter_links).to include([ "Pending", admin_root_path(filter: "pending") ])
     expect(filter_links).to include([ "Trial", admin_root_path(filter: "trial") ])
     expect(filter_links).to include([ "Paid", admin_root_path(filter: "paid") ])
     expect(filter_links).to include([ "Suspended", admin_root_path(filter: "suspended") ])
@@ -90,6 +109,7 @@ RSpec.describe "Admin dashboard", type: :request do
     paid_workspace, paid_user = create_workspace_with_owner(name: "Dashboard Paid Account", slug: "dashboard-paid-account", owner_email: "dashboard-paid-user@example.com")
     canceled_workspace, canceled_user = create_workspace_with_owner(name: "Dashboard Canceled Account", slug: "dashboard-canceled-account", owner_email: "dashboard-canceled-user@example.com")
     archived_user = User.create!(email: "dashboard-archived-user@example.com", password: "password123", removed_at: 1.day.ago)
+    pending_user = create_pending_signup(email: "dashboard-pending-user@example.com")
 
     trial_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_TRIALING)
     paid_workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
@@ -101,13 +121,21 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("User account filters")
     expect(response.body).to include("Archive")
+    expect(response.body).to include("Pending")
+    expect(response.body).to include("Resend confirmation")
     expect(response.body).to include(trial_user.email)
     expect(response.body).to include(paid_user.email)
+    expect(response.body).to include(pending_user.email)
     expect(response.body).not_to include(canceled_user.email)
     expect(response.body).not_to include(archived_user.email)
 
+    get admin_root_path(filter: "pending")
+    expect(response.body).to include(pending_user.email)
+    expect(response.body).not_to include(trial_user.email)
+
     get admin_root_path(filter: "trial")
     expect(response.body).to include(trial_user.email)
+    expect(response.body).not_to include(pending_user.email)
     expect(response.body).not_to include(paid_user.email)
 
     get admin_root_path(filter: "paid")
@@ -127,6 +155,13 @@ RSpec.describe "Admin dashboard", type: :request do
     trial_user.reload
     expect(trial_user).to be_removed
     expect(trial_user).not_to be_active_for_authentication
+
+    expect do
+      patch resend_confirmation_admin_user_path(pending_user, filter: "pending", return_to: "dashboard")
+    end.to change(AdminAuditEvent.where(action: "user_confirmation_resent"), :count).by(1)
+      .and have_enqueued_mail(Devise::Mailer, :confirmation_instructions)
+
+    expect(response).to redirect_to(admin_root_path(filter: "pending"))
   end
 
   it "allows env-allowlisted admins without changing the user row" do
@@ -305,6 +340,7 @@ RSpec.describe "Admin dashboard", type: :request do
     canceled_workspace, canceled_user = create_workspace_with_owner(name: "Canceled Account", slug: "canceled-account", owner_email: "canceled-account-user@example.com")
     manual_paid_user = User.create!(email: "manual-paid-account-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
     archived_user = User.create!(email: "archived-account-user@example.com", password: "password123", removed_at: 1.day.ago)
+    pending_user = create_pending_signup(email: "pending-account-user@example.com")
 
     trial_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_TRIALING)
     paid_workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
@@ -320,14 +356,21 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(document.at_css(".notae-admin-user-list-item .notae-admin-user-list-actions")).to be_present
     expect(response.body).to include("User account filters")
     expect(response.body).to include("Archive")
+    expect(response.body).to include("Resend confirmation")
     expect(response.body).to include(trial_user.email)
     expect(response.body).to include(paid_user.email)
     expect(response.body).to include(suspended_user.email)
+    expect(response.body).to include(pending_user.email)
     expect(response.body).not_to include(archived_user.email)
     expect(response.body).not_to include(canceled_user.email)
 
+    get admin_users_path(filter: "pending")
+    expect(response.body).to include(pending_user.email)
+    expect(response.body).not_to include(trial_user.email)
+
     get admin_users_path(filter: "trial")
     expect(response.body).to include(trial_user.email)
+    expect(response.body).not_to include(pending_user.email)
     expect(response.body).not_to include(paid_user.email)
 
     get admin_users_path(filter: "paid")
@@ -352,6 +395,13 @@ RSpec.describe "Admin dashboard", type: :request do
     trial_user.reload
     expect(trial_user).to be_removed
     expect(trial_user).not_to be_active_for_authentication
+
+    expect do
+      patch resend_confirmation_admin_user_path(pending_user, filter: "pending")
+    end.to change(AdminAuditEvent.where(action: "user_confirmation_resent"), :count).by(1)
+      .and have_enqueued_mail(Devise::Mailer, :confirmation_instructions)
+
+    expect(response).to redirect_to(admin_users_path(filter: "pending"))
   end
 
   it "suspends, removes, and reinstates user accounts from the admin user detail page" do

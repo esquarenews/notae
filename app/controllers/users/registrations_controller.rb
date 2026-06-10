@@ -12,7 +12,10 @@ module Users
 
     def build_resource(hash = {})
       super
-      resource.require_self_service_registration_confirmation! if action_name == "create"
+      return unless action_name == "create"
+
+      resource.require_self_service_registration_confirmation!
+      resource.start_self_service_trial!(plan_key: selected_trial_plan_key)
     end
 
     def after_inactive_sign_up_path_for(_resource)
@@ -55,6 +58,11 @@ module Users
       return unless Billing::PlanCatalog.public_plan_keys.include?(requested.to_s)
 
       session[:notae_signup_plan] = requested.to_s
+    end
+
+    def selected_trial_plan_key
+      requested = params[:plan].presence || params.dig(resource_name, :plan).presence || session[:notae_signup_plan].presence
+      Billing::PlanCatalog.public_plan_keys.include?(requested.to_s) ? requested.to_s : WorkspaceSubscription::PLAN_STARTER
     end
   end
 end

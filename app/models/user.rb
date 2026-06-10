@@ -64,6 +64,7 @@ class User < ApplicationRecord
   }.freeze
   ADMIN_SUSPENSION_PERIOD = 1.week
   ADMIN_FREE_TIER_REINSTATEMENT_PERIOD = 1.week
+  SELF_SERVICE_TRIAL_PERIOD = 7.days
 
   START_WEEK_OPTIONS = [
     [ "Monday", "monday" ],
@@ -320,6 +321,10 @@ class User < ApplicationRecord
     column_names.include?("admin_free_tier_ends_at")
   end
 
+  def self.trial_ends_at_column_available?
+    column_names.include?("trial_ends_at")
+  end
+
   def self.platform_admin_email_allowlist
     ENV.fetch("NOTAE_PLATFORM_ADMIN_EMAILS", "")
        .split(",")
@@ -329,6 +334,11 @@ class User < ApplicationRecord
 
   def require_self_service_registration_confirmation!
     self.self_service_registration_confirmation_required = true
+  end
+
+  def start_self_service_trial!(plan_key: SAAS_PLAN_STARTER, at: Time.current)
+    self.saas_plan_key = plan_key
+    self.trial_ends_at = at + SELF_SERVICE_TRIAL_PERIOD if self.class.trial_ends_at_column_available?
   end
 
   def send_devise_notification(notification, *args)
@@ -437,8 +447,41 @@ class User < ApplicationRecord
   def admin_account_status
     return "Removed" if removed?
     return "Suspended" if admin_suspended?
+    return "Pending" if pending_confirmation?
+    return "Trial expired" if trial_expired_without_paid_access?
+    return "Trial" if self_service_trial_active?
 
     "Active"
+  end
+
+  def pending_confirmation?
+    respond_to?(:confirmed?) && !confirmed?
+  end
+
+  def self_service_trial_active?(at: Time.current)
+    return false unless self.class.trial_ends_at_column_available?
+
+    trial_ends_at.present? && trial_ends_at > at
+  end
+
+  def trial_expired_without_paid_access?(at: Time.current)
+    return false unless self.class.trial_ends_at_column_available?
+    return false if trial_ends_at.blank? || trial_ends_at > at
+
+    !paid_workspace_subscription?
+  end
+
+  def paid_workspace_subscription?
+    memberships.joins(workspace: :workspace_subscription)
+               .where(workspace_subscriptions: {
+                 status: WorkspaceSubscription::STATUS_ACTIVE,
+                 plan_key: [
+                   WorkspaceSubscription::PLAN_STARTER,
+                   WorkspaceSubscription::PLAN_TEAM,
+                   WorkspaceSubscription::PLAN_BUSINESS
+                 ]
+               })
+               .exists?
   end
 
   def suspend_for_week!
@@ -469,12 +512,13 @@ class User < ApplicationRecord
   end
 
   def active_for_authentication?
-    super && !removed? && !admin_suspended?
+    super && !removed? && !admin_suspended? && !trial_expired_without_paid_access?
   end
 
   def inactive_message
     return :removed_account if removed?
     return :admin_suspended if admin_suspended?
+    return :trial_expired if trial_expired_without_paid_access?
 
     super
   end

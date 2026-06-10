@@ -107,6 +107,12 @@
                 <% elsif user == current_user || user.platform_admin? %>
                   <span class="notae-general-backup-status is-ready">Protected</span>
                 <% else %>
+                  <% unless user.confirmed? %>
+                    <%= button_to "Resend confirmation",
+                                  resend_confirmation_admin_user_path(user, filter: @user_filter, return_to: "dashboard"),
+                                  method: :patch,
+                                  class: "notae-chip-button notae-chip-button-subtle" %>
+                  <% end %>
                   <%= button_to "Archive",
                                 archive_admin_user_path(user, filter: @user_filter, return_to: "dashboard"),
                                 method: :patch,

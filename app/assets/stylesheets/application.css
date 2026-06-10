@@ -23096,6 +23096,11 @@ main.notae-content.notae-admin-content {
   color: #166534;
 }
 
+.notae-admin-status-pill.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .notae-admin-status-pill.past_due,
 .notae-admin-status-pill.canceled,
 .notae-admin-status-pill.suspended,

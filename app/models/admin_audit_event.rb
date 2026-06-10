@@ -11,6 +11,7 @@ class AdminAuditEvent < ApplicationRecord
     user_suspended
     user_removed
     user_reinstated
+    user_confirmation_resent
   ].freeze
 
   belongs_to :actor, class_name: "User"

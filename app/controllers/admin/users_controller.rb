@@ -1,6 +1,6 @@
 module Admin
   class UsersController < BaseController
-    before_action :set_user, only: %i[show update archive suspend remove reinstate]
+    before_action :set_user, only: %i[show update archive resend_confirmation suspend remove reinstate]
 
     def index
       @user_filter = Admin::UserAccountFilter.normalize(params[:filter])
@@ -46,6 +46,22 @@ module Admin
       )
 
       redirect_to archive_redirect_path, notice: "User archived and deactivated."
+    end
+
+    def resend_confirmation
+      if @user.confirmed?
+        return redirect_to user_action_redirect_path, alert: "This user has already confirmed their email address."
+      end
+
+      @user.resend_confirmation_instructions
+
+      record_admin_audit!(
+        action: "user_confirmation_resent",
+        target: @user,
+        metadata: { confirmation_sent_at: @user.confirmation_sent_at&.iso8601 }
+      )
+
+      redirect_to user_action_redirect_path, notice: "Confirmation email resent."
     end
 
     def suspend
@@ -94,6 +110,10 @@ module Admin
     private
 
     def archive_redirect_path
+      user_action_redirect_path
+    end
+
+    def user_action_redirect_path
       filter = Admin::UserAccountFilter.normalize(params[:filter])
       return admin_root_path(filter: filter) if params[:return_to] == "dashboard"
 

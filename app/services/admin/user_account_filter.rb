@@ -2,6 +2,7 @@ module Admin
   class UserAccountFilter
     FILTER_LABELS = {
       "all" => "All",
+      "pending" => "Pending",
       "trial" => "Trial",
       "paid" => "Paid",
       "suspended" => "Suspended",
@@ -21,8 +22,13 @@ module Admin
 
     def call
       case filter
+      when "pending"
+        unarchived_users(scope).where(confirmed_at: nil)
       when "trial"
-        unarchived_users(scope).where(id: trial_user_ids)
+        unarchived_scope = unarchived_users(scope).where.not(confirmed_at: nil)
+        unarchived_scope
+          .where(id: trial_user_ids)
+          .or(unarchived_scope.where("trial_ends_at > ?", Time.current))
       when "paid"
         unarchived_scope = unarchived_users(scope)
         unarchived_scope

@@ -13,12 +13,16 @@ module Admin
 
       if user.removed?
         [ "Archived", "canceled" ]
+      elsif user.pending_confirmation?
+        [ "Pending", "pending" ]
       elsif canceled_subscription
         [ "Cancelled", "canceled" ]
       elsif user.admin_suspended? || suspended_subscription
         [ "Suspended", "suspended" ]
-      elsif trial_subscription
+      elsif trial_subscription || user.self_service_trial_active?
         [ "Trial", "trialing" ]
+      elsif user.trial_expired_without_paid_access?
+        [ "Expired", "canceled" ]
       elsif paid_subscription
         [ "Paid", "active" ]
       else

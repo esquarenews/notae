@@ -34,6 +34,7 @@ Rails.application.routes.draw do
     resources :users, only: %i[index show update] do
       member do
         patch :archive
+        patch :resend_confirmation
         patch :suspend
         patch :remove
         patch :reinstate

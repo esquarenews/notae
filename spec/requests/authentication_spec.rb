@@ -80,6 +80,8 @@ RSpec.describe "Authentication", type: :request do
     user = User.find_by!(email: "new-confirmation-user@example.com")
     expect(user).not_to be_confirmed
     expect(user.confirmation_token).to be_present
+    expect(user.saas_plan_key).to eq(User::SAAS_PLAN_STARTER)
+    expect(user.trial_ends_at).to be_within(5.seconds).of(7.days.from_now)
   end
 
   it "keeps new signups on the sign-in confirmation screen after sending confirmation email" do
@@ -103,7 +105,7 @@ RSpec.describe "Authentication", type: :request do
     expect(response.body).not_to include('name="user[password]"')
   end
 
-  it "captures the requested trial plan without failing registration" do
+  it "starts the requested trial plan without failing registration" do
     expect do
       post user_registration_path(plan: User::SAAS_PLAN_STARTER), params: {
         user: {
@@ -119,7 +121,8 @@ RSpec.describe "Authentication", type: :request do
     expect(response).to redirect_to(new_user_session_path(confirmation_sent: "1"))
     user = User.find_by!(email: "new-trial-user@example.com")
     expect(user).not_to be_confirmed
-    expect(user.saas_plan_key).to eq(User::SAAS_PLAN_FREE)
+    expect(user.saas_plan_key).to eq(User::SAAS_PLAN_STARTER)
+    expect(user.trial_ends_at).to be_within(5.seconds).of(7.days.from_now)
   end
 
   it "does not deliver confirmation email synchronously during signup" do

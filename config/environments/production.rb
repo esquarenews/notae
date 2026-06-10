@@ -60,9 +60,9 @@ Rails.application.configure do
   # ACTIVE_JOB_QUEUE_ADAPTER=sidekiq when Redis/Sidekiq are available.
   config.active_job.queue_adapter = ENV.fetch("ACTIVE_JOB_QUEUE_ADAPTER", "async").to_sym
 
-  # Ignore bad email addresses and do not raise email delivery errors.
-  # Set this to true and configure the email server for immediate delivery to raise delivery errors.
-  # config.action_mailer.raise_delivery_errors = false
+  # Raise delivery failures into the Devise mail logger so signup confirmation
+  # problems are visible in production logs instead of being silently ignored.
+  config.action_mailer.raise_delivery_errors = ActiveModel::Type::Boolean.new.cast(ENV.fetch("ACTION_MAILER_RAISE_DELIVERY_ERRORS", "true"))
 
   smtp_address = ENV["SMTP_ADDRESS"].presence
   default_smtp_port = smtp_address.present? ? "587" : "1025"
