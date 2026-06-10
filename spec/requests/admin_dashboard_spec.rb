@@ -19,6 +19,13 @@ RSpec.describe "Admin dashboard", type: :request do
     end
   end
 
+  def create_self_service_trial(email:)
+    User.create!(email: email, password: "password123").tap do |user|
+      user.start_self_service_trial!
+      user.save!
+    end
+  end
+
   around do |example|
     clear_enqueued_jobs
     clear_performed_jobs
@@ -92,6 +99,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include("Total spend")
     expect(response.body).to include("Storage")
     expect(response.body).to include("First signed")
+    expect(document.css("th").map { |heading| heading.text.squish }).not_to include("Status")
     expect(response.body).to include("MRR")
     expect(response.body).to include("AI cost")
     expect(response.body).to include("admin-visible-owner@example.com")
@@ -110,6 +118,7 @@ RSpec.describe "Admin dashboard", type: :request do
     canceled_workspace, canceled_user = create_workspace_with_owner(name: "Dashboard Canceled Account", slug: "dashboard-canceled-account", owner_email: "dashboard-canceled-user@example.com")
     archived_user = User.create!(email: "dashboard-archived-user@example.com", password: "password123", removed_at: 1.day.ago)
     pending_user = create_pending_signup(email: "dashboard-pending-user@example.com")
+    self_service_trial_user = create_self_service_trial(email: "dashboard-self-service-trial@example.com")
 
     trial_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_TRIALING)
     paid_workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
@@ -126,8 +135,13 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include(trial_user.email)
     expect(response.body).to include(paid_user.email)
     expect(response.body).to include(pending_user.email)
+    expect(response.body).to include(self_service_trial_user.email)
     expect(response.body).not_to include(canceled_user.email)
     expect(response.body).not_to include(archived_user.email)
+    document = Nokogiri::HTML(response.body)
+    trial_row_text = document.css("tr").find { |row| row.text.include?(self_service_trial_user.email) }.text.squish
+    expect(trial_row_text).to include("Trial")
+    expect(trial_row_text).not_to include("Free")
 
     get admin_root_path(filter: "pending")
     expect(response.body).to include(pending_user.email)
@@ -135,12 +149,14 @@ RSpec.describe "Admin dashboard", type: :request do
 
     get admin_root_path(filter: "trial")
     expect(response.body).to include(trial_user.email)
+    expect(response.body).to include(self_service_trial_user.email)
     expect(response.body).not_to include(pending_user.email)
     expect(response.body).not_to include(paid_user.email)
 
     get admin_root_path(filter: "paid")
     expect(response.body).to include(paid_user.email)
     expect(response.body).not_to include(trial_user.email)
+    expect(response.body).not_to include(self_service_trial_user.email)
 
     get admin_root_path(filter: "archived")
     expect(response.body).to include(canceled_user.email)
@@ -341,6 +357,7 @@ RSpec.describe "Admin dashboard", type: :request do
     manual_paid_user = User.create!(email: "manual-paid-account-user@example.com", password: "password123", saas_plan_key: User::SAAS_PLAN_TEAM)
     archived_user = User.create!(email: "archived-account-user@example.com", password: "password123", removed_at: 1.day.ago)
     pending_user = create_pending_signup(email: "pending-account-user@example.com")
+    self_service_trial_user = create_self_service_trial(email: "self-service-trial-account-user@example.com")
 
     trial_workspace.workspace_subscription.update!(status: WorkspaceSubscription::STATUS_TRIALING)
     paid_workspace.workspace_subscription.update!(plan_key: WorkspaceSubscription::PLAN_TEAM, status: WorkspaceSubscription::STATUS_ACTIVE)
@@ -361,8 +378,12 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include(paid_user.email)
     expect(response.body).to include(suspended_user.email)
     expect(response.body).to include(pending_user.email)
+    expect(response.body).to include(self_service_trial_user.email)
     expect(response.body).not_to include(archived_user.email)
     expect(response.body).not_to include(canceled_user.email)
+    self_service_trial_item = document.css(".notae-admin-user-list-item").find { |item| item.text.include?(self_service_trial_user.email) }.text.squish
+    expect(self_service_trial_item).to include("Trial")
+    expect(self_service_trial_item).not_to include("Free")
 
     get admin_users_path(filter: "pending")
     expect(response.body).to include(pending_user.email)
@@ -370,6 +391,7 @@ RSpec.describe "Admin dashboard", type: :request do
 
     get admin_users_path(filter: "trial")
     expect(response.body).to include(trial_user.email)
+    expect(response.body).to include(self_service_trial_user.email)
     expect(response.body).not_to include(pending_user.email)
     expect(response.body).not_to include(paid_user.email)
 
@@ -377,6 +399,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include(paid_user.email)
     expect(response.body).to include(manual_paid_user.email)
     expect(response.body).not_to include(trial_user.email)
+    expect(response.body).not_to include(self_service_trial_user.email)
 
     get admin_users_path(filter: "suspended")
     expect(response.body).to include(suspended_user.email)

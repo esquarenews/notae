@@ -59,7 +59,6 @@
             <th>Total spend</th>
             <th>Storage</th>
             <th>First signed</th>
-            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -67,15 +66,15 @@
           <% @user_admin_rows.each do |row| %>
             <% user = row.fetch(:user) %>
             <% summary = row.fetch(:summary) %>
-            <% account_status = admin_user_account_status(user) %>
+            <% account_tier = admin_user_account_tier(user) %>
             <tr class="notae-admin-user-tier-row notae-admin-user-tier-<%= user.saas_plan_key %>">
               <td>
                 <strong><%= link_to user.display_name, admin_user_path(user) %></strong>
                 <span><%= user.email %><%= " · platform admin" if user.platform_admin? %></span>
               </td>
               <td>
-                <strong><%= user.saas_plan_name %></strong>
-                <span><%= Billing::PlanCatalog.monthly_price_label_for(user.saas_plan_key) %></span>
+                <span class="notae-admin-status-pill <%= account_tier.second %>"><%= account_tier.first %></span>
+                <span><%= account_tier.third %></span>
               </td>
               <td>
                 <strong><%= pluralize(summary.fetch(:total_ai_requests), "AI request") %></strong>
@@ -96,9 +95,6 @@
               <td>
                 <strong><%= summary.fetch(:first_signed_at).to_date.to_fs(:long) %></strong>
                 <span><%= time_ago_in_words(summary.fetch(:first_signed_at)) %> ago</span>
-              </td>
-              <td>
-                <span class="notae-admin-status-pill <%= account_status.last %>"><%= account_status.first %></span>
               </td>
               <td>
                 <%= link_to "User", admin_user_path(user), class: "notae-chip-button" %>

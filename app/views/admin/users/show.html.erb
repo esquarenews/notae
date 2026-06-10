@@ -10,28 +10,25 @@
 <section class="notae-settings-shell notae-admin-shell">
   <div class="notae-settings-content">
     <section class="notae-settings-section">
+      <% account_tier = admin_user_account_tier(@user) %>
       <h2><%= @user.display_name %></h2>
       <p class="notae-pref-description"><%= @user.email %><%= " · platform admin" if @user.platform_admin? %></p>
 
       <div class="notae-ai-analytics-grid">
         <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">Tier</p>
-          <p class="notae-utility-title"><%= @user.saas_plan_name %></p>
-          <p class="notae-pref-description">Manual account tier for Notae entitlements.</p>
-        </article>
-
-        <article class="notae-ai-analytics-card">
-          <p class="notae-pref-label">Account status</p>
-          <p class="notae-utility-title"><%= @user.admin_account_status %></p>
+          <p class="notae-pref-label">Account tier</p>
+          <p class="notae-utility-title"><%= account_tier.first %></p>
           <p class="notae-pref-description">
             <% if @user.removed? %>
               Cancelled <%= time_ago_in_words(@user.removed_at) %> ago.
+            <% elsif @user.pending_confirmation? %>
+              Awaiting email confirmation.
             <% elsif @user.admin_suspended? %>
               Suspended until <%= l(@user.admin_suspended_until, format: :long) %>.
             <% elsif @user.admin_free_tier_ends_at.present? %>
               Free tier reinstatement ends <%= l(@user.admin_free_tier_ends_at, format: :long) %>.
             <% else %>
-              Account access is active.
+              <%= account_tier.third %>.
             <% end %>
           </p>
         </article>

@@ -27,12 +27,13 @@ module Admin
       when "trial"
         unarchived_scope = unarchived_users(scope).where.not(confirmed_at: nil)
         unarchived_scope
+          .where.not(id: paid_user_ids)
           .where(id: trial_user_ids)
-          .or(unarchived_scope.where("trial_ends_at > ?", Time.current))
+          .or(unarchived_scope.where.not(id: paid_user_ids).where("trial_ends_at > ?", Time.current))
       when "paid"
-        unarchived_scope = unarchived_users(scope)
+        unarchived_scope = unarchived_users(scope).where.not(confirmed_at: nil)
         unarchived_scope
-          .where(saas_plan_key: paid_plan_keys)
+          .where(saas_plan_key: paid_plan_keys, trial_ends_at: nil)
           .or(unarchived_scope.where(id: paid_user_ids))
       when "suspended"
         unarchived_scope = unarchived_users(scope)

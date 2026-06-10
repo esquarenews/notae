@@ -20,16 +20,16 @@
 
       <div class="notae-general-backup-list">
         <% @users.each do |user| %>
-          <% account_status = admin_user_account_status(user) %>
+          <% account_tier = admin_user_account_tier(user) %>
           <article class="notae-general-backup-item notae-admin-user-list-item">
             <div class="notae-general-backup-item-copy">
               <p class="notae-general-backup-item-title"><%= link_to user.email, admin_user_path(user) %></p>
               <p class="notae-general-backup-item-meta">
-                <%= user.saas_plan_name %>
+                <%= account_tier.third %>
                 <%= " · platform admin" if user.platform_admin? %>
               </p>
             </div>
-            <span class="notae-admin-status-pill <%= account_status.last %>"><%= account_status.first %></span>
+            <span class="notae-admin-status-pill <%= account_tier.second %>"><%= account_tier.first %></span>
             <div class="notae-admin-user-list-actions">
               <% if user.removed? %>
                 <span class="notae-general-backup-status is-failed">Deactivated</span>

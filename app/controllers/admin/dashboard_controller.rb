@@ -12,10 +12,12 @@ module Admin
         else
           { User::SAAS_PLAN_FREE => @user_count }
         end
-      @trial_count = WorkspaceSubscription.where(status: WorkspaceSubscription::STATUS_TRIALING).count
+      @trial_count =
+        WorkspaceSubscription.where(status: WorkspaceSubscription::STATUS_TRIALING).count +
+        User.where("trial_ends_at > ?", Time.current).count
       @past_due_count = WorkspaceSubscription.where(status: WorkspaceSubscription::STATUS_PAST_DUE).count
       @canceled_count = WorkspaceSubscription.where(status: WorkspaceSubscription::STATUS_CANCELED).count
-      @mrr_aud_cents = User.sum { |user| Billing::PlanCatalog.monthly_price_aud_cents_for(user.saas_plan_key) }
+      @mrr_aud_cents = paid_mrr_aud_cents
       @ai_cost_this_month_usd = AiUsageLog.where(created_at: Time.current.beginning_of_month..Time.current).sum(:estimated_cost_usd).to_f
       @high_ai_cost_workspaces = Workspace
         .joins(:ai_usage_logs)
@@ -44,6 +46,29 @@ module Admin
           summary: user_summaries.fetch(user)
         }
       end
+    end
+
+    private
+
+    def paid_mrr_aud_cents
+      subscription_mrr = WorkspaceSubscription
+        .where(status: WorkspaceSubscription::STATUS_ACTIVE)
+        .where.not(plan_key: WorkspaceSubscription::PLAN_FREE)
+        .sum { |subscription| Billing::PlanCatalog.monthly_price_aud_cents_for(subscription.plan_key) }
+
+      paid_subscription_user_ids = Membership
+        .joins(workspace: :workspace_subscription)
+        .where(workspace_subscriptions: {
+          status: WorkspaceSubscription::STATUS_ACTIVE,
+          plan_key: Billing::PlanCatalog.public_plan_keys
+        })
+        .select(:user_id)
+
+      manual_paid_users = User.where(saas_plan_key: Billing::PlanCatalog.public_plan_keys)
+                              .where(trial_ends_at: nil)
+                              .where.not(id: paid_subscription_user_ids)
+
+      subscription_mrr + manual_paid_users.sum { |user| Billing::PlanCatalog.monthly_price_aud_cents_for(user.saas_plan_key) }
     end
   end
 end
