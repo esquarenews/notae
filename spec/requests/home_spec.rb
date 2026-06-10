@@ -10,6 +10,7 @@ RSpec.describe "Home", type: :request do
     expect(response.body).to include("<title>Notae</title>")
     expect(response.body).to include("Sign in")
     expect(response.body).to include("Start a 7-day trial")
+    expect(response.body).to include("Start with a Free 7 day trial")
     expect(response.body).to include("The command center for knowledge &amp; work")
     expect(response.body).to include("without spreading work across apps.")
     expect(response.body).to include("Everything important stays connected.")
