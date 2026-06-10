@@ -5,6 +5,8 @@ RSpec.describe "Home", type: :request do
     get root_path
 
     expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    preview_sidebar_items = document.css(".notae-public-product-sidebar span").map { |item| item.text.squish }
     expect(response.body).to include("<title>Notae</title>")
     expect(response.body).to include("Sign in")
     expect(response.body).to include("Start a 7-day trial")
@@ -17,6 +19,8 @@ RSpec.describe "Home", type: :request do
     expect(response.body).to include("Starter")
     expect(response.body).to include("Team")
     expect(response.body).to include("Business")
+    expect(preview_sidebar_items).to include("Grids")
+    expect(preview_sidebar_items).not_to include("Tabulae")
     expect(response.headers["Content-Security-Policy"]).to include("default-src 'self'")
     expect(response.headers["Content-Security-Policy"]).to include("frame-ancestors 'self'")
     expect(response.headers["X-Frame-Options"]).to eq("SAMEORIGIN")
