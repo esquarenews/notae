@@ -1,10 +1,8 @@
 module Databases
   class RowWindowQueryService
-    DEFAULT_PER_PAGE = ENV.fetch("NOTAE_DATABASE_ROWS_PER_PAGE", 25).to_i.clamp(10, 100)
-
     Result = Struct.new(:rows, :total_count, :page, :per_page, :total_pages, :paginated?, keyword_init: true)
 
-    def initialize(scope:, sort_property:, sort_by_title: false, sort_direction:, sort_mode: "standard", filter_property:, filter_value:, filter_operator:, view_type:, page:)
+    def initialize(scope:, sort_property:, sort_by_title: false, sort_direction:, sort_mode: "standard", filter_property:, filter_value:, filter_operator:, view_type:, page:, per_page: Database::DEFAULT_ROWS_PER_PAGE)
       @scope = scope
       @sort_property = sort_property
       @sort_by_title = sort_by_title
@@ -15,6 +13,7 @@ module Databases
       @filter_operator = filter_operator.to_s
       @view_type = view_type.to_s
       @page = page.to_i > 0 ? page.to_i : 1
+      @per_page = Database::ROWS_PER_PAGE_OPTIONS.include?(per_page.to_i) ? per_page.to_i : Database::DEFAULT_ROWS_PER_PAGE
     end
 
     def call
@@ -48,7 +47,7 @@ module Databases
     end
 
     def per_page
-      DEFAULT_PER_PAGE
+      @per_page
     end
 
     def apply_filter(scope)

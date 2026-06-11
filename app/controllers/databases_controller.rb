@@ -522,7 +522,7 @@ class DatabasesController < ApplicationController
   def update
     authorize @database, :update?
 
-    if @database.locked? && !unlocking_database_request?
+    if @database.locked? && !unlocking_database_request? && !rows_per_page_request?
       @database.errors.add(:base, "Grid is locked. Unlock to make changes.")
     else
       @database.assign_attributes(database_update_params)
@@ -730,9 +730,14 @@ class DatabasesController < ApplicationController
   end
 
   def database_update_params
-    permitted = params.fetch(:database, ActionController::Parameters.new).permit(:name, :description, :locked, :small_text, :font_style)
+    permitted = params.fetch(:database, ActionController::Parameters.new).permit(:name, :description, :locked, :small_text, :font_style, :rows_per_page)
     permitted.delete(:locked) unless policy(@database).permissions?
     permitted
+  end
+
+  def rows_per_page_request?
+    keys = params.fetch(:database, ActionController::Parameters.new).keys.map(&:to_s)
+    keys.present? && (keys - %w[rows_per_page]).empty?
   end
 
   def database_style_params
@@ -1315,7 +1320,8 @@ class DatabasesController < ApplicationController
       filter_value: @filter_value,
       filter_operator: @filter_operator,
       view_type: @view_type,
-      page: rows_page_param
+      page: rows_page_param,
+      per_page: @database.rows_per_page
     ).call
   end
 

@@ -5,6 +5,8 @@ class Database < ApplicationRecord
   COVER_PRESET_KEYS = Page::COVER_PRESET_KEYS
   ICON_SUGGESTIONS = Page::ICON_SUGGESTIONS
   FONT_STYLES = Page::FONT_STYLES
+  ROWS_PER_PAGE_OPTIONS = [ 25, 50, 100 ].freeze
+  DEFAULT_ROWS_PER_PAGE = 25
 
   attribute :permission_mode, :integer, default: 0
   enum :permission_mode, { shared_to_workspace: 0, private_database: 1, specific_users: 2 }, default: :shared_to_workspace
@@ -36,6 +38,7 @@ class Database < ApplicationRecord
   validates :locked, inclusion: { in: [ true, false ] }, if: -> { self.class.has_column?(:locked) }
   validates :small_text, inclusion: { in: [ true, false ] }, if: -> { self.class.has_column?(:small_text) }
   validates :font_style, inclusion: { in: FONT_STYLES }, if: -> { self.class.has_column?(:font_style) }
+  validates :rows_per_page, inclusion: { in: ROWS_PER_PAGE_OPTIONS }, if: -> { self.class.has_column?(:rows_per_page) }
   validates :name_column_text_color, inclusion: { in: DbRow::ROW_TEXT_COLORS }, if: -> { self.class.has_column?(:name_column_text_color) }
   validates :name_column_background_color, inclusion: { in: DbRow::BACKGROUND_COLORS }, if: -> { self.class.has_column?(:name_column_background_color) }
   validate :icon_must_be_short_or_custom, if: -> { self.class.has_column?(:icon) }
@@ -101,6 +104,12 @@ class Database < ApplicationRecord
     return name unless tab_child?
 
     linked_page&.tab_reference_title.presence || name
+  end
+
+  def rows_per_page
+    return DEFAULT_ROWS_PER_PAGE unless self.class.has_column?(:rows_per_page)
+
+    self[:rows_per_page].presence || DEFAULT_ROWS_PER_PAGE
   end
 
   def linked_page_id

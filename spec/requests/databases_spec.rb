@@ -3053,8 +3053,10 @@ RSpec.describe "Databases", type: :request do
     workspace = Workspace.create!(name: "Pagination tables", slug: "pagination-tables")
     Membership.create!(workspace: workspace, user: owner, role: :owner)
     database = Database.create!(workspace: workspace, name: "Paginated grid")
+    other_database = Database.create!(workspace: workspace, name: "Separate paginated grid")
     65.times do |index|
       DbRow.create!(workspace: workspace, database: database, title: format("Row %02d", index + 1))
+      DbRow.create!(workspace: workspace, database: other_database, title: format("Other row %02d", index + 1))
     end
     sign_in owner
 
@@ -3066,18 +3068,50 @@ RSpec.describe "Databases", type: :request do
     expect(rendered_row_ids.length).to eq(25)
     expect(response.body).to include("Page 1 of 3")
     expect(document.at_css("#database_row_count")&.text).to include("65 rows")
+    rows_per_page_select = document.at_css("select[name='database[rows_per_page]']")
+    selected_rows_per_page = rows_per_page_select.at_css("option[selected]") || rows_per_page_select.css("option").first
+    expect(selected_rows_per_page.text).to eq("25")
     expect(response.body).to include("Row 01")
     expect(response.body).not_to include("Row 65")
+
+    patch database_path(workspace_slug: workspace.slug, id: database.id),
+          params: { database: { rows_per_page: "50" } }
+
+    expect(response).to redirect_to(database_path(workspace_slug: workspace.slug, id: database.id))
+    expect(database.reload.rows_per_page).to eq(50)
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
+    expect(rendered_row_ids.length).to eq(50)
+    expect(response.body).to include("Page 1 of 2")
+    rows_per_page_select = document.at_css("select[name='database[rows_per_page]']")
+    selected_rows_per_page = rows_per_page_select.at_css("option[selected]") || rows_per_page_select.css("option").first
+    expect(selected_rows_per_page.text).to eq("50")
+    expect(response.body).to include("Row 50")
+    expect(response.body).not_to include("Row 51")
+
+    get database_path(workspace_slug: workspace.slug, id: other_database.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
+    expect(rendered_row_ids.length).to eq(25)
+    rows_per_page_select = document.at_css("select[name='database[rows_per_page]']")
+    selected_rows_per_page = rows_per_page_select.at_css("option[selected]") || rows_per_page_select.css("option").first
+    expect(selected_rows_per_page.text).to eq("25")
 
     get database_path(workspace_slug: workspace.slug, id: database.id, rows_page: 2)
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
     rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
-    expect(rendered_row_ids.length).to eq(25)
-    expect(response.body).to include("Page 2 of 3")
-    expect(response.body).to include("Row 26")
-    expect(response.body).not_to include("Row 65")
+    expect(rendered_row_ids.length).to eq(15)
+    expect(response.body).to include("Page 2 of 2")
+    expect(response.body).to include("Row 51")
+    expect(response.body).to include("Row 65")
 
     get database_path(workspace_slug: workspace.slug, id: database.id, rows_page: 3)
 
@@ -3085,7 +3119,7 @@ RSpec.describe "Databases", type: :request do
     document = Nokogiri::HTML(response.body)
     rendered_row_ids = document.css("#database_table_rows tr[id^='row_']").map { |row| row["id"] }
     expect(rendered_row_ids.length).to eq(15)
-    expect(response.body).to include("Page 3 of 3")
+    expect(response.body).to include("Page 2 of 2")
     expect(response.body).to include("Row 65")
   end
 

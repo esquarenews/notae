@@ -4372,6 +4372,40 @@ turbo-frame#notae_sidebar_sections {
   color: var(--notae-muted);
 }
 
+.notae-db-row-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+}
+
+.notae-db-rows-per-page-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.notae-db-rows-per-page-label {
+  font-size: 0.72rem;
+  color: var(--notae-muted);
+  font-weight: 700;
+}
+
+.notae-db-rows-per-page-select {
+  min-height: 1.9rem;
+  border: 1px solid var(--notae-border-muted);
+  border-radius: var(--notae-radius-button);
+  background: var(--notae-panel-elevated);
+  color: var(--notae-text-strong);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.22rem 1.6rem 0.22rem 0.55rem;
+}
+
 .notae-db-linked-page-controls {
   display: flex;
   align-items: center;
