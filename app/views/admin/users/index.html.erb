@@ -37,15 +37,15 @@
                 <span class="notae-general-backup-status is-ready">Protected</span>
               <% else %>
                 <% unless user.confirmed? %>
-                  <%= button_to "Resend confirmation",
+                  <%= button_to "Resend",
                                 resend_confirmation_admin_user_path(user, filter: @user_filter),
                                 method: :patch,
-                                class: "notae-chip-button notae-chip-button-subtle" %>
+                                class: "notae-chip-button notae-chip-button-subtle notae-admin-action-button" %>
                 <% end %>
                 <%= button_to "Archive",
                               archive_admin_user_path(user, filter: @user_filter),
                               method: :patch,
-                              class: "notae-chip-button notae-chip-button-subtle",
+                              class: "notae-chip-button notae-chip-button-subtle notae-admin-action-button",
                               form: { data: { turbo_confirm: "Archive and deactivate #{user.email}?" } } %>
               <% end %>
             </div>

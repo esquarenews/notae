@@ -97,22 +97,22 @@
                 <span><%= time_ago_in_words(summary.fetch(:first_signed_at)) %> ago</span>
               </td>
               <td>
-                <%= link_to "User", admin_user_path(user), class: "notae-chip-button" %>
+                <%= link_to "User", admin_user_path(user), class: "notae-chip-button notae-admin-action-button" %>
                 <% if user.removed? %>
                   <span class="notae-general-backup-status is-failed">Deactivated</span>
                 <% elsif user == current_user || user.platform_admin? %>
                   <span class="notae-general-backup-status is-ready">Protected</span>
                 <% else %>
                   <% unless user.confirmed? %>
-                    <%= button_to "Resend confirmation",
+                    <%= button_to "Resend",
                                   resend_confirmation_admin_user_path(user, filter: @user_filter, return_to: "dashboard"),
                                   method: :patch,
-                                  class: "notae-chip-button notae-chip-button-subtle" %>
+                                  class: "notae-chip-button notae-chip-button-subtle notae-admin-action-button" %>
                   <% end %>
                   <%= button_to "Archive",
                                 archive_admin_user_path(user, filter: @user_filter, return_to: "dashboard"),
                                 method: :patch,
-                                class: "notae-chip-button notae-chip-button-subtle",
+                                class: "notae-chip-button notae-chip-button-subtle notae-admin-action-button",
                                 form: { data: { turbo_confirm: "Archive and deactivate #{user.email}?" } } %>
                 <% end %>
               </td>

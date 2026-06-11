@@ -131,7 +131,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).to include("User account filters")
     expect(response.body).to include("Archive")
     expect(response.body).to include("Pending")
-    expect(response.body).to include("Resend confirmation")
+    expect(response.body).to include("Resend")
     expect(response.body).to include(trial_user.email)
     expect(response.body).to include(paid_user.email)
     expect(response.body).to include(pending_user.email)
@@ -373,7 +373,7 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(document.at_css(".notae-admin-user-list-item .notae-admin-user-list-actions")).to be_present
     expect(response.body).to include("User account filters")
     expect(response.body).to include("Archive")
-    expect(response.body).to include("Resend confirmation")
+    expect(response.body).to include("Resend")
     expect(response.body).to include(trial_user.email)
     expect(response.body).to include(paid_user.email)
     expect(response.body).to include(suspended_user.email)

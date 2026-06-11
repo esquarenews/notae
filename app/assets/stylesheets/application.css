@@ -9511,11 +9511,20 @@ body.notae-theme-dark .notae-db-grid-data-row.is-row-bg-rose td {
 .notae-admin-user-list-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.35rem;
   min-width: 0;
 }
 
 .notae-admin-user-list-actions form {
   margin: 0;
+}
+
+.notae-admin-action-button {
+  width: 4.8rem;
+  min-height: 2rem;
+  padding-inline: 0.5rem;
+  white-space: nowrap;
 }
 
 .notae-workspace-color-grid {
@@ -23075,7 +23084,13 @@ main.notae-content.notae-admin-content {
 .notae-admin-table td:last-child {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.35rem;
+}
+
+.notae-admin-table td:last-child form {
+  margin: 0;
 }
 
 .notae-admin-status-pill {
