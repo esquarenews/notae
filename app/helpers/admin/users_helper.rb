@@ -17,6 +17,8 @@ module Admin
 
       if user.removed?
         [ "Archived", "canceled", "Deactivated account" ]
+      elsif user.platform_admin?
+        [ user.saas_plan_name, user.saas_plan_key, Billing::PlanCatalog.monthly_price_label_for(user.saas_plan_key) ]
       elsif user.pending_confirmation?
         [ "Pending", "pending", "Awaiting email confirmation" ]
       elsif canceled_subscription

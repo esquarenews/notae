@@ -323,6 +323,26 @@ RSpec.describe "Admin dashboard", type: :request do
     expect(response.body).not_to include("Hidden Workspace Two")
   end
 
+  it "keeps account tier aligned with user tier for platform admins" do
+    admin = User.create!(email: "platform-tier-admin@example.com", password: "password123", super_admin: true)
+    workspace = Workspace.create!(name: "Admin Trial Workspace", slug: "admin-trial-workspace")
+    Membership.create!(workspace: workspace, user: admin, role: :owner)
+    workspace.create_workspace_subscription!(status: WorkspaceSubscription::STATUS_TRIALING)
+    sign_in admin
+
+    get admin_user_path(admin)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    account_tier_card = document.css(".notae-ai-analytics-card").find { |card| card.text.include?("Account tier") }
+    user_tier_select = document.at_css("select[name='user[saas_plan_key]']")
+    selected_tier = user_tier_select.css("option[selected]").first&.text&.squish || user_tier_select.css("option").find { |option| option["value"] == admin.saas_plan_key }.text.squish
+
+    expect(account_tier_card.text.squish).to include("Account tier Free")
+    expect(selected_tier).to eq("Free")
+    expect(account_tier_card.text.squish).not_to include("Trial")
+  end
+
   it "redirects the hidden workspace index to the filtered users page" do
     admin = User.create!(email: "workspace-index-admin@example.com", password: "password123", super_admin: true)
     create_workspace_with_owner(
