@@ -84,12 +84,14 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).not_to include('from "@tiptap/starter-kit"')
   end
 
-  it "focuses the mounted contenteditable editor after lazy hydration" do
+  it "focuses the mounted contenteditable editor at the clicked text position after lazy hydration" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
-    expect(source).to include("focusEditor()")
-    expect(source).to include('this.editor.commands.focus("end")')
-    expect(source).to include("this.editor.view?.dom")
+    expect(source).to include("focusEditor({ immediate = false, point = null } = {})")
+    expect(source).to include("focusPointFromEvent(event)")
+    expect(source).to include("focusEditorAtPoint(point)")
+    expect(source).to include("view?.posAtCoords?.({ left: point.x, top: point.y })")
+    expect(source).to include("this.editor.commands.setTextSelection(position.pos)")
     expect(source).to include("editorElement.focus({ preventScroll: true })")
   end
 
@@ -98,12 +100,20 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
 
     expect(source).to include("if (this.editor) {")
     expect(source).to include("if (this.eventInsideEditorSurface(event)) return")
-    expect(source).to include("this.focusEditor({ immediate: true })")
+    expect(source).to include("this.focusEditor({ immediate: true, point: this.focusPointFromEvent(event) })")
     expect(source).to include("eventInsideEditorSurface(event)")
     expect(source).to include('event?.target?.closest?.(".ProseMirror")')
-    expect(source).to include("focusEditor({ immediate = false } = {})")
+    expect(source).to include("focusEditor({ immediate = false, point = null } = {})")
     expect(source).to include("if (immediate) {")
     expect(source).to include("requestAnimationFrame(focus)")
+  end
+
+  it "keeps end focus as the keyboard fallback without using it for clicked text" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("focusEditorAtEnd()")
+    expect(source).to include('this.editor.commands.focus("end")')
+    expect(source).to include("if (point && this.focusEditorAtPoint(point)) return")
   end
 
   it "fails closed when deferred editor content cannot be loaded" do

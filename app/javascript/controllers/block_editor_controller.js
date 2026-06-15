@@ -190,12 +190,12 @@ export default class extends Controller {
       if (this.eventInsideEditorSurface(event)) return
 
       event?.preventDefault()
-      this.focusEditor({ immediate: true })
+      this.focusEditor({ immediate: true, point: this.focusPointFromEvent(event) })
       return
     }
 
     event?.preventDefault()
-    this.hydrate({ focus: true })
+    this.hydrate({ focus: true, point: this.focusPointFromEvent(event) })
   }
 
   activateFromKeyboard(event) {
@@ -235,15 +235,15 @@ export default class extends Controller {
     return Boolean(window.matchMedia?.(query)?.matches)
   }
 
-  hydrate({ focus = false } = {}) {
+  hydrate({ focus = false, point = null } = {}) {
     if (this.editor) {
-      if (focus) this.focusEditor()
+      if (focus) this.focusEditor({ point })
       return Promise.resolve(true)
     }
 
     if (this.hydrationPromise) {
       return this.hydrationPromise.then((result) => {
-        if (focus) this.focusEditor()
+        if (focus) this.focusEditor({ point })
         return result
       })
     }
@@ -254,7 +254,7 @@ export default class extends Controller {
 
       const mounted = await this.mountEditor(initialContent)
       if (!mounted) return false
-      if (focus) this.focusEditor()
+      if (focus) this.focusEditor({ point })
       return true
     })().finally(() => {
       this.hydrationPromise = null
@@ -418,16 +418,13 @@ export default class extends Controller {
     this.globalHandlersInstalled = false
   }
 
-  focusEditor({ immediate = false } = {}) {
+  focusEditor({ immediate = false, point = null } = {}) {
     const focus = () => {
       if (!this.editor) return
 
-      this.editor.commands.focus("end")
-      const editorElement = this.editor.view?.dom
-      if (editorElement instanceof HTMLElement && document.activeElement !== editorElement) {
-        editorElement.focus({ preventScroll: true })
-        this.editor.commands.focus("end")
-      }
+      if (point && this.focusEditorAtPoint(point)) return
+
+      this.focusEditorAtEnd()
     }
 
     if (immediate) {
@@ -436,6 +433,39 @@ export default class extends Controller {
     }
 
     requestAnimationFrame(focus)
+  }
+
+  focusPointFromEvent(event) {
+    const clientX = event?.clientX
+    const clientY = event?.clientY
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return null
+
+    return { x: clientX, y: clientY }
+  }
+
+  focusEditorAtPoint(point) {
+    const view = this.editor?.view
+    const editorElement = view?.dom
+    const position = view?.posAtCoords?.({ left: point.x, top: point.y })
+    if (!position || !Number.isFinite(position.pos)) return false
+
+    this.editor.commands.setTextSelection(position.pos)
+    if (editorElement instanceof HTMLElement) {
+      editorElement.focus({ preventScroll: true })
+      return true
+    }
+
+    view?.focus?.()
+    return true
+  }
+
+  focusEditorAtEnd() {
+    this.editor.commands.focus("end")
+    const editorElement = this.editor.view?.dom
+    if (editorElement instanceof HTMLElement && document.activeElement !== editorElement) {
+      editorElement.focus({ preventScroll: true })
+      this.editor.commands.focus("end")
+    }
   }
 
   parseContent() {
