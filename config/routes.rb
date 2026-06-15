@@ -139,7 +139,7 @@ Rails.application.routes.draw do
         post :reject
       end
     end
-    resources :knowledge_suggestions, only: [] do
+    resources :knowledge_suggestions, only: %i[show] do
       member do
         post :dismiss
         post :convert_to_task

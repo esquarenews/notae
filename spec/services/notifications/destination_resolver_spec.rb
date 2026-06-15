@@ -150,6 +150,6 @@ RSpec.describe Notifications::DestinationResolver do
 
     destination = described_class.new(notification: notification).call
 
-    expect(destination).to eq("/w/#{workspace.slug}?knowledge_suggestion_id=#{suggestion.id}&show_home=1#knowledge-suggestion-#{suggestion.id}")
+    expect(destination).to eq("/w/#{workspace.slug}/knowledge_suggestions/#{suggestion.id}")
   end
 end

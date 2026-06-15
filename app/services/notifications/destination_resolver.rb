@@ -54,14 +54,14 @@ module Notifications
 
     def knowledge_suggestion_destination_url
       suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion)
+      suggestion ||= KnowledgeSuggestion.find_by(
+        id: notification.metadata["knowledge_suggestion_id"],
+        workspace_id: notification.workspace_id,
+        user_id: notification.recipient_id
+      )
       return if suggestion.blank?
 
-      workspace_path(
-        notification.workspace.slug,
-        show_home: 1,
-        knowledge_suggestion_id: suggestion.id,
-        anchor: "knowledge-suggestion-#{suggestion.id}"
-      )
+      knowledge_suggestion_path(workspace_slug: notification.workspace.slug, id: suggestion.id)
     end
 
     def codex_completion_destination_url

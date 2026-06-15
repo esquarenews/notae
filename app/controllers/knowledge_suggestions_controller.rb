@@ -1,7 +1,12 @@
 class KnowledgeSuggestionsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_knowledge_suggestion, only: %i[dismiss convert_to_task convert_to_nota refresh]
+  before_action :set_knowledge_suggestion, only: %i[show dismiss convert_to_task convert_to_nota refresh]
+
+  def show
+    authorize @knowledge_suggestion, :show?
+    @knowledge_task_databases = knowledge_task_databases_for(@workspace)
+  end
 
   def dismiss
     authorize @knowledge_suggestion, :dismiss?

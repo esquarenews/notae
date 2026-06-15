@@ -161,7 +161,7 @@ RSpec.describe "PWA", type: :request do
 
     get pwa_notification_launch_path(id: notification.id)
 
-    expect(response).to redirect_to(workspace_path(workspace.slug, show_home: 1, knowledge_suggestion_id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(response).to redirect_to(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id))
     expect(notification.reload.read_at).to be_present
   end
 

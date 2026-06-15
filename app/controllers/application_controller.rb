@@ -449,7 +449,7 @@ class ApplicationController < ActionController::Base
       id: "knowledge_suggestion:#{suggestion.id}",
       title: suggestion.title,
       preview: preview_lines.join("\n"),
-      url: workspace_path(suggestion.workspace.slug, show_home: 1, knowledge_suggestion_id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"),
+      url: knowledge_suggestion_path(workspace_slug: suggestion.workspace.slug, id: suggestion.id),
       action_label: "Open full window",
       kind_label: "Suggestion",
       updated_at: updated_at,

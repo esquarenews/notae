@@ -113,7 +113,7 @@
               <% end %>
             <% end %>
             <%= link_to "Open suggestion",
-                        workspace_path(@workspace.slug, show_home: 1, knowledge_suggestion_id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"),
+                        Notifications::DestinationResolver.new(notification: notification).call,
                         class: "notae-utility-link notae-utility-mini-link" %>
           <% elsif notification.notification_type == Notification::TYPE_WORKFLOW_FAILED && notification.notifiable.is_a?(WorkflowRun) %>
             <% workflow_run = notification.notifiable %>

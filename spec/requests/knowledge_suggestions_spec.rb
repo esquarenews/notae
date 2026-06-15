@@ -29,6 +29,19 @@ RSpec.describe "Knowledge suggestions", type: :request do
     )
   end
 
+  it "shows a suggestion opened from a notification" do
+    suggestion = create_suggestion
+
+    get knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("AI suggestion")
+    expect(response.body).to include("Suggested next step")
+    expect(response.body).to include("A suggestion grounded in sources.")
+    expect(response.body).to include("Triage outstanding blockers")
+    expect(response.body).to include("Opened from a notification.")
+  end
+
   it "dismisses an active suggestion" do
     suggestion = create_suggestion
 
