@@ -11,8 +11,8 @@ RSpec.describe WorkspaceSubscription, type: :model do
 
     expect(subscription.effective_limits).to include(
       members: 7,
-      storage_mb: 2_048,
-      ai_requests_per_month: 1_000
+      storage_mb: 1_024,
+      ai_requests_per_month: 300
     )
   end
 

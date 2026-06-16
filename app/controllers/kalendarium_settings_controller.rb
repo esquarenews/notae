@@ -112,5 +112,4 @@ class KalendariumSettingsController < ApplicationController
       index += 1
     end
   end
-
 end
