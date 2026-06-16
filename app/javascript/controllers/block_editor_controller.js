@@ -449,13 +449,9 @@ export default class extends Controller {
     const position = view?.posAtCoords?.({ left: point.x, top: point.y })
     if (!position || !Number.isFinite(position.pos)) return false
 
-    this.editor.commands.setTextSelection(position.pos)
-    if (editorElement instanceof HTMLElement) {
-      editorElement.focus({ preventScroll: true })
-      return true
-    }
-
+    if (!this.editor.commands.setTextSelection(position.pos)) return false
     view?.focus?.()
+    if (editorElement instanceof HTMLElement) editorElement.scrollIntoView({ block: "nearest", inline: "nearest" })
     return true
   }
 

@@ -92,7 +92,8 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("focusEditorAtPoint(point)")
     expect(source).to include("view?.posAtCoords?.({ left: point.x, top: point.y })")
     expect(source).to include("this.editor.commands.setTextSelection(position.pos)")
-    expect(source).to include("editorElement.focus({ preventScroll: true })")
+    expect(source).to include("view?.focus?.()")
+    expect(source).to include('editorElement.scrollIntoView({ block: "nearest", inline: "nearest" })')
   end
 
   it "focuses prehydrated mobile editors when tapping the block shell" do
