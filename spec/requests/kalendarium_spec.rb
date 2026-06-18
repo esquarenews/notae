@@ -108,8 +108,70 @@ RSpec.describe "Kalendarium", type: :request do
     expect(document.at_css("dialog[data-kalendarium-focus-target='createDialog']")).to be_present
     planning_toggle = document.at_css("a.notae-kalendarium-planning-toggle.is-active")
     expect(planning_toggle&.text.to_s.strip).to eq("Standard view")
+    expect(planning_toggle["href"]).to include("planning=standard")
     expect(planning_toggle["href"]).not_to include("planning=wide")
     expect(document.at_css("input[name='planning'][value='wide']")).to be_present
+    expect(Membership.find_by!(user: user, workspace: workspace).calendar_preferences["planning_view"]).to eq("wide")
+  end
+
+  it "keeps wide planning mode after creating an event" do
+    user, workspace, calendar = build_stack(suffix: "wide-planning-create")
+    sign_in user
+
+    start_time = 2.days.from_now.change(hour: 12, min: 0, sec: 0)
+    end_time = start_time + 1.hour
+
+    expect do
+      post kalendarium_events_path(workspace_slug: workspace.slug, planning: "wide"), params: {
+        view: "week",
+        date: start_time.to_date.to_s,
+        kalendarium_event: {
+          kalendarium_calendar_id: calendar.id,
+          title: "Wide mode event",
+          starts_at_local: start_time.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+          ends_at_local: end_time.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
+        }
+      }
+    end.to change(KalendariumEvent, :count).by(1)
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "week", date: start_time.to_date.to_s, planning: "wide"))
+
+    follow_redirect!
+
+    document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css("main.notae-content")&.[]("class")).to include("notae-content-kalendarium-planning-wide")
+    expect(document.at_css(".notae-kalendarium")&.[]("class")).to include("is-planning-wide")
+    expect(document.at_css("aside.notae-kalendarium-sidebar.is-pinned")).to be_nil
+  end
+
+  it "restores stored wide planning mode after creating an event from the standard sidebar flow" do
+    user, workspace, calendar = build_stack(suffix: "wide-planning-sidebar-create")
+    sign_in user
+    Membership.find_by!(user: user, workspace: workspace).update!(calendar_preferences_json: { "planning_view" => "wide" })
+
+    start_time = 3.days.from_now.change(hour: 12, min: 0, sec: 0)
+    end_time = start_time + 1.hour
+
+    expect do
+      post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+        view: "week",
+        date: start_time.to_date.to_s,
+        kalendarium_event: {
+          kalendarium_calendar_id: calendar.id,
+          title: "Sidebar wide restore event",
+          starts_at_local: start_time.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M"),
+          ends_at_local: end_time.in_time_zone(user.time_zone).strftime("%Y-%m-%dT%H:%M")
+        }
+      }
+    end.to change(KalendariumEvent, :count).by(1)
+
+    expect(response).to redirect_to(kalendarium_path(workspace_slug: workspace.slug, view: "week", date: start_time.to_date.to_s, planning: "wide"))
+
+    follow_redirect!
+
+    document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css("main.notae-content")&.[]("class")).to include("notae-content-kalendarium-planning-wide")
+    expect(document.at_css(".notae-kalendarium")&.[]("class")).to include("is-planning-wide")
   end
 
   it "wires month and year date double clicks into the create event flow" do

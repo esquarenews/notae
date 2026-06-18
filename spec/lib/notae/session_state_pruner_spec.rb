@@ -6,7 +6,8 @@ RSpec.describe Notae::SessionStatePruner do
       "notae_last_page_visits" => 10.times.to_h { |index| [ "w#{index}", index.to_s ] },
       "kalendarium_calendar_selection" => 12.times.to_h { |index| [ "w#{index}", { "mode" => "selected", "ids" => [ index.to_s ] } ] },
       "kalendarium_project_visibility" => 12.times.to_h { |index| [ "w#{index}", { "mode" => "all_except", "ids" => [ index.to_s ] } ] },
-      "kalendarium_last_calendar_view" => 12.times.to_h { |index| [ "w#{index}", "week" ] }
+      "kalendarium_last_calendar_view" => 12.times.to_h { |index| [ "w#{index}", "week" ] },
+      "kalendarium_planning_view" => 12.times.to_h { |index| [ "w#{index}", "wide" ] }
     }
 
     described_class.prune!(session)
@@ -15,6 +16,7 @@ RSpec.describe Notae::SessionStatePruner do
     expect(session["kalendarium_calendar_selection"].keys).to eq(%w[w4 w5 w6 w7 w8 w9 w10 w11])
     expect(session["kalendarium_project_visibility"].keys).to eq(%w[w4 w5 w6 w7 w8 w9 w10 w11])
     expect(session["kalendarium_last_calendar_view"].keys).to eq(%w[w4 w5 w6 w7 w8 w9 w10 w11])
+    expect(session["kalendarium_planning_view"].keys).to eq(%w[w4 w5 w6 w7 w8 w9 w10 w11])
   end
 
   it "compacts oversized legacy calendar visibility payloads before they overflow cookie sessions" do

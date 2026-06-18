@@ -279,10 +279,31 @@ class KalendariumEventsController < ApplicationController
     redirect_params[:tz] = time_zones if time_zones.any?
     redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     redirect_params[:window_start] = params[:window_start].presence if params[:window_start].present?
+    redirect_params[:planning] = "wide" if restore_wide_planning_view?
     redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
     redirect_params[:widget] = "1" if params[:widget].to_s == "1"
     redirect_params[:task_row_id] = params[:task_row_id].presence if params[:task_row_id].present?
     kalendarium_path(redirect_params)
+  end
+
+  def restore_wide_planning_view?
+    requested = params[:planning].to_s
+    return true if requested == "wide"
+    return false if requested.present?
+
+    stored = workspace_calendar_preference(
+      "planning_view",
+      fallback: planning_view_session[planning_view_workspace_key]
+    ).to_s
+    stored == "wide"
+  end
+
+  def planning_view_session
+    session[:kalendarium_planning_view] ||= {}
+  end
+
+  def planning_view_workspace_key
+    @workspace.id.to_s
   end
 
   def find_event_project(project_id)
