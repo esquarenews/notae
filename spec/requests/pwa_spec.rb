@@ -135,9 +135,18 @@ RSpec.describe "PWA", type: :request do
   it "routes signed-in notification launches through the server and marks them as read" do
     user = User.create!(email: "pwa-notification-launch@example.com", password: "password123")
     workspace = create_workspace_for(user:, slug: "pwa-notification", name: "PWA Notification")
+    conversation = AiConversation.create!(
+      workspace: workspace,
+      user: user,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUGGESTION,
+      prompt: "Proactive workspace suggestion",
+      answer: "A new AI suggestion is waiting. [1]"
+    )
     suggestion = KnowledgeSuggestion.create!(
       workspace: workspace,
       user: user,
+      ai_conversation: conversation,
       kind: KnowledgeSuggestion::KIND_PROACTIVE,
       status: KnowledgeSuggestion::STATUS_ACTIVE,
       title: "Follow up on the board",
@@ -161,7 +170,7 @@ RSpec.describe "PWA", type: :request do
 
     get pwa_notification_launch_path(id: notification.id)
 
-    expect(response).to redirect_to(workspace_path(workspace.slug, show_home: 1, knowledge_suggestion_id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(response).to redirect_to(workspace_ai_conversation_history_path(workspace_slug: workspace.slug, conversation_id: conversation.id, anchor: "ai-conversation-#{conversation.id}"))
     expect(notification.reload.read_at).to be_present
   end
 

@@ -27,6 +27,7 @@ export default class extends Controller {
     this.diameter = DEFAULT_DIAMETER
     this.activeStroke = null
     this.activePointerId = null
+    this.strokeRevision = 0
     this.saveTimer = null
     this.fullscreenPlaceholder = this.element.notaeWhiteboardPlaceholder || null
     this.fullscreenAnimation = null
@@ -136,6 +137,7 @@ export default class extends Controller {
 
     this.strokes = []
     this.state.strokes = this.strokes
+    this.markStrokeChanged()
     this.draw()
     this.queueSave({ immediate: true })
   }
@@ -160,6 +162,7 @@ export default class extends Controller {
       points: [ point ]
     }
     this.strokes.push(this.activeStroke)
+    this.markStrokeChanged()
     if (this.tool === "eraser") {
       this.draw()
     } else {
@@ -187,6 +190,7 @@ export default class extends Controller {
     if (previous.x === point.x && previous.y === point.y) return
 
     this.activeStroke.points.push(point)
+    this.markStrokeChanged()
     if (this.activeStroke.tool === "eraser") return
 
     this.drawStrokeSegment(this.activeStroke, previous, point)
@@ -362,6 +366,7 @@ export default class extends Controller {
 
   async save() {
     this.setStatus("Saving")
+    const saveRevision = this.strokeRevision
     const content = this.serializedContent()
 
     try {
@@ -378,6 +383,12 @@ export default class extends Controller {
       if (!response.ok) throw new Error(`Save failed with status ${response.status}`)
 
       const payload = await response.json()
+      if (saveRevision !== this.strokeRevision) {
+        this.setStatus("Unsaved")
+        this.queueSave()
+        return
+      }
+
       this.state = this.normalizedState(payload.block?.content_json || content)
       this.strokes = this.state.strokes
       this.board = this.state.board
@@ -575,7 +586,6 @@ export default class extends Controller {
 
   pointerEventsFor(event) {
     const coalescedEvents = event.getCoalescedEvents?.() || []
-    const predictedEvents = event.getPredictedEvents?.() || []
     const pointerEvents = coalescedEvents.length ? [ ...coalescedEvents ] : []
     const lastEvent = pointerEvents[pointerEvents.length - 1]
 
@@ -583,8 +593,11 @@ export default class extends Controller {
       pointerEvents.push(event)
     }
 
-    pointerEvents.push(...predictedEvents)
     return pointerEvents
+  }
+
+  markStrokeChanged() {
+    this.strokeRevision += 1
   }
 
   positiveNumber(value, fallback) {

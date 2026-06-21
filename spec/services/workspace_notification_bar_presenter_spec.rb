@@ -118,9 +118,18 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     workspace = Workspace.create!(name: "AI status workspace", slug: "ai-status-workspace", shell_status_bar_mode: "all")
     Membership.create!(workspace: workspace, user: user, role: :owner)
 
+    conversation = AiConversation.create!(
+      workspace: workspace,
+      user: user,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUGGESTION,
+      prompt: "Proactive workspace suggestion",
+      answer: "A new AI suggestion is ready. [1]"
+    )
     suggestion = KnowledgeSuggestion.create!(
       workspace: workspace,
       user: user,
+      ai_conversation: conversation,
       kind: KnowledgeSuggestion::KIND_PROACTIVE,
       status: KnowledgeSuggestion::STATUS_ACTIVE,
       title: "Review the launch note",
@@ -154,7 +163,7 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.recent_ai_update_present?).to be(true)
     expect(presenter.recent_ai_update_headline).to eq("New AI suggestion")
     expect(presenter.recent_ai_update_detail).to include("Review the launch note")
-    expect(presenter.recent_ai_update_path).to eq("/w/#{workspace.slug}?knowledge_suggestion_id=#{suggestion.id}&show_home=1#knowledge-suggestion-#{suggestion.id}")
+    expect(presenter.recent_ai_update_path).to eq("/w/#{workspace.slug}/ai-conversation-history?conversation_id=#{conversation.id}#ai-conversation-#{conversation.id}")
     expect(presenter.recent_update_count).to eq(1)
     expect(presenter.recent_update_headline).to eq("1 new workspace update")
   end

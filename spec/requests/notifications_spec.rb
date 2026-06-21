@@ -197,9 +197,18 @@ RSpec.describe "Notifications", type: :request do
     user = User.create!(email: "notif-suggestion@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notif Suggestion", slug: "notif-suggestion")
     Membership.create!(workspace: workspace, user: user, role: :owner)
+    conversation = AiConversation.create!(
+      workspace: workspace,
+      user: user,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUGGESTION,
+      prompt: "Proactive workspace suggestion",
+      answer: "A supplier email now needs a follow-up. [1]"
+    )
     suggestion = KnowledgeSuggestion.create!(
       workspace: workspace,
       user: user,
+      ai_conversation: conversation,
       kind: KnowledgeSuggestion::KIND_PROACTIVE,
       status: KnowledgeSuggestion::STATUS_ACTIVE,
       title: "Escalate invoice delay",
@@ -227,8 +236,8 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include("New AI suggestion")
     expect(response.body).to include("Escalate invoice delay")
     expect(response.body).to include("Open suggestion")
-    expect(response.body).to include("knowledge_suggestion_id=#{suggestion.id}")
-    expect(response.body).to include("#knowledge-suggestion-#{suggestion.id}")
+    expect(response.body).to include("conversation_id=#{conversation.id}")
+    expect(response.body).to include("#ai-conversation-#{conversation.id}")
   end
 
   it "renders codex notifications with unavailable destinations as workspace links" do

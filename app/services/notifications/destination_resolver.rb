@@ -56,12 +56,7 @@ module Notifications
       suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion)
       return if suggestion.blank?
 
-      workspace_path(
-        notification.workspace.slug,
-        show_home: 1,
-        knowledge_suggestion_id: suggestion.id,
-        anchor: "knowledge-suggestion-#{suggestion.id}"
-      )
+      KnowledgeSuggestions::DestinationResolver.new(suggestion: suggestion).call
     end
 
     def codex_completion_destination_url

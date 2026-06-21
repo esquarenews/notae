@@ -121,9 +121,50 @@ RSpec.describe Notifications::DestinationResolver do
     expect(destination).to eq(destination_path)
   end
 
-  it "routes knowledge suggestion notifications to the exact home card" do
+  it "routes knowledge suggestion notifications to the source AI conversation when available" do
     workspace = Workspace.create!(name: "Resolver Suggestion", slug: "resolver-suggestion")
     user = User.create!(email: "resolver-suggestion@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    conversation = AiConversation.create!(
+      workspace: workspace,
+      user: user,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUGGESTION,
+      prompt: "Proactive workspace suggestion",
+      answer: "The clicked suggestion should open the full generated detail. [1]"
+    )
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      ai_conversation: conversation,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Review stalled task",
+      summary: "The clicked suggestion should render directly. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notifiable: suggestion,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: {}
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq("/w/#{workspace.slug}/ai-conversation-history?conversation_id=#{conversation.id}#ai-conversation-#{conversation.id}")
+  end
+
+  it "falls back to the exact home card when a knowledge suggestion has no source conversation" do
+    workspace = Workspace.create!(name: "Resolver Suggestion Fallback", slug: "resolver-suggestion-fallback")
+    user = User.create!(email: "resolver-suggestion-fallback@example.com", password: "password123")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     suggestion = KnowledgeSuggestion.create!(
       workspace: workspace,

@@ -2,7 +2,7 @@
   <% if ai_conversations.any? %>
     <ul class="notae-ai-history-list">
       <% ai_conversations.each do |conversation| %>
-        <li class="notae-ai-history-item">
+        <li class="notae-ai-history-item" id="ai-conversation-<%= conversation.id %>">
           <div class="notae-ai-history-meta">
             <span class="notae-ai-history-workspace"><%= conversation.workspace.name %></span>
             <% if conversation.status == AiConversation::STATUS_SUGGESTION %>

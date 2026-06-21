@@ -551,9 +551,18 @@ RSpec.describe "AI Assistant", type: :request do
     )
     fresh_workflow_run.update_column(:updated_at, 5.minutes.ago)
 
+    suggestion_conversation = AiConversation.create!(
+      workspace: workspace,
+      user: user,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUGGESTION,
+      prompt: "Proactive workspace suggestion",
+      answer: "The approval gap still needs attention. [1]"
+    )
     proactive_suggestion = KnowledgeSuggestion.create!(
       workspace: workspace,
       user: user,
+      ai_conversation: suggestion_conversation,
       kind: KnowledgeSuggestion::KIND_PROACTIVE,
       status: KnowledgeSuggestion::STATUS_ACTIVE,
       title: "Escalate approval gap",
@@ -585,8 +594,8 @@ RSpec.describe "AI Assistant", type: :request do
     expect(html).to include("Workflow: Create task")
     expect(html).to include("Escalate approval gap")
     expect(html).to include("Suggestion: Suggested next step")
-    expect(html).to include("knowledge_suggestion_id=#{proactive_suggestion.id}")
-    expect(html).to include("#knowledge-suggestion-#{proactive_suggestion.id}")
+    expect(html).to include("conversation_id=#{suggestion_conversation.id}")
+    expect(html).to include("#ai-conversation-#{suggestion_conversation.id}")
     expect(html).to include("Open full window")
     expect(html).to include(workflow_run_path(workspace_slug: workspace.slug, id: fresh_workflow_run.id))
     expect(html).not_to include("Stale email draft")
