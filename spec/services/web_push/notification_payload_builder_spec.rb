@@ -37,7 +37,7 @@ RSpec.describe WebPush::NotificationPayloadBuilder do
     expect(payload[:url]).to eq("/app/notifications/#{notification.id}")
   end
 
-  it "builds a knowledge suggestion payload that deep-links to the workspace home card" do
+  it "builds a knowledge suggestion payload that launches through the notification resolver" do
     workspace = Workspace.create!(name: "Knowledge Push", slug: "knowledge-push")
     user = User.create!(email: "knowledge-push@example.com", password: "password123")
     Membership.create!(workspace: workspace, user: user, role: :owner)

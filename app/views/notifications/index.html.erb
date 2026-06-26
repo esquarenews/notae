@@ -86,35 +86,40 @@
             <%= link_to "Open draft",
                         agent_action_path(workspace_slug: @workspace.slug, id: agent_action.id),
                         class: "notae-utility-link notae-utility-mini-link" %>
-          <% elsif notification.knowledge_suggestion_notification? && notification.notifiable.is_a?(KnowledgeSuggestion) %>
-            <% suggestion = notification.notifiable %>
+          <% elsif notification.knowledge_suggestion_notification? %>
+            <% suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion) %>
+            <% suggestion ||= KnowledgeSuggestion.where(workspace_id: @workspace.id, user_id: current_user.id).find_by(id: notification.metadata["knowledge_suggestion_id"].to_s.strip) %>
             <% daily_agenda_items = Array(notification.metadata["daily_agenda_items"]) %>
-            <p class="notae-utility-copy">
-              <strong><%= suggestion.title %></strong>
-              · <%= suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief" : "Suggested next step" %>
-            </p>
-            <p class="notae-utility-copy"><%= suggestion.summary %></p>
-            <% if suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY %>
-              <% if daily_agenda_items.any? %>
-                <ul class="notae-utility-agenda-list">
-                  <% daily_agenda_items.each do |item| %>
-                    <li>
-                      <span class="notae-utility-agenda-time"><%= item["time"] %></span>
-                      <span><%= item["title"] %></span>
-                    </li>
+            <% if suggestion.present? %>
+              <p class="notae-utility-copy">
+                <strong><%= suggestion.title %></strong>
+                · <%= suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief" : "Suggested next step" %>
+              </p>
+              <p class="notae-utility-copy"><%= suggestion.summary %></p>
+              <% if suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY %>
+                <% if daily_agenda_items.any? %>
+                  <ul class="notae-utility-agenda-list">
+                    <% daily_agenda_items.each do |item| %>
+                      <li>
+                        <span class="notae-utility-agenda-time"><%= item["time"] %></span>
+                        <span><%= item["title"] %></span>
+                      </li>
+                    <% end %>
+                  </ul>
+                  <% remaining_items = notification.metadata["daily_agenda_total_count"].to_i - daily_agenda_items.length %>
+                  <% if remaining_items.positive? %>
+                    <p class="notae-utility-copy">+<%= remaining_items %> more events today</p>
                   <% end %>
-                </ul>
-                <% remaining_items = notification.metadata["daily_agenda_total_count"].to_i - daily_agenda_items.length %>
-                <% if remaining_items.positive? %>
-                  <p class="notae-utility-copy">+<%= remaining_items %> more events today</p>
+                <% elsif ActiveModel::Type::Boolean.new.cast(notification.metadata["daily_agenda_empty"]) %>
+                  <p class="notae-utility-copy">No events scheduled today.</p>
                 <% end %>
-              <% elsif ActiveModel::Type::Boolean.new.cast(notification.metadata["daily_agenda_empty"]) %>
-                <p class="notae-utility-copy">No events scheduled today.</p>
               <% end %>
+              <%= link_to "Open suggestion",
+                          Notifications::DestinationResolver.new(notification: notification).call,
+                          class: "notae-utility-link notae-utility-mini-link" %>
+            <% else %>
+              <p class="notae-utility-copy">The original AI suggestion is no longer available.</p>
             <% end %>
-            <%= link_to "Open suggestion",
-                        KnowledgeSuggestions::DestinationResolver.new(suggestion: suggestion).call,
-                        class: "notae-utility-link notae-utility-mini-link" %>
           <% elsif notification.notification_type == Notification::TYPE_WORKFLOW_FAILED && notification.notifiable.is_a?(WorkflowRun) %>
             <% workflow_run = notification.notifiable %>
             <p class="notae-utility-copy">
@@ -128,26 +133,28 @@
             <% destination = Notifications::DestinationResolver.new(notification: notification).call %>
             <% requested_destination = notification.metadata["path"].to_s.strip %>
             <% destination_available = requested_destination.present? && destination == requested_destination %>
+            <% suggestion_destination = notification.metadata["knowledge_suggestion_id"].present? && destination.match?(%r{/knowledge[-_]suggestions/}) %>
             <% if notification.metadata["body"].present? %>
               <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>
             <% end %>
-            <% unless destination_available %>
+            <% unless destination_available || suggestion_destination %>
               <p class="notae-utility-meta">The original destination is not available in Notae.</p>
             <% end %>
-            <%= link_to(destination_available ? "Open destination" : "Open workspace",
+            <%= link_to(suggestion_destination ? "Open suggestion" : (destination_available ? "Open destination" : "Open workspace"),
                         destination,
                         class: "notae-utility-link notae-utility-mini-link") %>
           <% elsif notification.notification_type == Notification::TYPE_TEST_PUSH %>
             <% destination = Notifications::DestinationResolver.new(notification: notification).call %>
             <% requested_destination = notification.metadata["path"].to_s.strip %>
             <% destination_available = requested_destination.present? && destination == requested_destination %>
+            <% suggestion_destination = notification.metadata["knowledge_suggestion_id"].present? && destination.match?(%r{/knowledge[-_]suggestions/}) %>
             <% if notification.metadata["body"].present? %>
               <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>
             <% end %>
-            <% unless destination_available %>
+            <% unless destination_available || suggestion_destination %>
               <p class="notae-utility-meta">The original destination is not available in Notae.</p>
             <% end %>
-            <%= link_to(destination_available ? "Open destination" : "Open workspace",
+            <%= link_to(suggestion_destination ? "Open suggestion" : (destination_available ? "Open destination" : "Open workspace"),
                         destination,
                         class: "notae-utility-link notae-utility-mini-link") %>
           <% end %>

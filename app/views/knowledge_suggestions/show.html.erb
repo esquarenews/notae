@@ -1,0 +1,30 @@
+<% content_for :title, @knowledge_suggestion.title %>
+<% content_for :content_class, "notae-content-page notae-content-home" %>
+
+<section class="notae-workspace-home notae-utility-page">
+  <header class="notae-utility-header">
+    <p class="notae-utility-workspace">
+      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "notae-utility-workspace-link" %>
+    </p>
+    <h1 class="notae-utility-title"><%= @knowledge_suggestion.title %></h1>
+    <p class="notae-utility-meta">
+      <%= @knowledge_suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief" : "Suggested next step" %>
+      · generated <%= time_ago_in_words(@knowledge_suggestion.generated_at) %> ago
+    </p>
+    <div class="notae-utility-page-actions">
+      <%= link_to "Notifications",
+                  workspace_notifications_path(workspace_slug: @workspace.slug),
+                  class: "notae-chip-button" %>
+      <%= link_to "Workspace home",
+                  workspace_path(@workspace.slug),
+                  class: "notae-chip-button notae-chip-button-subtle" %>
+    </div>
+  </header>
+
+  <div id="knowledge-suggestion-<%= @knowledge_suggestion.id %>">
+    <%= render "shared/knowledge_suggestion_card",
+               suggestion: @knowledge_suggestion,
+               workspace: @workspace,
+               task_databases: @knowledge_task_databases %>
+  </div>
+</section>

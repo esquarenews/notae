@@ -170,7 +170,39 @@ RSpec.describe "PWA", type: :request do
 
     get pwa_notification_launch_path(id: notification.id)
 
-    expect(response).to redirect_to(workspace_ai_conversation_history_path(workspace_slug: workspace.slug, conversation_id: conversation.id, anchor: "ai-conversation-#{conversation.id}"))
+    expect(response).to redirect_to(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(notification.reload.read_at).to be_present
+  end
+
+  it "routes metadata-only suggestion notification launches to the suggestion page" do
+    user = User.create!(email: "pwa-notification-metadata-launch@example.com", password: "password123")
+    workspace = create_workspace_for(user:, slug: "pwa-notification-metadata", name: "PWA Notification Metadata")
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Follow up on the board",
+      summary: "A new AI suggestion is waiting. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: { "knowledge_suggestion_id" => suggestion.id }
+    )
+    sign_in user
+
+    get pwa_notification_launch_path(id: notification.id)
+
+    expect(response).to redirect_to(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
     expect(notification.reload.read_at).to be_present
   end
 

@@ -121,7 +121,7 @@ RSpec.describe Notifications::DestinationResolver do
     expect(destination).to eq(destination_path)
   end
 
-  it "routes knowledge suggestion notifications to the source AI conversation when available" do
+  it "routes knowledge suggestion notifications to the concrete suggestion page" do
     workspace = Workspace.create!(name: "Resolver Suggestion", slug: "resolver-suggestion")
     user = User.create!(email: "resolver-suggestion@example.com", password: "password123")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -159,10 +159,10 @@ RSpec.describe Notifications::DestinationResolver do
 
     destination = described_class.new(notification: notification).call
 
-    expect(destination).to eq("/w/#{workspace.slug}/ai-conversation-history?conversation_id=#{conversation.id}#ai-conversation-#{conversation.id}")
+    expect(destination).to eq(Rails.application.routes.url_helpers.knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
   end
 
-  it "falls back to the exact home card when a knowledge suggestion has no source conversation" do
+  it "routes metadata-only knowledge suggestion notifications to the concrete suggestion page" do
     workspace = Workspace.create!(name: "Resolver Suggestion Fallback", slug: "resolver-suggestion-fallback")
     user = User.create!(email: "resolver-suggestion-fallback@example.com", password: "password123")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -184,13 +184,81 @@ RSpec.describe Notifications::DestinationResolver do
       workspace: workspace,
       actor: user,
       recipient: user,
-      notifiable: suggestion,
       notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
-      metadata: {}
+      metadata: { "knowledge_suggestion_id" => suggestion.id }
     )
 
     destination = described_class.new(notification: notification).call
 
-    expect(destination).to eq("/w/#{workspace.slug}?knowledge_suggestion_id=#{suggestion.id}&show_home=1#knowledge-suggestion-#{suggestion.id}")
+    expect(destination).to eq(Rails.application.routes.url_helpers.knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
+  end
+
+  it "does not resolve metadata-only knowledge suggestion notifications across users" do
+    workspace = Workspace.create!(name: "Resolver Suggestion Isolation", slug: "resolver-suggestion-isolation")
+    actor = User.create!(email: "resolver-suggestion-isolation-actor@example.com", password: "password123")
+    recipient = User.create!(email: "resolver-suggestion-isolation-recipient@example.com", password: "password123")
+    other_user = User.create!(email: "resolver-suggestion-isolation-other@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: recipient, role: :owner)
+    Membership.create!(workspace: workspace, user: other_user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: other_user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Private suggestion",
+      summary: "This belongs to another user. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: actor,
+      recipient: recipient,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: { "knowledge_suggestion_id" => suggestion.id }
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq("/w/#{workspace.slug}/notifications")
+  end
+
+  it "rescues legacy codex-style suggestion notifications with stored suggestion metadata" do
+    workspace = Workspace.create!(name: "Resolver Suggestion Legacy", slug: "resolver-suggestion-legacy")
+    user = User.create!(email: "resolver-suggestion-legacy@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Legacy proactive suggestion",
+      summary: "This should not fall back to workspace home. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "I've prepared fresh suggestions",
+        "path" => "/w/#{workspace.slug}",
+        "knowledge_suggestion_id" => suggestion.id
+      }
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq(Rails.application.routes.url_helpers.knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
   end
 end
