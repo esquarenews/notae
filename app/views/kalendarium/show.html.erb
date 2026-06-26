@@ -1,4 +1,7 @@
 <% content_for :title, "Kalendārium" %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
 <% content_for :topbar_page_icon do %>
   <%= notae_icon_svg(:kalendarium, css_class: "notae-topbar-page-icon-glyph") %>
 <% end %>
@@ -267,6 +270,7 @@
                         method: :post,
                         params: refresh_kalendarium_params,
                         class: "notae-chip-button notae-kalendarium-refresh-button",
+                        form: { data: { turbo: false } },
                         title: "Refresh calendars",
                         aria: { label: "Refresh calendars" } do %>
             <span class="notae-kalendarium-refresh-glyph" aria-hidden="true">↻</span>

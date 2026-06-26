@@ -12925,6 +12925,9 @@ body.notae-whiteboard-open {
   border: 1px solid #d6e1ea;
   border-radius: 8px;
   background: #f8fafc;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .notae-doc-block.is-type-whiteboard > .notae-whiteboard:not(.is-fullscreen) {
@@ -13179,6 +13182,9 @@ body.notae-whiteboard-open {
   background: #ffffff;
   cursor: crosshair;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .notae-whiteboard:not(.is-fullscreen) .notae-whiteboard-canvas {

@@ -53,6 +53,7 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-content-kalendarium")
     expect(response.body).to include("notae-tool-page-title")
     expect(response.body).to include("notae-topbar-page-icon-glyph")
+    expect(response.body).to include('<meta name="turbo-cache-control" content="no-cache">')
     expect(response.body).not_to include(">10m</span>")
     expect(response.headers["X-Notae-Perf-Action"]).to eq("KalendariumController#show")
     expect(response.headers["X-Notae-Perf-Sql-Queries"]).to be_present
@@ -87,6 +88,9 @@ RSpec.describe "Kalendarium", type: :request do
     planning_toggle = document.at_css("a.notae-kalendarium-planning-toggle")
     expect(planning_toggle&.text.to_s.strip).to eq("Wide view")
     expect(planning_toggle["href"]).to include("planning=wide")
+    refresh_form = document.at_css("form:has(.notae-kalendarium-refresh-button)")
+    expect(refresh_form).to be_present
+    expect(refresh_form["data-turbo"]).to eq("false")
     active_view_link = document.css("a.notae-chip-button.is-active").find { |link| link.text.strip == "Week" }
     expect(active_view_link).to be_present
   end

@@ -31,6 +31,62 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["page_updated_at"]).to be_present
   end
 
+  it "persists whiteboard strokes into the block and renders them after reload" do
+    owner = User.create!(email: "blocks-whiteboard-persist-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Whiteboard persistence", slug: "whiteboard-persistence")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Whiteboard persistence page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "whiteboard",
+      content_json: {
+        type: "whiteboard",
+        version: 1,
+        board: { width: 1600, height: 1000 },
+        strokes: []
+      }
+    )
+    whiteboard_content = {
+      type: "whiteboard",
+      version: 1,
+      board: { width: 1600, height: 1000 },
+      strokes: [
+        {
+          id: "stylus-stroke-1",
+          tool: "pencil",
+          color: "#111827",
+          width: 3,
+          points: [
+            { x: 120, y: 140 },
+            { x: 180, y: 220 },
+            { x: 260, y: 300 }
+          ]
+        }
+      ]
+    }
+    sign_in owner
+
+    patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+          params: { block: { content_json: whiteboard_content } },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(block.reload.content_json.dig("strokes", 0, "id")).to eq("stylus-stroke-1")
+    expect(block.content_json.dig("strokes", 0, "points").length).to eq(3)
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    whiteboard = document.at_css(".notae-whiteboard[data-controller='whiteboard']")
+    expect(whiteboard).to be_present
+    rendered_content = JSON.parse(whiteboard["data-whiteboard-initial-json-value"])
+    expect(rendered_content.dig("strokes", 0, "id")).to eq("stylus-stroke-1")
+    expect(rendered_content.dig("strokes", 0, "points").last).to include("x" => 260, "y" => 300)
+  end
+
   it "serves block editor content separately for lazy editor hydration" do
     owner = User.create!(email: "blocks-content-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Block content", slug: "block-content")
