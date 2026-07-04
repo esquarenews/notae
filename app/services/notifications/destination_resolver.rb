@@ -64,7 +64,10 @@ module Notifications
       return suggestion_destination if suggestion_destination.present?
 
       path = notification.metadata["path"].to_s.strip
-      Notifications::InternalPathSanitizer.call(path, fallback: workspace_path(notification.workspace.slug))
+      sanitized_path = Notifications::InternalPathSanitizer.call(path, fallback: nil)
+      return notification_detail_url if generic_workspace_destination?(sanitized_path)
+
+      sanitized_path.presence || notification_detail_url
     end
 
     def knowledge_suggestion_for_notification
@@ -105,6 +108,15 @@ module Notifications
 
     def fallback_url
       workspace_notifications_path(workspace_slug: notification.workspace.slug)
+    end
+
+    def notification_detail_url
+      workspace_notification_path(workspace_slug: notification.workspace.slug, id: notification.id)
+    end
+
+    def generic_workspace_destination?(path)
+      normalized_path = path.to_s.split("#", 2).first.to_s.split("?", 2).first
+      normalized_path == workspace_path(notification.workspace.slug)
     end
   end
 end

@@ -93,6 +93,7 @@ Rails.application.routes.draw do
     patch "settings/kalendarium", to: "kalendarium_settings#update"
     get "settings/epistularium", to: "epistularium_settings#show", as: :workspace_epistularium_settings
     get "notifications", to: "notifications#index", as: :workspace_notifications
+    get "notifications/:id", to: "notifications#show", as: :workspace_notification
     get "notification-bar", to: "workspace_notification_bars#show", as: :workspace_notification_bar
     get "icon-picker", to: "icon_pickers#show", as: :workspace_icon_picker
     get "cover-picker", to: "cover_pickers#show", as: :workspace_cover_picker

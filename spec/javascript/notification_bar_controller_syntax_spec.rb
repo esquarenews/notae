@@ -20,6 +20,7 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/notification_bar_controller.js").read
 
     expect(source).to include("ALERT_POLL_INTERVAL_MS")
+    expect(source).to include("const ALERT_POLL_INTERVAL_MS = 60000")
     expect(source).to include("renderClock()")
     expect(source).to include("Intl.DateTimeFormat")
     expect(source).to include("weekday: \"short\"")

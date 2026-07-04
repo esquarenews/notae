@@ -16,7 +16,7 @@ const config = {
   internalToken: env("MEETING_BOT_INTERNAL_TOKEN"),
   displayName: env("MEETING_BOT_DISPLAY_NAME", "Notae Bot"),
   workerId: env("MEETING_BOT_WORKER_ID", `${os.hostname()}-${process.pid}`),
-  pollIntervalMs: numberEnv("MEETING_BOT_POLL_INTERVAL_MS", 5000),
+  pollIntervalMs: numberEnv("MEETING_BOT_POLL_INTERVAL_MS", 30000),
   heartbeatIntervalMs: numberEnv("MEETING_BOT_HEARTBEAT_INTERVAL_MS", 15000),
   joinTimeoutMs: numberEnv("MEETING_BOT_JOIN_TIMEOUT_MS", 10 * 60 * 1000),
   minimumJoinDiagnosisMs: numberEnv("MEETING_BOT_MINIMUM_JOIN_DIAGNOSIS_MS", 15000),

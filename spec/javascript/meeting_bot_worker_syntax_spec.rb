@@ -23,6 +23,7 @@ RSpec.describe "Meeting bot worker JavaScript" do
     source = Rails.root.join("services/meeting_bot_worker/worker.mjs").read
 
     expect(source).to include("claimNextRun")
+    expect(source).to include('pollIntervalMs: numberEnv("MEETING_BOT_POLL_INTERVAL_MS", 30000)')
     expect(source).to include("sendHeartbeat")
     expect(source).to include("transcript_complete_path")
     expect(source).to include("Ask to join")

@@ -206,6 +206,28 @@ RSpec.describe "PWA", type: :request do
     expect(notification.reload.read_at).to be_present
   end
 
+  it "routes workspace-home codex notification launches to notification details" do
+    user = User.create!(email: "pwa-notification-codex-home@example.com", password: "password123")
+    workspace = create_workspace_for(user:, slug: "pwa-notification-codex-home", name: "PWA Notification Codex Home")
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "I've prepared fresh suggestions",
+        "body" => "I've prepared fresh suggestions regarding Bela App.",
+        "path" => "/w/#{workspace.slug}"
+      }
+    )
+    sign_in user
+
+    get pwa_notification_launch_path(id: notification.id)
+
+    expect(response).to redirect_to(workspace_notification_path(workspace_slug: workspace.slug, id: notification.id))
+    expect(notification.reload.read_at).to be_present
+  end
+
   it "falls back to the app launch route when the notification no longer exists" do
     user = User.create!(email: "pwa-notification-missing@example.com", password: "password123")
     create_workspace_for(user:, slug: "pwa-notification-missing", name: "PWA Notification Missing")

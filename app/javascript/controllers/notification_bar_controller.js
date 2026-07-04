@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-const ALERT_POLL_INTERVAL_MS = 15000
+const ALERT_POLL_INTERVAL_MS = 60000
 const BAR_GUTTER_PX = 20
 const DRAG_THRESHOLD_PX = 4
 

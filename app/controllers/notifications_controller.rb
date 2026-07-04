@@ -3,12 +3,17 @@ class NotificationsController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_notification, only: :mark_read
+  before_action :set_notification, only: %i[show mark_read]
   track_request_performance_for :index
 
   def index
     authorize Notification
     @notifications = policy_scope(Notification).where(workspace_id: @workspace.id).recent_first.limit(100)
+  end
+
+  def show
+    authorize @notification
+    @notification.mark_as_read! if @notification.read_at.blank?
   end
 
   def mark_read
