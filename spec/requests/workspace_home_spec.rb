@@ -851,7 +851,7 @@ RSpec.describe "Workspace home", type: :request do
     get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("notae-ai-agent-toast")
+    expect(response.body).not_to include("notae-ai-agent-toast")
     expect(response.body).to include("data-ai-rail-agent-updates-path-value=\"#{workspace_ai_assistant_updates_path(workspace_slug: workspace.slug)}\"")
     expect(response.body).to include("Update available from Agent")
     expect(response.body).to include("Open full window")

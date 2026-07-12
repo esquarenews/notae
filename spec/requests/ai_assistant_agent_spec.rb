@@ -146,7 +146,9 @@ RSpec.describe "AI Assistant agent", type: :request do
 
     get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug, current_page_id: page.id)
     expect(response.body).not_to include("Old thread prompt")
-    expect(response.body).to include("Find it. Understand it. Get it done.")
+    expect(response.body).to include('class="notae-ai-head-title">Notae AI</span>')
+    expect(response.body).not_to include("Find it. Understand it. Get it done.")
+    expect(response.body).not_to include("Ask naturally. I can search this document")
     expect(response.body).to include("Whole app")
 
     post workspace_ai_assistant_new_chat_path(workspace_slug: workspace.slug),

@@ -26,7 +26,6 @@
      data-controller="ai-rail"
      <% if ai_rail_workspace_ready %>
        data-ai-rail-agent-updates-path-value="<%= workspace_ai_assistant_updates_path(workspace_slug: ai_rail_workspace_slug) %>"
-       data-ai-rail-workspace-key-value="<%= ai_rail_workspace.id %>"
      <% end %>>
   <button type="button"
           class="notae-ai-floating-toggle"
@@ -47,23 +46,6 @@
           data-action="click->ai-rail#closeFloatingRail"
           aria-label="Close AI assistant panel"
           hidden></button>
-
-  <section class="notae-ai-agent-toast"
-           data-ai-rail-target="agentToast"
-           hidden
-           aria-live="polite"
-           aria-atomic="true">
-    <button type="button"
-            class="notae-ai-agent-toast-main"
-            data-action="click->ai-rail#openAgentToast">
-      <span class="notae-ai-agent-toast-title">AI Agent</span>
-      <span class="notae-ai-agent-toast-body" data-ai-rail-target="agentToastBody"></span>
-    </button>
-    <button type="button"
-            class="notae-ai-agent-toast-dismiss"
-            data-action="click->ai-rail#dismissAgentToast"
-            aria-label="Dismiss AI agent updates">×</button>
-  </section>
 
   <aside class="notae-ai-rail">
   <button type="button"
@@ -104,11 +86,6 @@
         ▸
       </button>
     </div>
-  </div>
-
-  <div class="notae-ai-card">
-    <p class="notae-ai-title">Find it. Understand it. Get it done.</p>
-    <p class="notae-ai-copy">Ask naturally. I can search this document, this workspace, or all of Notae; check the live web; and make authorized changes inside Notae.</p>
   </div>
 
   <section class="notae-ai-thread" data-ai-rail-target="thread" aria-live="polite" aria-busy="false">

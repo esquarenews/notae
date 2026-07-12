@@ -204,8 +204,14 @@ async function clearPrivateCaches() {
 async function showPushNotification(event) {
   const payload = parsePushPayload(event.data)
   const title = payload.title || "Notae"
+  const notificationSuppressedInForeground = await hasVisibleWindowClient()
   let notificationDisplayed = false
   let notificationError = ""
+
+  if (notificationSuppressedInForeground) {
+    await notifyPushReceipt(payload, { notificationSuppressedInForeground })
+    return
+  }
 
   try {
     await self.registration.showNotification(title, {
@@ -224,8 +230,14 @@ async function showPushNotification(event) {
   } catch (error) {
     notificationError = error?.message || String(error)
   } finally {
-    await notifyPushReceipt(payload, { notificationDisplayed, notificationError })
+    await notifyPushReceipt(payload, { notificationDisplayed, notificationError, notificationSuppressedInForeground })
   }
+}
+
+async function hasVisibleWindowClient() {
+  const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+
+  return clientsList.some((client) => client.visibilityState === "visible")
 }
 
 function parsePushPayload(data) {
@@ -267,9 +279,9 @@ async function openNotificationDestination(rawUrl) {
   }
 }
 
-async function notifyPushReceipt(payload, { notificationDisplayed = false, notificationError = "" } = {}) {
+async function notifyPushReceipt(payload, { notificationDisplayed = false, notificationError = "", notificationSuppressedInForeground = false } = {}) {
   const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
-  const receiptPayload = pushReceiptPayload(payload, { notificationDisplayed, notificationError })
+  const receiptPayload = pushReceiptPayload(payload, { notificationDisplayed, notificationError, notificationSuppressedInForeground })
 
   await Promise.all(
     clientsList.map((client) => {
@@ -285,7 +297,7 @@ async function notifyPushReceipt(payload, { notificationDisplayed = false, notif
   )
 }
 
-function pushReceiptPayload(payload, { notificationDisplayed = false, notificationError = "" } = {}) {
+function pushReceiptPayload(payload, { notificationDisplayed = false, notificationError = "", notificationSuppressedInForeground = false } = {}) {
   return {
     notificationId: payload.notification_id || null,
     notificationType: payload.type || payload.notification_type || null,
@@ -296,6 +308,7 @@ function pushReceiptPayload(payload, { notificationDisplayed = false, notificati
     icon: payload.icon || "/icon-192-v5.png",
     requireInteraction: Boolean(payload.require_interaction),
     notificationDisplayed,
+    notificationSuppressedInForeground,
     notificationError
   }
 }

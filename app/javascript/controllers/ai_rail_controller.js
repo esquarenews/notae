@@ -1,9 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
 const AGENT_UPDATE_POLL_INTERVAL_MS = 15000
-const AGENT_UPDATE_TOAST_DURATION_MS = 10000
-const AGENT_UPDATE_FOCUS_CLASS = "is-recently-focused"
-const AGENT_UPDATE_FOCUS_DURATION_MS = 2200
 const AI_RAIL_COLLAPSED_PREFERENCE_KEY = "notae-ai-rail-collapsed-v2"
 
 export default class extends Controller {
@@ -19,14 +16,11 @@ export default class extends Controller {
     "insertPayload",
     "floatingToggle",
     "overlay",
-    "agentUpdate",
-    "agentToast",
-    "agentToastBody"
+    "agentUpdate"
   ]
 
   static values = {
-    agentUpdatesPath: String,
-    workspaceKey: String
+    agentUpdatesPath: String
   }
 
   connect() {
@@ -35,15 +29,10 @@ export default class extends Controller {
     this.visualViewport = window.visualViewport || null
     this.onRailViewportChange = () => this.handleRailViewportChange()
     this.prefillEventHandler = (event) => this.applyPrefill(event.detail || {})
-    this.visibilityChangeHandler = () => {
-      this.refreshAgentToastState()
-      this.syncAgentUpdatePolling({ immediate: this.railActive() })
-    }
+    this.visibilityChangeHandler = () => this.syncAgentUpdatePolling({ immediate: this.railActive() })
     this.pushReceivedHandler = () => this.pollAgentUpdates({ force: true })
     this.agentUpdateIds = new Set()
-    this.agentToastTimer = null
     this.agentUpdatePollTimer = null
-    this.agentUpdateFocusTimer = null
     this.agentUpdatePollRequest = null
     this.agentUpdateBooting = true
 
@@ -69,7 +58,6 @@ export default class extends Controller {
     this.queueThreadScroll()
     this.applyInsertPayload()
     this.captureExistingAgentUpdates()
-    this.refreshAgentToastState()
     this.startAgentUpdatePolling()
     this.agentUpdateBooting = false
     this.finishHydration()
@@ -91,8 +79,6 @@ export default class extends Controller {
     window.removeEventListener("notae:push-received", this.pushReceivedHandler)
     document.removeEventListener("visibilitychange", this.visibilityChangeHandler)
 
-    if (this.agentToastTimer) window.clearTimeout(this.agentToastTimer)
-    if (this.agentUpdateFocusTimer) window.clearTimeout(this.agentUpdateFocusTimer)
     this.stopAgentUpdatePolling()
     if (this.shellElement) {
       this.shellElement.classList.remove("is-ai-compact-viewport")
@@ -228,27 +214,6 @@ export default class extends Controller {
     this.setOverlayOpen(false)
   }
 
-  openAgentToast(event) {
-    event.preventDefault()
-    const targetUpdateId = this.latestUnseenAgentUpdateElement()?.dataset.aiAgentUpdateId || ""
-
-    if (this.compactViewport()) {
-      this.setOverlayOpen(true)
-    } else {
-      this.setRailCollapsed(false)
-    }
-
-    this.markAgentUpdatesSeen()
-    this.clearDismissedAgentUpdateCursor()
-    this.hideAgentToast()
-    this.queueAgentUpdateFocus(targetUpdateId)
-  }
-
-  dismissAgentToast(event) {
-    event.preventDefault()
-    this.dismissCurrentAgentToast()
-  }
-
   appendPendingUserMessage(text) {
     if (!this.hasThreadTarget) return
 
@@ -309,7 +274,6 @@ export default class extends Controller {
     this.shellElement.classList.toggle("is-ai-rail-collapsed", collapsed)
     this.setPreference(AI_RAIL_COLLAPSED_PREFERENCE_KEY, collapsed)
     this.notifyLayoutChange()
-    this.refreshAgentToastState()
     this.syncAgentUpdatePolling({ immediate: !collapsed && !this.compactViewport() })
   }
 
@@ -319,7 +283,6 @@ export default class extends Controller {
     this.shellElement.classList.toggle("is-ai-rail-overlay-open", open)
     this.syncFloatingControls()
     this.notifyLayoutChange()
-    this.refreshAgentToastState()
     this.syncAgentUpdatePolling({ immediate: open })
   }
 
@@ -336,15 +299,6 @@ export default class extends Controller {
       const value = window.localStorage.getItem(key)
       if (value === null) return fallback
       return value === "true"
-    } catch (_error) {
-      return fallback
-    }
-  }
-
-  stringPreference(key, fallback = "") {
-    try {
-      const value = window.localStorage.getItem(key)
-      return value === null ? fallback : value
     } catch (_error) {
       return fallback
     }
@@ -477,7 +431,6 @@ export default class extends Controller {
     }
 
     this.syncFloatingControls()
-    this.refreshAgentToastState()
     this.syncAgentUpdatePolling({ immediate: this.railActive() })
   }
 
@@ -538,139 +491,6 @@ export default class extends Controller {
     return document.visibilityState === "visible" && this.railVisible()
   }
 
-  refreshAgentToastState() {
-    if (!this.hasAgentToastTarget) return
-
-    if (this.statusBarAvailable()) {
-      this.hideAgentToast()
-      return
-    }
-
-    if (this.railActive()) {
-      this.markAgentUpdatesSeen()
-      this.hideAgentToast()
-      return
-    }
-
-    const unseenCount = this.unseenAgentUpdateCount()
-    const latestCursor = this.latestAgentUpdateCursor()
-    if (unseenCount < 1 || !latestCursor || latestCursor <= this.dismissedAgentUpdateCursor()) {
-      this.hideAgentToast()
-      return
-    }
-
-    this.showAgentToast(unseenCount)
-  }
-
-  latestAgentUpdateCursor() {
-    let latest = this.lastSeenAgentUpdateCursor()
-
-    this.agentUpdateElements().forEach((element) => {
-      const updatedAt = element.dataset.aiAgentUpdateUpdatedAt || ""
-      if (updatedAt > latest) latest = updatedAt
-    })
-
-    return latest
-  }
-
-  latestUnseenAgentUpdateElement() {
-    const lastSeen = this.lastSeenAgentUpdateCursor()
-    let newestElement = null
-
-    this.agentUpdateElements().forEach((element) => {
-      const updatedAt = element.dataset.aiAgentUpdateUpdatedAt || ""
-      if (!updatedAt || updatedAt <= lastSeen) return
-
-      if (!newestElement) {
-        newestElement = element
-        return
-      }
-
-      const newestUpdatedAt = newestElement.dataset.aiAgentUpdateUpdatedAt || ""
-      if (updatedAt >= newestUpdatedAt) newestElement = element
-    })
-
-    return newestElement
-  }
-
-  unseenAgentUpdateCount() {
-    const lastSeen = this.lastSeenAgentUpdateCursor()
-
-    return this.agentUpdateElements().filter((element) => {
-      const updatedAt = element.dataset.aiAgentUpdateUpdatedAt || ""
-      return updatedAt && updatedAt > lastSeen
-    }).length
-  }
-
-  markAgentUpdatesSeen() {
-    const latestCursor = this.latestAgentUpdateCursor()
-    if (!latestCursor) return
-
-    if (latestCursor > this.lastSeenAgentUpdateCursor()) {
-      this.setStringPreference(this.agentLastSeenPreferenceKey(), latestCursor)
-    }
-    this.clearDismissedAgentUpdateCursor()
-  }
-
-  showAgentToast(count) {
-    if (!this.hasAgentToastTarget || !this.hasAgentToastBodyTarget) return
-
-    const pluralized = count === 1 ? "message" : "messages"
-    this.agentToastBodyTarget.textContent = `you have ${count} new ${pluralized} from the AI Agent`
-    this.agentToastTarget.hidden = false
-
-    if (this.agentToastTimer) window.clearTimeout(this.agentToastTimer)
-    this.agentToastTimer = window.setTimeout(() => {
-      this.dismissCurrentAgentToast()
-    }, AGENT_UPDATE_TOAST_DURATION_MS)
-  }
-
-  hideAgentToast() {
-    if (!this.hasAgentToastTarget) return
-
-    this.agentToastTarget.hidden = true
-    if (this.agentToastTimer) {
-      window.clearTimeout(this.agentToastTimer)
-      this.agentToastTimer = null
-    }
-  }
-
-  dismissCurrentAgentToast() {
-    const latestCursor = this.latestAgentUpdateCursor()
-    if (latestCursor) {
-      this.setStringPreference(this.agentDismissedPreferenceKey(), latestCursor)
-    }
-    this.hideAgentToast()
-  }
-
-  clearDismissedAgentUpdateCursor() {
-    this.setStringPreference(this.agentDismissedPreferenceKey(), "")
-  }
-
-  lastSeenAgentUpdateCursor() {
-    return this.stringPreference(this.agentLastSeenPreferenceKey(), "")
-  }
-
-  dismissedAgentUpdateCursor() {
-    return this.stringPreference(this.agentDismissedPreferenceKey(), "")
-  }
-
-  agentLastSeenPreferenceKey() {
-    return `notae-ai-agent-last-seen:${this.workspaceScopeKey()}`
-  }
-
-  agentDismissedPreferenceKey() {
-    return `notae-ai-agent-dismissed:${this.workspaceScopeKey()}`
-  }
-
-  workspaceScopeKey() {
-    return this.hasWorkspaceKeyValue && this.workspaceKeyValue ? this.workspaceKeyValue : "global"
-  }
-
-  statusBarAvailable() {
-    return document.querySelector(".notae-shell-status-bar") !== null
-  }
-
   startAgentUpdatePolling() {
     if (!this.hasAgentUpdatesPathValue || !this.agentUpdatesPathValue) return
     this.syncAgentUpdatePolling()
@@ -701,10 +521,7 @@ export default class extends Controller {
         if (!html.trim()) return
 
         const mutationCount = this.insertAgentUpdateHtml(html)
-        if (mutationCount > 0) {
-          this.queueThreadScroll()
-          this.refreshAgentToastState()
-        }
+        if (mutationCount > 0) this.queueThreadScroll()
       } catch (_error) {
         // silent polling failure
       } finally {
@@ -793,36 +610,6 @@ export default class extends Controller {
     if (!this.hasThreadTarget) return []
 
     return Array.from(this.threadTarget.querySelectorAll(".notae-ai-thread-entry"))
-  }
-
-  queueAgentUpdateFocus(updateId) {
-    if (!updateId) return
-
-    window.requestAnimationFrame(() => {
-      this.scrollAgentUpdateIntoView(updateId)
-      window.requestAnimationFrame(() => this.scrollAgentUpdateIntoView(updateId))
-    })
-  }
-
-  scrollAgentUpdateIntoView(updateId) {
-    if (!updateId) return
-
-    const target = this.findAgentUpdateElement(updateId)
-    if (!target) return
-
-    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" })
-    this.highlightAgentUpdate(target)
-  }
-
-  highlightAgentUpdate(element) {
-    this.agentUpdateElements().forEach((entry) => entry.classList.remove(AGENT_UPDATE_FOCUS_CLASS))
-    element.classList.add(AGENT_UPDATE_FOCUS_CLASS)
-
-    if (this.agentUpdateFocusTimer) window.clearTimeout(this.agentUpdateFocusTimer)
-    this.agentUpdateFocusTimer = window.setTimeout(() => {
-      element.classList.remove(AGENT_UPDATE_FOCUS_CLASS)
-      this.agentUpdateFocusTimer = null
-    }, AGENT_UPDATE_FOCUS_DURATION_MS)
   }
 
   notifyLayoutChange() {
