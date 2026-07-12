@@ -160,7 +160,7 @@ export default class extends Controller {
   submitOnShortcut(event) {
     if (event.isComposing) return
     if (event.key !== "Enter") return
-    if (!(event.metaKey || event.ctrlKey)) return
+    if (event.shiftKey) return
 
     event.preventDefault()
 

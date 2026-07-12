@@ -72,4 +72,16 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include("event.detail?.success === false")
     expect(source).to include("this.promptInputTarget.value = this.pendingPrompt")
   end
+
+  it "submits with Enter and reserves Shift+Enter for a new line" do
+    source = Rails.root.join("app/javascript/controllers/ai_rail_controller.js").read
+    shortcut_handler = source.match(/submitOnShortcut\(event\) \{(?<body>.*?)\n  \}/m)&.[](:body)
+
+    expect(shortcut_handler).to be_present
+    expect(shortcut_handler).to include('if (event.key !== "Enter") return')
+    expect(shortcut_handler).to include("if (event.shiftKey) return")
+    expect(shortcut_handler).not_to include("event.metaKey || event.ctrlKey")
+    expect(shortcut_handler).to include("event.preventDefault()")
+    expect(shortcut_handler).to include("form.requestSubmit")
+  end
 end
