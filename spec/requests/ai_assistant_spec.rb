@@ -29,7 +29,7 @@ RSpec.describe "AI Assistant", type: :request do
     sign_in user
     expect {
       post workspace_ai_assistant_path(workspace_slug: workspace.slug),
-           params: { ai_assistant: { prompt: "Is Mac mentioned?", scope: "this-will-fallback", current_page_id: page.id } },
+           params: { ai_assistant: { prompt: "Is Mac mentioned?", scope: "this-will-fallback", current_page_id: page.id, intent: Search::AssistantQueryService::INTENT_SEARCH } },
            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     }.to change(AiConversation, :count).by(1)
 
@@ -102,7 +102,7 @@ RSpec.describe "AI Assistant", type: :request do
 
     expect {
       post workspace_ai_assistant_path(workspace_slug: workspace.slug),
-           params: { ai_assistant: { prompt: "Will this crash?", scope: Search::AssistantQueryService::SCOPE_AUTO } },
+           params: { ai_assistant: { prompt: "Will this crash?", scope: Search::AssistantQueryService::SCOPE_AUTO, intent: Search::AssistantQueryService::INTENT_SEARCH } },
            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     }.to change(AiConversation, :count).by(1)
 
@@ -119,7 +119,7 @@ RSpec.describe "AI Assistant", type: :request do
     sign_in user
     expect {
       post workspace_ai_assistant_path(workspace_slug: workspace.slug),
-           params: { ai_assistant: { prompt: "Summarise this document", scope: Search::AssistantQueryService::SCOPE_DOCUMENT } },
+           params: { ai_assistant: { prompt: "Summarise this document", scope: Search::AssistantQueryService::SCOPE_DOCUMENT, intent: Search::AssistantQueryService::INTENT_SEARCH } },
            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     }.to change(AiConversation, :count).by(1)
 
@@ -223,7 +223,8 @@ RSpec.describe "AI Assistant", type: :request do
            params: {
              ai_assistant: {
                prompt: "Draft an email to team@example.com about the two day launch delay.",
-               scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+               scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+               intent: Search::AssistantQueryService::INTENT_DRAFT_ACTION
              }
            },
            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
@@ -282,7 +283,8 @@ RSpec.describe "AI Assistant", type: :request do
            params: {
              ai_assistant: {
                prompt: "Create a Nota with a decision brief from this page.",
-               scope: Search::AssistantQueryService::SCOPE_WORKSPACE
+               scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+               intent: Search::AssistantQueryService::INTENT_DRAFT_ACTION
              }
            },
            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
@@ -310,7 +312,7 @@ RSpec.describe "AI Assistant", type: :request do
 
     sign_in user
     post workspace_ai_assistant_path(workspace_slug: workspace.slug),
-         params: { ai_assistant: { prompt: "What is an alternative word to nice?", scope: Search::AssistantQueryService::SCOPE_WORKSPACE } },
+         params: { ai_assistant: { prompt: "What is an alternative word to nice?", scope: Search::AssistantQueryService::SCOPE_WORKSPACE, intent: Search::AssistantQueryService::INTENT_SEARCH } },
          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
 
     expect(response).to have_http_status(:ok)
@@ -344,6 +346,7 @@ RSpec.describe "AI Assistant", type: :request do
            ai_assistant: {
              prompt: "What is the weather today going to be?",
              scope: Search::AssistantQueryService::SCOPE_AUTO,
+             intent: Search::AssistantQueryService::INTENT_SEARCH,
              current_page_id: page.id
            }
          },
@@ -355,8 +358,8 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.body).to include("https://weather.example/today")
     expect(response.body).to include("target=\"_blank\"")
     expect(response.body).to include("Live web")
-    expect(response.body).to include("<details class=\"notae-ai-sources-panel\">")
-    expect(response.body).not_to include("<details class=\"notae-ai-sources-panel\" open>")
+    expect(response.body).to include("notae-ai-web-sources")
+    expect(response.body).to include("Web sources")
     conversation = AiConversation.order(:created_at).last
     expect(conversation.answer).to eq("I need your location to answer today's weather.")
     expect(conversation.sources.first.fetch("url")).to eq("https://weather.example/today")
@@ -409,9 +412,10 @@ RSpec.describe "AI Assistant", type: :request do
     post workspace_ai_assistant_path(workspace_slug: workspace.slug),
          params: {
            ai_assistant: {
-             prompt: "Summarize this document",
-             scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
-             current_page_id: external_page.id
+               prompt: "Summarize this document",
+               scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
+               intent: Search::AssistantQueryService::INTENT_SEARCH,
+               current_page_id: external_page.id
            }
          },
          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
@@ -425,9 +429,10 @@ RSpec.describe "AI Assistant", type: :request do
     post workspace_ai_assistant_path(workspace_slug: workspace.slug),
          params: {
            ai_assistant: {
-             prompt: "Summarize this document",
-             scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
-             current_page_id: local_page.id
+               prompt: "Summarize this document",
+               scope: Search::AssistantQueryService::SCOPE_DOCUMENT,
+               intent: Search::AssistantQueryService::INTENT_SEARCH,
+               current_page_id: local_page.id
            }
          },
          headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
@@ -594,8 +599,14 @@ RSpec.describe "AI Assistant", type: :request do
     expect(html).to include("Workflow: Create task")
     expect(html).to include("Escalate approval gap")
     expect(html).to include("Suggestion: Suggested next step")
-    expect(html).to include("conversation_id=#{suggestion_conversation.id}")
-    expect(html).to include("#ai-conversation-#{suggestion_conversation.id}")
+    expect(html).to include(
+      knowledge_suggestion_path(
+        workspace_slug: workspace.slug,
+        id: proactive_suggestion.id,
+        anchor: "knowledge-suggestion-#{proactive_suggestion.id}"
+      )
+    )
+    expect(html).not_to include("conversation_id=#{suggestion_conversation.id}")
     expect(html).to include("Open full window")
     expect(html).to include(workflow_run_path(workspace_slug: workspace.slug, id: fresh_workflow_run.id))
     expect(html).not_to include("Stale email draft")

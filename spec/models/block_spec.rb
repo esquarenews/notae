@@ -82,6 +82,40 @@ RSpec.describe Block, type: :model do
     expect(::PageLinks::SyncFromBlockService).to have_received(:call).with(block: block)
   end
 
+  it "exposes attachment and embed metadata as searchable content" do
+    owner = User.create!(email: "block-searchable-media-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Searchable media", slug: "searchable-media")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Media")
+    image = described_class.create!(workspace: workspace, page: page, created_by: owner, block_type: "image")
+    image.asset.attach(
+      io: StringIO.new("image-bytes"),
+      filename: "quarterly-chart.png",
+      content_type: "image/png"
+    )
+    embed = described_class.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "embed",
+      embed_url: "https://www.youtube.com/embed/quarterly-review"
+    )
+
+    expect(image.searchable_content).to include("image", "quarterly-chart.png", "image/png")
+    expect(embed.searchable_content).to include("embed", "https://www.youtube.com/embed/quarterly-review")
+  end
+
+  it "reindexes its page when searchable embed metadata changes" do
+    owner = User.create!(email: "block-embed-index-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Embed indexing", slug: "embed-indexing")
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Embeds")
+    block = described_class.create!(workspace: workspace, page: page, created_by: owner, block_type: "embed")
+    allow(Search::IndexPageJob).to receive(:perform_later)
+
+    block.update!(embed_url: "https://www.youtube.com/embed/searchable-review")
+
+    expect(Search::IndexPageJob).to have_received(:perform_later).with(page.id)
+  end
+
   it "updates a block when async indexing queue is unavailable" do
     owner = User.create!(email: "block-queue-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Block queue safe", slug: "block-queue-safe")

@@ -43,7 +43,7 @@ module Search
     end
 
     def call
-      return unavailable(:missing_api_key) unless user.openai_api_key_configured?
+      return unavailable(:missing_api_key) unless Openai::CredentialResolver.configured?(user: user)
       return unavailable(:budget_exceeded) unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
       return unavailable(:rate_limited) unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
 
@@ -52,7 +52,7 @@ module Search
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: prompt_for(context_chunks),
-        api_key: user.openai_api_key,
+        api_key: Openai::CredentialResolver.resolve(user: user),
         model: MODEL,
         max_output_tokens: 900
       )

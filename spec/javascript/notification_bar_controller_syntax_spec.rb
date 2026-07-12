@@ -21,6 +21,9 @@ RSpec.describe "NotificationBarController JavaScript syntax" do
 
     expect(source).to include("ALERT_POLL_INTERVAL_MS")
     expect(source).to include("const ALERT_POLL_INTERVAL_MS = 60000")
+    expect(source).to include("const ALERT_POLL_INITIAL_DELAY_MS = 55000")
+    expect(source).to include("this.alertPollStartTimer = window.setTimeout")
+    expect(source).to include("window.clearTimeout(this.alertPollStartTimer)")
     expect(source).to include("renderClock()")
     expect(source).to include("Intl.DateTimeFormat")
     expect(source).to include("weekday: \"short\"")

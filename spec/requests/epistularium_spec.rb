@@ -124,6 +124,87 @@ RSpec.describe "Epistularium", type: :request do
     expect(payload["html"]).to include("data-epistularium-selected-message-id")
   end
 
+  it "skips message loading and rendering when a polling cursor is unchanged" do
+    user, workspace, account, message = build_stack(suffix: "json-unchanged")
+    sign_in user
+    request_params = {
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox",
+      message_id: message.id
+    }
+
+    get workspace_epistularium_path(**request_params), headers: { "ACCEPT" => "application/json" }
+    initial_payload = JSON.parse(response.body)
+    initial_query_count = response.headers["X-Notae-Perf-Sql-Queries"].to_i
+
+    get workspace_epistularium_path(**request_params, poll_cursor: initial_payload.fetch("cursor")),
+        headers: { "ACCEPT" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+    unchanged_payload = JSON.parse(response.body)
+    expect(unchanged_payload).to include(
+      "cursor" => initial_payload.fetch("cursor"),
+      "active" => true,
+      "unchanged" => true
+    )
+    expect(unchanged_payload).not_to have_key("html")
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be < initial_query_count
+  end
+
+  it "builds the initial page cursor after due sync scheduling changes account state" do
+    user, workspace, account, message = build_stack(suffix: "initial-cursor-after-schedule")
+    sign_in user
+    request_params = {
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox",
+      message_id: message.id
+    }
+
+    get workspace_epistularium_path(**request_params)
+    initial_document = Nokogiri::HTML(response.body)
+    initial_cursor = initial_document.at_css("[data-epistularium-poller-cursor-value]")["data-epistularium-poller-cursor-value"]
+
+    get workspace_epistularium_path(**request_params, poll_cursor: initial_cursor),
+        headers: { "ACCEPT" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+    expect(JSON.parse(response.body)).to include(
+      "cursor" => initial_cursor,
+      "unchanged" => true
+    )
+  end
+
+  it "refreshes changed message content even when the update is within the same second" do
+    user, workspace, account, message = build_stack(suffix: "json-subsecond-change")
+    sign_in user
+    request_params = {
+      workspace_slug: workspace.slug,
+      account_id: account.id,
+      mailbox: "inbox",
+      message_id: message.id
+    }
+    initial_timestamp = Time.zone.parse("2026-07-11 10:00:00.100000")
+    message.update_columns(updated_at: initial_timestamp)
+
+    get workspace_epistularium_path(**request_params), headers: { "ACCEPT" => "application/json" }
+    initial_payload = JSON.parse(response.body)
+
+    message.update_columns(
+      subject: "Updated within one second",
+      updated_at: initial_timestamp + 0.0005
+    )
+    get workspace_epistularium_path(**request_params, poll_cursor: initial_payload.fetch("cursor")),
+        headers: { "ACCEPT" => "application/json" }
+
+    expect(response).to have_http_status(:ok)
+    changed_payload = JSON.parse(response.body)
+    expect(changed_payload["unchanged"]).to eq(false)
+    expect(changed_payload["cursor"]).not_to eq(initial_payload.fetch("cursor"))
+    expect(changed_payload["html"]).to include("Updated within one second")
+  end
+
   it "does not enqueue due sync scheduling work during json polling refreshes" do
     user, workspace, account, message = build_stack(suffix: "json-no-schedule")
     sign_in user

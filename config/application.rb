@@ -32,6 +32,12 @@ module Notae
     config.x.ai_pricing.gpt_4_1_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4_1_OUTPUT_PER_1K", "0.00800").to_f
     config.x.ai_pricing.gpt_4_1_mini_input_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4_1_MINI_INPUT_PER_1K", "0.00040").to_f
     config.x.ai_pricing.gpt_4_1_mini_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_4_1_MINI_OUTPUT_PER_1K", "0.00160").to_f
+    config.x.ai_pricing.gpt_5_6_sol_input_per_1k = ENV.fetch("OPENAI_PRICE_GPT_5_6_SOL_INPUT_PER_1K", "0.00500").to_f
+    config.x.ai_pricing.gpt_5_6_sol_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_5_6_SOL_OUTPUT_PER_1K", "0.03000").to_f
+    config.x.ai_pricing.gpt_5_6_terra_input_per_1k = ENV.fetch("OPENAI_PRICE_GPT_5_6_TERRA_INPUT_PER_1K", "0.00250").to_f
+    config.x.ai_pricing.gpt_5_6_terra_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_5_6_TERRA_OUTPUT_PER_1K", "0.01500").to_f
+    config.x.ai_pricing.gpt_5_6_luna_input_per_1k = ENV.fetch("OPENAI_PRICE_GPT_5_6_LUNA_INPUT_PER_1K", "0.00100").to_f
+    config.x.ai_pricing.gpt_5_6_luna_output_per_1k = ENV.fetch("OPENAI_PRICE_GPT_5_6_LUNA_OUTPUT_PER_1K", "0.00600").to_f
     config.action_dispatch.default_headers.merge!(
       "X-Frame-Options" => "SAMEORIGIN",
       "X-Content-Type-Options" => "nosniff",

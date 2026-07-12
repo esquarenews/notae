@@ -42,9 +42,9 @@ class ApplicationController < ActionController::Base
   end
 
   def should_store_last_workspace_slug?
-    user_signed_in? &&
+    params[:workspace_slug].present? &&
       request.get? &&
-      params[:workspace_slug].present?
+      user_signed_in?
   end
 
   def handle_not_authorized
@@ -156,8 +156,43 @@ class ApplicationController < ActionController::Base
     return unless user_signed_in?
 
     @ai_rail_conversations = with_optional_schema_fallback(default: [], feature: "AI conversations") do
-      recent_ai_conversations_for(user: current_user, window: 1.week, limit: ai_rail_conversation_limit).to_a.reverse
+      conversations = recent_ai_conversations_for(user: current_user, window: 1.week, limit: nil)
+      conversations = conversations.where(workspace_id: @ai_rail_workspace.id) if @ai_rail_workspace.present?
+      if @ai_rail_workspace.present? && AiConversation.column_names.include?("thread_id")
+        thread_id = current_ai_chat_thread_id(@ai_rail_workspace)
+        claim_legacy_ai_conversations_for_thread!(conversations, thread_id: thread_id)
+        conversations = conversations.where(thread_id: thread_id)
+      end
+      conversations.limit(ai_rail_conversation_limit).to_a.reverse
     end
+  end
+
+  def current_ai_chat_thread_id(workspace)
+    thread_ids = session[:notae_ai_chat_thread_ids]
+    thread_ids = {} unless thread_ids.is_a?(Hash)
+    workspace_key = workspace.id.to_s
+    thread_id = thread_ids[workspace_key].to_s
+
+    if thread_id.blank?
+      thread_id = SecureRandom.uuid
+      thread_ids[workspace_key] = thread_id
+      session[:notae_ai_chat_thread_ids] = thread_ids
+    end
+
+    thread_id
+  end
+
+  def reset_ai_chat_thread!(workspace)
+    thread_ids = session[:notae_ai_chat_thread_ids]
+    thread_ids = {} unless thread_ids.is_a?(Hash)
+    thread_ids[workspace.id.to_s] = SecureRandom.uuid
+    session[:notae_ai_chat_thread_ids] = thread_ids
+  end
+
+  def claim_legacy_ai_conversations_for_thread!(scope, thread_id:)
+    return if scope.where(thread_id: thread_id).exists?
+
+    scope.where(thread_id: nil).update_all(thread_id: thread_id, updated_at: Time.current)
   end
 
   def set_ai_agent_updates
@@ -179,6 +214,7 @@ class ApplicationController < ActionController::Base
     end
 
     if @active_knowledge_suggestion.present?
+      @active_knowledge_task_databases = knowledge_task_databases_for(@ai_rail_workspace)
       clear_knowledge_suggestion_generation_pending!(@ai_rail_workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
       @pending_proactive_knowledge_suggestion = false
       return
@@ -477,7 +513,7 @@ class ApplicationController < ActionController::Base
   end
 
   def should_generate_proactive_knowledge_suggestion?
-    return false unless current_user.openai_api_key_configured?
+    return false unless Openai::CredentialResolver.configured?(user: current_user)
 
     current_hour = Time.zone.now.hour
     return false unless current_hour >= 9 && current_hour < 18

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_12_093000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_12_091000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -142,6 +142,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_093000) do
     t.string "scope", null: false
     t.jsonb "sources", default: [], null: false
     t.string "status", default: "success", null: false
+    t.uuid "thread_id"
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
     t.uuid "workspace_id", null: false
@@ -151,6 +152,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_12_093000) do
     t.index ["status"], name: "index_ai_conversations_on_status"
     t.index ["user_id", "created_at"], name: "idx_ai_conversations_on_user_created_at"
     t.index ["user_id", "workspace_id", "created_at"], name: "idx_ai_conversations_on_user_workspace_created_at"
+    t.index ["user_id", "workspace_id", "thread_id", "created_at"], name: "idx_ai_conversations_on_active_thread"
     t.index ["user_id"], name: "index_ai_conversations_on_user_id"
     t.index ["workspace_id", "created_at"], name: "idx_ai_conversations_on_workspace_created_at"
     t.index ["workspace_id"], name: "index_ai_conversations_on_workspace_id"

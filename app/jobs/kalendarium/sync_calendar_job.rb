@@ -1,6 +1,7 @@
 module Kalendarium
   class SyncCalendarJob < ApplicationJob
     queue_as :default
+    self.enqueue_after_transaction_commit = true
 
     def perform(calendar_id)
       calendar = KalendariumCalendar.find_by(id: calendar_id)

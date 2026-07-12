@@ -49,6 +49,25 @@ RSpec.describe Kalendarium::SyncConnectionJob, type: :job do
     expect(connection.reload.enabled).to be(true)
   end
 
+  it "auto-disables revoked Google connections instead of retrying them" do
+    connection = build_connection(suffix: "google-revoked")
+    sync_service = instance_double(Kalendarium::ConnectionSyncService)
+    allow(Kalendarium::ConnectionSyncService).to receive(:new).with(connection: connection).and_return(sync_service)
+    allow(sync_service).to receive(:call).and_raise(
+      RuntimeError,
+      "Google token refresh failed (400): Token has been expired or revoked."
+    )
+
+    expect do
+      described_class.perform_now(connection.id)
+    end.not_to raise_error
+
+    connection.reload
+    expect(connection.enabled).to be(false)
+    expect(connection.status).to eq("sync_error")
+    expect(connection.last_error).to include("expired or revoked")
+  end
+
   it "skips duplicate sync attempts while a lock already exists" do
     connection = build_connection(suffix: "duplicate-lock")
     sync_service = instance_double(Kalendarium::ConnectionSyncService)
@@ -61,6 +80,7 @@ RSpec.describe Kalendarium::SyncConnectionJob, type: :job do
     described_class.perform_now(connection.id)
 
     expect(sync_service).not_to have_received(:call)
+    expect(Rails.cache).not_to have_received(:delete)
   end
 
   it "queues a knowledge suggestion refresh after a successful sync" do

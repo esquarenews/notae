@@ -3644,6 +3644,38 @@ turbo-frame#notae_sidebar_sections {
   }
 }
 
+.notae-ai-head-controls form {
+  margin: 0;
+}
+
+.notae-ai-new-chat {
+  white-space: nowrap;
+}
+
+.notae-ai-action-receipts,
+.notae-ai-web-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.notae-ai-action-receipt {
+  border-color: color-mix(in srgb, #16a34a 38%, var(--notae-border-muted));
+  background: color-mix(in srgb, #dcfce7 74%, var(--notae-panel-bg));
+  color: #166534;
+}
+
+.notae-ai-web-sources .notae-utility-link {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.notae-ai-message.is-suggestion .notae-knowledge-card {
+  margin-top: 0.35rem;
+}
+
 .notae-ai-compose button {
   justify-self: end;
   border: 0;

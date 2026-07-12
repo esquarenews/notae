@@ -268,6 +268,7 @@ Rails.application.routes.draw do
     get "join/:token", to: "workspace_join_links#show", as: :workspace_join_link
     get "ai-assistant/panel", to: "ai_assistant#panel", as: :workspace_ai_assistant_panel
     get "ai-assistant/updates", to: "ai_assistant#updates", as: :workspace_ai_assistant_updates
+    post "ai-assistant/new-chat", to: "ai_assistant#new_chat", as: :workspace_ai_assistant_new_chat
     post "ai-assistant", to: "ai_assistant#create", as: :workspace_ai_assistant
   end
 

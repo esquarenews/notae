@@ -1,7 +1,20 @@
 class PwaController < ApplicationController
+  PUBLIC_ASSET_ACTIONS = %i[manifest service_worker].freeze
+
   before_action :authenticate_user!, only: %i[launch notification_launch]
+  skip_before_action :ensure_active_record_encryption_keys,
+                     :prune_workspace_session_state,
+                     :set_paper_trail_whodunnit,
+                     :set_paper_trail_enabled_for_controller,
+                     :set_paper_trail_controller_info,
+                     :ensure_realtime_channel_loaded,
+                     only: PUBLIC_ASSET_ACTIONS
+  skip_around_action :use_user_time_zone, only: PUBLIC_ASSET_ACTIONS
   skip_forgery_protection only: :service_worker
   skip_after_action :verify_pundit_authorization
+  skip_after_action :store_last_workspace_slug!,
+                    :warn_if_cookie_session_near_limit,
+                    only: PUBLIC_ASSET_ACTIONS
   skip_after_action :verify_same_origin_request, only: :service_worker
 
   def launch

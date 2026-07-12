@@ -1,8 +1,16 @@
 <%
-  importmap_urls = JSON.parse(Rails.application.importmap.to_json(resolver: self)).fetch("imports", {}).values
-  same_origin_importmap_urls = importmap_urls.grep(/\A\//)
+  importmap_imports = JSON.parse(Rails.application.importmap.to_json(resolver: self)).fetch("imports", {})
+  core_importmap_names = [
+    "application",
+    "@hotwired/turbo-rails",
+    "@hotwired/stimulus",
+    "@hotwired/stimulus-loading",
+    "controllers",
+    "controllers/application"
+  ]
+  core_importmap_urls = core_importmap_names.filter_map { |name| importmap_imports[name] }.grep(/\A\//)
   precache_urls = (
-    same_origin_importmap_urls +
+    core_importmap_urls +
     [
       asset_path("application.css"),
       "/icon-192-v5.png",

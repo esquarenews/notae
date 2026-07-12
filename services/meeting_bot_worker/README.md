@@ -28,6 +28,8 @@ export MEETING_BOT_SLOW_MO_MS="0"
 export MEETING_BOT_ARTIFACT_DIR="./output/playwright/meeting_bot_worker"
 ```
 
+The worker honors this configured claim interval. Use 30 seconds for lower idle request volume, or 5 seconds when faster meeting pickup is required.
+
 ### Start
 
 ```bash

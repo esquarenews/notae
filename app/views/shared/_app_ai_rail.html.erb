@@ -78,7 +78,7 @@
   </button>
 
   <div class="notae-ai-head">
-    <span class="notae-ai-head-title">New AI chat</span>
+    <span class="notae-ai-head-title">Notae AI</span>
     <div class="notae-ai-head-controls">
       <% if ai_rail_workspace_ready %>
         <%= select_tag "ai_assistant[scope]",
@@ -88,6 +88,14 @@
                        form: "notae_ai_assistant_form" %>
       <% else %>
         <span class="notae-ai-kicker">Auto</span>
+      <% end %>
+      <% if ai_rail_workspace_ready %>
+        <%= button_to "New chat",
+                      workspace_ai_assistant_new_chat_path(workspace_slug: ai_rail_workspace_slug),
+                      method: :post,
+                      params: { current_page_id: @ai_rail_current_page_id },
+                      class: "notae-chip-button notae-ai-new-chat",
+                      form: { data: { turbo_frame: "ai_rail_panel" } } %>
       <% end %>
       <button type="button"
               class="notae-ai-rail-toggle"
@@ -99,11 +107,11 @@
   </div>
 
   <div class="notae-ai-card">
-    <p class="notae-ai-title">Notae AI assistant</p>
-    <p class="notae-ai-copy">Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.</p>
+    <p class="notae-ai-title">Find it. Understand it. Get it done.</p>
+    <p class="notae-ai-copy">Ask naturally. I can search this document, this workspace, or all of Notae; check the live web; and make authorized changes inside Notae.</p>
   </div>
 
-  <section class="notae-ai-thread" data-ai-rail-target="thread">
+  <section class="notae-ai-thread" data-ai-rail-target="thread" aria-live="polite" aria-busy="false">
     <% ai_timeline_entries.each do |entry| %>
       <% if entry[:kind] == :conversation %>
         <%= render "shared/app_ai_conversation", conversation: entry[:conversation] %>
@@ -117,6 +125,17 @@
         <p class="notae-ai-message-label">Notae AI</p>
         <%= render "shared/knowledge_suggestion_pending_card",
                    kind: KnowledgeSuggestion::KIND_PROACTIVE,
+                   compact: true %>
+      </article>
+    <% end %>
+
+    <% if @active_knowledge_suggestion.present? %>
+      <article class="notae-ai-message is-assistant is-suggestion">
+        <p class="notae-ai-message-label">Proactive suggestion</p>
+        <%= render "shared/knowledge_suggestion_card",
+                   suggestion: @active_knowledge_suggestion,
+                   workspace: ai_rail_workspace,
+                   task_databases: Array(@active_knowledge_task_databases),
                    compact: true %>
       </article>
     <% end %>
@@ -167,7 +186,7 @@
                              ai_rail_target: "promptInput",
                              action: "keydown->ai-rail#submitOnShortcut"
                            },
-                           placeholder: "Ask a question or request a draft action for review." %>
+                           placeholder: "Ask Notae to find, answer, create, or change something…" %>
         <div class="notae-ai-compose-loading" data-ai-rail-target="loading">
           <span class="notae-ai-compose-swirl" aria-hidden="true"></span>
           <%= render "shared/ai_loader_icon",

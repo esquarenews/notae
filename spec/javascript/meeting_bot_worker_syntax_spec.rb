@@ -24,6 +24,7 @@ RSpec.describe "Meeting bot worker JavaScript" do
 
     expect(source).to include("claimNextRun")
     expect(source).to include('pollIntervalMs: numberEnv("MEETING_BOT_POLL_INTERVAL_MS", 30000)')
+    expect(source).not_to include("MIN_POLL_INTERVAL_MS")
     expect(source).to include("sendHeartbeat")
     expect(source).to include("transcript_complete_path")
     expect(source).to include("Ask to join")

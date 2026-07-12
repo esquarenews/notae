@@ -33,6 +33,21 @@ module Openai
             Rails.application.config.x.ai_pricing.gpt_4_1_input_per_1k.to_f,
             Rails.application.config.x.ai_pricing.gpt_4_1_output_per_1k.to_f
           ]
+        when "gpt-5.6", "gpt-5.6-sol"
+          [
+            Rails.application.config.x.ai_pricing.gpt_5_6_sol_input_per_1k.to_f,
+            Rails.application.config.x.ai_pricing.gpt_5_6_sol_output_per_1k.to_f
+          ]
+        when "gpt-5.6-terra"
+          [
+            Rails.application.config.x.ai_pricing.gpt_5_6_terra_input_per_1k.to_f,
+            Rails.application.config.x.ai_pricing.gpt_5_6_terra_output_per_1k.to_f
+          ]
+        when "gpt-5.6-luna"
+          [
+            Rails.application.config.x.ai_pricing.gpt_5_6_luna_input_per_1k.to_f,
+            Rails.application.config.x.ai_pricing.gpt_5_6_luna_output_per_1k.to_f
+          ]
         else
           [ 0.0, 0.0 ]
         end

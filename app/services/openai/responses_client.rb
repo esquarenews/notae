@@ -5,8 +5,48 @@ require "uri"
 module Openai
   class ResponsesClient
     API_URL = URI("https://api.openai.com/v1/responses")
+    DEFAULT_READ_TIMEOUT_SECONDS = 90
+    MIN_READ_TIMEOUT_SECONDS = 5
+    MAX_READ_TIMEOUT_SECONDS = 300
 
     class Error < StandardError; end
+
+    def self.create(
+      input:,
+      api_key:,
+      model:,
+      instructions: nil,
+      tools: nil,
+      include: nil,
+      previous_response_id: nil,
+      reasoning: nil,
+      text: nil,
+      parallel_tool_calls: nil,
+      safety_identifier: nil,
+      max_output_tokens: nil
+    )
+      normalized_api_key = api_key.to_s.strip
+      normalized_model = model.to_s.strip
+      raise Error, "Missing OpenAI API key" if normalized_api_key.blank?
+      raise Error, "Missing OpenAI model" if normalized_model.blank?
+
+      payload = {
+        model: normalized_model,
+        input: input
+      }
+      payload[:instructions] = instructions unless instructions.nil?
+      payload[:tools] = tools unless tools.nil?
+      payload[:include] = include unless include.nil?
+      payload[:previous_response_id] = previous_response_id if previous_response_id.present?
+      payload[:reasoning] = reasoning unless reasoning.nil?
+      payload[:text] = text unless text.nil?
+      payload[:parallel_tool_calls] = parallel_tool_calls unless parallel_tool_calls.nil?
+      payload[:safety_identifier] = safety_identifier if safety_identifier.present?
+      payload[:max_output_tokens] = max_output_tokens unless max_output_tokens.nil?
+
+      body = request_payload!(payload: payload, api_key: normalized_api_key)
+      response_from_body(body)
+    end
 
     def self.generate_text(prompt:, api_key:, model: "gpt-4o-mini", max_output_tokens: 260, tools: nil, include: nil)
       response = generate_text_with_usage(
@@ -42,9 +82,6 @@ module Openai
     end
 
     def self.request_response!(prompt:, api_key:, model:, max_output_tokens:, tools: nil, include: nil)
-      request = Net::HTTP::Post.new(API_URL)
-      request["Authorization"] = "Bearer #{api_key}"
-      request["Content-Type"] = "application/json"
       payload = {
         model: model,
         input: prompt,
@@ -52,6 +89,14 @@ module Openai
       }
       payload[:tools] = tools if tools.present?
       payload[:include] = include if include.present?
+
+      request_payload!(payload: payload, api_key: api_key)
+    end
+
+    def self.request_payload!(payload:, api_key:)
+      request = Net::HTTP::Post.new(API_URL)
+      request["Authorization"] = "Bearer #{api_key}"
+      request["Content-Type"] = "application/json"
       request.body = JSON.generate(payload)
 
       response = Net::HTTP.start(
@@ -59,7 +104,7 @@ module Openai
         API_URL.port,
         use_ssl: true,
         open_timeout: 5,
-        read_timeout: 25
+        read_timeout: read_timeout_seconds
       ) do |http|
         http.request(request)
       end
@@ -68,7 +113,7 @@ module Openai
       return parsed if response.is_a?(Net::HTTPSuccess)
 
       message = parsed.dig("error", "message") || "OpenAI responses request failed"
-      raise Error, message
+      raise Error, redact_api_key(message, api_key)
     rescue JSON::ParserError => e
       raise Error, "Invalid response from responses API: #{e.message}"
     rescue Timeout::Error,
@@ -80,7 +125,18 @@ module Openai
            Errno::EHOSTUNREACH,
            Errno::ENETUNREACH,
            OpenSSL::SSL::SSLError => e
-      raise Error, "Responses API connection failed: #{e.message}"
+      raise Error, "Responses API connection failed: #{redact_api_key(e.message, api_key)}"
+    end
+
+    def self.response_from_body(body)
+      {
+        id: body["id"].to_s.presence,
+        text: extract_output_text(body),
+        function_calls: extract_function_calls(body),
+        usage: usage_from_body(body),
+        sources: extract_sources(body),
+        raw: body
+      }
     end
 
     def self.extract_output_text(body)
@@ -113,6 +169,23 @@ module Openai
         completion_tokens: 0,
         total_tokens: 0
       }
+    end
+
+    def self.extract_function_calls(body)
+      Array(body["output"]).filter_map do |entry|
+        next unless entry["type"] == "function_call"
+
+        raw_arguments = entry["arguments"].to_s
+        function_call = {
+          name: entry["name"].to_s,
+          arguments: parse_function_arguments(raw_arguments),
+          raw_arguments: raw_arguments
+        }
+        function_call[:id] = entry["id"].to_s if entry["id"].present?
+        function_call[:call_id] = entry["call_id"].to_s if entry["call_id"].present?
+        function_call[:status] = entry["status"].to_s if entry["status"].present?
+        function_call
+      end
     end
 
     def self.extract_sources(body)
@@ -155,6 +228,32 @@ module Openai
         title: title,
         url: url
       }
+    end
+
+    def self.parse_function_arguments(raw_arguments)
+      return {} if raw_arguments.blank?
+
+      JSON.parse(raw_arguments)
+    rescue JSON::ParserError
+      nil
+    end
+
+    def self.redact_api_key(message, api_key)
+      value = message.to_s
+      secret = api_key.to_s
+      return value if secret.blank?
+
+      value.gsub(secret, "[REDACTED]")
+    end
+
+    def self.read_timeout_seconds
+      configured = Integer(
+        ENV.fetch("OPENAI_RESPONSES_READ_TIMEOUT_SECONDS", DEFAULT_READ_TIMEOUT_SECONDS.to_s),
+        10
+      )
+      configured.clamp(MIN_READ_TIMEOUT_SECONDS, MAX_READ_TIMEOUT_SECONDS)
+    rescue ArgumentError, TypeError
+      DEFAULT_READ_TIMEOUT_SECONDS
     end
   end
 end

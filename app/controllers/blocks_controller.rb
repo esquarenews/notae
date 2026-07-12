@@ -63,6 +63,7 @@ class BlocksController < ApplicationController
       Notae::UploadPolicy.validate_block_upload!(file, block_type: @block.block_type)
       @block.asset.attach(file)
       @block.touch
+      reindex_page_after_attachment!
       touched_at = touch_pages_for_blocks!([ @block ])
       respond_to do |format|
         format.json do
@@ -281,6 +282,15 @@ class BlocksController < ApplicationController
       format.json { render json: { errors: [ message ] }, status: :unprocessable_entity }
       format.html { redirect_to page_redirect_path, alert: message }
     end
+  end
+
+  def reindex_page_after_attachment!
+    Search::IndexPageJob.perform_later(@page.id)
+  rescue StandardError => error
+    raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
+
+    Rails.logger.warn("Search index queue unavailable for page=#{@page.id}: #{error.class}: #{error.message}")
+    Search::ChunkIndexingService.index_page!(page: @page.reload)
   end
 
   def block_params

@@ -2704,31 +2704,33 @@ RSpec.describe "Kalendarium", type: :request do
   end
 
   it "parses event form times in the user's time zone so weekly recurrence days do not shift" do
-    user, workspace, calendar = build_stack(suffix: "recurrence-user-time-zone", time_zone: "Australia/Melbourne")
-    sign_in user
+    travel_to Time.zone.parse("2026-07-01 09:00:00") do
+      user, workspace, calendar = build_stack(suffix: "recurrence-user-time-zone", time_zone: "Australia/Melbourne")
+      sign_in user
 
-    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
-      view: "week",
-      date: "2026-07-06",
-      kalendarium_event: {
-        kalendarium_calendar_id: calendar.id,
-        title: "Monday evening recurring event",
-        starts_at_local: "2026-07-06T20:00",
-        ends_at_local: "2026-07-06T21:00",
-        rrule: "FREQ=WEEKLY;BYDAY=MO"
+      post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+        view: "week",
+        date: "2026-07-06",
+        kalendarium_event: {
+          kalendarium_calendar_id: calendar.id,
+          title: "Monday evening recurring event",
+          starts_at_local: "2026-07-06T20:00",
+          ends_at_local: "2026-07-06T21:00",
+          rrule: "FREQ=WEEKLY;BYDAY=MO"
+        }
       }
-    }
 
-    event = KalendariumEvent.find_by!(title: "Monday evening recurring event")
-    expect(event.starts_at_utc.in_time_zone(user.time_zone).strftime("%A %H:%M")).to eq("Monday 20:00")
+      event = KalendariumEvent.find_by!(title: "Monday evening recurring event")
+      expect(event.starts_at_utc.in_time_zone(user.time_zone).strftime("%A %H:%M")).to eq("Monday 20:00")
 
-    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-07-06")
+      get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-07-06")
 
-    document = Nokogiri::HTML.parse(response.body)
-    monday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-06']")
-    tuesday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-07']")
-    expect(monday_track&.text).to include("Monday evening recurring event")
-    expect(tuesday_track&.text).not_to include("Monday evening recurring event")
+      document = Nokogiri::HTML.parse(response.body)
+      monday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-06']")
+      tuesday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-07']")
+      expect(monday_track&.text).to include("Monday evening recurring event")
+      expect(tuesday_track&.text).not_to include("Monday evening recurring event")
+    end
   end
 
   it "renders recurring project event occurrences whose original start is outside the visible week" do

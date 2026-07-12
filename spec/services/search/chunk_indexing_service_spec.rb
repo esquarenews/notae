@@ -60,6 +60,32 @@ RSpec.describe Search::ChunkIndexingService do
     expect(chunk.embedding_model).to be_nil
   end
 
+  it "indexes attachment filenames, MIME types, and embed URLs with their page" do
+    user = User.create!(email: "chunk-media@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Chunk Media", slug: "chunk-media")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: user, title: "Media index")
+    file_block = Block.create!(workspace: workspace, page: page, created_by: user, block_type: "file")
+    file_block.asset.attach(
+      io: StringIO.new("report"),
+      filename: "board-report.pdf",
+      content_type: "application/pdf"
+    )
+    Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: user,
+      block_type: "embed",
+      embed_url: "https://www.youtube.com/embed/board-review"
+    )
+
+    described_class.index_page!(page: page)
+
+    indexed_text = SearchChunk.for_source(SearchChunk::SOURCE_PAGE, page.id).pluck(:text).join(" ")
+    expect(indexed_text).to include("board-report.pdf", "application/pdf")
+    expect(indexed_text).to include("https://www.youtube.com/embed/board-review")
+  end
+
   it "removes chunks for archived pages" do
     user = User.create!(email: "chunk-archive@example.com", password: "password123")
     workspace = Workspace.create!(name: "Chunk Archive", slug: "chunk-archive")

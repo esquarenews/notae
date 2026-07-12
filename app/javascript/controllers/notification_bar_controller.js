@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 const ALERT_POLL_INTERVAL_MS = 60000
+const ALERT_POLL_INITIAL_DELAY_MS = 55000
 const BAR_GUTTER_PX = 20
 const DRAG_THRESHOLD_PX = 4
 
@@ -24,6 +25,7 @@ export default class extends Controller {
     this.pointerUpHandler = () => this.stopDrag()
     this.resizeHandler = () => this.applyStoredBarPosition()
     this.pushReceivedHandler = () => this.pollAlerts({ force: true })
+    this.alertPollStartTimer = null
     this.alertPollTimer = null
     this.alertPollRequest = null
     this.timesheetStoppedFadeTimer = null
@@ -606,16 +608,23 @@ export default class extends Controller {
       return
     }
 
-    if (!this.alertPollTimer) {
-      this.alertPollTimer = window.setInterval(() => {
+    if (!this.alertPollStartTimer && !this.alertPollTimer) {
+      this.alertPollStartTimer = window.setTimeout(() => {
+        this.alertPollStartTimer = null
         this.pollAlerts()
-      }, ALERT_POLL_INTERVAL_MS)
+        this.alertPollTimer = window.setInterval(() => this.pollAlerts(), ALERT_POLL_INTERVAL_MS)
+      }, ALERT_POLL_INITIAL_DELAY_MS)
     }
 
     if (immediate) this.pollAlerts()
   }
 
   stopAlertPolling() {
+    if (this.alertPollStartTimer) {
+      window.clearTimeout(this.alertPollStartTimer)
+      this.alertPollStartTimer = null
+    }
+
     if (this.alertPollTimer) {
       window.clearInterval(this.alertPollTimer)
       this.alertPollTimer = null

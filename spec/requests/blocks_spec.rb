@@ -902,6 +902,7 @@ RSpec.describe "Blocks", type: :request do
     page = Page.create!(workspace: workspace, created_by: owner, title: "Images")
     block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "image")
     sign_in owner
+    allow(Search::IndexPageJob).to receive(:perform_later)
 
     Tempfile.create([ "block-upload", ".png" ]) do |file|
       file.write("fake-png-data")
@@ -923,6 +924,7 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["html"]).to include('rel="noopener noreferrer"')
     expect(payload["page_updated_at"]).to be_present
     expect(block.reload.asset).to be_attached
+    expect(Search::IndexPageJob).to have_received(:perform_later).with(page.id)
   end
 
   it "rejects SVG uploads for image blocks" do

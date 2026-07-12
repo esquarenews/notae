@@ -39,6 +39,7 @@ export default class extends Controller {
       this.refreshAgentToastState()
       this.syncAgentUpdatePolling({ immediate: this.railActive() })
     }
+    this.pushReceivedHandler = () => this.pollAgentUpdates({ force: true })
     this.agentUpdateIds = new Set()
     this.agentToastTimer = null
     this.agentUpdatePollTimer = null
@@ -56,6 +57,7 @@ export default class extends Controller {
     }
 
     window.addEventListener("notae:ai-prefill", this.prefillEventHandler)
+    window.addEventListener("notae:push-received", this.pushReceivedHandler)
     document.addEventListener("visibilitychange", this.visibilityChangeHandler)
 
     this.restoreRailState()
@@ -86,6 +88,7 @@ export default class extends Controller {
     }
 
     window.removeEventListener("notae:ai-prefill", this.prefillEventHandler)
+    window.removeEventListener("notae:push-received", this.pushReceivedHandler)
     document.removeEventListener("visibilitychange", this.visibilityChangeHandler)
 
     if (this.agentToastTimer) window.clearTimeout(this.agentToastTimer)
@@ -139,6 +142,7 @@ export default class extends Controller {
     this.capturePendingInsertion()
 
     const prompt = this.hasPromptInputTarget ? this.promptInputTarget.value.trim() : ""
+    this.pendingPrompt = prompt
     if (prompt.length > 0) {
       this.appendPendingUserMessage(prompt)
       this.promptInputTarget.value = ""
@@ -147,6 +151,7 @@ export default class extends Controller {
 
     if (this.hasPromptInputTarget) this.promptInputTarget.setAttribute("disabled", "disabled")
     if (this.hasSubmitButtonTarget) this.submitButtonTarget.setAttribute("disabled", "disabled")
+    if (this.hasThreadTarget) this.threadTarget.setAttribute("aria-busy", "true")
 
     form.classList.add("is-loading")
     if (this.hasLoadingTarget) this.loadingTarget.classList.remove("is-fading")
@@ -175,6 +180,15 @@ export default class extends Controller {
 
     if (this.hasPromptInputTarget) this.promptInputTarget.removeAttribute("disabled")
     if (this.hasSubmitButtonTarget) this.submitButtonTarget.removeAttribute("disabled")
+    if (this.hasThreadTarget) this.threadTarget.setAttribute("aria-busy", "false")
+
+    if (event.detail?.success === false && this.hasPromptInputTarget && this.pendingPrompt) {
+      this.promptInputTarget.value = this.pendingPrompt
+      this.promptInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
+      this.promptInputTarget.focus()
+    } else {
+      this.pendingPrompt = ""
+    }
 
     if (this.hasLoadingTarget) this.loadingTarget.classList.add("is-fading")
     window.setTimeout(() => {

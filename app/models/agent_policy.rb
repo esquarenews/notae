@@ -2,7 +2,7 @@ class AgentPolicy < ApplicationRecord
   DEFAULT_AUTHOR_ROLES = %w[member admin owner automation_agent].freeze
   DEFAULT_APPROVER_ROLES = %w[admin owner].freeze
   DEFAULT_MAX_ESTIMATED_COST_USD = 0.0
-  INTERNAL_ACTION_OPTIONS = %w[create_nota create_task create_calendar_event].freeze
+  INTERNAL_ACTION_OPTIONS = %w[create_nota update_nota create_task create_calendar_event create_database].freeze
   DEFAULT_ALLOWED_INTERNAL_ACTIONS = INTERNAL_ACTION_OPTIONS.freeze
   DEFAULT_AUTOMATION_RETRY_LIMIT = 2
   DEFAULT_AUTOMATION_CONFIDENCE_THRESHOLD = 0.7

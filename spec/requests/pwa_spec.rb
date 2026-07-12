@@ -57,6 +57,7 @@ RSpec.describe "PWA", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.media_type).to eq("application/manifest+json")
+    expect(response.headers["Cache-Control"]).to include("no-cache")
 
     manifest = JSON.parse(response.body)
     icons = manifest.fetch("icons")
@@ -73,6 +74,54 @@ RSpec.describe "PWA", type: :request do
     expect(icons).to include(a_hash_including("src" => "/icon-maskable-512-v5.png", "purpose" => "maskable"))
   end
 
+  it "serves public PWA assets without database work" do
+    sql_queries = []
+    subscriber = lambda do |_name, _start, _finish, _id, payload|
+      next if payload[:cached]
+      next if %w[SCHEMA TRANSACTION CACHE].include?(payload[:name].to_s)
+
+      sql_queries << payload[:sql]
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      get pwa_manifest_path
+      expect(response).to have_http_status(:ok)
+
+      get pwa_service_worker_path
+      expect(response).to have_http_status(:ok)
+    end
+
+    expect(sql_queries).to be_empty
+  end
+
+  it "does not load the signed-in user while serving public PWA assets" do
+    user = User.create!(email: "pwa-public-assets@example.com", password: "password123")
+    sign_in user
+    sql_queries = []
+    manifest_queries = []
+    service_worker_queries = []
+    subscriber = lambda do |_name, _start, _finish, _id, payload|
+      next if payload[:cached]
+      next if %w[SCHEMA TRANSACTION CACHE].include?(payload[:name].to_s)
+
+      sql_queries << payload[:sql]
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      get pwa_manifest_path
+      expect(response).to have_http_status(:ok)
+      manifest_queries = sql_queries.dup
+      sql_queries.clear
+
+      get pwa_service_worker_path
+      expect(response).to have_http_status(:ok)
+      service_worker_queries = sql_queries.dup
+    end
+
+    expect(manifest_queries).to be_empty
+    expect(service_worker_queries).to be_empty
+  end
+
   it "serves a parseable service worker with the offline fallback, private cache clearing, and push hooks" do
     get pwa_service_worker_path
 
@@ -86,6 +135,9 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to match(/const CACHE_VERSION = "pwa-[0-9a-f]{12}"/)
     expect(response.body).not_to include('const CACHE_VERSION = "pwa-v6"')
     expect(response.body).to include("const ACTIVE_CACHES = [SHELL_CACHE, ASSET_CACHE, FONT_CACHE]")
+    expect(response.body).to include("controllers/index")
+    expect(response.body).not_to include("archive_game_controller")
+    expect(response.body).not_to include("whiteboard_controller")
     expect(response.body).not_to include("const DOCUMENT_CACHE")
     expect(response.body).not_to include("cacheableDocumentResponse")
     expect(response.body).to include("if (!cacheableRequestUrl(url)) return")

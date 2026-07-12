@@ -27,7 +27,7 @@ RSpec.describe "AiRailController JavaScript syntax" do
   it "keeps agent update polling, toast handling, and the expanded desktop rail default" do
     source = Rails.root.join("app/javascript/controllers/ai_rail_controller.js").read
 
-    expect(source).to include("AGENT_UPDATE_POLL_INTERVAL_MS")
+    expect(source).to include("const AGENT_UPDATE_POLL_INTERVAL_MS = 15000")
     expect(source).to include("AGENT_UPDATE_TOAST_DURATION_MS")
     expect(source).to include("pollAgentUpdates({ force = false } = {})")
     expect(source).to include("syncAgentUpdatePolling({ immediate = false } = {})")
@@ -36,6 +36,9 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include("if (!force && this.agentUpdatePollRequest) return this.agentUpdatePollRequest")
     expect(source).to include("const shouldPollImmediately = immediate && !this.agentUpdateBooting")
     expect(source).to include("this.syncAgentUpdatePolling()")
+    expect(source).to include('window.addEventListener("notae:push-received", this.pushReceivedHandler)')
+    expect(source).to include('window.removeEventListener("notae:push-received", this.pushReceivedHandler)')
+    expect(source).to include("this.pollAgentUpdates({ force: true })")
     expect(source).to include("showAgentToast(count)")
     expect(source).to include("statusBarAvailable()")
     expect(source).to include("document.querySelector(\".notae-shell-status-bar\")")
@@ -59,5 +62,14 @@ RSpec.describe "AiRailController JavaScript syntax" do
     expect(source).to include("queueAgentUpdateFocus(targetUpdateId)")
     expect(source).to include("scrollAgentUpdateIntoView(updateId)")
     expect(source).to include('scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" })')
+  end
+
+  it "marks agent work busy and restores the prompt after a failed submission" do
+    source = Rails.root.join("app/javascript/controllers/ai_rail_controller.js").read
+
+    expect(source).to include('this.threadTarget.setAttribute("aria-busy", "true")')
+    expect(source).to include('this.threadTarget.setAttribute("aria-busy", "false")')
+    expect(source).to include("event.detail?.success === false")
+    expect(source).to include("this.promptInputTarget.value = this.pendingPrompt")
   end
 end
