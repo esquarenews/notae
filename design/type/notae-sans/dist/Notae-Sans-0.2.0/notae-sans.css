@@ -1,0 +1,23 @@
+@font-face {
+  font-family: "Notae Sans";
+  src: url("./web/NotaeSans-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Notae Sans";
+  src: url("./web/NotaeSans-Italic-Variable.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --font-notae-sans: "Notae Sans", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+body {
+  font-family: var(--font-notae-sans);
+}

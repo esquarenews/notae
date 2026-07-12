@@ -27,6 +27,10 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("data-pwa-target=\"networkToast\"")
     expect(response.body).not_to include("data-pwa-target=\"pushLiveBanner\"")
     expect(response.body).not_to include("data-pwa-unread-notification-count-value=")
+    expect(response.body).to include("rel=\"preload\"")
+    expect(response.body).to include("notae-sans-variable")
+    expect(response.body).not_to include("fonts.googleapis.com")
+    expect(response.body).not_to include("fonts.gstatic.com")
   end
 
   it "keeps hidden PWA shell cards hidden until the controller reveals them" do
@@ -134,6 +138,10 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to match(/const CACHE_VERSION = "pwa-[0-9a-f]{12}"/)
     expect(response.body).not_to include('const CACHE_VERSION = "pwa-v6"')
     expect(response.body).to include("const ACTIVE_CACHES = [SHELL_CACHE, ASSET_CACHE, FONT_CACHE]")
+    expect(response.body).to include("const PRECACHE_FONT_URLS =")
+    expect(response.body).to include("notae-sans-variable")
+    expect(response.body).to include("notae-sans-italic-variable")
+    expect(response.body).to include("fontCache.addAll(PRECACHE_FONT_URLS)")
     expect(response.body).to include("controllers/index")
     expect(response.body).not_to include("archive_game_controller")
     expect(response.body).not_to include("whiteboard_controller")
@@ -142,7 +150,10 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("if (!cacheableRequestUrl(url)) return")
     expect(response.body).to include("function cacheableRequestUrl(url)")
     expect(response.body).to include('return url.protocol === "http:" || url.protocol === "https:"')
-    expect(response.body).to include('(url.origin === self.location.origin && /\\.(?:woff2?|ttf|otf)$/i.test(url.pathname))')
+    expect(response.body).to include('return url.origin === self.location.origin && /\\.(?:woff2?|ttf|otf)$/i.test(url.pathname)')
+    expect(response.body).not_to include("fonts.googleapis.com")
+    expect(response.body).not_to include("fonts.gstatic.com")
+    expect(response.body.index("if (isFontRequest(url))")).to be < response.body.index("if (isSameOriginAsset(url))")
     expect(response.body).to include("event.respondWith(networkFirstDocument(request))")
     expect(response.body).to include("async function networkFirstDocument(request)")
     expect(response.body).to include("self.addEventListener(\"push\"")

@@ -1,0 +1,9 @@
+fonttools[woff]==4.63.0
+fontmake==3.12.1
+glyphsLib==6.13.1
+ufo2ft==3.8.2
+brotli==1.2.0
+gftools==0.9.996
+fontbakery==1.1.0
+opentype-sanitizer==9.2.0
+uharfbuzz==0.55.0

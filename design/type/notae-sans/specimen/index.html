@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Notae Sans — complete family specimen</title>
+  <style>
+    @font-face {
+      font-family: "Notae Sans";
+      src: url("../fonts/NotaeSans%5Bwght%5D.woff2?v=0.200") format("woff2-variations");
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "Notae Sans";
+      src: url("../fonts/NotaeSans-Italic%5Bwght%5D.woff2?v=0.200") format("woff2-variations");
+      font-style: italic;
+      font-weight: 100 900;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "Manrope Reference";
+      src: url("../../../../vendor/fonts/Manrope-wght.ttf") format("truetype-variations");
+      font-style: normal;
+      font-weight: 200 800;
+      font-display: swap;
+    }
+
+    :root {
+      --paper: #f2eee5;
+      --paper-raised: #f8f5ee;
+      --ink: #171a18;
+      --muted: #696b66;
+      --rule: #b8b5ad;
+      --accent: #315f53;
+      --accent-wash: #d8e3dc;
+      --display-weight: 560;
+      --display-size: 72px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Notae Sans", "Avenir Next", "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    button, input { font: inherit; }
+    a { color: inherit; }
+
+    .topbar {
+      position: relative;
+      z-index: 10;
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 14px clamp(20px, 4vw, 64px);
+      border-bottom: 1px solid color-mix(in srgb, var(--rule) 78%, transparent);
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      backdrop-filter: blur(18px);
+    }
+    .wordmark {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: -.015em;
+    }
+    .wordmark small {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .topnav { display: flex; align-items: center; gap: 18px; }
+    .topnav a {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      text-decoration: none;
+    }
+    .theme-toggle {
+      appearance: none;
+      padding: 7px 11px;
+      border: 1px solid var(--rule);
+      border-radius: 99px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    main { overflow: hidden; }
+    section {
+      padding: clamp(62px, 9vw, 126px) clamp(20px, 4vw, 64px);
+      border-bottom: 1px solid var(--rule);
+    }
+    .content { width: min(1320px, 100%); margin: 0 auto; }
+    .eyebrow {
+      margin: 0 0 22px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .section-title {
+      max-width: 950px;
+      margin: 0 0 54px;
+      font-size: clamp(38px, 6vw, 82px);
+      font-weight: 570;
+      line-height: .98;
+      letter-spacing: -.045em;
+    }
+
+    .hero {
+      min-height: calc(100svh - 62px);
+      display: grid;
+      align-items: end;
+      background:
+        linear-gradient(90deg, transparent 0 74%, color-mix(in srgb, var(--accent-wash) 45%, transparent) 74% 100%);
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(240px, .9fr);
+      gap: clamp(44px, 8vw, 120px);
+      align-items: end;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(94px, 15.5vw, 228px);
+      font-weight: 560;
+      line-height: .76;
+      letter-spacing: -.075em;
+      transform: translateX(-.055em);
+    }
+    .hero-copy {
+      max-width: 780px;
+      margin: clamp(48px, 7vw, 92px) 0 0;
+      font-size: clamp(21px, 2.4vw, 35px);
+      font-weight: 420;
+      line-height: 1.2;
+      letter-spacing: -.025em;
+    }
+    .hero-note {
+      display: grid;
+      gap: 24px;
+      padding-bottom: 4px;
+    }
+    .hero-note dl { margin: 0; }
+    .hero-note div {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    dt { color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
+    dd { margin: 0; font-size: 12px; font-weight: 650; text-align: right; }
+
+    .playground { background: var(--paper-raised); }
+    .control-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px 180px;
+      gap: 32px;
+      align-items: end;
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .control label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .editable-sample {
+      min-height: 2.8em;
+      margin-top: 54px;
+      outline: none;
+      font-size: clamp(46px, var(--display-size), 112px);
+      font-variation-settings: "wght" var(--display-weight);
+      font-weight: var(--display-weight);
+      line-height: .98;
+      letter-spacing: -.045em;
+      transition: font-weight 180ms ease, color 180ms ease;
+    }
+    .edit-hint { margin: 24px 0 0; color: var(--muted); font-size: 12px; }
+
+    .weight-lines { display: grid; }
+    .weight-line {
+      display: grid;
+      grid-template-columns: 80px 140px 1fr;
+      gap: 24px;
+      align-items: baseline;
+      padding: 24px 0;
+      border-top: 1px solid var(--rule);
+      transition: padding-left 180ms ease, color 180ms ease;
+    }
+    .weight-line:hover { padding-left: 10px; color: var(--accent); }
+    .weight-value, .weight-name { color: var(--muted); font-size: 12px; font-weight: 650; }
+    .weight-sample { font-size: clamp(30px, 4.6vw, 68px); line-height: 1; letter-spacing: -.035em; }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+    }
+    .comparison-column { padding: clamp(24px, 4vw, 54px); background: var(--paper); }
+    .comparison-column.reference { font-family: "Manrope Reference", sans-serif; }
+    .comparison-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 44px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .reading-proof { margin: 0 0 34px; max-width: 58ch; }
+    .reading-proof:last-child { margin-bottom: 0; }
+    .reading-proof strong { display: block; margin-bottom: 7px; color: var(--accent); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .reading-proof p { margin: 0; line-height: 1.55; }
+    .size-12 { font-size: 12px; font-weight: 430; }
+    .size-14 { font-size: 14px; font-weight: 420; }
+    .size-16 { font-size: 16px; font-weight: 410; }
+    .size-18 { font-size: 18px; font-weight: 400; }
+
+    .italic-pair-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+    }
+    .italic-column { padding: clamp(24px, 4vw, 54px); background: var(--paper-raised); }
+    .italic-column.italic { font-style: italic; }
+    .italic-form-line {
+      margin: 54px 0 0;
+      font-size: clamp(60px, 10vw, 148px);
+      font-weight: 450;
+      font-style: italic;
+      line-height: .82;
+      letter-spacing: -.055em;
+      overflow-wrap: anywhere;
+    }
+    .mixed-proofs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(34px, 6vw, 90px);
+      margin-top: 70px;
+      padding-top: 32px;
+      border-top: 1px solid var(--rule);
+    }
+    .mixed-proofs article { max-width: 58ch; }
+    .mixed-proofs h3 { margin: 0 0 18px; font-size: 22px; font-weight: 650; letter-spacing: -.02em; }
+    .mixed-proofs p { margin: 0; font-size: 16px; line-height: 1.65; }
+    .mixed-proofs em { font-style: italic; font-weight: 430; }
+    .mixed-proofs blockquote {
+      margin: 0;
+      padding-left: 24px;
+      border-left: 2px solid var(--accent);
+      font-size: 22px;
+      font-style: italic;
+      font-weight: 430;
+      line-height: 1.45;
+    }
+
+    .ui-stage {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr) 320px;
+      min-height: 650px;
+      overflow: hidden;
+      border: 1px solid #343a38;
+      border-radius: 18px;
+      background: #121614;
+      color: #e7ece9;
+      box-shadow: 0 24px 70px rgb(27 31 28 / 14%);
+    }
+    .ui-nav, .ui-rail { padding: 22px; background: #171c19; }
+    .ui-nav { border-right: 1px solid #343a38; }
+    .ui-rail { border-left: 1px solid #343a38; }
+    .ui-brand { margin-bottom: 38px; font-size: 18px; font-weight: 760; letter-spacing: -.03em; }
+    .ui-label { margin: 28px 0 10px; color: #86918b; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+    .ui-item { padding: 9px 10px; border-radius: 8px; color: #abb5b0; font-size: 12px; font-weight: 570; }
+    .ui-item.active { background: #26312c; color: #f2f6f4; }
+    .ui-document { padding: clamp(34px, 6vw, 82px); background: #f7f5f0; color: #1c201e; }
+    .ui-kicker { color: #6b746f; font-size: 11px; font-weight: 650; }
+    .ui-document h3 { max-width: 720px; margin: 20px 0 28px; font-size: clamp(42px, 5vw, 72px); font-weight: 790; line-height: .96; letter-spacing: -.055em; }
+    .ui-document p { max-width: 680px; font-size: 16px; line-height: 1.65; }
+    .ui-document h4 { margin: 46px 0 12px; font-size: 22px; font-weight: 680; letter-spacing: -.025em; }
+    .rail-head { margin-bottom: 22px; font-size: 13px; font-weight: 720; }
+    .chat { padding: 14px 0; border-top: 1px solid #343a38; color: #c8d0cc; font-size: 12px; line-height: 1.5; }
+    .chat b { display: block; margin-bottom: 4px; color: #8cb6a4; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+    .glyph-stack { display: grid; gap: 22px; }
+    .glyph-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 34px;
+      padding-top: 22px;
+      border-top: 1px solid var(--rule);
+    }
+    .glyph-row dt { padding-top: 9px; }
+    .glyph-row dd {
+      font-size: clamp(27px, 4vw, 54px);
+      font-weight: 450;
+      line-height: 1.35;
+      letter-spacing: .015em;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+    .ambiguity { font-feature-settings: "tnum" 1; }
+
+    .metric-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr); gap: clamp(52px, 8vw, 120px); }
+    .metric-diagram {
+      position: relative;
+      min-height: 520px;
+      background: repeating-linear-gradient(to bottom, transparent 0 79px, var(--rule) 79px 80px);
+    }
+    .metric-glyphs {
+      position: absolute;
+      left: 4%;
+      bottom: 55px;
+      font-size: clamp(210px, 29vw, 430px);
+      font-weight: 430;
+      line-height: .8;
+      letter-spacing: -.08em;
+    }
+    .metric-tag { position: absolute; right: 0; padding: 3px 7px; background: var(--paper); color: var(--accent); font-size: 10px; font-weight: 700; }
+    .metric-tag.cap { top: 81px; }
+    .metric-tag.xheight { top: 168px; }
+    .metric-tag.base { top: 328px; }
+    .metric-tag.desc { top: 409px; }
+    .metric-table { margin: 0; }
+    .metric-table div { display: grid; grid-template-columns: 1fr auto; gap: 30px; padding: 13px 0; border-bottom: 1px solid var(--rule); }
+    .metric-table dd { font-variant-numeric: tabular-nums; }
+    .metric-copy { margin: 36px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+    .final { background: var(--accent); color: #eef5f1; }
+    .final .eyebrow { color: #bcd0c7; }
+    .final .section-title { max-width: 1100px; margin-bottom: 34px; }
+    .final p { max-width: 760px; margin: 0; color: #d8e5df; font-size: 18px; line-height: 1.55; }
+
+    body.dark {
+      --paper: #151916;
+      --paper-raised: #1c211e;
+      --ink: #edf1ef;
+      --muted: #a3aba6;
+      --rule: #39413d;
+      --accent: #91c3ad;
+      --accent-wash: #263a31;
+    }
+
+    .reveal { opacity: 0; transform: translateY(18px); animation: enter 620ms cubic-bezier(.2,.75,.2,1) forwards; }
+    .reveal:nth-child(2) { animation-delay: 80ms; }
+    .reveal:nth-child(3) { animation-delay: 150ms; }
+    @keyframes enter { to { opacity: 1; transform: none; } }
+
+    @media (max-width: 900px) {
+      .topnav a { display: none; }
+      .hero-grid, .metric-layout { grid-template-columns: 1fr; }
+      .hero { background: var(--paper); }
+      .hero h1 { line-height: .82; }
+      .hero-note { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .control-grid { grid-template-columns: 1fr; }
+      .comparison-grid { grid-template-columns: 1fr; }
+      .italic-pair-grid, .mixed-proofs { grid-template-columns: 1fr; }
+      .ui-stage { grid-template-columns: 1fr; }
+      .ui-nav { display: none; }
+      .ui-rail { border: 0; border-top: 1px solid #343a38; }
+      .glyph-row { grid-template-columns: 1fr; gap: 8px; }
+    }
+
+    @media (max-width: 560px) {
+      section { padding-inline: 18px; }
+      .topbar { padding-inline: 18px; }
+      .wordmark small { display: none; }
+      .hero { min-height: auto; }
+      .hero h1 { font-size: 29vw; }
+      .hero-note { grid-template-columns: 1fr; }
+      .weight-line { grid-template-columns: 52px 84px 1fr; gap: 10px; }
+      .weight-sample { font-size: 25px; }
+      .comparison-column { padding: 24px 20px; }
+      .ui-document { padding: 36px 22px; }
+      .metric-diagram { min-height: 400px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; animation: none; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wordmark">Notae Sans <small>v0.2 complete family</small></div>
+    <nav class="topnav" aria-label="Specimen sections">
+      <a href="#weights">Weights</a>
+      <a href="#reading">Reading</a>
+      <a href="#italics">Italics</a>
+      <a href="#ui">Notae UI</a>
+      <a href="#glyphs">Glyphs</a>
+      <a href="#metrics">Metrics</a>
+      <button class="theme-toggle" type="button" aria-pressed="false">Dark proof</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="content hero-grid">
+        <div>
+          <p class="eyebrow reveal">Complete custom family · upright and true italic</p>
+          <h1 class="reveal">Notae<br>Sans</h1>
+          <p class="hero-copy reveal">A conservative screen grotesk with a softer rhythm: clear at 12 pixels, calm across long documents, and relaxed without becoming casual.</p>
+        </div>
+        <aside class="hero-note reveal" aria-label="Prototype summary">
+          <dl>
+            <div><dt>Axis</dt><dd>100–900</dd></div>
+            <div><dt>Upright webfont</dt><dd>57.4 KB</dd></div>
+            <div><dt>Italic webfont</dt><dd>62.8 KB</dd></div>
+            <div><dt>Encoded characters</dt><dd>470 in both</dd></div>
+            <div><dt>Status</dt><dd>Production candidate</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section class="playground" aria-labelledby="playground-title">
+      <div class="content">
+        <p class="eyebrow">Live proof</p>
+        <div class="control-grid">
+          <div><h2 class="section-title" id="playground-title">Make it work, not merely look good.</h2></div>
+          <div class="control">
+            <label for="weight-control">Weight <output id="weight-output">560</output></label>
+            <input id="weight-control" type="range" min="100" max="900" value="560" step="1">
+          </div>
+          <div class="control">
+            <label for="size-control">Size <output id="size-output">72 px</output></label>
+            <input id="size-control" type="range" min="10" max="112" value="72" step="1">
+          </div>
+        </div>
+        <div class="editable-sample" contenteditable="true" spellcheck="false" aria-label="Editable font sample">Write, find and connect the details that matter.</div>
+        <p class="edit-hint">Edit this line. The family supports every integer weight—not only named stops.</p>
+      </div>
+    </section>
+
+    <section id="weights" aria-labelledby="weights-title">
+      <div class="content">
+        <p class="eyebrow">Two styles · nine named stops · continuous interpolation</p>
+        <h2 class="section-title" id="weights-title">A weight system broad enough for the whole app.</h2>
+        <div class="weight-lines">
+          <div class="weight-line"><span class="weight-value">100</span><span class="weight-name">Thin</span><span class="weight-sample" style="font-weight:100">Airy display text at generous sizes</span></div>
+          <div class="weight-line"><span class="weight-value">200</span><span class="weight-name">ExtraLight</span><span class="weight-sample" style="font-weight:200">A restrained step before Light</span></div>
+          <div class="weight-line"><span class="weight-value">300</span><span class="weight-name">Light</span><span class="weight-sample" style="font-weight:300">Quiet space for larger ideas</span></div>
+          <div class="weight-line"><span class="weight-value">400</span><span class="weight-name">Regular</span><span class="weight-sample" style="font-weight:400">Long-form notes stay easy to read</span></div>
+          <div class="weight-line"><span class="weight-value">500</span><span class="weight-name">Medium</span><span class="weight-sample" style="font-weight:500">Dense controls remain crisp</span></div>
+          <div class="weight-line"><span class="weight-value">600</span><span class="weight-name">SemiBold</span><span class="weight-sample" style="font-weight:600">Navigation finds its place</span></div>
+          <div class="weight-line"><span class="weight-value">700</span><span class="weight-name">Bold</span><span class="weight-sample" style="font-weight:700">Section headings hold structure</span></div>
+          <div class="weight-line"><span class="weight-value">800</span><span class="weight-name">ExtraBold</span><span class="weight-sample" style="font-weight:800">Workspace titles feel assured</span></div>
+          <div class="weight-line"><span class="weight-value">900</span><span class="weight-name">Black</span><span class="weight-sample" style="font-weight:900">Rare emphasis stays deliberate</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="reading" aria-labelledby="reading-title">
+      <div class="content">
+        <p class="eyebrow">Same words · same sizes · current and proposed</p>
+        <h2 class="section-title" id="reading-title">Reading comfort is the deciding feature.</h2>
+        <div class="comparison-grid">
+          <article class="comparison-column reference">
+            <div class="comparison-label"><span>Current</span><span>Manrope</span></div>
+            <div class="reading-proof size-12"><strong>12 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+            <div class="reading-proof size-14"><strong>14 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+            <div class="reading-proof size-16"><strong>16 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+            <div class="reading-proof size-18"><strong>18 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+          </article>
+          <article class="comparison-column">
+            <div class="comparison-label"><span>Proposed</span><span>Notae Sans</span></div>
+            <div class="reading-proof size-12"><strong>12 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+            <div class="reading-proof size-14"><strong>14 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+            <div class="reading-proof size-16"><strong>16 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+            <div class="reading-proof size-18"><strong>18 px</strong><p>Notae brings documents, databases, tasks and calendars into one workspace. Search the detail, understand the context, then move the work forward.</p></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="italics" aria-labelledby="italics-title">
+      <div class="content">
+        <p class="eyebrow">Genuinely drawn forms · matched at working sizes</p>
+        <h2 class="section-title" id="italics-title">An italic with its own voice, held inside the same rhythm.</h2>
+        <div class="italic-pair-grid">
+          <article class="italic-column">
+            <div class="comparison-label"><span>Upright</span><span>Regular 400</span></div>
+            <div class="reading-proof size-12"><strong>12 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+            <div class="reading-proof size-14"><strong>14 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+            <div class="reading-proof size-16"><strong>16 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+            <div class="reading-proof size-18"><strong>18 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+          </article>
+          <article class="italic-column italic">
+            <div class="comparison-label"><span>True italic</span><span>Italic 400 · −9.4°</span></div>
+            <div class="reading-proof size-12"><strong>12 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+            <div class="reading-proof size-14"><strong>14 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+            <div class="reading-proof size-16"><strong>16 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+            <div class="reading-proof size-18"><strong>18 px</strong><p>Clear notes create useful context. Decisions, dates and names remain easy to scan across a busy workspace.</p></div>
+          </article>
+        </div>
+        <p class="italic-form-line">a f g y Q &amp; 0123</p>
+        <div class="mixed-proofs">
+          <article>
+            <h3>Mixed editorial paragraph</h3>
+            <p>Notae keeps the record direct, then lets <em>emphasis move naturally through the sentence without changing its texture</em>. Upright and italic maintain nearly identical lowercase width averages—517 and 516.8 units—so lines stay settled when a phrase changes style.</p>
+          </article>
+          <blockquote>“The italic should add warmth and direction, not make the reader adjust to a different family.”</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section id="ui" aria-labelledby="ui-title">
+      <div class="content">
+        <p class="eyebrow">Real interface pressure test</p>
+        <h2 class="section-title" id="ui-title">From a 10-pixel label to a four-line document title.</h2>
+        <div class="ui-stage">
+          <aside class="ui-nav">
+            <div class="ui-brand">Notae</div>
+            <div class="ui-label">Workspace</div>
+            <div class="ui-item active">Research notes</div>
+            <div class="ui-item">Project plan</div>
+            <div class="ui-item">Editorial calendar</div>
+            <div class="ui-label">Recent</div>
+            <div class="ui-item">Design review</div>
+            <div class="ui-item">Weekly actions</div>
+          </aside>
+          <article class="ui-document">
+            <div class="ui-kicker">Updated today · 4 collaborators</div>
+            <h3>A calmer place to think through complicated work.</h3>
+            <p>Good note-taking is not about collecting more. It is about preserving enough structure that an idea can be found, understood and used again—without forcing every thought into the same shape.</p>
+            <h4>What we should protect</h4>
+            <p>Fast scanning, generous reading rhythm, clear numerals and punctuation, and enough character to make the workspace recognisably Notae.</p>
+          </article>
+          <aside class="ui-rail">
+            <div class="rail-head">Notae AI</div>
+            <div class="chat"><b>You</b>Find the launch tasks that are still blocked.</div>
+            <div class="chat"><b>Notae AI</b>I found three blocked tasks across the current workspace. Two depend on final copy and one is waiting for legal review.</div>
+            <div class="chat"><b>Suggestion</b>Group the copy dependencies into a single follow-up list.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section id="glyphs" aria-labelledby="glyphs-title">
+      <div class="content">
+        <p class="eyebrow">Character set</p>
+        <h2 class="section-title" id="glyphs-title">Familiar forms, softer joins, deliberate ambiguity control.</h2>
+        <dl class="glyph-stack">
+          <div class="glyph-row"><dt>Uppercase</dt><dd>ABCDEFGHIJKLMNOPQRSTUVWXYZ</dd></div>
+          <div class="glyph-row"><dt>Lowercase</dt><dd>abcdefghijklmnopqrstuvwxyz</dd></div>
+          <div class="glyph-row"><dt>Numerals</dt><dd class="ambiguity">0123456789  09:41  12/07/2026  $1,249.00  18.5%</dd></div>
+          <div class="glyph-row"><dt>Ambiguity</dt><dd class="ambiguity">Il1| O0 QG rn m cl db pq 8B 5S 2Z</dd></div>
+          <div class="glyph-row"><dt>Punctuation</dt><dd>.,:;!? ¿¡ ‘ ’ “ ” ( ) [ ] { } — – … / \ @ # &amp; *</dd></div>
+          <div class="glyph-row"><dt>Currency</dt><dd>$ ¢ £ € ¥ ₽ ₴</dd></div>
+          <div class="glyph-row"><dt>Not in v0.2</dt><dd>Greek · ₸ ₹ ₺ ₼ ₾ ₿</dd></div>
+          <div class="glyph-row"><dt>Latin extended</dt><dd>ÀÁÂÃÄÅ Æ Ç ÈÉÊË ÌÍÎÏ Ñ ÒÓÔÕÖ Ø Œ ÙÚÛÜ Ý Ÿ Ð Þ</dd></div>
+          <div class="glyph-row"><dt>Cyrillic sample</dt><dd>Абвгдеёжзийклмнопрстуфхцчшщ</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section id="metrics" aria-labelledby="metrics-title">
+      <div class="content">
+        <p class="eyebrow">Exact construction and loading details</p>
+        <h2 class="section-title" id="metrics-title">Measured for a screen, not dressed for a poster.</h2>
+        <div class="metric-layout">
+          <div class="metric-diagram" aria-label="Cap height, x-height, baseline and descender diagram">
+            <span class="metric-glyphs">Hax</span>
+            <span class="metric-tag cap">Cap 718</span>
+            <span class="metric-tag xheight">x-height 535</span>
+            <span class="metric-tag base">Baseline 0</span>
+            <span class="metric-tag desc">Descender −315</span>
+          </div>
+          <div>
+            <dl class="metric-table">
+              <div><dt>Units per em</dt><dd>1000</dd></div>
+              <div><dt>x-height</dt><dd>535 / 53.5%</dd></div>
+              <div><dt>Cap height</dt><dd>718 / 71.8%</dd></div>
+              <div><dt>Typo ascender</dt><dd>985</dd></div>
+              <div><dt>Typo descender</dt><dd>−315</dd></div>
+              <div><dt>Line gap</dt><dd>0</dd></div>
+              <div><dt>H advance, 400</dt><dd>712</dd></div>
+              <div><dt>n advance, 400</dt><dd>579</dd></div>
+              <div><dt>o advance, 400</dt><dd>583</dd></div>
+              <div><dt>Average a–z advance</dt><dd>517</dd></div>
+              <div><dt>Weight axis</dt><dd>100–900</dd></div>
+              <div><dt>Upright WOFF2</dt><dd>58,756 bytes</dd></div>
+              <div><dt>Italic WOFF2</dt><dd>64,348 bytes</dd></div>
+              <div><dt>Upright TTF</dt><dd>124,768 bytes</dd></div>
+              <div><dt>Italic TTF</dt><dd>160,112 bytes</dd></div>
+              <div><dt>Italic angle</dt><dd>−9.4°</dd></div>
+            </dl>
+            <p class="metric-copy">Each WOFF2 contains every weight from 100–900 for one style. Both expose the same 470 codepoints; the italic retains the app-facing kerning, mark, localization, contextual and numeral features while omitting unrelated source alternates.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="final">
+      <div class="content">
+        <p class="eyebrow">Family specification</p>
+        <h2 class="section-title">One calm system, from Thin upright to Black italic.</h2>
+        <p>The production pair is self-hostable, locally installable and metric-aligned for UI controls, documents, dense metadata and editorial emphasis. The build remains reproducible from its two pinned OFL sources.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const weight = document.querySelector('#weight-control');
+    const size = document.querySelector('#size-control');
+    const weightOutput = document.querySelector('#weight-output');
+    const sizeOutput = document.querySelector('#size-output');
+    const themeToggle = document.querySelector('.theme-toggle');
+
+    weight.addEventListener('input', () => {
+      root.style.setProperty('--display-weight', weight.value);
+      weightOutput.value = weight.value;
+    });
+
+    size.addEventListener('input', () => {
+      root.style.setProperty('--display-size', `${size.value}px`);
+      sizeOutput.value = `${size.value} px`;
+    });
+
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.body.classList.toggle('dark');
+      themeToggle.setAttribute('aria-pressed', String(isDark));
+      themeToggle.textContent = isDark ? 'Light proof' : 'Dark proof';
+    });
+  </script>
+</body>
+</html>

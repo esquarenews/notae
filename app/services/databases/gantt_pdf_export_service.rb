@@ -23,8 +23,6 @@ module Databases
     TEXT_COLOR = "292524".freeze
     MUTED_TEXT_COLOR = "57534E".freeze
     SURFACE_COLOR = "FCFCFB".freeze
-    FONT_FILE = Rails.root.join("vendor/fonts/Manrope-wght.ttf").freeze
-
     STATUS_STYLES = {
       "not started" => { fg: "9A3412", bg: "FDBA74" },
       "started" => { fg: "166534", bg: "BBF7D0" },
@@ -54,8 +52,7 @@ module Databases
           Title: [ database.name.presence || "Gantt", "Gantt chart" ].join(" - ")
         }
       )
-      register_fonts(pdf)
-      pdf.font(pdf_font_family)
+      pdf.font(Notae::PdfFontFamily.register(pdf))
 
       if gantt_data.eligible?
         draw_chart(pdf)
@@ -69,21 +66,6 @@ module Databases
     private
 
     attr_reader :database, :gantt_data
-
-    def register_fonts(pdf)
-      return unless FONT_FILE.exist?
-
-      pdf.font_families.update(
-        "Manrope" => {
-          normal: FONT_FILE.to_s,
-          bold: FONT_FILE.to_s
-        }
-      )
-    end
-
-    def pdf_font_family
-      FONT_FILE.exist? ? "Manrope" : "Helvetica"
-    end
 
     def draw_chart(pdf)
       tasks_per_page = [ ((pdf.bounds.height - TITLE_HEIGHT - TITLE_GAP - HEADER_HEIGHT - HEADER_GAP) / (ROW_HEIGHT + ROW_GAP)).floor, 1 ].max

@@ -42,5 +42,9 @@ RSpec.describe "Nota Maze game controller JavaScript syntax" do
     expect(source).to include("playSound")
     expect(source).to include("handlePointerdown")
     expect(source).to include("queueDirectionFromVector")
+    expect(source).to include("prepareOverlayFont")
+    expect(source).to include("document.fonts.load")
+    expect(source).to include('800 32px "Notae Sans"')
+    expect(source).not_to include("32px system-ui")
   end
 end

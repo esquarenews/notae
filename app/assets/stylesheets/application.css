@@ -9,6 +9,22 @@
  * Consider organizing styles into separate files for maintainability.
  */
 
+@font-face {
+  font-family: "Notae Sans";
+  src: url("notae_sans/notae-sans-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Notae Sans";
+  src: url("notae_sans/notae-sans-italic-variable.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   --notae-bg: #f5f5f4;
   --notae-surface: #fcfcfb;
@@ -85,7 +101,8 @@ body.notae-theme {
   min-height: 100vh;
   background: var(--notae-bg);
   color: var(--notae-text);
-  font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+  font-family: "Notae Sans", "Avenir Next", "Segoe UI", sans-serif;
+  font-synthesis: none;
 }
 
 body.notae-theme-light {
