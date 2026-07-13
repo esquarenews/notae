@@ -57,7 +57,7 @@ module ApplicationHelper
     return [] unless user_signed_in?
 
     @ui_workspaces ||= workspace_scope_with_slug
-                        .select(:id, :slug, :name, :workspace_color, :updated_at, :created_at)
+                        .select(:id, :slug, :name, :workspace_color, :analytics_enabled, :updated_at, :created_at)
                         .order(:created_at)
                         .to_a
   end
@@ -175,6 +175,20 @@ module ApplicationHelper
     return @workspace.display_color if defined?(@workspace) && @workspace.present?
 
     ui_current_workspace&.display_color
+  end
+
+  def analytics_surface_for_request
+    return "nota" if controller_name == "pages"
+    return "grid" if controller_name.in?(%w[databases db_rows db_cells db_properties database_views database_comments])
+    return "ai" if controller_name.in?(%w[ai_assistant ai_conversation_histories knowledge_suggestions agent_actions workflow_runs])
+    return "calendar" if controller_name.start_with?("kalendarium")
+    return "mail" if controller_name.start_with?("epistularium")
+    return "meetings" if controller_name.in?(%w[meetings meeting_sessions meeting_extension_tokens])
+    return "search" if controller_name.in?(%w[searches libraries])
+    return "settings" if controller_name.end_with?("settings") || controller_name.in?(%w[preferences account_settings notification_settings subscription_settings])
+    return "home" if controller_name.in?(%w[home workspace_home])
+
+    "other"
   end
 
   def workspace_notification_bar_presenter

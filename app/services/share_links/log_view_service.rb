@@ -2,6 +2,8 @@ module ShareLinks
   class LogViewService
     class << self
       def call(share_link:, ip_address:, viewed_at: Time.current)
+        return unless share_link.workspace.analytics_enabled?
+
         ShareLink.transaction do
           share_link.share_link_views.create!(
             workspace: share_link.workspace,

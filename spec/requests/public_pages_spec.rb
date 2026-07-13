@@ -34,6 +34,21 @@ RSpec.describe "Public pages", type: :request do
     expect(share_link.reload.last_viewed_at).to be_present
   end
 
+  it "does not log a shared-page view when workspace analytics are disabled" do
+    owner = User.create!(email: "public-page-private-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Private analytics workspace", slug: "private-analytics-workspace", analytics_enabled: false)
+    Membership.create!(workspace:, user: owner, role: :owner)
+    page = Page.create!(workspace:, created_by: owner, title: "Shared without tracking")
+    share_link = ShareLink.create!(workspace:, page:, created_by: owner)
+
+    expect do
+      get public_share_path(token: share_link.token)
+    end.not_to change(ShareLinkView, :count)
+
+    expect(response).to have_http_status(:ok)
+    expect(share_link.reload.last_viewed_at).to be_nil
+  end
+
   it "preserves public nota formatting for paragraphs, line breaks, headings, lists, quotes, and links" do
     owner = User.create!(email: "public-page-formatting-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Public formatting", slug: "public-formatting")

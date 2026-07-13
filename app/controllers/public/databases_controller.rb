@@ -30,7 +30,7 @@ module Public
       @cells = DbCell.for_database(@database).index_by { |cell| [ cell.db_row_id, cell.db_property_id ] }
       @visible_properties = @db_properties.first(8)
 
-      @share_link.update!(last_viewed_at: Time.current)
+      @share_link.update!(last_viewed_at: Time.current) if @workspace.analytics_enabled?
     end
 
     private

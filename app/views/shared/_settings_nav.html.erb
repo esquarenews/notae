@@ -1,6 +1,6 @@
 <aside class="notae-settings-nav" data-controller="auto-submit">
   <% settings_workspace_slug = params[:settings_workspace_slug].to_s %>
-  <% workspace_section_item = %i[general people import emoji].include?(active_item) ? active_item : :general %>
+  <% workspace_section_item = %i[general people import emoji analytics].include?(active_item) ? active_item : :general %>
   <% workspace_options = policy_scope(Workspace)
        .where.not(slug: [ nil, "" ])
        .to_a
@@ -8,6 +8,7 @@
   <% selected_workspace = workspace_options.find { |candidate_workspace| candidate_workspace.slug == settings_workspace_slug } || workspace %>
   <% active_item_labels = {
        account: "Account",
+       analytics: "Analytics",
        preferences: "Preferences",
        notifications: "Notifications",
        subscription: "Subscription",
@@ -33,6 +34,8 @@
          workspace_import_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
        when :emoji
          workspace_emoji_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
+       when :analytics
+         workspace_analytics_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
        else
          workspace_general_settings_path(workspace_slug: candidate_workspace.slug, settings_workspace_slug: candidate_workspace.slug)
        end
@@ -64,6 +67,13 @@
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       <span>Preferences</span>
+    </span>
+  <% end %>
+  <%= link_to workspace_analytics_settings_path(workspace_slug: workspace.slug),
+              class: [ "notae-settings-nav-item", ("active" if active_item == :analytics) ].compact.join(" ") do %>
+    <span class="notae-settings-nav-item-label">
+      <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M6 16v-4M10 16V7M14 16v-6M18 16V4"/></svg>
+      <span>Analytics</span>
     </span>
   <% end %>
   <%= link_to workspace_notification_settings_path(workspace_slug: workspace.slug),

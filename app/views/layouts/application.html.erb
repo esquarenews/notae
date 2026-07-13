@@ -45,11 +45,21 @@
                                   )
                                 end %>
   <% layout_ai_rail_shell_id = "notae_ai_rail_shell_#{layout_workspace_slug.to_s.gsub(/[^a-zA-Z0-9_-]/, "_")}" %>
+  <% layout_analytics_workspace = layout_workspace_slug.present? ? ui_current_workspace : nil %>
+  <% layout_global_analytics_enabled = user_signed_in? && ui_workspaces.any?(&:analytics_enabled?) %>
+  <% layout_analytics_enabled = user_signed_in? && if layout_analytics_workspace.present?
+                                                     layout_analytics_workspace.analytics_enabled?
+                                                   else
+                                                     layout_global_analytics_enabled
+                                                   end %>
   <body class="notae-theme <%= notae_theme_body_class %>"
-        data-controller="<%= [("pwa"), ("link-preferences" if user_signed_in?)].compact.join(" ") %>"
+        data-controller="<%= [("pwa"), ("link-preferences" if user_signed_in?), ("analytics-tracker" if layout_analytics_enabled)].compact.join(" ") %>"
         data-pwa-authenticated-value="<%= user_signed_in? ? "true" : "false" %>"
         data-pwa-web-push-public-key-value="<%= notae_web_push_public_key %>"
         data-link-preferences-open-links-in-new-window-value="<%= user_signed_in? ? current_user.open_links_in_desktop_app? : false %>"
+        data-analytics-tracker-endpoint-value="<%= analytics_activity_path if layout_analytics_enabled %>"
+        data-analytics-tracker-workspace-slug-value="<%= layout_workspace_slug %>"
+        data-analytics-tracker-surface-value="<%= analytics_surface_for_request %>"
         data-ai-rail-workspace-slug-value="<%= layout_workspace_slug %>"
         data-ai-rail-current-page-id-value="<%= layout_ai_rail_current_page_id %>"
         data-ai-rail-panel-src-value="<%= layout_ai_rail_panel_src %>">

@@ -1758,7 +1758,7 @@ body.notae-theme-dark .notae-workspace-home-banner-svg {
   background: #fff;
   color: var(--notae-text);
   cursor: pointer;
-  z-index: 72;
+  z-index: var(--notae-layer-ai-toast);
   padding: 0;
   align-items: center;
   justify-content: center;
@@ -3583,6 +3583,582 @@ turbo-frame#notae_sidebar_sections {
 
   .notae-ai-analytics-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Personal analytics */
+.notae-analytics-content {
+  --notae-analytics-accent: var(--notae-accent);
+  --notae-analytics-accent-soft: color-mix(in srgb, var(--notae-accent) 14%, transparent);
+  --notae-analytics-rule: color-mix(in srgb, var(--notae-border) 88%, transparent);
+  gap: 0;
+  padding: clamp(1rem, 2.1vw, 1.75rem) clamp(0.9rem, 2.5vw, 2rem) 2.4rem;
+}
+
+.notae-analytics-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0 0 1.25rem;
+  border-bottom: 1px solid var(--notae-analytics-rule);
+}
+
+.notae-analytics-header > div:first-child {
+  min-width: 0;
+}
+
+.notae-analytics-header h1 {
+  margin: 0.12rem 0 0;
+  color: var(--notae-text-strong);
+  font-size: clamp(1.65rem, 3vw, 2.45rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.notae-analytics-header p:not(.notae-analytics-kicker) {
+  max-width: 42rem;
+  margin: 0.45rem 0 0;
+  color: var(--notae-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.notae-analytics-kicker {
+  margin: 0;
+  color: var(--notae-analytics-accent);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.085em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.notae-analytics-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notae-analytics-actions form {
+  margin: 0;
+}
+
+.notae-analytics-actions .notae-chip-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.notae-analytics-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, 1.25fr) minmax(8rem, 1fr) minmax(8.4rem, 1fr) minmax(8.4rem, 1fr);
+  gap: 0.65rem;
+  padding: 0.9rem 0 0.55rem;
+}
+
+.notae-analytics-filter-bar label {
+  display: grid;
+  gap: 0.26rem;
+  min-width: 0;
+}
+
+.notae-analytics-filter-bar label > span {
+  color: var(--notae-text-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notae-analytics-filter-bar .notae-pref-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.notae-analytics-range-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding-bottom: 0.85rem;
+  color: var(--notae-text-soft);
+  font-size: 0.74rem;
+}
+
+.notae-analytics-notice {
+  margin: 0 0 0.8rem;
+  border-left: 2px solid var(--notae-analytics-accent);
+  padding: 0.52rem 0.7rem;
+  background: var(--notae-analytics-accent-soft);
+  color: var(--notae-text-default);
+  font-size: 0.79rem;
+  line-height: 1.4;
+}
+
+.notae-analytics-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block: 1px solid var(--notae-analytics-rule);
+}
+
+.notae-analytics-kpis article {
+  min-width: 0;
+  padding: 1.05rem 1rem 1.05rem 0;
+}
+
+.notae-analytics-kpis article + article {
+  border-left: 1px solid var(--notae-analytics-rule);
+  padding-left: 1rem;
+}
+
+.notae-analytics-kpis p,
+.notae-analytics-kpis span {
+  margin: 0;
+  color: var(--notae-text-soft);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.notae-analytics-kpis strong {
+  display: block;
+  margin: 0.16rem 0 0.08rem;
+  color: var(--notae-text-strong);
+  font-size: clamp(1.35rem, 2.8vw, 2.05rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 620;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.notae-analytics-section {
+  min-width: 0;
+  padding: 1.35rem 0 1.25rem;
+  border-bottom: 1px solid var(--notae-analytics-rule);
+}
+
+.notae-analytics-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.notae-analytics-section-heading h2 {
+  margin: 0.2rem 0 0;
+  color: var(--notae-text-strong);
+  font-size: 1.03rem;
+  font-weight: 680;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.notae-analytics-section-heading > p {
+  max-width: 28rem;
+  margin: 0;
+  color: var(--notae-text-soft);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.notae-analytics-trend-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.notae-analytics-trend {
+  display: grid;
+  grid-auto-columns: minmax(1.05rem, 1fr);
+  grid-auto-flow: column;
+  align-items: end;
+  min-width: min(100%, calc(var(--notae-analytics-marks, 12) * 1.65rem));
+  height: 14rem;
+  margin: 0;
+  padding: 1.25rem 0 0;
+  border-bottom: 1px solid var(--notae-analytics-rule);
+  list-style: none;
+}
+
+.notae-analytics-trend li {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 1rem;
+  align-items: end;
+  justify-items: center;
+  height: 100%;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.notae-analytics-trend-value {
+  display: none;
+}
+
+.notae-analytics-trend-bar {
+  width: clamp(0.32rem, 54%, 0.78rem);
+  height: max(0.16rem, var(--notae-analytics-value));
+  border-radius: 0.22rem 0.22rem 0 0;
+  background: var(--notae-analytics-accent);
+  opacity: 0.88;
+  transform-origin: bottom;
+  animation: notae-analytics-rise 260ms ease-out both;
+}
+
+.notae-analytics-trend-bar.is-zero {
+  background: var(--notae-analytics-rule);
+  opacity: 0.72;
+}
+
+.notae-analytics-trend-label {
+  overflow: hidden;
+  width: 100%;
+  color: var(--notae-text-soft);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+@keyframes notae-analytics-rise {
+  from { transform: scaleY(0.1); opacity: 0.18; }
+}
+
+.notae-analytics-data-table {
+  margin-top: 0.72rem;
+  color: var(--notae-text-muted);
+  font-size: 0.75rem;
+}
+
+.notae-analytics-data-table summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.notae-analytics-data-table > div {
+  max-height: 18rem;
+  margin-top: 0.55rem;
+  overflow: auto;
+}
+
+.notae-analytics-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: clamp(1rem, 3vw, 2.25rem);
+  border-bottom: 1px solid var(--notae-analytics-rule);
+}
+
+.notae-analytics-split .notae-analytics-section {
+  border-bottom: 0;
+}
+
+.notae-analytics-split .notae-analytics-section + .notae-analytics-section {
+  border-left: 1px solid var(--notae-analytics-rule);
+  padding-left: clamp(1rem, 3vw, 2.25rem);
+}
+
+.notae-analytics-bars,
+.notae-analytics-content-bars,
+.notae-analytics-workspaces {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notae-analytics-bars li {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.notae-analytics-bars li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--notae-text-default);
+  font-size: 0.8rem;
+}
+
+.notae-analytics-bars strong,
+.notae-analytics-content-bars strong,
+.notae-analytics-workspace-values {
+  color: var(--notae-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.notae-analytics-bars small {
+  color: var(--notae-text-soft);
+  font-size: 0.66rem;
+}
+
+.notae-analytics-bar-track {
+  display: block;
+  width: 100%;
+  height: 0.34rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--notae-border) 76%, transparent);
+}
+
+.notae-analytics-bar-track > span {
+  display: block;
+  width: var(--notae-analytics-value);
+  min-width: 0.16rem;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--notae-analytics-accent);
+  opacity: 0.84;
+  transition: width 180ms ease-out;
+}
+
+.notae-analytics-ai-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 1rem;
+  border-block: 1px solid var(--notae-analytics-rule);
+}
+
+.notae-analytics-ai-summary div {
+  padding: 0.72rem 0.6rem 0.72rem 0;
+}
+
+.notae-analytics-ai-summary div + div {
+  border-left: 1px solid var(--notae-analytics-rule);
+  padding-left: 0.6rem;
+}
+
+.notae-analytics-ai-summary dt {
+  color: var(--notae-text-soft);
+  font-size: 0.63rem;
+  line-height: 1.2;
+}
+
+.notae-analytics-ai-summary dd {
+  margin: 0.18rem 0 0;
+  color: var(--notae-text-strong);
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.notae-analytics-bars.is-compact {
+  gap: 0.58rem;
+}
+
+.notae-analytics-empty {
+  margin: 0;
+  padding: 1.2rem 0;
+  color: var(--notae-text-soft);
+  font-size: 0.8rem;
+}
+
+.notae-analytics-content-bars li {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, 0.8fr) minmax(10rem, 2fr) 3.5rem;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--notae-text-default);
+  font-size: 0.8rem;
+}
+
+.notae-analytics-content-bars strong {
+  text-align: right;
+}
+
+.notae-analytics-workspaces li {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.8fr) minmax(8rem, 1.6fr) minmax(11rem, auto);
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.notae-analytics-workspace-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.notae-analytics-workspace-name strong {
+  overflow: hidden;
+  color: var(--notae-text-default);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notae-analytics-workspace-name small {
+  flex: 0 0 auto;
+  color: var(--notae-text-soft);
+  font-size: 0.62rem;
+}
+
+.notae-analytics-workspace-dot {
+  flex: 0 0 auto;
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 50%;
+  background: var(--notae-analytics-workspace-color);
+}
+
+.notae-analytics-workspace-values {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.notae-analytics-privacy-note {
+  margin-top: 1.2rem;
+  padding-top: 0.1rem;
+  color: var(--notae-text-soft);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.notae-analytics-privacy-note strong {
+  color: var(--notae-text-default);
+}
+
+@media (max-width: 1180px) {
+  .notae-analytics-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notae-analytics-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notae-analytics-kpis article:nth-child(3) {
+    border-top: 1px solid var(--notae-analytics-rule);
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .notae-analytics-kpis article:nth-child(4) {
+    border-top: 1px solid var(--notae-analytics-rule);
+  }
+}
+
+@media (max-width: 760px) {
+  .notae-analytics-header,
+  .notae-analytics-section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .notae-analytics-header {
+    gap: 0.9rem;
+  }
+
+  .notae-analytics-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .notae-analytics-actions > *,
+  .notae-analytics-actions form,
+  .notae-analytics-actions .notae-chip-button {
+    flex: 1 1 auto;
+  }
+
+  .notae-analytics-actions .notae-chip-button {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .notae-analytics-section-heading > p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .notae-analytics-split {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .notae-analytics-split .notae-analytics-section + .notae-analytics-section {
+    border-top: 1px solid var(--notae-analytics-rule);
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .notae-analytics-content-bars li,
+  .notae-analytics-workspaces li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .notae-analytics-content-bars .notae-analytics-bar-track,
+  .notae-analytics-workspaces .notae-analytics-bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .notae-analytics-workspace-values {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .notae-analytics-filter-bar,
+  .notae-analytics-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .notae-analytics-filter-bar label {
+    min-height: 2.75rem;
+  }
+
+  .notae-analytics-range-note {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .notae-analytics-kpis article,
+  .notae-analytics-kpis article + article,
+  .notae-analytics-kpis article:nth-child(3) {
+    border-top: 1px solid var(--notae-analytics-rule);
+    border-left: 0;
+    padding: 0.82rem 0;
+  }
+
+  .notae-analytics-kpis article:first-child {
+    border-top: 0;
+  }
+
+  .notae-analytics-trend {
+    min-width: max(100%, 28rem);
+  }
+
+  .notae-analytics-ai-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .notae-analytics-ai-summary div + div {
+    border-top: 1px solid var(--notae-analytics-rule);
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notae-analytics-trend-bar {
+    animation: none;
+  }
+
+  .notae-analytics-bar-track > span {
+    transition: none;
   }
 }
 
@@ -20831,6 +21407,7 @@ body.notae-theme-system .notae-account-delete-button {
   background: color-mix(in srgb, var(--notae-panel-elevated) 90%, transparent);
   box-shadow: var(--notae-shadow-float);
   backdrop-filter: blur(24px);
+  z-index: var(--notae-layer-pwa-banner);
 }
 
 .notae-pwa-offline-banner[hidden],
@@ -23139,5 +23716,90 @@ main.notae-content.notae-admin-content {
   .notae-admin-summary-grid,
   .notae-admin-limit-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Personal analytics cascade and legibility guardrails. Keep after shared settings rules. */
+.notae-settings-content.notae-analytics-content {
+  --notae-text-soft: var(--notae-text-muted);
+  gap: 0;
+  padding: clamp(1rem, 2.1vw, 1.75rem) clamp(0.9rem, 2.5vw, 2rem) 2.4rem;
+}
+
+.notae-content.notae-content-analytics {
+  max-width: 1280px;
+}
+
+.notae-analytics-filter-bar {
+  grid-template-columns: minmax(9.5rem, 1.25fr) minmax(8rem, 1fr) minmax(8.4rem, 1fr) minmax(8.4rem, 1fr) auto;
+}
+
+.notae-analytics-filter-submit {
+  align-self: end;
+  min-height: 2.35rem;
+  white-space: nowrap;
+}
+
+.notae-analytics-action-stack {
+  display: grid;
+  gap: 0.24rem;
+  max-width: 14rem;
+}
+
+.notae-analytics-action-stack > span {
+  color: var(--notae-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.notae-analytics-filter-bar label > span,
+.notae-analytics-trend-label,
+.notae-analytics-workspace-name small {
+  font-size: 0.7rem;
+}
+
+.notae-analytics-range-note,
+.notae-analytics-kpis p,
+.notae-analytics-kpis span,
+.notae-analytics-bars small,
+.notae-analytics-ai-summary dt,
+.notae-analytics-privacy-note {
+  font-size: 0.75rem;
+}
+
+.notae-analytics-section-heading > p {
+  font-size: 0.78rem;
+}
+
+.notae-analytics-bars li > div > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+  .notae-analytics-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notae-analytics-filter-submit {
+    width: fit-content;
+  }
+}
+
+@media (max-width: 760px) {
+  .notae-analytics-action-stack {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .notae-analytics-filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .notae-analytics-filter-submit {
+    width: 100%;
+    min-height: 2.75rem;
   }
 }

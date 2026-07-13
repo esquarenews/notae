@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_12_091000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_13_092000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -176,6 +176,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_12_091000) do
     t.index ["user_id"], name: "index_ai_usage_logs_on_user_id"
     t.index ["workspace_id", "created_at"], name: "idx_ai_usage_logs_on_workspace_created_at"
     t.index ["workspace_id"], name: "index_ai_usage_logs_on_workspace_id"
+  end
+
+  create_table "analytics_activity_buckets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "bucket_started_at", null: false
+    t.datetime "created_at", null: false
+    t.integer "duration_seconds", default: 30, null: false
+    t.string "sample_id", null: false
+    t.integer "segment_index", default: 0, null: false
+    t.integer "segment_offset_seconds", default: 0, null: false
+    t.string "surface", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "workspace_id"
+    t.index ["user_id", "bucket_started_at"], name: "idx_analytics_activity_buckets_user_started"
+    t.index ["user_id", "sample_id", "segment_index"], name: "idx_analytics_activity_samples_idempotency", unique: true
+    t.index ["user_id", "surface", "bucket_started_at"], name: "idx_analytics_activity_buckets_surface_started"
+    t.index ["user_id", "workspace_id", "bucket_started_at"], name: "idx_analytics_activity_buckets_scope_started"
+    t.check_constraint "(segment_offset_seconds + duration_seconds) <= 30", name: "analytics_activity_bucket_segment_within_bucket"
+    t.check_constraint "duration_seconds >= 1 AND duration_seconds <= 30", name: "analytics_activity_bucket_duration_range"
+    t.check_constraint "segment_offset_seconds >= 0 AND segment_offset_seconds <= 29", name: "analytics_activity_bucket_offset_range"
   end
 
   create_table "api_token_audit_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1265,6 +1285,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_12_091000) do
   add_foreign_key "ai_conversations", "workspaces"
   add_foreign_key "ai_usage_logs", "users"
   add_foreign_key "ai_usage_logs", "workspaces"
+  add_foreign_key "analytics_activity_buckets", "users"
+  add_foreign_key "analytics_activity_buckets", "workspaces"
   add_foreign_key "api_token_audit_events", "api_tokens"
   add_foreign_key "api_token_audit_events", "users"
   add_foreign_key "api_token_audit_events", "workspaces"

@@ -1,0 +1,289 @@
+<% content_for :title, "My activity" %>
+<% content_for :content_class, "notae-content-analytics" %>
+<% content_for :topbar_page_icon, "◔" %>
+<% content_for :topbar_privacy, "Account" %>
+<% content_for :topbar_actions do %>
+  <%= link_to "Close", workspace_path(@workspace.slug), class: "notae-chip-button" %>
+<% end %>
+<% content_for :suppress_layout_flash, true %>
+
+<%= render "shared/settings_flash_messages" %>
+<section class="notae-settings-shell">
+  <%= render "shared/settings_nav", workspace: @workspace, active_item: :analytics %>
+
+  <div class="notae-settings-content notae-analytics-content">
+    <% filter_query = { scope: @analytics_scope, **@date_range.to_params } %>
+    <% export_path = workspace_analytics_export_path(workspace_slug: @workspace.slug, **filter_query) %>
+    <% max_trend_seconds = [ @snapshot.trend_series.map { |entry| entry[:seconds] }.max.to_i, 1 ].max %>
+    <% max_content_count = [ @snapshot.content_counts.map { |entry| entry[:count] }.max.to_i, 1 ].max %>
+    <% max_model_count = [ @snapshot.ai_models.map { |entry| entry[:count] }.max.to_i, 1 ].max %>
+    <% max_workspace_seconds = [ @snapshot.workspace_breakdown.map { |entry| entry[:active_seconds] }.max.to_i, 1 ].max %>
+
+    <header class="notae-analytics-header">
+      <div>
+        <p class="notae-analytics-kicker">Personal analytics</p>
+        <h1><%= @snapshot.scope_label %></h1>
+        <p>Only your activity is included. Workspace members are never compared or ranked here.</p>
+      </div>
+      <div class="notae-analytics-actions">
+        <%= link_to "Export PDF", export_path, class: "notae-chip-button" %>
+        <div class="notae-analytics-action-stack">
+          <%= button_to "Embed in a Nota",
+                        workspace_analytics_nota_path(workspace_slug: @workspace.slug),
+                        method: :post,
+                        params: filter_query,
+                        class: "notae-chip-button is-primary" %>
+          <% if @analytics_scope == "all" %>
+            <span>Creates a private snapshot in <%= @workspace.name %>.</span>
+          <% end %>
+        </div>
+      </div>
+    </header>
+
+    <%= form_with url: workspace_analytics_settings_path(workspace_slug: @workspace.slug),
+                  method: :get,
+                  class: "notae-analytics-filter-bar",
+                  data: { controller: "analytics-filters" } do |form| %>
+      <label>
+        <span>Scope</span>
+        <%= form.select :scope,
+                        options_for_select([
+                          [ @workspace.name, "workspace" ],
+                          [ "All my workspaces", "all" ]
+                        ], @analytics_scope),
+                        {},
+                        class: "notae-pref-select",
+                        data: { action: "change->analytics-filters#submit" } %>
+      </label>
+      <label>
+        <span>Period</span>
+        <%= form.select :period,
+                        options_for_select([
+                          [ "Past 7 days", "7d" ],
+                          [ "Past 30 days", "30d" ],
+                          [ "Past 90 days", "90d" ],
+                          [ "This year", "year" ],
+                          [ "Custom", "custom" ]
+                        ], @date_range.period),
+                        {},
+                        class: "notae-pref-select",
+                        data: {
+                          analytics_filters_target: "period",
+                          action: "change->analytics-filters#submit"
+                        } %>
+      </label>
+      <label>
+        <span>From</span>
+        <%= form.date_field :start_date,
+                            value: @date_range.start_date.iso8601,
+                            max: @date_range.end_date.iso8601,
+                            class: "notae-pref-select",
+                            data: {
+                              analytics_filters_target: "startDate",
+                              action: "change->analytics-filters#prepareCustomRange"
+                            } %>
+      </label>
+      <label>
+        <span>To</span>
+        <%= form.date_field :end_date,
+                            value: @date_range.end_date.iso8601,
+                            min: @date_range.start_date.iso8601,
+                            max: Time.zone.today.iso8601,
+                            class: "notae-pref-select",
+                            data: {
+                              analytics_filters_target: "endDate",
+                              action: "change->analytics-filters#prepareCustomRange"
+                            } %>
+      </label>
+      <%= form.submit "Apply dates", class: "notae-chip-button notae-analytics-filter-submit" %>
+    <% end %>
+
+    <p class="notae-analytics-range-note">
+      <span><%= @date_range.label %></span>
+      <span>Updated <%= @snapshot.generated_at.in_time_zone(@user.time_zone).strftime("%-I:%M %p") %></span>
+    </p>
+
+    <% unless @snapshot.tracking_enabled %>
+      <div class="notae-analytics-notice" role="status">
+        Active-time tracking is off for this workspace. Existing content and AI totals remain available.
+      </div>
+    <% end %>
+
+    <section class="notae-analytics-kpis" aria-label="Activity overview">
+      <article>
+        <p>Active time</p>
+        <strong><%= Analytics::Formatting.duration(@snapshot.active_seconds) %></strong>
+        <span>
+          <% if @snapshot.active_change_percent.nil? %>
+            No earlier baseline
+          <% elsif @snapshot.active_change_percent.zero? %>
+            No change from prior period
+          <% else %>
+            <%= @snapshot.active_change_percent.positive? ? "+" : "" %><%= @snapshot.active_change_percent %>% from prior period
+          <% end %>
+        </span>
+      </article>
+      <article>
+        <p>Active days</p>
+        <strong><%= @snapshot.active_days %></strong>
+        <span><%= Analytics::Formatting.duration(@snapshot.average_active_seconds) %> average active day</span>
+      </article>
+      <article>
+        <p>Content additions</p>
+        <strong><%= number_with_delimiter(@snapshot.content_total) %></strong>
+        <span><%= @snapshot.longest_streak_days %>-day longest streak</span>
+      </article>
+      <article>
+        <p>AI calls</p>
+        <strong><%= number_with_delimiter(@snapshot.ai_summary[:requests]) %></strong>
+        <span><%= number_with_delimiter(@snapshot.ai_summary[:tokens]) %> tokens</span>
+      </article>
+    </section>
+
+    <section class="notae-analytics-section" aria-labelledby="analytics-time-heading">
+      <div class="notae-analytics-section-heading">
+        <div>
+          <p class="notae-analytics-kicker">Time in Notae</p>
+          <h2 id="analytics-time-heading">Active time over the period</h2>
+        </div>
+        <p>
+          <% if @snapshot.peak_day&.dig(:seconds).to_i.positive? %>
+            Peak: <strong><%= @snapshot.peak_day[:date].strftime("%-d %b") %></strong>, <%= Analytics::Formatting.duration(@snapshot.peak_day[:seconds]) %>
+          <% else %>
+            Active time appears after your first visible work interval.
+          <% end %>
+        </p>
+      </div>
+
+      <div class="notae-analytics-trend-wrap">
+        <ol class="notae-analytics-trend" aria-hidden="true" style="--notae-analytics-marks: <%= @snapshot.trend_series.length %>">
+          <% @snapshot.trend_series.each do |entry| %>
+            <% height = ((entry[:seconds].to_f / max_trend_seconds) * 100).round(1) %>
+            <li title="<%= entry[:date].strftime("%-d %b %Y") %>: <%= Analytics::Formatting.duration(entry[:seconds]) %>">
+              <span class="notae-analytics-trend-value"><%= Analytics::Formatting.duration(entry[:seconds]) if entry[:seconds].positive? %></span>
+              <span class="notae-analytics-trend-bar <%= "is-zero" if entry[:seconds].zero? %>" style="--notae-analytics-value: <%= height %>%"></span>
+              <span class="notae-analytics-trend-label"><%= entry[:label] %></span>
+            </li>
+          <% end %>
+        </ol>
+      </div>
+
+      <details class="notae-analytics-data-table">
+        <summary>View activity data</summary>
+        <div>
+          <table class="notae-data-table">
+            <thead><tr><th>Date</th><th>Active time</th></tr></thead>
+            <tbody>
+              <% @snapshot.daily_activity.each do |entry| %>
+                <tr><td><%= entry[:date].strftime("%-d %b %Y") %></td><td><%= Analytics::Formatting.duration(entry[:seconds]) %></td></tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <div class="notae-analytics-split">
+      <section class="notae-analytics-section" aria-labelledby="analytics-surface-heading">
+        <div class="notae-analytics-section-heading">
+          <div>
+            <p class="notae-analytics-kicker">Focus mix</p>
+            <h2 id="analytics-surface-heading">Where your time went</h2>
+          </div>
+        </div>
+        <% if @snapshot.surface_breakdown.any? %>
+          <ol class="notae-analytics-bars">
+            <% @snapshot.surface_breakdown.each do |entry| %>
+              <li>
+                <div><span><%= entry[:label] %></span><strong><%= Analytics::Formatting.duration(entry[:seconds]) %></strong></div>
+                <span class="notae-analytics-bar-track" aria-hidden="true"><span style="--notae-analytics-value: <%= entry[:percent] %>%"></span></span>
+                <small><%= entry[:percent] %>% of active time</small>
+              </li>
+            <% end %>
+          </ol>
+        <% else %>
+          <p class="notae-analytics-empty">No active-time categories have been recorded yet.</p>
+        <% end %>
+      </section>
+
+      <section class="notae-analytics-section" aria-labelledby="analytics-ai-heading">
+        <div class="notae-analytics-section-heading">
+          <div>
+            <p class="notae-analytics-kicker">Notae AI</p>
+            <h2 id="analytics-ai-heading">Calls and outcomes</h2>
+          </div>
+        </div>
+        <dl class="notae-analytics-ai-summary">
+          <div><dt>Generated writes</dt><dd><%= number_with_delimiter(@snapshot.ai_summary[:generated_writes]) %></dd></div>
+          <div><dt>Completed actions</dt><dd><%= number_with_delimiter(@snapshot.ai_summary[:completed_actions]) %></dd></div>
+          <div><dt>Models used</dt><dd><%= number_with_delimiter(@snapshot.ai_summary[:models_used]) %></dd></div>
+        </dl>
+        <% if @snapshot.ai_models.any? %>
+          <ol class="notae-analytics-bars is-compact">
+            <% @snapshot.ai_models.each do |entry| %>
+              <li>
+                <div><span><%= entry[:model] %></span><strong><%= entry[:count] %></strong></div>
+                <span class="notae-analytics-bar-track" aria-hidden="true"><span style="--notae-analytics-value: <%= ((entry[:count].to_f / max_model_count) * 100).round(1) %>%"></span></span>
+              </li>
+            <% end %>
+          </ol>
+        <% else %>
+          <p class="notae-analytics-empty">No AI requests in this period.</p>
+        <% end %>
+      </section>
+    </div>
+
+    <section class="notae-analytics-section" aria-labelledby="analytics-content-heading">
+      <div class="notae-analytics-section-heading">
+        <div>
+          <p class="notae-analytics-kicker">Output</p>
+          <h2 id="analytics-content-heading">Content and collaboration</h2>
+        </div>
+        <p>Counts are attributed only where Notae records you as the creator or author.</p>
+      </div>
+      <ol class="notae-analytics-content-bars">
+        <% @snapshot.content_counts.each do |entry| %>
+          <li>
+            <span><%= entry[:label] %></span>
+            <span class="notae-analytics-bar-track" aria-hidden="true"><span style="--notae-analytics-value: <%= ((entry[:count].to_f / max_content_count) * 100).round(1) %>%"></span></span>
+            <strong><%= number_with_delimiter(entry[:count]) %></strong>
+          </li>
+        <% end %>
+      </ol>
+    </section>
+
+    <% if @analytics_scope == "all" %>
+      <section class="notae-analytics-section" aria-labelledby="analytics-workspaces-heading">
+        <div class="notae-analytics-section-heading">
+          <div>
+            <p class="notae-analytics-kicker">App-wide view</p>
+            <h2 id="analytics-workspaces-heading">Across your workspaces</h2>
+          </div>
+          <p>Only workspaces you can currently access are included.</p>
+        </div>
+        <ol class="notae-analytics-workspaces">
+          <% @snapshot.workspace_breakdown.each do |entry| %>
+            <li>
+              <div class="notae-analytics-workspace-name">
+                <span class="notae-analytics-workspace-dot" style="--notae-analytics-workspace-color: <%= entry[:color] %>" aria-hidden="true"></span>
+                <strong><%= entry[:name] %></strong>
+                <% unless entry[:tracking_enabled] %><small>Tracking off</small><% end %>
+              </div>
+              <span class="notae-analytics-bar-track" aria-hidden="true"><span style="--notae-analytics-value: <%= ((entry[:active_seconds].to_f / max_workspace_seconds) * 100).round(1) %>%"></span></span>
+              <div class="notae-analytics-workspace-values">
+                <span><%= Analytics::Formatting.duration(entry[:active_seconds]) %></span>
+                <span><%= entry[:ai_requests] %> AI</span>
+                <span><%= entry[:items_created] %> created</span>
+              </div>
+            </li>
+          <% end %>
+        </ol>
+      </section>
+    <% end %>
+
+    <footer class="notae-analytics-privacy-note">
+      <strong>Privacy by design.</strong> Active-time records contain a workspace, a broad app area, and a 30-second time bucket. Notae does not store document titles, URLs, prompts, keystrokes, or page content in activity analytics.
+      <% if @analytics_scope == "all" %>App-wide embeds are created as private snapshots in the current workspace.<% end %>
+    </footer>
+  </div>
+</section>

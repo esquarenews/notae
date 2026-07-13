@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   get "/manifest.webmanifest", to: "pwa#manifest", as: :pwa_manifest
   get "/service-worker.js", to: "pwa#service_worker", as: :pwa_service_worker
   resource :pwa_push_subscription, path: "pwa/push-subscription", only: %i[create destroy]
+  post "analytics/activity", to: "analytics_activity_buckets#create", as: :analytics_activity
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
@@ -76,6 +77,9 @@ Rails.application.routes.draw do
     patch "settings/notae-ai", to: "notae_ai_settings#update"
     get "settings/ai-analytics", to: "ai_analytics_settings#show", as: :workspace_ai_analytics_settings
     patch "settings/ai-analytics", to: "ai_analytics_settings#update"
+    get "settings/analytics", to: "analytics_settings#show", as: :workspace_analytics_settings
+    get "settings/analytics/export", to: "analytics_settings#export_pdf", defaults: { format: :pdf }, as: :workspace_analytics_export
+    post "settings/analytics/nota", to: "analytics_settings#create_nota", as: :workspace_analytics_nota
     get "settings/favicon-lab", to: "favicon_settings#show", as: :workspace_favicon_settings
     get "settings/emoji", to: "emoji_settings#show", as: :workspace_emoji_settings
     post "settings/emoji", to: "emoji_settings#create"
