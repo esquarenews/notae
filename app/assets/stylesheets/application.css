@@ -3590,9 +3590,31 @@ turbo-frame#notae_sidebar_sections {
 .notae-analytics-content {
   --notae-analytics-accent: var(--notae-accent);
   --notae-analytics-accent-soft: color-mix(in srgb, var(--notae-accent) 14%, transparent);
+  --notae-analytics-blue: color-mix(in srgb, var(--notae-accent) 82%, #1d4ed8);
+  --notae-analytics-teal: #0f766e;
+  --notae-analytics-amber: #b45309;
+  --notae-analytics-violet: #6d4fc2;
+  --notae-analytics-rose: #be123c;
+  --notae-analytics-series: var(--notae-analytics-blue);
   --notae-analytics-rule: color-mix(in srgb, var(--notae-border) 88%, transparent);
   gap: 0;
   padding: clamp(1rem, 2.1vw, 1.75rem) clamp(0.9rem, 2.5vw, 2rem) 2.4rem;
+}
+
+body.notae-theme-dark .notae-analytics-content {
+  --notae-analytics-teal: #5eead4;
+  --notae-analytics-amber: #fbbf24;
+  --notae-analytics-violet: #c4b5fd;
+  --notae-analytics-rose: #fb7185;
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-analytics-content {
+    --notae-analytics-teal: #5eead4;
+    --notae-analytics-amber: #fbbf24;
+    --notae-analytics-violet: #c4b5fd;
+    --notae-analytics-rose: #fb7185;
+  }
 }
 
 .notae-analytics-header {
@@ -3655,7 +3677,11 @@ turbo-frame#notae_sidebar_sections {
   display: grid;
   grid-template-columns: minmax(9.5rem, 1.25fr) minmax(8rem, 1fr) minmax(8.4rem, 1fr) minmax(8.4rem, 1fr);
   gap: 0.65rem;
-  padding: 0.9rem 0 0.55rem;
+  margin: 0.8rem 0 0.55rem;
+  padding: 0.78rem;
+  border: 1px solid color-mix(in srgb, var(--notae-analytics-blue) 18%, var(--notae-border));
+  border-radius: 0.72rem;
+  background: color-mix(in srgb, var(--notae-analytics-blue) 5%, var(--notae-surface-raised));
 }
 
 .notae-analytics-filter-bar label {
@@ -3682,7 +3708,7 @@ turbo-frame#notae_sidebar_sections {
   justify-content: space-between;
   gap: 1rem;
   margin: 0;
-  padding-bottom: 0.85rem;
+  padding: 0 0.15rem 0.85rem;
   color: var(--notae-text-soft);
   font-size: 0.74rem;
 }
@@ -3704,8 +3730,23 @@ turbo-frame#notae_sidebar_sections {
 }
 
 .notae-analytics-kpis article {
+  --notae-analytics-metric: var(--notae-analytics-blue);
   min-width: 0;
   padding: 1.05rem 1rem 1.05rem 0;
+  background: color-mix(in srgb, var(--notae-analytics-metric) 4%, transparent);
+  box-shadow: inset 0 3px color-mix(in srgb, var(--notae-analytics-metric) 72%, transparent);
+}
+
+.notae-analytics-kpis article:nth-child(2) {
+  --notae-analytics-metric: var(--notae-analytics-teal);
+}
+
+.notae-analytics-kpis article:nth-child(3) {
+  --notae-analytics-metric: var(--notae-analytics-amber);
+}
+
+.notae-analytics-kpis article:nth-child(4) {
+  --notae-analytics-metric: var(--notae-analytics-violet);
 }
 
 .notae-analytics-kpis article + article {
@@ -3724,7 +3765,7 @@ turbo-frame#notae_sidebar_sections {
 .notae-analytics-kpis strong {
   display: block;
   margin: 0.16rem 0 0.08rem;
-  color: var(--notae-text-strong);
+  color: color-mix(in srgb, var(--notae-analytics-metric) 74%, var(--notae-text-strong));
   font-size: clamp(1.35rem, 2.8vw, 2.05rem);
   font-variant-numeric: tabular-nums;
   font-weight: 620;
@@ -3736,6 +3777,30 @@ turbo-frame#notae_sidebar_sections {
   min-width: 0;
   padding: 1.35rem 0 1.25rem;
   border-bottom: 1px solid var(--notae-analytics-rule);
+}
+
+.notae-analytics-section.is-time {
+  --notae-analytics-series: var(--notae-analytics-blue);
+}
+
+.notae-analytics-section.is-focus {
+  --notae-analytics-series: var(--notae-analytics-teal);
+}
+
+.notae-analytics-section.is-ai {
+  --notae-analytics-series: var(--notae-analytics-violet);
+}
+
+.notae-analytics-section.is-output {
+  --notae-analytics-series: var(--notae-analytics-amber);
+}
+
+.notae-analytics-section.is-workspaces {
+  --notae-analytics-series: var(--notae-analytics-blue);
+}
+
+.notae-analytics-section .notae-analytics-kicker {
+  color: var(--notae-analytics-series);
 }
 
 .notae-analytics-section-heading {
@@ -3772,20 +3837,21 @@ turbo-frame#notae_sidebar_sections {
 
 .notae-analytics-trend {
   display: grid;
-  grid-auto-columns: minmax(1.05rem, 1fr);
+  grid-auto-columns: minmax(2.7rem, 1fr);
   grid-auto-flow: column;
   align-items: end;
-  min-width: min(100%, calc(var(--notae-analytics-marks, 12) * 1.65rem));
-  height: 14rem;
+  min-width: max(100%, calc(var(--notae-analytics-marks, 12) * 3.2rem));
+  height: 16rem;
   margin: 0;
-  padding: 1.25rem 0 0;
+  padding: 0.8rem 0 0;
+  background: color-mix(in srgb, var(--notae-analytics-series) 3.5%, transparent);
   border-bottom: 1px solid var(--notae-analytics-rule);
   list-style: none;
 }
 
 .notae-analytics-trend li {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 1rem;
+  grid-template-rows: minmax(0, 1fr) 1rem 1.35rem;
   align-items: end;
   justify-items: center;
   height: 100%;
@@ -3793,16 +3859,31 @@ turbo-frame#notae_sidebar_sections {
   gap: 0.25rem;
 }
 
+.notae-analytics-trend-plot {
+  display: grid;
+  grid-template-rows: 1.05rem minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  align-items: end;
+  justify-items: center;
+}
+
 .notae-analytics-trend-value {
-  display: none;
+  display: block;
+  align-self: start;
+  color: var(--notae-text-muted);
+  font-size: 0.58rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .notae-analytics-trend-bar {
-  width: clamp(0.32rem, 54%, 0.78rem);
+  width: clamp(0.52rem, 58%, 1.15rem);
   height: max(0.16rem, var(--notae-analytics-value));
   border-radius: 0.22rem 0.22rem 0 0;
-  background: var(--notae-analytics-accent);
-  opacity: 0.88;
+  background: var(--notae-analytics-series);
+  opacity: 0.92;
   transform-origin: bottom;
   animation: notae-analytics-rise 260ms ease-out both;
 }
@@ -3821,6 +3902,31 @@ turbo-frame#notae_sidebar_sections {
   text-align: center;
   text-overflow: clip;
   white-space: nowrap;
+}
+
+.notae-analytics-trend-change {
+  align-self: start;
+  min-width: 2.4rem;
+  border-radius: 999px;
+  padding: 0.14rem 0.32rem;
+  color: var(--notae-text-muted);
+  background: color-mix(in srgb, var(--notae-border) 56%, transparent);
+  font-size: 0.57rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 720;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.notae-analytics-trend-change.is-up {
+  color: var(--notae-analytics-teal);
+  background: color-mix(in srgb, var(--notae-analytics-teal) 12%, transparent);
+}
+
+.notae-analytics-trend-change.is-down {
+  color: var(--notae-analytics-rose);
+  background: color-mix(in srgb, var(--notae-analytics-rose) 10%, transparent);
 }
 
 @keyframes notae-analytics-rise {
@@ -3911,7 +4017,7 @@ turbo-frame#notae_sidebar_sections {
   min-width: 0.16rem;
   height: 100%;
   border-radius: inherit;
-  background: var(--notae-analytics-accent);
+  background: var(--notae-analytics-series);
   opacity: 0.84;
   transition: width 180ms ease-out;
 }
@@ -4138,7 +4244,7 @@ turbo-frame#notae_sidebar_sections {
   }
 
   .notae-analytics-trend {
-    min-width: max(100%, 28rem);
+    min-width: max(100%, calc(var(--notae-analytics-marks, 12) * 3.2rem));
   }
 
   .notae-analytics-ai-summary {
@@ -23740,18 +23846,6 @@ main.notae-content.notae-admin-content {
   white-space: nowrap;
 }
 
-.notae-analytics-action-stack {
-  display: grid;
-  gap: 0.24rem;
-  max-width: 14rem;
-}
-
-.notae-analytics-action-stack > span {
-  color: var(--notae-text-muted);
-  font-size: 0.72rem;
-  line-height: 1.3;
-}
-
 .notae-analytics-filter-bar label > span,
 .notae-analytics-trend-label,
 .notae-analytics-workspace-name small {
@@ -23776,20 +23870,13 @@ main.notae-content.notae-admin-content {
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1400px) {
   .notae-analytics-filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .notae-analytics-filter-submit {
     width: fit-content;
-  }
-}
-
-@media (max-width: 760px) {
-  .notae-analytics-action-stack {
-    width: 100%;
-    max-width: none;
   }
 }
 

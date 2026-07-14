@@ -15,5 +15,11 @@ RSpec.describe "Personal analytics styles" do
     expect(stylesheet).to include("--notae-text-soft: var(--notae-text-muted)")
     expect(stylesheet).to include(".notae-analytics-bars li > div > span:first-child")
     expect(stylesheet).to include("overflow-wrap: anywhere")
+    expect(stylesheet).to include("--notae-analytics-teal")
+    expect(stylesheet).to include("--notae-analytics-amber")
+    expect(stylesheet).to include("--notae-analytics-violet")
+    expect(stylesheet).to include(".notae-analytics-trend-change.is-up")
+    expect(stylesheet).to include(".notae-analytics-trend-change.is-down")
+    expect(stylesheet).to include("background: color-mix(in srgb, var(--notae-analytics-series) 3.5%, transparent)")
   end
 end

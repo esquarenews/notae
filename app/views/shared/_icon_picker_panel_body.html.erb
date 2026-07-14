@@ -76,7 +76,8 @@
         <% category.emojis.each do |emoji| %>
           <button type="button"
                   class="notae-page-emoji-button"
-                  title="Use <%= emoji %>"
+                  title="Use <%= category.display_names.fetch(emoji, emoji) %>"
+                  aria-label="Use <%= category.display_names.fetch(emoji, emoji) %>"
                   data-action="emoji-picker#choose"
                   data-icon-value="<%= emoji %>"
                   data-search-text="<%= category.search_terms.fetch(emoji, "#{category.label} #{emoji}") %>"

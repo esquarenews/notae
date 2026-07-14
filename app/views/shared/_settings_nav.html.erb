@@ -18,7 +18,7 @@
        people: "People",
        import: "Import",
        notae_ai: "Notae AI",
-       ai_analytics: "AI Analytics",
+       ai_analytics: "AI Use",
        kalendarium: "Kalendarium",
        epistularium: "Epistularium",
        emoji: "Emoji",
@@ -133,7 +133,7 @@
               class: [ "notae-settings-nav-item", ("active" if active_item == :ai_analytics) ].compact.join(" ") do %>
     <span class="notae-settings-nav-item-label">
       <svg class="notae-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M6 16v-5"/><path d="M10 16V8"/><path d="M14 16v-2"/><path d="M18 16V5"/></svg>
-      <span>AI Analytics</span>
+      <span>AI Use</span>
     </span>
   <% end %>
   <%= link_to workspace_kalendarium_settings_path(workspace_slug: selected_workspace.slug, settings_workspace_slug: selected_workspace.slug),

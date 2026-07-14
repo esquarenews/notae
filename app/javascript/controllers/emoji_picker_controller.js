@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { emojiSearchMatches } from "controllers/emoji_search"
 
 export default class extends Controller {
   static targets = ["form", "input", "searchInput", "option", "section", "emptyState"]
@@ -18,7 +19,11 @@ export default class extends Controller {
   }
 
   filter() {
-    const query = this.hasSearchInputTarget ? this.searchInputTarget.value.trim().toLowerCase() : ""
+    const query = this.hasSearchInputTarget ? this.searchInputTarget.value.trim() : ""
+    const allowTypos = query.length > 0 && !this.optionTargets.some((option) => {
+      const searchText = `${option.dataset.searchText || ""} ${option.dataset.iconValue || ""}`
+      return emojiSearchMatches(searchText, query, { allowTypos: false })
+    })
     let anyVisible = false
 
     this.sectionTargets.forEach((section) => {
@@ -26,8 +31,8 @@ export default class extends Controller {
       let visibleOptions = 0
 
       options.forEach((option) => {
-        const searchText = `${option.dataset.searchText || ""} ${option.dataset.iconValue || ""}`.toLowerCase()
-        const matches = query.length === 0 || searchText.includes(query)
+        const searchText = `${option.dataset.searchText || ""} ${option.dataset.iconValue || ""}`
+        const matches = emojiSearchMatches(searchText, query, { allowTypos })
 
         option.hidden = !matches
         option.setAttribute("aria-hidden", matches ? "false" : "true")

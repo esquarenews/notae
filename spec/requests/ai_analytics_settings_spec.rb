@@ -98,6 +98,8 @@ RSpec.describe "AI Analytics settings", type: :request do
     get workspace_ai_analytics_settings_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
+    expect(response.body).to include("AI Use")
+    expect(response.body).not_to include(">AI Analytics<")
     expect(response.body).to include("AI usage trends")
     expect(response.body).to include("Past 7 days")
     expect(response.body).to include("Past 30 days")

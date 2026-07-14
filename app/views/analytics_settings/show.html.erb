@@ -18,6 +18,8 @@
     <% max_content_count = [ @snapshot.content_counts.map { |entry| entry[:count] }.max.to_i, 1 ].max %>
     <% max_model_count = [ @snapshot.ai_models.map { |entry| entry[:count] }.max.to_i, 1 ].max %>
     <% max_workspace_seconds = [ @snapshot.workspace_breakdown.map { |entry| entry[:active_seconds] }.max.to_i, 1 ].max %>
+    <% trend_unit = { day: "day", week: "week", month: "month" }.fetch(@date_range.grouping) %>
+    <% latest_trend = @snapshot.trend_series.last %>
 
     <header class="notae-analytics-header">
       <div>
@@ -27,16 +29,11 @@
       </div>
       <div class="notae-analytics-actions">
         <%= link_to "Export PDF", export_path, class: "notae-chip-button" %>
-        <div class="notae-analytics-action-stack">
-          <%= button_to "Embed in a Nota",
-                        workspace_analytics_nota_path(workspace_slug: @workspace.slug),
-                        method: :post,
-                        params: filter_query,
-                        class: "notae-chip-button is-primary" %>
-          <% if @analytics_scope == "all" %>
-            <span>Creates a private snapshot in <%= @workspace.name %>.</span>
-          <% end %>
-        </div>
+        <%= button_to "Embed in a Nota",
+                      workspace_analytics_nota_path(workspace_slug: @workspace.slug),
+                      method: :post,
+                      params: filter_query,
+                      class: "notae-chip-button is-primary" %>
       </div>
     </header>
 
@@ -56,10 +53,12 @@
                         data: { action: "change->analytics-filters#submit" } %>
       </label>
       <label>
-        <span>Period</span>
+        <span>Graph</span>
         <%= form.select :period,
                         options_for_select([
-                          [ "Past 7 days", "7d" ],
+                          [ "Daily · past 7 days", "7d" ],
+                          [ "Weekly · past 8 weeks", "8w" ],
+                          [ "Month to date", "mtd" ],
                           [ "Past 30 days", "30d" ],
                           [ "Past 90 days", "90d" ],
                           [ "This year", "year" ],
@@ -140,14 +139,16 @@
       </article>
     </section>
 
-    <section class="notae-analytics-section" aria-labelledby="analytics-time-heading">
+    <section class="notae-analytics-section is-time" aria-labelledby="analytics-time-heading">
       <div class="notae-analytics-section-heading">
         <div>
           <p class="notae-analytics-kicker">Time in Notae</p>
-          <h2 id="analytics-time-heading">Active time over the period</h2>
+          <h2 id="analytics-time-heading">Active time by <%= trend_unit %></h2>
         </div>
         <p>
-          <% if @snapshot.peak_day&.dig(:seconds).to_i.positive? %>
+          <% if latest_trend&.dig(:previous_seconds).present? || latest_trend&.dig(:previous_seconds) == 0 %>
+            Latest: <strong><%= latest_trend[:change_label] %></strong> vs previous <%= trend_unit %>
+          <% elsif @snapshot.peak_day&.dig(:seconds).to_i.positive? %>
             Peak: <strong><%= @snapshot.peak_day[:date].strftime("%-d %b") %></strong>, <%= Analytics::Formatting.duration(@snapshot.peak_day[:seconds]) %>
           <% else %>
             Active time appears after your first visible work interval.
@@ -159,23 +160,31 @@
         <ol class="notae-analytics-trend" aria-hidden="true" style="--notae-analytics-marks: <%= @snapshot.trend_series.length %>">
           <% @snapshot.trend_series.each do |entry| %>
             <% height = ((entry[:seconds].to_f / max_trend_seconds) * 100).round(1) %>
-            <li title="<%= entry[:date].strftime("%-d %b %Y") %>: <%= Analytics::Formatting.duration(entry[:seconds]) %>">
-              <span class="notae-analytics-trend-value"><%= Analytics::Formatting.duration(entry[:seconds]) if entry[:seconds].positive? %></span>
-              <span class="notae-analytics-trend-bar <%= "is-zero" if entry[:seconds].zero? %>" style="--notae-analytics-value: <%= height %>%"></span>
+            <li title="<%= entry[:date].strftime("%-d %b %Y") %>: <%= Analytics::Formatting.duration(entry[:seconds]) %>; <%= entry[:change_label] %> vs previous <%= trend_unit %>">
+              <span class="notae-analytics-trend-plot">
+                <span class="notae-analytics-trend-value"><%= Analytics::Formatting.duration(entry[:seconds]) %></span>
+                <span class="notae-analytics-trend-bar <%= "is-zero" if entry[:seconds].zero? %>" style="--notae-analytics-value: <%= height %>%"></span>
+              </span>
               <span class="notae-analytics-trend-label"><%= entry[:label] %></span>
+              <span class="notae-analytics-trend-change is-<%= entry[:change_direction] %>"><%= entry[:change_label] %></span>
             </li>
           <% end %>
         </ol>
       </div>
 
       <details class="notae-analytics-data-table">
-        <summary>View activity data</summary>
+        <summary>View graph data</summary>
         <div>
           <table class="notae-data-table">
-            <thead><tr><th>Date</th><th>Active time</th></tr></thead>
+            <thead><tr><th><%= trend_unit.capitalize %></th><th>Active time</th><th>Previous <%= trend_unit %></th><th>Change</th></tr></thead>
             <tbody>
-              <% @snapshot.daily_activity.each do |entry| %>
-                <tr><td><%= entry[:date].strftime("%-d %b %Y") %></td><td><%= Analytics::Formatting.duration(entry[:seconds]) %></td></tr>
+              <% @snapshot.trend_series.each do |entry| %>
+                <tr>
+                  <td><%= entry[:date].strftime("%-d %b %Y") %></td>
+                  <td><%= Analytics::Formatting.duration(entry[:seconds]) %></td>
+                  <td><%= entry[:previous_seconds].nil? ? "—" : Analytics::Formatting.duration(entry[:previous_seconds]) %></td>
+                  <td><%= entry[:change_label] %></td>
+                </tr>
               <% end %>
             </tbody>
           </table>
@@ -184,7 +193,7 @@
     </section>
 
     <div class="notae-analytics-split">
-      <section class="notae-analytics-section" aria-labelledby="analytics-surface-heading">
+      <section class="notae-analytics-section is-focus" aria-labelledby="analytics-surface-heading">
         <div class="notae-analytics-section-heading">
           <div>
             <p class="notae-analytics-kicker">Focus mix</p>
@@ -206,7 +215,7 @@
         <% end %>
       </section>
 
-      <section class="notae-analytics-section" aria-labelledby="analytics-ai-heading">
+      <section class="notae-analytics-section is-ai" aria-labelledby="analytics-ai-heading">
         <div class="notae-analytics-section-heading">
           <div>
             <p class="notae-analytics-kicker">Notae AI</p>
@@ -233,7 +242,7 @@
       </section>
     </div>
 
-    <section class="notae-analytics-section" aria-labelledby="analytics-content-heading">
+    <section class="notae-analytics-section is-output" aria-labelledby="analytics-content-heading">
       <div class="notae-analytics-section-heading">
         <div>
           <p class="notae-analytics-kicker">Output</p>
@@ -253,7 +262,7 @@
     </section>
 
     <% if @analytics_scope == "all" %>
-      <section class="notae-analytics-section" aria-labelledby="analytics-workspaces-heading">
+      <section class="notae-analytics-section is-workspaces" aria-labelledby="analytics-workspaces-heading">
         <div class="notae-analytics-section-heading">
           <div>
             <p class="notae-analytics-kicker">App-wide view</p>

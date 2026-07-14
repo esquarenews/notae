@@ -356,7 +356,8 @@ module Analytics
 
     def trend_values_label
       snapshot.trend_series.map do |entry|
-        "#{entry[:label]}: #{Formatting.duration(entry[:seconds])}"
+        comparison = entry[:previous_seconds].nil? ? "" : " (#{entry[:change_label]})"
+        "#{entry[:label]}: #{Formatting.duration(entry[:seconds])}#{comparison}"
       end.join(" · ")
     end
   end

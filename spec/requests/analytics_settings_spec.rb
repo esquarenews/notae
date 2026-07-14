@@ -32,10 +32,10 @@ RSpec.describe "Analytics settings", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Personal analytics")
-    expect(response.body).to include("Active time over the period")
+    expect(response.body).to include("Active time by day")
     expect(response.body).to include("Where your time went")
     expect(response.body).to include("Calls and outcomes")
-    expect(response.body).to include("View activity data")
+    expect(response.body).to include("View graph data")
     expect(response.body).to include("Export PDF")
     expect(response.body).to include("Embed in a Nota")
     expect(response.body).to include("notae-content-analytics")
@@ -44,8 +44,32 @@ RSpec.describe "Analytics settings", type: :request do
 
     document = Nokogiri::HTML(response.body)
     expect(document.at_css("select[name='scope'] option[value='all']")&.text).to eq("All my workspaces")
+    graph_options = document.css("select[name='period'] option").to_h { |option| [ option["value"], option.text.strip ] }
+    expect(graph_options).to include(
+      "7d" => "Daily · past 7 days",
+      "8w" => "Weekly · past 8 weeks",
+      "mtd" => "Month to date"
+    )
     expect(document.css(".notae-analytics-trend li").length).to eq(7)
+    expect(document.css(".notae-analytics-trend-change").length).to eq(7)
     expect(document.at_css(".notae-analytics-data-table table")).to be_present
+  end
+
+  it "switches the graph between weekly and month-to-date comparisons" do
+    get workspace_analytics_settings_path(workspace_slug: workspace.slug, period: "8w")
+
+    expect(response).to have_http_status(:ok)
+    weekly = Nokogiri::HTML(response.body)
+    expect(weekly.at_css("#analytics-time-heading")&.text).to include("Active time by week")
+    expect(weekly.css(".notae-analytics-trend li").length).to eq(8)
+
+    get workspace_analytics_settings_path(workspace_slug: workspace.slug, period: "mtd")
+
+    expect(response).to have_http_status(:ok)
+    month_to_date = Nokogiri::HTML(response.body)
+    expect(month_to_date.at_css("#analytics-time-heading")&.text).to include("Active time by day")
+    user_today = Time.current.in_time_zone(user.time_zone).to_date
+    expect(month_to_date.css(".notae-analytics-trend li").length).to eq(user_today.day)
   end
 
   it "combines only workspaces the user can currently access" do
@@ -67,7 +91,7 @@ RSpec.describe "Analytics settings", type: :request do
     expect(response.body).to include(workspace.name)
     expect(response.body).to include(other_workspace.name)
     expect(response.body).not_to include(hidden_workspace.name)
-    expect(response.body).to include("Creates a private snapshot in #{workspace.name}.")
+    expect(response.body).not_to include("Creates a private snapshot")
   end
 
   it "excludes subscription-inaccessible workspaces from app-wide views and exports" do
@@ -117,7 +141,8 @@ RSpec.describe "Analytics settings", type: :request do
     expect(text).to include("Personal analytics")
     expect(text).to include("30 sec")
     expect(text).to include("Privacy: foreground analytics")
-    expect(text).to include(Analytics::DateRange.new(params: { period: "7d" }).label)
+    user_today = Time.current.in_time_zone(user.time_zone).to_date
+    expect(text).to include(Analytics::DateRange.new(params: { period: "7d" }, today: user_today).label)
     expect(text).not_to include("Private prompt text")
     expect(text).not_to include("Private answer text")
   end
@@ -147,13 +172,14 @@ RSpec.describe "Analytics settings", type: :request do
            params: { scope: "workspace", period: "7d" }
     end.not_to change(Page, :count)
 
+    user_today = Time.current.in_time_zone(user.time_zone).to_date
     expect(response).to redirect_to(
       workspace_analytics_settings_path(
         workspace_slug: workspace.slug,
         scope: "workspace",
         period: "7d",
-        start_date: 6.days.ago.to_date.iso8601,
-        end_date: Time.zone.today.iso8601
+        start_date: (user_today - 6.days).iso8601,
+        end_date: user_today.iso8601
       )
     )
     expect(flash[:alert]).to eq("Snapshot could not be imported.")

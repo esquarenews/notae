@@ -100,6 +100,9 @@ RSpec.describe "Page header features", type: :request do
     expect(html.at_css(".notae-emoji-picker-remove")&.text&.squish).to eq("Remove icon")
     custom_button = html.at_css(".notae-page-emoji-button.is-custom")
     expect(custom_button["data-search-text"]).to include("Party avocado")
+    star_button = html.at_xpath("//button[@data-icon-value='⭐']")
+    expect(star_button["data-search-text"]).to include("star")
+    expect(star_button["aria-label"]).to eq("Use Star")
   end
 
   it "lazy-loads the database icon picker with database update params" do

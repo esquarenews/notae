@@ -218,12 +218,17 @@ module Analytics
         end
       end
 
-      grouped.map do |date, entries|
+      series = grouped.map do |date, entries|
         {
           date: date,
           label: trend_label(date),
           seconds: entries.sum { |entry| entry[:seconds] }
         }
+      end
+
+      series.each_with_index.map do |entry, index|
+        previous_seconds = index.zero? ? nil : series[index - 1][:seconds]
+        entry.merge(trend_comparison(current: entry[:seconds], previous: previous_seconds))
       end
     end
 
@@ -231,8 +236,24 @@ module Analytics
       case date_range.grouping
       when :week then date.strftime("%-d %b")
       when :month then date.strftime("%b")
-      else date.strftime("%-d")
+      else date.strftime("%a %-d")
       end
+    end
+
+    def trend_comparison(current:, previous:)
+      return { previous_seconds: nil, change_percent: nil, change_direction: :baseline, change_label: "—" } if previous.nil?
+      return { previous_seconds: previous, change_percent: 0, change_direction: :flat, change_label: "No change" } if current == previous
+      if previous.zero?
+        return { previous_seconds: previous, change_percent: nil, change_direction: :up, change_label: "New" }
+      end
+
+      percent = (((current - previous).to_f / previous) * 100).round
+      {
+        previous_seconds: previous,
+        change_percent: percent,
+        change_direction: percent.positive? ? :up : :down,
+        change_label: "#{percent.positive? ? "+" : ""}#{percent}%"
+      }
     end
 
     def build_surface_breakdown(active_seconds)

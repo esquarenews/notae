@@ -185,6 +185,29 @@ RSpec.describe Analytics::SnapshotBuilder do
     end
   end
 
+  it "adds visible day-to-day comparisons to the trend series" do
+    travel_to Time.zone.parse("2026-07-13 12:00:00 UTC") do
+      user = User.create!(email: "analytics-comparison@example.com", password: "password123", time_zone: "UTC")
+      workspace = Workspace.create!(name: "Daily comparison", slug: "daily-comparison")
+      Membership.create!(user:, workspace:, role: :member)
+      create_activity(user:, workspace:, surface: "nota", at: Time.utc(2026, 7, 11, 9, 0), seconds: 10)
+      create_activity(user:, workspace:, surface: "nota", at: Time.utc(2026, 7, 12, 9, 0), seconds: 20)
+      create_activity(user:, workspace:, surface: "nota", at: Time.utc(2026, 7, 13, 9, 0), seconds: 10)
+
+      snapshot = described_class.call(
+        user:,
+        workspaces: [ workspace ],
+        scope: "workspace",
+        date_range: Analytics::DateRange.new(params: { period: "7d" }, today: Time.zone.today)
+      )
+      by_date = snapshot.trend_series.index_by { |entry| entry[:date] }
+
+      expect(by_date.fetch(Date.new(2026, 7, 11))).to include(change_direction: :up, change_label: "New", previous_seconds: 0)
+      expect(by_date.fetch(Date.new(2026, 7, 12))).to include(change_direction: :up, change_label: "+100%", previous_seconds: 10)
+      expect(by_date.fetch(Date.new(2026, 7, 13))).to include(change_direction: :down, change_label: "-50%", previous_seconds: 20)
+    end
+  end
+
   def create_activity(user:, workspace:, surface:, at:, seconds:, offset: 0)
     AnalyticsActivityBucket.create!(
       user: user,

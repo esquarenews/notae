@@ -1,8 +1,8 @@
 module Analytics
   class DateRange
-    DEFAULT_PERIOD = "30d".freeze
+    DEFAULT_PERIOD = "7d".freeze
     MAX_DAYS = 366
-    PERIODS = %w[7d 30d 90d year custom].freeze
+    PERIODS = %w[7d 8w mtd 30d 90d year custom].freeze
 
     attr_reader :start_date, :end_date, :period
 
@@ -28,6 +28,7 @@ module Analytics
     end
 
     def grouping
+      return :week if period == "8w"
       return :day if days <= 31
       return :week if days <= 180
 
@@ -59,6 +60,10 @@ module Analytics
       case period
       when "7d"
         [ today - 6.days, today ]
+      when "8w"
+        [ today.beginning_of_week - 7.weeks, today ]
+      when "mtd"
+        [ today.beginning_of_month, today ]
       when "90d"
         [ today - 89.days, today ]
       when "year"
@@ -88,7 +93,7 @@ module Analytics
 
     def reset_to_default!
       @period = DEFAULT_PERIOD
-      @start_date = today - 29.days
+      @start_date = today - 6.days
       @end_date = today
     end
   end

@@ -32,6 +32,7 @@ gem "matrix"
 gem "rubyzip"
 gem "rexml", "~> 3.2"
 gem "unicode-emoji", "~> 4.2"
+gem "gemoji", "~> 4.1"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
