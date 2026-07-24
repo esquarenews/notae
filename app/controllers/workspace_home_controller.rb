@@ -58,6 +58,7 @@ class WorkspaceHomeController < ApplicationController
 
   def set_workspace
     @workspace = policy_scope(Workspace).find_by!(slug: params[:workspace_slug])
+    Billing::AccountCoveredWorkspaceRecovery.new(user: current_user, workspace: @workspace).call
   end
 
   def greeting_for(time)

@@ -5,6 +5,7 @@ class AdminAuditEvent < ApplicationRecord
     subscription_updated
     subscription_checkout_started
     workspace_created_under_account_plan
+    workspace_subscription_recovered_under_account_plan
     subscription_canceled
     stripe_webhook_processed
     user_limits_updated
