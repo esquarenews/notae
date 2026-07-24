@@ -299,7 +299,9 @@
 </aside>
 
 <% if workspace && can_create_workspace %>
-  <div class="notae-modal is-hidden"
+  <div id="notae_workspace_dialog_<%= sidebar_shell_key %>"
+       class="notae-modal is-hidden"
+       data-turbo-permanent
        data-shell-target="workspaceDialog"
        data-action="click->shell#closeWorkspaceDialog">
     <div class="notae-modal-panel notae-workspace-modal-panel" data-action="click->shell#noop">
