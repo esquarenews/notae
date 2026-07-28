@@ -1,12 +1,21 @@
-#!/usr/bin/env node
+#!/bin/sh
 
-import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+set -eu
 
-import { ensureSidecarDependencies } from "../services/notae_mcp_server/bootstrap.mjs";
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+launcher="$script_dir/../services/notae_mcp_server/launcher.mjs"
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const serviceDir = resolve(repoRoot, "services/notae_mcp_server");
+if [ -n "${NOTAE_NODE_BINARY:-}" ] && [ -x "$NOTAE_NODE_BINARY" ]; then
+  node_binary="$NOTAE_NODE_BINARY"
+elif command -v node >/dev/null 2>&1; then
+  node_binary=$(command -v node)
+elif [ -x /opt/homebrew/bin/node ]; then
+  node_binary=/opt/homebrew/bin/node
+elif [ -x /usr/local/bin/node ]; then
+  node_binary=/usr/local/bin/node
+else
+  echo "Notae MCP could not find Node.js. Install Node or set NOTAE_NODE_BINARY to an executable path." >&2
+  exit 127
+fi
 
-ensureSidecarDependencies({ serviceDir });
-await import(pathToFileURL(resolve(serviceDir, "server.mjs")).href);
+exec "$node_binary" "$launcher"

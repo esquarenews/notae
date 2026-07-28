@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test auto_push.test.mjs bootstrap.test.mjs client.test.mjs",
-    "check": "node --check auto_push.mjs && node --check bootstrap.mjs && node --check client.mjs && node --check server.mjs"
+    "test": "node --test auto_push.test.mjs bootstrap.test.mjs client.test.mjs launcher.test.mjs server.integration.test.mjs",
+    "check": "node --check auto_push.mjs && node --check bootstrap.mjs && node --check client.mjs && node --check launcher.mjs && node --check server.mjs"
   }
 }
