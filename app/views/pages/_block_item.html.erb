@@ -28,8 +28,8 @@
     <div class="notae-doc-block-row">
       <span class="notae-doc-handle"
             title="Drag block"
-            draggable="true"
-            data-action="pointerdown->block-list#prepareDragStart dragstart->block-list#handleDragStart dragend->block-list#handleDragEnd">
+            draggable="false"
+            data-action="pointerdown->block-list#prepareDragStart pointermove->block-list#handlePointerMove pointerup->block-list#handlePointerEnd pointercancel->block-list#handlePointerCancel">
         ⋮⋮
       </span>
       <p class="hidden pb-1 text-xs font-medium text-sky-700" data-editing-indicator-for="<%= block.id %>"></p>

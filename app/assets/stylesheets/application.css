@@ -12627,12 +12627,22 @@ body.notae-theme-dark .notae-doc-block.is-focused {
 .notae-doc-handle {
   color: #a8a29e;
   font-size: 0.74rem;
-  width: 1.25rem;
-  text-align: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: grab;
+  touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
   pointer-events: auto;
   margin-top: 0;
+}
+
+.notae-doc-tree.is-drag-active .notae-doc-handle {
+  cursor: grabbing;
 }
 
 .notae-block-menu {
