@@ -36,6 +36,133 @@ module Analytics
       exports_created: "Exports"
     }.freeze
 
+    DAILY_ACTIVITY_SQL = <<~SQL.squish.freeze
+      WITH expanded_activity_seconds AS (
+        SELECT buckets.bucket_started_at, active_seconds.active_second
+        FROM analytics_activity_buckets AS buckets
+        CROSS JOIN LATERAL generate_series(
+          buckets.segment_offset_seconds,
+          buckets.segment_offset_seconds + buckets.duration_seconds - 1
+        ) AS active_seconds(active_second)
+        WHERE buckets.user_id = $1
+          AND buckets.bucket_started_at BETWEEN $2 AND $3
+          AND (
+            ($5 AND (
+              buckets.workspace_id = ANY($4)
+              OR buckets.workspace_id IS NULL
+            ))
+            OR (NOT $5 AND buckets.workspace_id = $6)
+          )
+      ),
+      distinct_activity_seconds AS (
+        SELECT DISTINCT bucket_started_at, active_second
+        FROM expanded_activity_seconds
+      )
+      SELECT DATE(bucket_started_at AT TIME ZONE 'UTC' AT TIME ZONE $7) AS activity_date,
+             COUNT(*) AS total_seconds
+      FROM distinct_activity_seconds
+      GROUP BY activity_date
+    SQL
+
+    TOTAL_ACTIVITY_SQL = <<~SQL.squish.freeze
+      WITH expanded_activity_seconds AS (
+        SELECT buckets.bucket_started_at, active_seconds.active_second
+        FROM analytics_activity_buckets AS buckets
+        CROSS JOIN LATERAL generate_series(
+          buckets.segment_offset_seconds,
+          buckets.segment_offset_seconds + buckets.duration_seconds - 1
+        ) AS active_seconds(active_second)
+        WHERE buckets.user_id = $1
+          AND buckets.bucket_started_at BETWEEN $2 AND $3
+          AND (
+            ($5 AND (
+              buckets.workspace_id = ANY($4)
+              OR buckets.workspace_id IS NULL
+            ))
+            OR (NOT $5 AND buckets.workspace_id = $6)
+          )
+      )
+      SELECT COUNT(*)
+      FROM (
+        SELECT DISTINCT bucket_started_at, active_second
+        FROM expanded_activity_seconds
+      ) AS distinct_activity_seconds
+    SQL
+
+    SURFACE_ACTIVITY_SQL = <<~SQL.squish.freeze
+      WITH expanded_activity_dimensions AS (
+        SELECT buckets.bucket_started_at,
+               active_seconds.active_second,
+               buckets.surface AS dimension_value
+        FROM analytics_activity_buckets AS buckets
+        CROSS JOIN LATERAL generate_series(
+          buckets.segment_offset_seconds,
+          buckets.segment_offset_seconds + buckets.duration_seconds - 1
+        ) AS active_seconds(active_second)
+        WHERE buckets.user_id = $1
+          AND buckets.bucket_started_at BETWEEN $2 AND $3
+          AND (
+            ($5 AND (
+              buckets.workspace_id = ANY($4)
+              OR buckets.workspace_id IS NULL
+            ))
+            OR (NOT $5 AND buckets.workspace_id = $6)
+          )
+      ),
+      unique_activity_dimensions AS (
+        SELECT DISTINCT bucket_started_at, active_second, dimension_value
+        FROM expanded_activity_dimensions
+      ),
+      weighted_activity_dimensions AS (
+        SELECT dimension_value,
+               COUNT(*) OVER (
+                 PARTITION BY bucket_started_at, active_second
+               ) AS dimensions_in_second
+        FROM unique_activity_dimensions
+      )
+      SELECT dimension_value,
+             SUM(1.0 / dimensions_in_second) AS attributed_seconds
+      FROM weighted_activity_dimensions
+      GROUP BY dimension_value
+    SQL
+
+    WORKSPACE_ACTIVITY_SQL = <<~SQL.squish.freeze
+      WITH expanded_activity_dimensions AS (
+        SELECT buckets.bucket_started_at,
+               active_seconds.active_second,
+               buckets.workspace_id AS dimension_value
+        FROM analytics_activity_buckets AS buckets
+        CROSS JOIN LATERAL generate_series(
+          buckets.segment_offset_seconds,
+          buckets.segment_offset_seconds + buckets.duration_seconds - 1
+        ) AS active_seconds(active_second)
+        WHERE buckets.user_id = $1
+          AND buckets.bucket_started_at BETWEEN $2 AND $3
+          AND (
+            ($5 AND (
+              buckets.workspace_id = ANY($4)
+              OR buckets.workspace_id IS NULL
+            ))
+            OR (NOT $5 AND buckets.workspace_id = $6)
+          )
+      ),
+      unique_activity_dimensions AS (
+        SELECT DISTINCT bucket_started_at, active_second, dimension_value
+        FROM expanded_activity_dimensions
+      ),
+      weighted_activity_dimensions AS (
+        SELECT dimension_value,
+               COUNT(*) OVER (
+                 PARTITION BY bucket_started_at, active_second
+               ) AS dimensions_in_second
+        FROM unique_activity_dimensions
+      )
+      SELECT dimension_value,
+             SUM(1.0 / dimensions_in_second) AS attributed_seconds
+      FROM weighted_activity_dimensions
+      GROUP BY dimension_value
+    SQL
+
     class << self
       def call(user:, workspaces:, scope:, date_range:)
         new(user:, workspaces:, scope:, date_range:).call
@@ -95,93 +222,53 @@ module Analytics
       scope == "all" ? "All my workspaces" : workspaces.first&.name.to_s
     end
 
-    def activity_scope(range = date_range.time_range)
-      relation = AnalyticsActivityBucket.for_user(user).within(range)
-      if scope == "all"
-        relation.where(workspace_id: workspace_ids).or(relation.where(workspace_id: nil))
-      else
-        relation.where(workspace_id: workspace_ids.first)
-      end
-    end
-
     def record_scope(model, user_key:, range: date_range.time_range)
       model.where(user_key => user.id, workspace_id: workspace_ids, created_at: range)
     end
 
     def daily_activity_series
-      totals = grouped_sum_by_day(activity_scope)
+      totals = grouped_sum_by_day(date_range.time_range)
       each_date.map { |date| { date: date, seconds: totals.fetch(date, 0).to_i } }
     end
 
     def previous_activity_seconds
-      capped_activity_seconds(activity_scope(date_range.previous_time_range))
+      capped_activity_seconds(date_range.previous_time_range)
     end
 
     def each_date
       (date_range.start_date..date_range.end_date).to_a
     end
 
-    def grouped_sum_by_day(relation)
-      seconds = distinct_activity_seconds_sql(relation)
-      rows = connection.select_rows(<<~SQL.squish)
-        SELECT #{day_sql("bucket_started_at")} AS activity_date, COUNT(*) AS total_seconds
-        FROM (#{seconds}) AS distinct_activity_seconds
-        GROUP BY activity_date
-      SQL
+    def grouped_sum_by_day(range)
+      rows = connection.exec_query(
+        DAILY_ACTIVITY_SQL,
+        "Analytics daily activity",
+        activity_query_binds(range, include_timezone: true)
+      ).rows
 
       rows.to_h { |day, total| [ day.to_date, total.to_i ] }
     end
 
-    def capped_activity_seconds(relation)
-      connection.select_value(<<~SQL.squish).to_i
-        SELECT COUNT(*)
-        FROM (#{distinct_activity_seconds_sql(relation)}) AS distinct_activity_seconds
-      SQL
+    def capped_activity_seconds(range)
+      connection.exec_query(
+        TOTAL_ACTIVITY_SQL,
+        "Analytics total activity",
+        activity_query_binds(range)
+      ).rows.dig(0, 0).to_i
     end
 
-    def expanded_activity_seconds_sql(relation, dimension: nil)
-      columns = [ :bucket_started_at, :segment_offset_seconds, :duration_seconds ]
-      columns << dimension if dimension.present?
-      dimension_sql = if dimension.present?
-        ", source.#{connection.quote_column_name(dimension)} AS dimension_value"
+    def capped_dimension_totals(range, dimension)
+      binds = activity_query_binds(range)
+      rows = case dimension
+      when :surface
+        connection.exec_query(SURFACE_ACTIVITY_SQL, "Analytics surface activity", binds).rows
+      when :workspace_id
+        connection.exec_query(WORKSPACE_ACTIVITY_SQL, "Analytics workspace activity", binds).rows
       else
-        ""
+        raise ArgumentError, "Unsupported analytics dimension: #{dimension.inspect}"
       end
 
-      <<~SQL.squish
-        SELECT source.bucket_started_at,
-               active_seconds.active_second
-               #{dimension_sql}
-        FROM (#{relation.select(*columns).to_sql}) AS source
-        CROSS JOIN LATERAL generate_series(
-          source.segment_offset_seconds,
-          source.segment_offset_seconds + source.duration_seconds - 1
-        ) AS active_seconds(active_second)
-      SQL
-    end
-
-    def distinct_activity_seconds_sql(relation)
-      <<~SQL.squish
-        SELECT DISTINCT bucket_started_at, active_second
-        FROM (#{expanded_activity_seconds_sql(relation)}) AS expanded_activity_seconds
-      SQL
-    end
-
-    def capped_dimension_totals(relation, dimension)
-      rows = connection.select_rows(<<~SQL.squish)
-        SELECT dimension_value, SUM(1.0 / dimensions_in_second) AS attributed_seconds
-        FROM (
-          SELECT dimension_value,
-                 COUNT(*) OVER (PARTITION BY bucket_started_at, active_second) AS dimensions_in_second
-          FROM (
-            SELECT DISTINCT bucket_started_at, active_second, dimension_value
-            FROM (#{expanded_activity_seconds_sql(relation, dimension:)}) AS expanded_activity_dimensions
-          ) AS unique_activity_dimensions
-        ) AS weighted_activity_dimensions
-        GROUP BY dimension_value
-      SQL
-
-      allocate_integer_seconds(rows, total: capped_activity_seconds(relation))
+      allocate_integer_seconds(rows, total: capped_activity_seconds(range))
     end
 
     def allocate_integer_seconds(rows, total:)
@@ -198,11 +285,33 @@ module Analytics
       allocations.to_h { |entry| [ entry[:value], entry[:seconds] ] }
     end
 
-    def day_sql(column)
-      return "DATE(#{column})" unless connection.adapter_name.downcase.include?("postgres")
+    def activity_query_binds(range, include_timezone: false)
+      binds = [
+        query_bind("user_id", user.id, uuid_type),
+        query_bind("range_start", range.begin, ActiveRecord::Type::DateTime.new),
+        query_bind("range_end", range.end, ActiveRecord::Type::DateTime.new),
+        query_bind("workspace_ids", workspace_ids, uuid_array_type),
+        query_bind("all_scope", scope == "all", ActiveRecord::Type::Boolean.new),
+        query_bind("workspace_id", workspace_ids.first, uuid_type)
+      ]
+      binds << query_bind("time_zone", analytics_time_zone, ActiveRecord::Type::String.new) if include_timezone
+      binds
+    end
 
-      timezone = ActiveSupport::TimeZone[user.time_zone.presence || "UTC"]&.tzinfo&.name || "UTC"
-      "DATE(#{column} AT TIME ZONE 'UTC' AT TIME ZONE #{connection.quote(timezone)})"
+    def query_bind(name, value, type)
+      ActiveRecord::Relation::QueryAttribute.new(name, value, type)
+    end
+
+    def analytics_time_zone
+      ActiveSupport::TimeZone[user.time_zone.presence || "UTC"]&.tzinfo&.name || "UTC"
+    end
+
+    def uuid_type
+      @uuid_type ||= ActiveRecord::Type.lookup(:uuid, adapter: :postgresql)
+    end
+
+    def uuid_array_type
+      @uuid_array_type ||= ActiveRecord::Type.lookup(:uuid, adapter: :postgresql, array: true)
     end
 
     def connection
@@ -257,7 +366,7 @@ module Analytics
     end
 
     def build_surface_breakdown(active_seconds)
-      totals = capped_dimension_totals(activity_scope, :surface)
+      totals = capped_dimension_totals(date_range.time_range, :surface)
       AnalyticsActivityBucket::SURFACES.filter_map do |surface|
         seconds = totals.fetch(surface, 0).to_i
         next if seconds.zero?
@@ -321,7 +430,7 @@ module Analytics
     end
 
     def build_workspace_breakdown
-      activity = capped_dimension_totals(activity_scope, :workspace_id)
+      activity = capped_dimension_totals(date_range.time_range, :workspace_id)
       ai_calls = ai_usage_scope.group(:workspace_id).count
       pages = nota_scope.group(:workspace_id).count
       databases = record_scope(Database, user_key: :created_by_id).group(:workspace_id).count
