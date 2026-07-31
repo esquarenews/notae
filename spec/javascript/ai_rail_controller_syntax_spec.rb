@@ -62,11 +62,14 @@ RSpec.describe "AiRailController JavaScript syntax" do
 
   it "marks agent work busy and restores the prompt after a failed submission" do
     source = Rails.root.join("app/javascript/controllers/ai_rail_controller.js").read
+    submit_start_handler = source.match(/submitStart\(event\) \{(?<body>.*?)\n  \}/m)&.[](:body)
 
     expect(source).to include('this.threadTarget.setAttribute("aria-busy", "true")')
     expect(source).to include('this.threadTarget.setAttribute("aria-busy", "false")')
     expect(source).to include("event.detail?.success === false")
     expect(source).to include("this.promptInputTarget.value = this.pendingPrompt")
+    expect(submit_start_handler).to be_present
+    expect(submit_start_handler).not_to include('this.promptInputTarget.value = ""')
   end
 
   it "submits with Enter and reserves Shift+Enter for a new line" do

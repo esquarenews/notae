@@ -89,14 +89,6 @@
   </div>
 
   <section class="notae-ai-thread" data-ai-rail-target="thread" aria-live="polite" aria-busy="false">
-    <% ai_timeline_entries.each do |entry| %>
-      <% if entry[:kind] == :conversation %>
-        <%= render "shared/app_ai_conversation", conversation: entry[:conversation] %>
-      <% else %>
-        <%= render "shared/app_ai_agent_update", update: entry[:update] %>
-      <% end %>
-    <% end %>
-
     <% if pending_proactive_knowledge_suggestion && @active_knowledge_suggestion.blank? %>
       <article class="notae-ai-message is-assistant is-pending">
         <p class="notae-ai-message-label">Notae AI</p>
@@ -115,6 +107,14 @@
                    task_databases: Array(@active_knowledge_task_databases),
                    compact: true %>
       </article>
+    <% end %>
+
+    <% ai_timeline_entries.each do |entry| %>
+      <% if entry[:kind] == :conversation %>
+        <%= render "shared/app_ai_conversation", conversation: entry[:conversation] %>
+      <% else %>
+        <%= render "shared/app_ai_agent_update", update: entry[:update] %>
+      <% end %>
     <% end %>
 
     <% if ai_timeline_entries.empty? && @ai_assistant_notice.present? %>

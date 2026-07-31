@@ -131,7 +131,6 @@ export default class extends Controller {
     this.pendingPrompt = prompt
     if (prompt.length > 0) {
       this.appendPendingUserMessage(prompt)
-      this.promptInputTarget.value = ""
     }
     this.resetAssistantInputs()
 
