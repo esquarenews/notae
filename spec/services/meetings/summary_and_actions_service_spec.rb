@@ -16,7 +16,7 @@ RSpec.describe Meetings::SummaryAndActionsService do
     )
   end
 
-  it "uses gpt-4.1 and filters weak or non-actionable tasks" do
+  it "uses balanced GPT-5.6 reasoning and filters weak or non-actionable tasks" do
     session = build_session(transcript: "Alex will send the proposal. Team discussed roadmap ideas.")
     response_payload = {
       summary_bullets: [ "Reviewed proposal scope." ],
@@ -36,7 +36,12 @@ RSpec.describe Meetings::SummaryAndActionsService do
     result = described_class.new(session: session).call
 
     expect(Openai::ResponsesClient).to have_received(:generate_text_with_usage).with(
-      hash_including(model: "gpt-4.1")
+      hash_including(
+        model: "gpt-5.6-terra",
+        reasoning: { effort: "medium" },
+        prompt_cache_key: "notae-meeting-summary-v1",
+        prompt_cache_options: { ttl: "30m" }
+      )
     )
     expect(result[:summary_markdown]).to include("### Summary")
     expect(result[:action_items].size).to eq(1)

@@ -16,7 +16,7 @@ module Search
       keyword_init: true
     )
 
-    MODEL = "gpt-4.1-mini".freeze
+    MODEL = "gpt-5.6-luna".freeze
     CONTEXT_LIMIT = 12
     CONTEXT_FETCH_LIMIT = 200
     MODE_FULL = "full".freeze
@@ -27,12 +27,13 @@ module Search
 
     attr_reader :unavailable_reason
 
-    def initialize(user:, workspace:, mode: MODE_FULL, since: nil, previous_report: nil)
+    def initialize(user:, workspace:, mode: MODE_FULL, since: nil, previous_report: nil, service_tier: nil)
       @user = user
       @workspace = workspace
       @mode = normalize_mode(mode)
       @since = since
       @previous_report = previous_report
+      @service_tier = service_tier
       @unavailable_reason = nil
     end
 
@@ -54,6 +55,10 @@ module Search
         prompt: prompt_for(context_chunks),
         api_key: Openai::CredentialResolver.resolve(user: user),
         model: MODEL,
+        reasoning: { effort: "none" },
+        service_tier: service_tier,
+        prompt_cache_key: "notae-knowledge-suggestion-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 900
       )
       payload = parse_payload(response[:text])
@@ -92,7 +97,7 @@ module Search
 
     private
 
-    attr_reader :user, :workspace, :mode, :since, :previous_report
+    attr_reader :user, :workspace, :mode, :since, :previous_report, :service_tier
 
     def select_context_chunks
       chunks = accessible_chunks_scope.includes(SearchChunk.context_preload_associations)

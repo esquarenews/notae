@@ -43,6 +43,9 @@ RSpec.describe Openai::ResponsesClient do
         text: { verbosity: "low" },
         parallel_tool_calls: false,
         safety_identifier: "user_hash_123",
+        service_tier: "flex",
+        prompt_cache_key: "notae-test-cache",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 640
       )
 
@@ -59,6 +62,9 @@ RSpec.describe Openai::ResponsesClient do
           text: { verbosity: "low" },
           parallel_tool_calls: false,
           safety_identifier: "user_hash_123",
+          service_tier: "flex",
+          prompt_cache_key: "notae-test-cache",
+          prompt_cache_options: { ttl: "30m" },
           max_output_tokens: 640
         }
       )
@@ -168,6 +174,49 @@ RSpec.describe Openai::ResponsesClient do
         sources: []
       )
       expect(described_class).not_to have_received(:request_response!)
+    end
+
+    it "passes GPT-5.6 reasoning, service tier, and cache options and records cache and web usage" do
+      allow(described_class).to receive(:request_response!).and_return(
+        {
+          "service_tier" => "flex",
+          "usage" => {
+            "input_tokens" => 2_000,
+            "output_tokens" => 100,
+            "total_tokens" => 2_100,
+            "input_tokens_details" => {
+              "cached_tokens" => 800,
+              "cache_write_tokens" => 600
+            }
+          },
+          "output" => [ { "type" => "web_search_call" } ]
+        }
+      )
+
+      response = described_class.generate_text_with_usage(
+        prompt: "Summarise current evidence",
+        api_key: "sk-test",
+        model: "gpt-5.6-luna",
+        reasoning: { effort: "none" },
+        service_tier: "flex",
+        prompt_cache_key: "notae-background-v1",
+        prompt_cache_options: { ttl: "30m" }
+      )
+
+      expect(described_class).to have_received(:request_response!).with(
+        hash_including(
+          reasoning: { effort: "none" },
+          service_tier: "flex",
+          prompt_cache_key: "notae-background-v1",
+          prompt_cache_options: { ttl: "30m" }
+        )
+      )
+      expect(response[:usage]).to include(
+        cached_prompt_tokens: 800,
+        cache_write_tokens: 600,
+        web_search_calls: 1,
+        service_tier: "flex"
+      )
     end
 
     it "keeps generate_text returning only the generated text" do

@@ -91,7 +91,8 @@ module Meetings
     end
 
     def capture_requires_chunking?(file_path)
-      audio_duration_seconds(file_path) > TRANSCRIPTION_MAX_DURATION_SECONDS
+      @transcription_duration_seconds = audio_duration_seconds(file_path)
+      @transcription_duration_seconds > TRANSCRIPTION_MAX_DURATION_SECONDS
     rescue Meetings::AudioChunker::Error => error
       Rails.logger.warn("Meeting audio probe failed for session=#{session.id}: #{error.class}: #{error.message}")
       false
@@ -110,6 +111,7 @@ module Meetings
 
       chunker = Meetings::AudioChunker.new(max_chunk_duration_seconds: TRANSCRIPTION_CHUNK_DURATION_SECONDS)
       split_result = chunker.split!(file_path: file_path)
+      @transcription_duration_seconds = split_result[:total_duration_seconds].to_f if split_result[:total_duration_seconds].present?
       chunk_responses = split_result.fetch(:chunks).map do |chunk|
         {
           chunk: chunk,
@@ -281,7 +283,14 @@ module Meetings
 
     def log_transcription_usage!(response_payload)
       usage = transcription_usage_from_response(response_payload)
-      return if usage.blank?
+      return if usage.blank? && !@transcription_duration_seconds.to_f.positive?
+
+      usage ||= {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+      }
+      usage[:audio_minutes] = @transcription_duration_seconds.to_f / 60.0 if @transcription_duration_seconds.to_f.positive?
 
       Search::AiUsageLogger.log!(
         user: session.created_by,
@@ -291,7 +300,8 @@ module Meetings
         usage: usage,
         metadata: {
           feature: "meetings_transcription",
-          meeting_session_id: session.id
+          meeting_session_id: session.id,
+          audio_minutes: usage[:audio_minutes]
         }
       )
     end

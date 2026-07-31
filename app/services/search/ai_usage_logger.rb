@@ -7,10 +7,29 @@ module Search
         prompt_tokens = usage.fetch(:prompt_tokens, 0).to_i
         completion_tokens = usage.fetch(:completion_tokens, 0).to_i
         total_tokens = usage.fetch(:total_tokens, prompt_tokens + completion_tokens).to_i
+        cached_prompt_tokens = usage.fetch(:cached_prompt_tokens, 0).to_i
+        cache_write_tokens = usage.fetch(:cache_write_tokens, 0).to_i
+        web_search_calls = usage.fetch(:web_search_calls, 0).to_i
+        audio_minutes = usage.fetch(:audio_minutes, 0).to_f
+        service_tier = usage[:service_tier].to_s.presence
         estimated_cost_usd = Openai::CostEstimator.estimate(
           model: model,
           prompt_tokens: prompt_tokens,
-          completion_tokens: completion_tokens
+          completion_tokens: completion_tokens,
+          cached_prompt_tokens: cached_prompt_tokens,
+          cache_write_tokens: cache_write_tokens,
+          web_search_calls: web_search_calls,
+          audio_minutes: audio_minutes,
+          service_tier: service_tier
+        )
+        enriched_metadata = (metadata || {}).to_h.merge(
+          usage_details: {
+            cached_prompt_tokens: cached_prompt_tokens,
+            cache_write_tokens: cache_write_tokens,
+            web_search_calls: web_search_calls,
+            audio_minutes: audio_minutes,
+            service_tier: service_tier
+          }.compact
         )
 
         create_log!(
@@ -22,7 +41,7 @@ module Search
           completion_tokens: completion_tokens,
           total_tokens: total_tokens,
           estimated_cost_usd: estimated_cost_usd,
-          metadata: metadata || {}
+          metadata: enriched_metadata
         )
       end
 

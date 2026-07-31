@@ -479,7 +479,10 @@ RSpec.describe Search::AssistantQueryService do
     Membership.create!(workspace: workspace, user: user, role: :owner)
 
     expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
-      expect(args[:model]).to eq("gpt-4.1-mini")
+      expect(args[:model]).to eq("gpt-5.6-luna")
+      expect(args[:reasoning]).to eq(effort: "none")
+      expect(args[:prompt_cache_key]).to eq("notae-writing-v1")
+      expect(args[:prompt_cache_options]).to eq(ttl: "30m")
       expect(args[:prompt]).to include("Generate paste-ready text")
       {
         text: "Launch highlights include QA sign-off and announcement prep.",
@@ -523,7 +526,8 @@ RSpec.describe Search::AssistantQueryService do
     )
 
     expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
-      expect(args[:model]).to eq("gpt-4.1-mini")
+      expect(args[:model]).to eq("gpt-5.6-luna")
+      expect(args[:reasoning]).to eq(effort: "none")
       expect(args[:prompt]).to include(block.search_text)
       {
         text: "This draft has typos and unclear phrasing.",

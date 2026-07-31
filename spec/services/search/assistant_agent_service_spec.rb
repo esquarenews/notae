@@ -82,6 +82,8 @@ RSpec.describe Search::AssistantAgentService do
     expect(Openai::ResponsesClient).to have_received(:create).with(
       hash_including(
         previous_response_id: "resp_tool",
+        prompt_cache_key: match(/\Anotae-assistant-v1-[a-f0-9]{24}\z/),
+        prompt_cache_options: { ttl: "30m" },
         input: [
           hash_including(
             type: "function_call_output",

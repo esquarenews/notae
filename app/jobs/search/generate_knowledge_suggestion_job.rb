@@ -10,7 +10,8 @@ module Search
       Search::PersistKnowledgeSuggestionService.new(
         user: user,
         workspace: workspace,
-        kind: kind
+        kind: kind,
+        service_tier: "flex"
       ).call
     ensure
       if user.present? && workspace.present?

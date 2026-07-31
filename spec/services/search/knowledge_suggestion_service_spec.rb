@@ -51,6 +51,15 @@ RSpec.describe Search::KnowledgeSuggestionService do
 
     response = described_class.new(user: user, workspace: workspace).call
 
+    expect(Openai::ResponsesClient).to have_received(:generate_text_with_usage).with(
+      hash_including(
+        model: "gpt-5.6-luna",
+        reasoning: { effort: "none" },
+        service_tier: nil,
+        prompt_cache_key: "notae-knowledge-suggestion-v1",
+        prompt_cache_options: { ttl: "30m" }
+      )
+    )
     expect(response.summary).to include("[1]")
     expect(response.insights.first).to include("[1]")
     expect(response.task_suggestions.first.fetch("owner")).to eq("Alex")
