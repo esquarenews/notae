@@ -17927,6 +17927,20 @@ body.notae-theme-dark .notae-options-mobile-detail-title {
   min-width: 0;
 }
 
+.notae-kalendarium-project-option-name.is-color-editable,
+.notae-kalendarium-project-card-title.is-color-editable {
+  position: relative;
+  cursor: pointer;
+}
+
+.notae-kalendarium-project-color-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .notae-kalendarium-project-option-label {
   display: block;
   min-width: 0;

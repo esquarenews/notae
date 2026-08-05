@@ -1325,6 +1325,14 @@ RSpec.describe "Kalendarium", type: :request do
     option_label = option_row.at_css(".notae-kalendarium-project-option-label")
     expect(option_label).to be_present
     expect(option_label.text).to include(project.name)
+    color_form = option_row.at_css("form.notae-kalendarium-project-option-name.is-color-editable")
+    color_input = color_form&.at_css("input[type='color'][name='kalendarium_project[color_hex]']")
+    expect(color_form).to be_present
+    expect(color_form["data-controller"]).to eq("project-color-picker")
+    expect(color_form["data-action"]).to eq("dblclick->project-color-picker#open")
+    expect(color_input).to be_present
+    expect(color_input["value"]).to eq(project.color_hex)
+    expect(color_input["data-action"]).to eq("change->project-color-picker#save")
     show_link = option_row.at_css("a.notae-kalendarium-project-action-link.is-toggle")
     archive_link = option_row.at_css("a[data-turbo-method='patch']")
     delete_link = option_row.at_css("a[data-turbo-method='delete']")
@@ -1359,6 +1367,27 @@ RSpec.describe "Kalendarium", type: :request do
     expect(close_link).to be_present
     expect(close_link["href"]).to include("view=day")
     expect(close_link["href"]).to include("date=2026-03-01")
+  end
+
+  it "offers the same double-click color editor on project management cards" do
+    user, workspace, = build_stack(suffix: "project-card-color-picker")
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch plan",
+      color_hex: "#8B5CF6"
+    )
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    color_form = document.at_css(".notae-kalendarium-project-card form.notae-kalendarium-project-card-title.is-color-editable")
+    color_input = color_form&.at_css("input[type='color'][name='kalendarium_project[color_hex]']")
+    expect(color_form["data-action"]).to eq("dblclick->project-color-picker#open")
+    expect(color_input["value"]).to eq(project.color_hex)
+    expect(color_input["aria-label"]).to eq("Choose color for #{project.name}")
   end
 
   it "renders project-calendar events in project view even when legacy rows have no project id" do
@@ -2378,6 +2407,37 @@ RSpec.describe "Kalendarium", type: :request do
     expect(project.kalendarium_calendar).to be_present
     expect(project.kalendarium_calendar.name).to eq("Launch")
     expect(project.kalendarium_calendar.color_hex).to eq("#8B5CF6")
+  end
+
+  it "updates a project color, synchronizes its calendar, and returns to the originating calendar view" do
+    user, workspace, = build_stack(suffix: "project-color-update")
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch",
+      color_hex: "#8B5CF6",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: project_calendar,
+      name: "Launch",
+      color_hex: "#8B5CF6"
+    )
+    sign_in user
+
+    patch kalendarium_project_path(workspace_slug: workspace.slug, id: project.id), params: {
+      view: "month",
+      date: "2026-03-01",
+      kalendarium_project: { color_hex: "#EF4444" }
+    }
+
+    expect(response).to redirect_to(
+      kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01", project_id: project.id)
+    )
+    expect(project.reload.color_hex).to eq("#EF4444")
+    expect(project_calendar.reload.color_hex).to eq("#EF4444")
   end
 
   it "archives a project, hides it from active views, and disables its project calendar" do

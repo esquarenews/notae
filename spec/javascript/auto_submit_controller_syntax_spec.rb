@@ -37,6 +37,7 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("window.Turbo.renderStreamMessage(responseBody)")
     expect(source).to include("window.Turbo.renderStreamMessage(responseBody)\n        this.restoreViewState()")
     expect(source).to include("submitOnEnter")
+    expect(source).to include("this.clearDebounceTimerFor(event.target)")
     expect(source).to include("requestSubmit(submitter)")
     expect(source).to include("autoSubmitPending")
     expect(source).to include("focusOnConnectValue")
@@ -44,6 +45,11 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("focusNextCreatedRow")
     expect(source).to include("nextRowFocusRequested")
     expect(source).to include("createRowFocusRequested")
+    expect(source).to include("isCreateNextRowSubmitter(submitter)")
+    expect(source).to include('form.dataset.preserveScroll = this.isCreateNextRowSubmitter(submitter) ? "false" : "true"')
+    expect(source).to include('submitter.name === "db_row[create_next_row]"')
+    expect(source).to include('submitter.value === "1"')
+    expect(source).to include("window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)")
     expect(source).to include("isCreateRowForm(form)")
     expect(source).to include("notae-db-new-row-trigger-form")
     expect(source).to include("notae-db-row-hover-control-form")
@@ -63,8 +69,18 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("window.sessionStorage")
     expect(source).to include("window.scrollTo")
     expect(source).to include("preventScroll: true")
-    expect(source).to include('form.dataset.preserveScroll = "true"')
     expect(source).to include('form.dataset.turboStream = "true"')
+  end
+
+  it "focuses a newly inserted row once without repeated viewport corrections" do
+    source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
+    focus_method = source[/  focusNextCreatedRow\(attempt = 0\) \{.*?\n  \}/m]
+    enter_method = source[/  submitOnEnter\(event\) \{.*?\n  \}/m]
+
+    expect(focus_method).to include("if (attempt < 20)")
+    expect(focus_method.scan("this.focusNextCreatedRow(attempt + 1)").size).to eq(1)
+    expect(focus_method).to include("input.focus({ preventScroll: true })")
+    expect(enter_method).not_to include("this.focusNextCreatedRow()")
   end
 
   it "restores the next clicked cell instead of stealing focus back to the submitted cell" do

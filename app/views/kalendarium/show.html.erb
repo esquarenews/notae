@@ -372,10 +372,28 @@
                 <% @projects.each do |project| %>
                   <% project_visible = visible_project_id_set.include?(project.id.to_s) %>
                   <div class="notae-kalendarium-project-option-row">
-                    <div class="notae-kalendarium-project-option-name">
-                      <span class="notae-kalendarium-dot" style="--kal-color: <%= project.color_hex %>"></span>
+                    <%= form_with model: project,
+                                  url: kalendarium_project_path(project_menu_params.merge(id: project.id)),
+                                  method: :patch,
+                                  class: "notae-kalendarium-project-option-name is-color-editable",
+                                  title: "Double-click to change #{project.name} color",
+                                  data: {
+                                    controller: "project-color-picker",
+                                    action: "dblclick->project-color-picker#open"
+                                  } do |form| %>
+                      <span class="notae-kalendarium-dot"
+                            style="--kal-color: <%= project.color_hex %>"
+                            data-project-color-picker-target="swatch"></span>
                       <span class="notae-kalendarium-project-option-label"><%= project.name %></span>
-                    </div>
+                      <%= form.color_field :color_hex,
+                                           value: project.color_hex,
+                                           class: "notae-kalendarium-project-color-input",
+                                           aria: { label: "Choose color for #{project.name}" },
+                                           data: {
+                                             project_color_picker_target: "input",
+                                             action: "change->project-color-picker#save"
+                                           } %>
+                    <% end %>
                     <div class="notae-kalendarium-project-option-actions">
                       <%= link_to(project_visible ? "Show: On" : "Show: Off",
                                   kalendarium_path(
@@ -870,10 +888,36 @@
             <% @projects.each do |project| %>
               <article class="notae-kalendarium-project-card">
                 <header>
-                  <div class="notae-kalendarium-project-card-title">
-                    <span class="notae-kalendarium-dot" style="--kal-color: <%= project.color_hex %>"></span>
+                  <%= form_with model: project,
+                                url: kalendarium_project_path(
+                                  kalendarium_base_params.merge(
+                                    id: project.id,
+                                    view: @view,
+                                    date: @selected_date,
+                                    project_id: @selected_project_id,
+                                    calendar_ids: @selected_calendar_ids
+                                  ).merge(project_scope_params)
+                                ),
+                                method: :patch,
+                                class: "notae-kalendarium-project-card-title is-color-editable",
+                                title: "Double-click to change #{project.name} color",
+                                data: {
+                                  controller: "project-color-picker",
+                                  action: "dblclick->project-color-picker#open"
+                                } do |form| %>
+                    <span class="notae-kalendarium-dot"
+                          style="--kal-color: <%= project.color_hex %>"
+                          data-project-color-picker-target="swatch"></span>
                     <strong><%= project.name %></strong>
-                  </div>
+                    <%= form.color_field :color_hex,
+                                         value: project.color_hex,
+                                         class: "notae-kalendarium-project-color-input",
+                                         aria: { label: "Choose color for #{project.name}" },
+                                         data: {
+                                           project_color_picker_target: "input",
+                                           action: "change->project-color-picker#save"
+                                         } %>
+                  <% end %>
                   <div class="notae-kalendarium-project-card-actions">
                     <%= button_to "Archive",
                                   archive_kalendarium_project_path(

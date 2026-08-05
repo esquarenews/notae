@@ -139,6 +139,7 @@ export default class extends Controller {
 
   submitOnEnter(event) {
     event.preventDefault()
+    this.clearDebounceTimerFor(event.target)
     const form = this.formFor(event)
     if (!form) return
 
@@ -149,9 +150,10 @@ export default class extends Controller {
     }
 
     this.nextRowFocusRequested = createNextOnEnter
-    this.captureViewState(event.target, form)
     if (createNextOnEnter) {
-      this.focusNextCreatedRow()
+      window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)
+    } else {
+      this.captureViewState(event.target, form)
     }
     this.requestSubmitOnce(form, submitter)
   }
@@ -323,7 +325,7 @@ export default class extends Controller {
       return
     }
 
-    form.dataset.preserveScroll = "true"
+    form.dataset.preserveScroll = this.isCreateNextRowSubmitter(submitter) ? "false" : "true"
     if (form.closest(".notae-settings-shell")) {
       form.dataset.turboStream = "true"
     }
@@ -333,6 +335,14 @@ export default class extends Controller {
     } else {
       form.requestSubmit()
     }
+  }
+
+  isCreateNextRowSubmitter(submitter) {
+    return (
+      submitter instanceof HTMLButtonElement &&
+      submitter.name === "db_row[create_next_row]" &&
+      submitter.value === "1"
+    )
   }
 
   async submitDetachedInput(target) {
@@ -595,10 +605,6 @@ export default class extends Controller {
         if (typeof input.select === "function") {
           input.select()
         }
-      }
-
-      if (attempt < 20) {
-        this.focusNextCreatedRow(attempt + 1)
       }
     }, attempt === 0 ? 0 : 75)
   }

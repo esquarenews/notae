@@ -3165,6 +3165,26 @@ RSpec.describe "Databases", type: :request do
     expect(document.css("[data-controller~='auto-submit']").size).to eq(1)
   end
 
+  it "only saves grid date cells after the date picker commits a day" do
+    owner = User.create!(email: "database-date-picker-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Date picker grid", slug: "date-picker-grid")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Tasks")
+    due_property = DbProperty.create!(workspace: workspace, database: database, name: "Due", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Choose a due date")
+    cell = DbCell.create!(workspace: workspace, db_row: row, db_property: due_property, value_text: "2026-08-05")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    date_input = Nokogiri::HTML(response.body).at_css("#db_cell_#{cell.id}_value_text")
+
+    expect(date_input["type"]).to eq("date")
+    expect(date_input["data-action"]).to eq("change->auto-submit#submit")
+    expect(date_input["data-action"]).not_to include("input->auto-submit#submitDebounced")
+  end
+
   it "creates a new row with turbo streams instead of redirecting the full grid for the simple table path" do
     owner = User.create!(email: "database-row-create-turbo-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Row create turbo tables", slug: "row-create-turbo-tables")
