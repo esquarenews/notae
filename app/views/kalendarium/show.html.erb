@@ -54,7 +54,7 @@
 }.compact %>
 <% kalendarium_base_params = { workspace_slug: @workspace.slug }.merge(embedded_params).merge(widget_params).merge(task_schedule_params).merge(window_start_params).merge(planning_params).merge(database_return_params) %>
 
-<section class="<%= ["notae-kalendarium", ("is-embedded-split" if embedded_split_view), ("is-widget" if widget_view), ("is-planning-wide" if wide_planning_view)].compact.join(" ") %>"
+<section class="<%= ["notae-kalendarium", ("is-month-view" if @view == "month"), ("is-embedded-split" if embedded_split_view), ("is-widget" if widget_view), ("is-planning-wide" if wide_planning_view)].compact.join(" ") %>"
          data-controller="<%= kalendarium_controllers.join(" ") %>"
          data-action="<%= kalendarium_actions.join(" ") %>"
          data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
@@ -1046,7 +1046,7 @@
                 <% end %>
               </header>
               <div class="notae-kalendarium-month-events">
-                <% day_events.first(3).each do |event| %>
+                <% day_events.each do |event| %>
                   <%= render "kalendarium_event",
                              event: event,
                              workspace: @workspace,

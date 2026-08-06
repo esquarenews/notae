@@ -1001,6 +1001,9 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-month-events")
     expect(response.body).to include("notae-kalendarium-month-overflow-label")
     expect(response.body).to include("+1 more")
+    document = Nokogiri::HTML.parse(response.body)
+    day_cell = document.at_css(".notae-kalendarium-month-cell[data-day-date='2026-03-01']")
+    expect(day_cell.css(".notae-kalendarium-month-events > .notae-kalendarium-event-card").size).to eq(4)
   end
 
   it "renders month view event cards with only title, time, and join link" do
@@ -1025,6 +1028,7 @@ RSpec.describe "Kalendarium", type: :request do
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css(".notae-kalendarium.is-month-view")).to be_present
     month_card = document.at_css(".notae-kalendarium-month-cell .notae-kalendarium-event-card")
     visible_paragraphs = month_card.css("> p").map { |node| node.text.strip }
     visible_links = month_card.css("> .notae-kalendarium-event-links a").map { |node| node.text.strip }
