@@ -201,6 +201,86 @@ RSpec.describe "Kalendarium", type: :request do
     expect(year_day_link["data-action"]).to include("dblclick->kalendarium-focus#quickCreateDay")
   end
 
+  it "renders the mobile month agenda and gesture controls" do
+    user, workspace, calendar = build_stack(suffix: "mobile-month-agenda")
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Mobile planning",
+      starts_at_utc: Time.utc(2026, 6, 2, 9),
+      ends_at_utc: Time.utc(2026, 6, 2, 10)
+    )
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    shell = document.at_css(".notae-kalendarium")
+    grid = document.at_css(".notae-kalendarium-month-grid")
+    agenda = document.at_css("dialog[data-kalendarium-month-target='agenda']")
+    event_card = document.at_css("#kalendarium_event_#{event.id}")
+    expect(shell["data-controller"]).to include("kalendarium-month")
+    expect(grid["data-action"]).to include("touchstart->kalendarium-month#touchStart")
+    expect(grid["data-kalendarium-month-next-url-value"]).to include("date=2026-07-02")
+    expect(agenda).to be_present
+    expect(agenda.text).to include("Mobile planning")
+    expect(agenda.at_css("button[data-action='kalendarium-month#quickAdd']")).to be_present
+    expect(event_card["data-action"]).to include("pointerdown->kalendarium-month#beginLongPress")
+  end
+
+  it "reschedules an event to a new local day while preserving its duration" do
+    user, workspace, calendar = build_stack(suffix: "mobile-month-reschedule", time_zone: "Australia/Melbourne")
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Move me",
+      starts_at_utc: Time.utc(2026, 6, 2, 1, 30),
+      ends_at_utc: Time.utc(2026, 6, 2, 3)
+    )
+    sign_in user
+
+    expect do
+      patch reschedule_kalendarium_event_path(workspace_slug: workspace.slug, id: event.id),
+            params: { target_date: "2026-06-08" },
+            as: :json
+    end.not_to change(KalendariumEvent, :count)
+
+    expect(response).to have_http_status(:ok)
+    event.reload
+    expect(event.starts_at_utc.in_time_zone(user.time_zone).strftime("%Y-%m-%d %H:%M")).to eq("2026-06-08 11:30")
+    expect(event.ends_at_utc - event.starts_at_utc).to eq(90.minutes)
+    expect(response.parsed_body["notice"]).to include("Move me moved")
+  end
+
+  it "requires recurring events to be rescheduled through their edit flow" do
+    user, workspace, calendar = build_stack(suffix: "mobile-month-recurring-reschedule")
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Weekly planning",
+      starts_at_utc: Time.utc(2026, 6, 2, 9),
+      ends_at_utc: Time.utc(2026, 6, 2, 10),
+      rrule: "FREQ=WEEKLY"
+    )
+    sign_in user
+
+    expect do
+      patch reschedule_kalendarium_event_path(workspace_slug: workspace.slug, id: event.id),
+            params: { target_date: "2026-06-08" },
+            as: :json
+    end.not_to change { event.reload.starts_at_utc }
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body["error"]).to include("recurring event")
+  end
+
   it "shows one all-workspaces calendar connection from another workspace" do
     user, source_workspace, = build_stack(suffix: "all-workspaces-source")
     target_workspace = Workspace.create!(name: "Kal Request all-workspaces-target", slug: "kal-request-all-workspaces-target")

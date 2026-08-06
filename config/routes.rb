@@ -113,7 +113,9 @@ Rails.application.routes.draw do
         patch :speakers
       end
     end
-    resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy]
+    resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy] do
+      patch :reschedule, on: :member
+    end
     resources :kalendarium_projects, path: "kalendarium/projects", only: %i[create update destroy] do
       member do
         patch :archive

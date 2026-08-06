@@ -26,8 +26,11 @@
          data-start-minutes="<%= timeline_start_minutes if timeline %>"
          data-end-minutes="<%= timeline_end_minutes if timeline %>"
          data-controller="kalendarium-event-modal"
+         data-kalendarium-event-id="<%= event.id %>"
+         data-kalendarium-event-title="<%= event.title %>"
+         data-kalendarium-event-recurring="<%= recurring_event %>"
          data-kalendarium-event-modal-event-title-value="<%= event.title %>"
-         data-action="dblclick->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
+         data-action="<%= "pointerdown->kalendarium-month#beginLongPress pointermove->kalendarium-month#moveLongPress pointerup->kalendarium-month#endLongPress pointercancel->kalendarium-month#cancelLongPress " if view == "month" %>dblclick->kalendarium-event-modal#openView keydown.enter->kalendarium-event-modal#openView keydown.space->kalendarium-event-modal#openView"
          role="button"
          tabindex="0"
          aria-label="View event details for <%= event.title %>">

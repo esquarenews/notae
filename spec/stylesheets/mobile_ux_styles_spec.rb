@@ -67,7 +67,8 @@ RSpec.describe "Mobile UX styles" do
   it "fits the complete month week across mobile with title-only event rows" do
     expect(stylesheet).to include(".notae-kalendarium.is-month-view .notae-kalendarium-month-grid {\n    grid-template-columns: repeat(7, minmax(0, 1fr));")
     expect(stylesheet).to include(".notae-kalendarium.is-month-view .notae-kalendarium-month-cell {\n    min-width: 0;\n    min-height: clamp(6rem, 26vw, 7rem);")
-    expect(stylesheet).to include(".notae-kalendarium.is-month-view .notae-kalendarium-month-events > .notae-kalendarium-event-card:nth-child(n + 4) {\n    display: grid;\n  }")
+    expect(stylesheet).to include(".notae-kalendarium.is-month-view .notae-kalendarium-month-events > .notae-kalendarium-event-card:nth-child(n + 4) {\n    display: none;\n  }")
+    expect(stylesheet).to include(".notae-kalendarium.is-month-view .notae-kalendarium-month-overflow-label {\n    display: inline-block;")
     expect(stylesheet).to include(".notae-kalendarium.is-month-view .notae-kalendarium-event-header-compact strong {\n    display: block;")
     expect(stylesheet).to include("    text-overflow: ellipsis;\n    white-space: nowrap;")
     expect(stylesheet).to include(".notae-kalendarium.is-month-view .notae-kalendarium-event-time-line,\n  .notae-kalendarium.is-month-view .notae-kalendarium-event-links {\n    display: none;")
