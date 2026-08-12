@@ -13293,24 +13293,63 @@ body.notae-theme-dark .notae-doc-editor .ProseMirror {
   background: #f8fbff;
 }
 
-.notae-doc-editor.is-columns-2 .ProseMirror {
-  column-count: 2;
-  column-gap: 1.5rem;
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror {
+  display: grid;
+  gap: 0.72rem;
+  counter-reset: notae-column;
 }
 
-.notae-doc-editor.is-columns-3 .ProseMirror {
-  column-count: 3;
-  column-gap: 1.3rem;
+.notae-doc-editor.is-columns-2 .ProseMirror { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.notae-doc-editor.is-columns-3 .ProseMirror { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.notae-doc-editor.is-columns-4 .ProseMirror { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.notae-doc-editor.is-columns-5 .ProseMirror { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > * {
+  min-width: 0;
+  min-height: 6rem;
+  margin: 0;
+  padding: 0.58rem 0.64rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.48rem;
+  background: rgba(248, 250, 252, 0.72);
+  counter-increment: notae-column;
 }
 
-.notae-doc-editor.is-columns-4 .ProseMirror {
-  column-count: 4;
-  column-gap: 1.15rem;
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote {
+  border-left-width: 1px;
 }
 
-.notae-doc-editor.is-columns-5 .ProseMirror {
-  column-count: 5;
-  column-gap: 1rem;
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > :first-child {
+  margin-top: 0;
+}
+
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > p:empty::before,
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > p:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: "Column " counter(notae-column);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+body.notae-theme-dark .notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > * {
+  border-color: #475569;
+  background: rgba(30, 41, 59, 0.48);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.notae-theme-system .notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > * {
+    border-color: #475569;
+    background: rgba(30, 41, 59, 0.48);
+  }
+}
+
+@media (max-width: 760px) {
+  .notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .notae-doc-editor.is-color-gray .ProseMirror { color: #6b7280; }

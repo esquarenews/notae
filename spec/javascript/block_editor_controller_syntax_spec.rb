@@ -34,6 +34,45 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("focusEditor: true")
   end
 
+  it "builds and navigates distinct cells for column sections before using block reparent shortcuts" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    column_navigation_position = source.index('this.currentBlockType.startsWith("columns_")')
+    block_reparent_position = source.index("this.supportsBlockReparentShortcut()")
+
+    expect(source).to include("normalizeColumnContent(content)")
+    expect(source).to include('node?.type === "blockquote"')
+    expect(source).to include('type: "blockquote"')
+    expect(source).to include("while (columns.length < columnCount)")
+    expect(source).to include("ensureColumnStructure()")
+    expect(source).to include("moveColumnSelection(delta)")
+    expect(source).to include("const currentIndex = state.selection.$from.index(0)")
+    expect(source).to include("this.editor.commands.setTextSelection(selectionPosition)")
+    expect(column_navigation_position).to be < block_reparent_position
+  end
+
+  it "preserves multi-paragraph column content and moves Tab into the next container" do
+    harness_path = Rails.root.join("spec/javascript/block_editor_columns_harness.mjs")
+    stdout, status = Open3.capture2e("node", harness_path.to_s)
+
+    expect(status.success?).to be(true), <<~MESSAGE
+      Expected column sections to normalize and navigate correctly.
+      Output:
+      #{stdout}
+    MESSAGE
+  rescue Errno::ENOENT
+    skip "node is not available in this environment"
+  end
+
+  it "renders column sections as visible grid cells instead of newspaper columns" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-doc-editor.is-columns-3 .ProseMirror { grid-template-columns: repeat(3, minmax(0, 1fr)); }")
+    expect(stylesheet).to include("min-height: 6rem;")
+    expect(stylesheet).to include('content: "Column " counter(notae-column);')
+    expect(stylesheet).not_to include("column-count: 3;")
+  end
+
   it "flushes pending editor saves before a block reparent happens" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 

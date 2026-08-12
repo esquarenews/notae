@@ -409,14 +409,22 @@ module Blocks
     def build_content_payload_for(mapped_type)
       metadata = deep_dup_json(block.content_json).slice("notae_color", "notae_highlight")
       lines = extract_lines(block.content_json)
+      primary_node = build_primary_node(mapped_type, lines)
 
       payload = {
         "type" => "doc",
-        "content" => [ build_primary_node(mapped_type, lines) ]
+        "content" => [ primary_node ]
       }
 
       if mapped_type.start_with?("columns_")
-        payload["notae_columns_count"] = mapped_type.split("_").last.to_i
+        column_count = mapped_type.split("_").last.to_i
+        payload["notae_columns_count"] = column_count
+        payload["content"] = Array.new(column_count) do |index|
+          {
+            "type" => "blockquote",
+            "content" => [ index.zero? ? primary_node : { "type" => "paragraph" } ]
+          }
+        end
       end
 
       payload.merge(metadata)

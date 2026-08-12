@@ -1152,6 +1152,82 @@ RSpec.describe "Blocks", type: :request do
     expect(synced_copy.content_json["notae_synced_source_id"]).to eq(block.id.to_s)
   end
 
+  it "creates distinct editable cells when a text block is turned into three columns" do
+    owner = User.create!(email: "blocks-three-columns-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Three columns", slug: "three-columns")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Three column page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Keep this text" } ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "columns_3" } }
+
+    block.reload
+    expect(block.block_type).to eq("columns_3")
+    expect(block.content_json.fetch("content").length).to eq(3)
+    expect(block.content_json.dig("content", 0, "type")).to eq("blockquote")
+    expect(block.content_json.dig("content", 0, "content", 0, "content", 0, "text")).to eq("Keep this text")
+    expect(block.content_json.fetch("content").drop(1)).to all(
+      eq("type" => "blockquote", "content" => [ { "type" => "paragraph" } ])
+    )
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    document = Nokogiri::HTML(response.body)
+    editor = document.at_css("#block_#{block.id} .notae-doc-editor.is-columns-3")
+    cells = editor.css(".notae-doc-static-content > blockquote")
+    expect(cells.length).to eq(3)
+    expect(cells.first.text).to eq("Keep this text")
+    expect(editor.at_css(".notae-doc-static-content")["data-column-count"]).to eq("3")
+    expect(editor.at_css(".notae-doc-static-content")["aria-label"]).to include("Click a column")
+  end
+
+  it "visually pads legacy three-column blocks without changing their stored text" do
+    owner = User.create!(email: "blocks-legacy-columns-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Legacy columns", slug: "legacy-columns")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Legacy columns page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "columns_3",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Existing column text" } ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    document = Nokogiri::HTML(response.body)
+    cells = document.css("#block_#{block.id} .notae-doc-static-content > blockquote")
+    expect(cells.length).to eq(3)
+    expect(cells.first.text).to eq("Existing column text")
+    expect(block.reload.content_json.fetch("content").length).to eq(1)
+  end
+
   it "toggles applied turn-into styles off when selected again" do
     owner = User.create!(email: "blocks-turn-toggle-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Turn toggle", slug: "turn-toggle")

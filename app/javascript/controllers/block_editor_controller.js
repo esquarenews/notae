@@ -519,7 +519,8 @@ export default class extends Controller {
 
     this.suppressUpdateCycle = true
     this.currentBlockType = block.block_type || this.currentBlockType
-    const content = block.content_json || { type: "doc", content: [{ type: "paragraph" }] }
+    const incomingContent = block.content_json || { type: "doc", content: [{ type: "paragraph" }] }
+    const content = this.normalizeContentForCurrentBlockType(incomingContent)
     this.editor.commands.setContent(content)
     this.hasPendingChanges = false
     this.syncStoredBlockState(content, this.currentBlockType)
@@ -562,6 +563,18 @@ export default class extends Controller {
       }
 
       return false
+    }
+
+    if (
+      event.key === "Tab" &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      this.currentBlockType.startsWith("columns_")
+    ) {
+      event.preventDefault()
+      this.moveColumnSelection(event.shiftKey ? -1 : 1)
+      return true
     }
 
     if (
@@ -806,6 +819,8 @@ export default class extends Controller {
     this.currentBlockType = command.blockType
     if (command.blockType === "todo_list") {
       this.ensureTodoListStructure()
+    } else if (command.blockType.startsWith("columns_")) {
+      this.ensureColumnStructure()
     }
     this.syncBlockTypeFromDocument(this.editor.getJSON())
     this.hideSlashMenu()
@@ -852,6 +867,7 @@ export default class extends Controller {
   }
 
   normalizeContentForCurrentBlockType(content) {
+    if (this.currentBlockType.startsWith("columns_")) return this.normalizeColumnContent(content)
     if (this.currentBlockType !== "todo_list") return content
     if (this.documentContainsTaskList(content)) return content
 
@@ -871,7 +887,53 @@ export default class extends Controller {
     }
   }
 
+  normalizeColumnContent(content) {
+    const columnCount = Number.parseInt(this.currentBlockType.split("_").at(-1), 10)
+    if (!Number.isInteger(columnCount) || columnCount < 2) return content
+
+    let columns = Array.isArray(content?.content) ? [...content.content] : []
+    if (!columns.every((node) => node?.type === "blockquote")) {
+      columns = [{
+        type: "blockquote",
+        content: columns.length > 0 ? columns : [{ type: "paragraph" }]
+      }]
+    }
+    while (columns.length < columnCount) {
+      columns.push({ type: "blockquote", content: [{ type: "paragraph" }] })
+    }
+
+    return { ...content, type: "doc", content: columns }
+  }
+
+  ensureColumnStructure() {
+    const normalized = this.normalizeColumnContent(this.editor.getJSON())
+    this.editor.commands.setContent(normalized)
+  }
+
+  moveColumnSelection(delta) {
+    const state = this.editor?.state
+    const doc = state?.doc
+    if (!doc || doc.childCount === 0) return false
+
+    const currentIndex = state.selection.$from.index(0)
+    const targetIndex = currentIndex + delta
+    if (targetIndex < 0 || targetIndex >= doc.childCount) return false
+
+    let targetPosition = 1
+    for (let index = 0; index < targetIndex; index += 1) {
+      targetPosition += doc.child(index).nodeSize
+    }
+
+    const targetNode = doc.child(targetIndex)
+    const selectionPosition = targetNode?.type?.name === "blockquote" ? targetPosition + 1 : targetPosition
+    this.editor.commands.setTextSelection(selectionPosition)
+    this.editor.view?.focus?.()
+    return true
+  }
+
   syncBlockTypeFromDocument(content) {
+    if (this.currentBlockType.startsWith("columns_")) return
+
     if (this.documentContainsTaskList(content)) {
       this.currentBlockType = "todo_list"
       return

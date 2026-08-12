@@ -78,16 +78,27 @@ module PagesHelper
   end
 
   def render_block_static_content(block, interactive: false)
-    content = render_prosemirror_node(block.content_json)
+    rendered_json = column_content_for_render(block)
+    content = render_prosemirror_node(rendered_json)
     content = content_tag(:p, block.search_text.to_s.presence || block.block_type.to_s) if content.blank?
+    column_count = block.block_type.to_s.delete_prefix("columns_").to_i if block.block_type.to_s.start_with?("columns_")
     options = {
       class: "ProseMirror notae-doc-static-content",
-      data: { block_editor_static: true }
+      data: {
+        block_editor_static: true,
+        column_count: column_count
+      }.compact
     }
     if interactive
       options[:tabindex] = 0
       options[:role] = "textbox"
-      options[:aria] = { label: "Block content. Press Enter or start typing to edit." }
+      aria_label =
+        if block.block_type.to_s.start_with?("columns_")
+          "#{block.block_type.to_s.delete_prefix('columns_')}-column section. Click a column or press Tab to move between columns."
+        else
+          "Block content. Press Enter or start typing to edit."
+        end
+      options[:aria] = { label: aria_label }
     end
 
     content_tag(:div, content, **options)
@@ -98,6 +109,21 @@ module PagesHelper
   end
 
   private
+
+  def column_content_for_render(block)
+    content = block.content_json.deep_dup
+    return content unless block.block_type.to_s.start_with?("columns_")
+
+    column_count = block.block_type.to_s.delete_prefix("columns_").to_i
+    nodes = Array(content["content"])
+    unless nodes.all? { |node| node.is_a?(Hash) && node["type"] == "blockquote" }
+      nodes = [ { "type" => "blockquote", "content" => nodes.presence || [ { "type" => "paragraph" } ] } ]
+    end
+    nodes += Array.new([ column_count - nodes.length, 0 ].max) do
+      { "type" => "blockquote", "content" => [ { "type" => "paragraph" } ] }
+    end
+    content.merge("type" => "doc", "content" => nodes)
+  end
 
   def render_prosemirror_node(node)
     case node
