@@ -1180,17 +1180,17 @@ RSpec.describe "Blocks", type: :request do
     block.reload
     expect(block.block_type).to eq("columns_3")
     expect(block.content_json.fetch("content").length).to eq(3)
-    expect(block.content_json.dig("content", 0, "type")).to eq("blockquote")
+    expect(block.content_json.dig("content", 0, "type")).to eq("columnCell")
     expect(block.content_json.dig("content", 0, "content", 0, "content", 0, "text")).to eq("Keep this text")
     expect(block.content_json.fetch("content").drop(1)).to all(
-      eq("type" => "blockquote", "content" => [ { "type" => "paragraph" } ])
+      eq("type" => "columnCell", "content" => [ { "type" => "paragraph" } ])
     )
 
     get page_path(workspace_slug: workspace.slug, id: page.id)
 
     document = Nokogiri::HTML(response.body)
     editor = document.at_css("#block_#{block.id} .notae-doc-editor.is-columns-3")
-    cells = editor.css(".notae-doc-static-content > blockquote")
+    cells = editor.css('.notae-doc-static-content > [data-type="column-cell"]')
     expect(cells.length).to eq(3)
     expect(cells.first.text).to eq("Keep this text")
     expect(editor.at_css(".notae-doc-static-content")["data-column-count"]).to eq("3")
@@ -1222,7 +1222,7 @@ RSpec.describe "Blocks", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
 
     document = Nokogiri::HTML(response.body)
-    cells = document.css("#block_#{block.id} .notae-doc-static-content > blockquote")
+    cells = document.css(%(#block_#{block.id} .notae-doc-static-content > [data-type="column-cell"]))
     expect(cells.length).to eq(3)
     expect(cells.first.text).to eq("Existing column text")
     expect(block.reload.content_json.fetch("content").length).to eq(1)

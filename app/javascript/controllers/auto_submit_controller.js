@@ -34,6 +34,8 @@ export default class extends Controller {
   connect() {
     this.debounceTimers = new Map()
     this.createRowFocusRequested = false
+    this.createdRowScrollState = null
+    this.createdRowMutationObserver = null
     this.handleSubmitStart = (event) => {
       const form = this.eventForm(event)
       this.markSubmitting(form)
@@ -64,6 +66,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.releaseCreatedRowScrollLock()
     this.clearDebounceTimers()
     this.constructor.removeDocumentPointerListener()
     this.element.removeEventListener("turbo:submit-start", this.handleSubmitStart)
@@ -152,6 +155,7 @@ export default class extends Controller {
     this.nextRowFocusRequested = createNextOnEnter
     if (createNextOnEnter) {
       window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)
+      this.captureCreatedRowScrollState()
     } else {
       this.captureViewState(event.target, form)
     }
@@ -589,6 +593,7 @@ export default class extends Controller {
 
   focusNextCreatedRow(attempt = 0) {
     setTimeout(() => {
+      this.restoreCreatedRowScrollPosition()
       const pendingForm = Array.from(document.querySelectorAll('form[data-auto-submit-focus-on-connect-value="true"]'))
         .reverse()
         .find((form) => form.dataset.autoSubmitPending !== "true")
@@ -596,17 +601,59 @@ export default class extends Controller {
       if (!(input instanceof HTMLElement)) {
         if (attempt < 20) {
           this.focusNextCreatedRow(attempt + 1)
+        } else {
+          this.releaseCreatedRowScrollLock()
         }
         return
       }
 
       if (document.activeElement !== input) {
         input.focus({ preventScroll: true })
-        if (typeof input.select === "function") {
-          input.select()
-        }
       }
+      if (typeof input.select === "function") input.select()
+
+      this.restoreCreatedRowScrollPosition()
+      requestAnimationFrame(() => {
+        this.restoreCreatedRowScrollPosition()
+        requestAnimationFrame(() => {
+          this.restoreCreatedRowScrollPosition()
+          this.releaseCreatedRowScrollLock()
+        })
+      })
     }, attempt === 0 ? 0 : 75)
+  }
+
+  captureCreatedRowScrollState() {
+    this.releaseCreatedRowScrollLock()
+    const scrollContainer = this.element.closest(".notae-content-scroll") || document.querySelector(".notae-content-scroll")
+    if (!(scrollContainer instanceof HTMLElement)) return
+
+    this.createdRowScrollState = {
+      container: scrollContainer,
+      top: scrollContainer.scrollTop,
+      left: scrollContainer.scrollLeft
+    }
+    scrollContainer.classList.add("is-grid-row-creating")
+
+    if (typeof MutationObserver === "function") {
+      this.createdRowMutationObserver = new MutationObserver(() => this.restoreCreatedRowScrollPosition())
+      this.createdRowMutationObserver.observe(this.element, { childList: true, subtree: true })
+    }
+  }
+
+  restoreCreatedRowScrollPosition() {
+    const state = this.createdRowScrollState
+    if (!state?.container?.isConnected) return
+
+    if (state.container.scrollTop !== state.top) state.container.scrollTop = state.top
+    if (state.container.scrollLeft !== state.left) state.container.scrollLeft = state.left
+  }
+
+  releaseCreatedRowScrollLock() {
+    this.createdRowMutationObserver?.disconnect()
+    this.createdRowMutationObserver = null
+    this.createdRowScrollState?.container?.classList?.remove("is-grid-row-creating")
+    this.createdRowScrollState = null
   }
 
   clearDebounceTimers() {

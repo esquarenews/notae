@@ -116,11 +116,13 @@ module PagesHelper
 
     column_count = block.block_type.to_s.delete_prefix("columns_").to_i
     nodes = Array(content["content"])
-    unless nodes.all? { |node| node.is_a?(Hash) && node["type"] == "blockquote" }
-      nodes = [ { "type" => "blockquote", "content" => nodes.presence || [ { "type" => "paragraph" } ] } ]
+    if nodes.all? { |node| node.is_a?(Hash) && node["type"] == "blockquote" }
+      nodes = nodes.map { |node| node.merge("type" => "columnCell") }
+    elsif !nodes.all? { |node| node.is_a?(Hash) && node["type"] == "columnCell" }
+      nodes = [ { "type" => "columnCell", "content" => nodes.presence || [ { "type" => "paragraph" } ] } ]
     end
     nodes += Array.new([ column_count - nodes.length, 0 ].max) do
-      { "type" => "blockquote", "content" => [ { "type" => "paragraph" } ] }
+      { "type" => "columnCell", "content" => [ { "type" => "paragraph" } ] }
     end
     content.merge("type" => "doc", "content" => nodes)
   end
@@ -158,6 +160,8 @@ module PagesHelper
       render_prosemirror_task_item(node)
     when "blockquote"
       content_tag(:blockquote, render_prosemirror_children(node))
+    when "columnCell"
+      content_tag(:div, render_prosemirror_children(node), data: { type: "column-cell" })
     when "codeBlock"
       content_tag(:pre, content_tag(:code, prosemirror_plain_text(node)))
     when "hardBreak"

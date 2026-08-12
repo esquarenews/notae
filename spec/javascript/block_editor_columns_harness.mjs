@@ -17,7 +17,7 @@ const normalized = controller.normalizeColumnContent({
   ]
 })
 
-if (normalized.content.length !== 3 || normalized.content.some((node) => node.type !== "blockquote")) {
+if (normalized.content.length !== 3 || normalized.content.some((node) => node.type !== "columnCell")) {
   throw new Error("Expected exactly three column containers")
 }
 
@@ -25,9 +25,18 @@ if (normalized.content[0].content.length !== 2 || normalized.content[0].content[
   throw new Error("Expected existing paragraphs to remain together in the first column")
 }
 
+const repairedAfterEdit = controller.normalizeColumnContent({
+  type: "doc",
+  content: normalized.content.slice(0, 2)
+})
+
+if (repairedAfterEdit.content.length !== 3 || repairedAfterEdit.content[2].type !== "columnCell") {
+  throw new Error("Expected a trailing empty column to be restored after an editor update")
+}
+
 let selectedPosition = null
 let focused = false
-const nodes = [5, 4, 3].map((nodeSize) => ({ nodeSize, type: { name: "blockquote" } }))
+const nodes = [5, 4, 3].map((nodeSize) => ({ nodeSize, type: { name: "columnCell" } }))
 controller.editor = {
   state: {
     selection: { $from: { index: () => 0 } },

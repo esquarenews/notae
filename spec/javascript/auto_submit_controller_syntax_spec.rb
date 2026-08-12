@@ -80,7 +80,22 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(focus_method).to include("if (attempt < 20)")
     expect(focus_method.scan("this.focusNextCreatedRow(attempt + 1)").size).to eq(1)
     expect(focus_method).to include("input.focus({ preventScroll: true })")
+    expect(focus_method).to include("input.select()")
     expect(enter_method).not_to include("this.focusNextCreatedRow()")
+  end
+
+  it "locks the grid viewport while replacing and inserting an Enter-created row" do
+    source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
+
+    expect(source).to include("captureCreatedRowScrollState()")
+    expect(source).to include('scrollContainer.classList.add("is-grid-row-creating")')
+    expect(source).to include("new MutationObserver(() => this.restoreCreatedRowScrollPosition())")
+    expect(source).to include("this.restoreCreatedRowScrollPosition()")
+    expect(source).to include("this.releaseCreatedRowScrollLock()")
+    expect(source).to include('classList?.remove("is-grid-row-creating")')
+
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    expect(stylesheet).to include(".notae-content-scroll.is-grid-row-creating {\n  overflow-anchor: none;")
   end
 
   it "restores the next clicked cell instead of stealing focus back to the submitted cell" do

@@ -421,7 +421,7 @@ module Blocks
         payload["notae_columns_count"] = column_count
         payload["content"] = Array.new(column_count) do |index|
           {
-            "type" => "blockquote",
+            "type" => "columnCell",
             "content" => [ index.zero? ? primary_node : { "type" => "paragraph" } ]
           }
         end

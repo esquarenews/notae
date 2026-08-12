@@ -41,14 +41,20 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     block_reparent_position = source.index("this.supportsBlockReparentShortcut()")
 
     expect(source).to include("normalizeColumnContent(content)")
-    expect(source).to include('node?.type === "blockquote"')
-    expect(source).to include('type: "blockquote"')
+    expect(source).to include('node?.type === "columnCell"')
+    expect(source).to include('type: "columnCell"')
     expect(source).to include("while (columns.length < columnCount)")
     expect(source).to include("ensureColumnStructure()")
     expect(source).to include("moveColumnSelection(delta)")
     expect(source).to include("const currentIndex = state.selection.$from.index(0)")
     expect(source).to include("this.editor.commands.setTextSelection(selectionPosition)")
     expect(column_navigation_position).to be < block_reparent_position
+    expect(source).to include('name: "columnCell"')
+    expect(source).to include('content: "block+"')
+    expect(source).to include('isolating: true')
+    expect(source).to include('renderHTML: () => ["div", { "data-type": "column-cell" }, 0]')
+    expect(source).to include("const normalizedContent = this.normalizeContentForCurrentBlockType(this.editor.getJSON())")
+    expect(source).to include("content_json: normalizedContent")
   end
 
   it "preserves multi-paragraph column content and moves Tab into the next container" do
@@ -69,7 +75,7 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
 
     expect(stylesheet).to include(".notae-doc-editor.is-columns-3 .ProseMirror { grid-template-columns: repeat(3, minmax(0, 1fr)); }")
     expect(stylesheet).to include("min-height: 6rem;")
-    expect(stylesheet).to include('content: "Column " counter(notae-column);')
+    expect(stylesheet).not_to include('content: "Column " counter(notae-column);')
     expect(stylesheet).not_to include("column-count: 3;")
   end
 

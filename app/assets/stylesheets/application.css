@@ -13296,7 +13296,6 @@ body.notae-theme-dark .notae-doc-editor .ProseMirror {
 .notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror {
   display: grid;
   gap: 0.72rem;
-  counter-reset: notae-column;
 }
 
 .notae-doc-editor.is-columns-2 .ProseMirror { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -13312,26 +13311,14 @@ body.notae-theme-dark .notae-doc-editor .ProseMirror {
   border: 1px dashed #cbd5e1;
   border-radius: 0.48rem;
   background: rgba(248, 250, 252, 0.72);
-  counter-increment: notae-column;
 }
 
-.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote {
-  border-left-width: 1px;
-}
-
-.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > :first-child {
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > [data-type="column-cell"] > :first-child {
   margin-top: 0;
 }
 
-.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > :last-child {
+.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > [data-type="column-cell"] > :last-child {
   margin-bottom: 0;
-}
-
-.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > p:empty::before,
-.notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > blockquote > p:has(> br.ProseMirror-trailingBreak:only-child)::before {
-  content: "Column " counter(notae-column);
-  color: #94a3b8;
-  pointer-events: none;
 }
 
 body.notae-theme-dark .notae-doc-editor:is(.is-columns-2, .is-columns-3, .is-columns-4, .is-columns-5) .ProseMirror > * {
@@ -15243,6 +15230,10 @@ body.notae-sidebar-open {
 .notae-content-scroll {
   min-height: 0;
   overflow-y: auto;
+}
+
+.notae-content-scroll.is-grid-row-creating {
+  overflow-anchor: none;
 }
 
 .notae-ai-rail {

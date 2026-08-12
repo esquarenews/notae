@@ -11,7 +11,7 @@ RSpec.describe "Grid Enter row creation", type: :system do
     workspace = Workspace.create!(name: "Grid Enter Scroll", slug: "grid-enter-scroll")
     Membership.create!(workspace: workspace, user: user, role: :owner)
     database = Database.create!(workspace: workspace, name: "Long task grid")
-    rows = 25.times.map do |index|
+    rows = 20.times.map do |index|
       DbRow.create!(workspace: workspace, database: database, title: "Task #{index + 1}")
     end
 
@@ -32,7 +32,7 @@ RSpec.describe "Grid Enter row creation", type: :system do
       })()
     JAVASCRIPT
 
-    source_input.set("Task 25 renamed")
+    source_input.set("Task 20 renamed")
     source_input.send_keys(:enter)
 
     expect(page).to have_css("form[data-auto-submit-focus-on-connect-value='true'] input.notae-db-title-input", wait: 5)
@@ -49,7 +49,10 @@ RSpec.describe "Grid Enter row creation", type: :system do
           range: Math.max(...samples) - Math.min(...samples),
           focusedInput,
           focusedRowId: focusedRow?.id || null,
-          sampleCount: samples.length
+          sampleCount: samples.length,
+          value: document.activeElement?.value || null,
+          selectionStart: document.activeElement?.selectionStart ?? null,
+          selectionEnd: document.activeElement?.selectionEnd ?? null
         }
       })()
     JAVASCRIPT
@@ -58,6 +61,12 @@ RSpec.describe "Grid Enter row creation", type: :system do
     expect(created_row).to be_present
     expect(result.fetch("focusedInput")).to be(true)
     expect(result.fetch("focusedRowId")).to eq("row_#{created_row.id}")
+    expect(result.fetch("value")).to eq("Untitled row")
+    expect(result.fetch("selectionStart")).to eq(0)
+    expect(result.fetch("selectionEnd")).to eq("Untitled row".length)
     expect(result.fetch("range")).to be <= 2
+
+    page.send_keys("Replacement title")
+    expect(find("#row_#{created_row.id} input.notae-db-title-input").value).to eq("Replacement title")
   end
 end

@@ -273,6 +273,7 @@ export default class extends Controller {
         import("@tiptap/extension-task-item")
       ]).then(([core, starterKit, link, taskList, taskItem]) => ({
         Editor: core.Editor,
+        Node: core.Node,
         StarterKit: starterKit.default,
         Link: link.default,
         TaskList: taskList.default,
@@ -340,8 +341,18 @@ export default class extends Controller {
   }
 
   async mountEditor(initialContent) {
-    const { Editor, StarterKit, Link, TaskList, TaskItem } = await this.loadEditorModules()
+    const { Editor, Node, StarterKit, Link, TaskList, TaskItem } = await this.loadEditorModules()
     if (!this.connected || !this.hasEditorTarget) return false
+
+    const ColumnCell = Node.create({
+      name: "columnCell",
+      group: "block",
+      content: "block+",
+      defining: true,
+      isolating: true,
+      parseHTML: () => [{ tag: 'div[data-type="column-cell"]' }],
+      renderHTML: () => ["div", { "data-type": "column-cell" }, 0]
+    })
 
     this.editorTarget.innerHTML = ""
     this.installGlobalHandlers()
@@ -359,7 +370,8 @@ export default class extends Controller {
         TaskList,
         TaskItem.configure({
           nested: true
-        })
+        }),
+        ColumnCell
       ],
       content: initialContent,
       editorProps: {
@@ -892,14 +904,16 @@ export default class extends Controller {
     if (!Number.isInteger(columnCount) || columnCount < 2) return content
 
     let columns = Array.isArray(content?.content) ? [...content.content] : []
-    if (!columns.every((node) => node?.type === "blockquote")) {
+    if (columns.every((node) => node?.type === "blockquote")) {
+      columns = columns.map((node) => ({ ...node, type: "columnCell" }))
+    } else if (!columns.every((node) => node?.type === "columnCell")) {
       columns = [{
-        type: "blockquote",
+        type: "columnCell",
         content: columns.length > 0 ? columns : [{ type: "paragraph" }]
       }]
     }
     while (columns.length < columnCount) {
-      columns.push({ type: "blockquote", content: [{ type: "paragraph" }] })
+      columns.push({ type: "columnCell", content: [{ type: "paragraph" }] })
     }
 
     return { ...content, type: "doc", content: columns }
@@ -925,7 +939,7 @@ export default class extends Controller {
     }
 
     const targetNode = doc.child(targetIndex)
-    const selectionPosition = targetNode?.type?.name === "blockquote" ? targetPosition + 1 : targetPosition
+    const selectionPosition = targetNode?.type?.name === "columnCell" ? targetPosition + 1 : targetPosition
     this.editor.commands.setTextSelection(selectionPosition)
     this.editor.view?.focus?.()
     return true
@@ -1358,9 +1372,10 @@ export default class extends Controller {
     if (!this.editor) return true
     if (!this.hasPendingChanges) return true
 
+    const normalizedContent = this.normalizeContentForCurrentBlockType(this.editor.getJSON())
     const payload = {
       block: {
-        content_json: this.editor.getJSON(),
+        content_json: normalizedContent,
         block_type: this.currentBlockType
       }
     }
