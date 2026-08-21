@@ -465,6 +465,7 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("Block created.")
     expect(response.body).to include('turbo-stream action="append" target="notae_doc_tree_root"')
     expect(response.body).to include(%(id="block_#{created_block.id}"))
+    expect(response.body).to include('data-block-editor-autofocus-value="true"')
   end
 
   it "creates a gantt embed block after the reference block for paste-driven embeds" do

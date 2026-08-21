@@ -475,7 +475,8 @@ class BlocksController < ApplicationController
           blocks_by_parent: page_render_context[:blocks_by_parent],
           index: sibling_index_for_render(page_render_context, block),
           reader_mode: page_render_context[:reader_mode],
-          embedded_page_params: current_embedded_page_params
+          embedded_page_params: current_embedded_page_params,
+          autofocus_editor: true
         }
       )
     ]

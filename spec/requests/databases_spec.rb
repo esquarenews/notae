@@ -3043,6 +3043,8 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
     expect(response.body).to include("Row updated.")
     expect(response.body).to include('data-auto-submit-focus-on-connect-value="true"')
+    expect(response.body).to include('data-controller="select-on-connect"')
+    expect(response.body).to include('data-select-on-connect-target="input"')
     expect(response.body).to include("is-new-row-highlight")
     expect(first_row.reload.title).to eq("Updated first row")
     expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])

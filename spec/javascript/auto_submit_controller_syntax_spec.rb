@@ -74,11 +74,11 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
 
   it "focuses a newly inserted row once without repeated viewport corrections" do
     source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
-    focus_method = source[/  focusNextCreatedRow\(attempt = 0\) \{.*?\n  \}/m]
+    focus_method = source[/  focusNextCreatedRow\(attempt = 0, generation = this\.createdRowScrollGeneration\) \{.*?\n  \}/m]
     enter_method = source[/  submitOnEnter\(event\) \{.*?\n  \}/m]
 
     expect(focus_method).to include("if (attempt < 20)")
-    expect(focus_method.scan("this.focusNextCreatedRow(attempt + 1)").size).to eq(1)
+    expect(focus_method.scan("this.focusNextCreatedRow(attempt + 1, generation)").size).to eq(1)
     expect(focus_method).to include("input.focus({ preventScroll: true })")
     expect(focus_method).to include("input.select()")
     expect(enter_method).not_to include("this.focusNextCreatedRow()")
@@ -89,10 +89,16 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
 
     expect(source).to include("captureCreatedRowScrollState()")
     expect(source).to include('scrollContainer.classList.add("is-grid-row-creating")')
-    expect(source).to include("new MutationObserver(() => this.restoreCreatedRowScrollPosition())")
+    expect(source).to include("this.focusEnterCreatedRowAfterMutation()")
+    expect(source).to include("if (!this.nextRowFocusRequested) return")
+    expect(source).to include("this.nextRowFocusRequested = false")
+    expect(source).to include("this.focusNextCreatedRow()")
     expect(source).to include("this.restoreCreatedRowScrollPosition()")
     expect(source).to include("this.releaseCreatedRowScrollLock()")
     expect(source).to include('classList?.remove("is-grid-row-creating")')
+    expect(source).to include("this.createdRowScrollGeneration += 1")
+    expect(source).to include("generation !== this.createdRowScrollGeneration")
+    expect(source).to include("this.releaseCreatedRowScrollLock(generation)")
 
     stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
     expect(stylesheet).to include(".notae-content-scroll.is-grid-row-creating {\n  overflow-anchor: none;")

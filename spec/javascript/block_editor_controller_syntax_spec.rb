@@ -104,7 +104,8 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
     connect_body = source[/connect\(\) \{(?<body>.*?)\n  \}/m, :body]
-    expect(connect_body).to include("if (this.shouldPrepareTouchTextEntry()) this.hydrate({ focus: false })")
+    expect(connect_body).to include("else if (this.shouldPrepareTouchTextEntry())")
+    expect(connect_body).to include("this.hydrate({ focus: false })")
     expect(connect_body).not_to include("new Editor(")
     expect(source).not_to include("IntersectionObserver")
     expect(source).not_to include("EDITOR_LAZY_ROOT_MARGIN")
@@ -139,6 +140,17 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("this.editor.commands.setTextSelection(position.pos)")
     expect(source).to include("view?.focus?.()")
     expect(source).to include('editorElement.scrollIntoView({ block: "nearest", inline: "nearest" })')
+  end
+
+  it "hydrates, focuses, and reveals only a newly created block marked for autofocus" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("autofocus: Boolean")
+    expect(source).to include("if (this.autofocusValue)")
+    expect(source).to include("this.focusNewlyCreatedBlock()")
+    expect(source).to include("this.hydrate({ focus: false }).then((mounted) => {")
+    expect(source).to include("this.focusEditor({ immediate: true })")
+    expect(source).to include('block?.scrollIntoView({ block: "nearest", inline: "nearest" })')
   end
 
   it "focuses prehydrated mobile editors when tapping the block shell" do

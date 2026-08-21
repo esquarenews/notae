@@ -13,6 +13,7 @@
 <% page_blocks_route_params = { workspace_slug: workspace.slug, page_id: page.id }.merge(embedded_page_params) %>
 <% editor_classes = "notae-doc-editor is-#{block.block_type.to_s.tr('_', '-')} #{("is-color-#{block_color}" if block_color.present?)} #{("is-highlight-#{block_highlight}" if block_highlight.present?)}" %>
 <% interactive_editor = !reader_mode %>
+<% autofocus_editor = local_assigns.fetch(:autofocus_editor, false) %>
 
 <article id="block_<%= block.id %>"
          class="notae-doc-block is-type-<%= block.block_type.to_s.tr('_', '-') %> <%= "is-color-#{block_color}" if block_color.present? %> <%= "is-highlight-#{block_highlight}" if block_highlight.present? %> <%= "is-columns" if block.block_type.start_with?("columns_") %> <%= "is-layout-columns-#{layout_columns_count}" if layout_columns_count.present? %>"
@@ -109,6 +110,7 @@
            data-block-editor-create-url-value="<%= page_blocks_path(page_blocks_route_params) %>"
            data-block-editor-block-type-value="<%= block.block_type %>"
            data-block-editor-block-id-value="<%= block.id %>"
+           data-block-editor-autofocus-value="<%= autofocus_editor %>"
            data-block-editor-touch-text-entry-value="<%= block_touch_text_entry_ready?(block) %>">
         <div data-block-editor-target="editor"
              data-action="pointerdown->block-editor#activateAndFocus focusin->block-editor#activateAndFocus keydown->block-editor#activateFromKeyboard"

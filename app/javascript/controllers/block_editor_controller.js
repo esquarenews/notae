@@ -138,7 +138,8 @@ export default class extends Controller {
     initialJson: String,
     blockType: String,
     blockId: String,
-    touchTextEntry: Boolean
+    touchTextEntry: Boolean,
+    autofocus: Boolean
   }
   static editorModulesPromise = null
   static editorModuleWarmupScheduled = false
@@ -148,6 +149,7 @@ export default class extends Controller {
     this.currentBlockType = this.blockTypeValue || "paragraph"
     this.clientSessionId = this.resolveClientSessionId()
     this.saveTimeout = null
+    this.autofocusTimeout = null
     this.pendingSavePromise = null
     this.hasPendingChanges = false
     this.editingIdleTimeout = null
@@ -165,12 +167,17 @@ export default class extends Controller {
     this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
     this.flushSaveHandler = (event) => this.handleFlushSaveRequest(event)
     this.constructor.scheduleEditorModuleWarmup()
-    if (this.shouldPrepareTouchTextEntry()) this.hydrate({ focus: false })
+    if (this.autofocusValue) {
+      this.focusNewlyCreatedBlock()
+    } else if (this.shouldPrepareTouchTextEntry()) {
+      this.hydrate({ focus: false })
+    }
   }
 
   disconnect() {
     this.connected = false
     clearTimeout(this.saveTimeout)
+    clearTimeout(this.autofocusTimeout)
     clearTimeout(this.editingIdleTimeout)
     this.hideSlashMenu()
     this.setBlockFocused(false)
@@ -233,6 +240,22 @@ export default class extends Controller {
 
   mediaQueryMatches(query) {
     return Boolean(window.matchMedia?.(query)?.matches)
+  }
+
+  focusNewlyCreatedBlock() {
+    const block = this.element.closest("[data-block-id]")
+    block?.scrollIntoView({ block: "nearest", inline: "nearest" })
+
+    this.hydrate({ focus: false }).then((mounted) => {
+      if (!mounted || !this.connected) return
+
+      this.autofocusTimeout = window.setTimeout(() => {
+        if (!this.connected) return
+
+        this.focusEditor({ immediate: true })
+        block?.scrollIntoView({ block: "nearest", inline: "nearest" })
+      }, 100)
+    })
   }
 
   hydrate({ focus = false, point = null } = {}) {
@@ -471,7 +494,8 @@ export default class extends Controller {
     this.editor.commands.focus("end")
     const editorElement = this.editor.view?.dom
     if (editorElement instanceof HTMLElement && document.activeElement !== editorElement) {
-      editorElement.focus({ preventScroll: true })
+      this.editor.view?.focus?.()
+      if (document.activeElement !== editorElement) editorElement.focus({ preventScroll: true })
       this.editor.commands.focus("end")
     }
   }

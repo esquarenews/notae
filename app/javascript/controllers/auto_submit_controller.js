@@ -36,6 +36,7 @@ export default class extends Controller {
     this.createRowFocusRequested = false
     this.createdRowScrollState = null
     this.createdRowMutationObserver = null
+    this.createdRowScrollGeneration = 0
     this.handleSubmitStart = (event) => {
       const form = this.eventForm(event)
       this.markSubmitting(form)
@@ -591,8 +592,10 @@ export default class extends Controller {
     })
   }
 
-  focusNextCreatedRow(attempt = 0) {
+  focusNextCreatedRow(attempt = 0, generation = this.createdRowScrollGeneration) {
     setTimeout(() => {
+      if (generation !== this.createdRowScrollGeneration) return
+
       this.restoreCreatedRowScrollPosition()
       const pendingForm = Array.from(document.querySelectorAll('form[data-auto-submit-focus-on-connect-value="true"]'))
         .reverse()
@@ -600,9 +603,9 @@ export default class extends Controller {
       const input = pendingForm?.querySelector?.('input[type="text"], input:not([type]), textarea')
       if (!(input instanceof HTMLElement)) {
         if (attempt < 20) {
-          this.focusNextCreatedRow(attempt + 1)
+          this.focusNextCreatedRow(attempt + 1, generation)
         } else {
-          this.releaseCreatedRowScrollLock()
+          this.releaseCreatedRowScrollLock(generation)
         }
         return
       }
@@ -616,8 +619,10 @@ export default class extends Controller {
       requestAnimationFrame(() => {
         this.restoreCreatedRowScrollPosition()
         requestAnimationFrame(() => {
+          if (generation !== this.createdRowScrollGeneration) return
+
           this.restoreCreatedRowScrollPosition()
-          this.releaseCreatedRowScrollLock()
+          this.releaseCreatedRowScrollLock(generation)
         })
       })
     }, attempt === 0 ? 0 : 75)
@@ -625,6 +630,7 @@ export default class extends Controller {
 
   captureCreatedRowScrollState() {
     this.releaseCreatedRowScrollLock()
+    this.createdRowScrollGeneration += 1
     const scrollContainer = this.element.closest(".notae-content-scroll") || document.querySelector(".notae-content-scroll")
     if (!(scrollContainer instanceof HTMLElement)) return
 
@@ -636,9 +642,19 @@ export default class extends Controller {
     scrollContainer.classList.add("is-grid-row-creating")
 
     if (typeof MutationObserver === "function") {
-      this.createdRowMutationObserver = new MutationObserver(() => this.restoreCreatedRowScrollPosition())
+      this.createdRowMutationObserver = new MutationObserver(() => {
+        this.restoreCreatedRowScrollPosition()
+        this.focusEnterCreatedRowAfterMutation()
+      })
       this.createdRowMutationObserver.observe(this.element, { childList: true, subtree: true })
     }
+  }
+
+  focusEnterCreatedRowAfterMutation() {
+    if (!this.nextRowFocusRequested) return
+
+    this.nextRowFocusRequested = false
+    this.focusNextCreatedRow()
   }
 
   restoreCreatedRowScrollPosition() {
@@ -649,7 +665,9 @@ export default class extends Controller {
     if (state.container.scrollLeft !== state.left) state.container.scrollLeft = state.left
   }
 
-  releaseCreatedRowScrollLock() {
+  releaseCreatedRowScrollLock(generation = null) {
+    if (generation !== null && generation !== this.createdRowScrollGeneration) return
+
     this.createdRowMutationObserver?.disconnect()
     this.createdRowMutationObserver = null
     this.createdRowScrollState?.container?.classList?.remove("is-grid-row-creating")

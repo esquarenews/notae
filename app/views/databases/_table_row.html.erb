@@ -91,6 +91,7 @@
                     accept-charset="UTF-8"
                     method="post"
                     class="notae-db-title-form notae-db-title-form-inline"
+                    <% if autofocus_title %>data-controller="select-on-connect"<% end %>
                     data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
                     data-preserve-database-scroll="true">
                 <input type="hidden" name="_method" value="patch" autocomplete="off">
@@ -99,6 +100,7 @@
                        value="<%= row.title %>"
                        class="notae-db-title-input"
                        placeholder="Enter name"
+                       data-select-on-connect-target="input"
                        data-action="input->auto-submit#submitDebounced change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter"
                        data-auto-submit-create-next-row-on-enter="true">
                 <input type="hidden" name="db_row[autosave_title]" value="1" autocomplete="off">
@@ -126,6 +128,7 @@
                   accept-charset="UTF-8"
                   method="post"
                   class="notae-db-title-form notae-db-title-form-inline"
+                  <% if autofocus_title %>data-controller="select-on-connect"<% end %>
                   data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
                   data-preserve-database-scroll="true">
               <input type="hidden" name="_method" value="patch" autocomplete="off">
@@ -134,6 +137,7 @@
                      value="<%= row.title %>"
                      class="notae-db-title-input"
                      placeholder="Enter name"
+                     data-select-on-connect-target="input"
                      data-action="input->auto-submit#submitDebounced change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter"
                      data-auto-submit-create-next-row-on-enter="true">
               <input type="hidden" name="db_row[autosave_title]" value="1" autocomplete="off">
