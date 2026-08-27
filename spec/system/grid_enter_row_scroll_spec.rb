@@ -92,4 +92,77 @@ RSpec.describe "Grid Enter row creation", type: :system do
     page.send_keys("Replacement title")
     expect(find("#row_#{created_row.id} input.notae-db-title-input").value).to eq("Replacement title")
   end
+
+  it "selects the untitled row after a sorted grid uses the redirect fallback" do
+    user = User.create!(email: "grid-enter-sorted-focus@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid Enter Sorted Focus", slug: "grid-enter-sorted-focus")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Sorted task grid")
+    source_row = DbRow.create!(workspace: workspace, database: database, title: "Source task")
+
+    login_as user, scope: :user
+    visit database_path(
+      workspace_slug: workspace.slug,
+      id: database.id,
+      sort_property_id: DatabaseView::NAME_SORT_KEY,
+      sort_direction: "asc"
+    )
+
+    source_input = find("#row_#{source_row.id} input.notae-db-title-input")
+    source_input.send_keys(:enter)
+
+    expect(page).to have_css(
+      "tr.is-new-row-highlight form[data-controller~='select-on-connect'] input.notae-db-title-input:focus",
+      wait: 5
+    )
+    expect(page.evaluate_script("document.activeElement?.value")).to eq("Untitled row")
+    expect(page.evaluate_script("[document.activeElement?.selectionStart, document.activeElement?.selectionEnd]")).to eq(
+      [ 0, "Untitled row".length ]
+    )
+  end
+
+  it "keeps a newly positioned caret when stale autosave state is restored" do
+    user = User.create!(email: "grid-caret-restore@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Grid Caret Restore", slug: "grid-caret-restore")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Caret task grid")
+    DbRow.create!(workspace: workspace, database: database, title: "Different row")
+    row = DbRow.create!(workspace: workspace, database: database, title: "abcdefghij")
+
+    login_as user, scope: :user
+    visit database_path(workspace_slug: workspace.slug, id: database.id)
+    input = find("#row_#{row.id} input.notae-db-title-input")
+
+    page.execute_script(<<~JAVASCRIPT, input.native)
+      const input = arguments[0]
+      window.sessionStorage.setItem("notae:auto-submit:view-state", JSON.stringify({
+        path: window.location.pathname,
+        search: window.location.search,
+        focusSelector: `[data-scroll-preserve-key="row_#{row.id}"] input[name="db_row[title]"]`,
+        scrollY: window.scrollY,
+        capturedAt: Date.now() - 100,
+        preservesSelection: true,
+        selectionStart: 2,
+        selectionEnd: 2,
+        selectionDirection: "none"
+      }))
+      input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }))
+      input.focus({ preventScroll: true })
+      input.setSelectionRange(8, 8)
+      input.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }))
+
+      const restoreTrigger = document.createElement("div")
+      restoreTrigger.dataset.controller = "auto-submit"
+      restoreTrigger.dataset.caretRestoreTrigger = "true"
+      document.body.appendChild(restoreTrigger)
+    JAVASCRIPT
+
+    expect(page).to have_css("[data-caret-restore-trigger]", visible: :all, wait: 5)
+    expect(page).to have_css("#database_table_rows #row_#{row.id} input.notae-db-title-input:focus", wait: 5)
+    expect(page.evaluate_script("window.sessionStorage.getItem('notae:auto-submit:view-state')")).to be_nil
+    expect(page.evaluate_script("[document.activeElement.selectionStart, document.activeElement.selectionEnd]")).to eq([ 8, 8 ])
+
+    page.send_keys("Z")
+    expect(input.value).to eq("abcdefghZij")
+  end
 end

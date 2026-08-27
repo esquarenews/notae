@@ -1,5 +1,6 @@
-<% autofocus_title = local_assigns.fetch(:autofocus_title, false) %>
 <% highlight_row_id = local_assigns[:highlight_row_id].presence %>
+<% autofocus_title = local_assigns.fetch(:autofocus_title, false) ||
+                     (highlight_row_id.to_s == row.id.to_s && row.title.to_s == "Untitled row") %>
 <% linked_page = row.linked_page %>
 <% row_can_update = local_assigns.fetch(:can_update_rows) { policy(row).update? && !database.locked? } %>
 <% row_can_destroy = local_assigns.fetch(:can_destroy_rows) { policy(row).destroy? && !database.locked? } %>

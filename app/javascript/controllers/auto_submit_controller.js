@@ -29,7 +29,11 @@ export default class extends Controller {
   static activeControllerCount = 0
   static pendingFocusSelector = ""
   static pendingFocusCapturedAt = 0
+  static pendingSelectionStart = null
+  static pendingSelectionEnd = null
+  static pendingSelectionDirection = "none"
   static documentPointerDownHandler = null
+  static documentPointerUpHandler = null
 
   connect() {
     this.debounceTimers = new Map()
@@ -79,7 +83,9 @@ export default class extends Controller {
     if (this.documentPointerDownHandler) return
 
     this.documentPointerDownHandler = (event) => this.capturePendingFocusTarget(event)
+    this.documentPointerUpHandler = (event) => this.capturePendingFocusSelection(event)
     document.addEventListener("pointerdown", this.documentPointerDownHandler, true)
+    document.addEventListener("pointerup", this.documentPointerUpHandler, true)
   }
 
   static removeDocumentPointerListener() {
@@ -87,8 +93,9 @@ export default class extends Controller {
     if (this.activeControllerCount > 0 || !this.documentPointerDownHandler) return
 
     document.removeEventListener("pointerdown", this.documentPointerDownHandler, true)
+    document.removeEventListener("pointerup", this.documentPointerUpHandler, true)
     this.documentPointerDownHandler = null
-    this.clearPendingFocusTarget()
+    this.documentPointerUpHandler = null
   }
 
   formFor(event) {
@@ -452,16 +459,26 @@ export default class extends Controller {
       return
     }
 
-    const selector = this.preferredFocusSelector(payload)
-    const target = selector ? document.querySelector(selector) : null
-    if (!(target instanceof HTMLElement)) return
-
     window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)
-    this.clearPendingFocusTarget()
     requestAnimationFrame(() => {
       window.scrollTo({ top: Number(payload.scrollY) || 0, behavior: "auto" })
       requestAnimationFrame(() => {
+        const focusState = this.preferredFocusState(payload)
+        const target = focusState.selector ? document.querySelector(focusState.selector) : null
+        if (!(target instanceof HTMLElement)) {
+          this.clearPendingFocusTarget()
+          return
+        }
+
+        const alreadyFocused = document.activeElement === target
         target.focus({ preventScroll: true })
+        if (focusState.userPositionedCaret) {
+          if (!alreadyFocused) this.restorePendingSelection(target, focusState)
+          this.clearPendingFocusTarget()
+          return
+        }
+
+        this.clearPendingFocusTarget()
         if (this.restoreSelection(target, payload)) return
         if (payload?.preservesSelection) return
 
@@ -509,15 +526,30 @@ export default class extends Controller {
     return true
   }
 
-  preferredFocusSelector(payload) {
+  preferredFocusState(payload) {
     const pendingCapturedAt = Number(payload?.pendingFocusCapturedAt || 0)
     const submittedAt = Number(payload?.capturedAt || 0)
+    const currentPendingCapturedAt = Number(this.constructor.pendingFocusCapturedAt || 0)
 
-    if (payload?.pendingFocusSelector && pendingCapturedAt >= submittedAt) {
-      return payload.pendingFocusSelector
+    if (this.constructor.pendingFocusSelector && currentPendingCapturedAt >= submittedAt) {
+      return {
+        selector: this.constructor.pendingFocusSelector,
+        selectionStart: this.constructor.pendingSelectionStart,
+        selectionEnd: this.constructor.pendingSelectionEnd,
+        selectionDirection: this.constructor.pendingSelectionDirection,
+        userPositionedCaret: true
+      }
     }
 
-    return payload?.focusSelector || ""
+    if (payload?.pendingFocusSelector && pendingCapturedAt >= submittedAt) {
+      return { selector: payload.pendingFocusSelector, userPositionedCaret: true }
+    }
+
+    return { selector: payload?.focusSelector || "", userPositionedCaret: false }
+  }
+
+  preferredFocusSelector(payload) {
+    return this.preferredFocusState(payload).selector
   }
 
   focusSelectorFor(target) {
@@ -530,7 +562,20 @@ export default class extends Controller {
     if (target.id) return `#${CSS.escape(target.id)}`
 
     const name = target.getAttribute("name")?.trim()
-    if (name) return `[name="${this.escapeAttribute(name)}"]`
+    if (name) {
+      const tagName = target.tagName.toLowerCase()
+      const inputType = target instanceof HTMLInputElement ? target.getAttribute("type")?.trim() : ""
+      const fieldSelector = `${tagName}[name="${this.escapeAttribute(name)}"]` +
+        (inputType ? `[type="${this.escapeAttribute(inputType)}"]` : "")
+      const keyedAncestor = target.closest("[data-scroll-preserve-key]")
+      const preserveKey = keyedAncestor?.getAttribute("data-scroll-preserve-key")?.trim()
+
+      if (preserveKey) {
+        return `[data-scroll-preserve-key="${this.escapeAttribute(preserveKey)}"] ${fieldSelector}`
+      }
+
+      return fieldSelector
+    }
 
     return ""
   }
@@ -552,11 +597,59 @@ export default class extends Controller {
 
     this.pendingFocusSelector = this.focusSelectorFor(focusTarget)
     this.pendingFocusCapturedAt = Date.now()
+    this.captureSelectionFor(focusTarget)
+  }
+
+  static capturePendingFocusSelection(event) {
+    const target = event?.target
+    if (!(target instanceof HTMLElement)) return
+
+    const focusTarget = target.closest("input, textarea, select, [contenteditable='true']")
+    if (!(focusTarget instanceof HTMLElement)) return
+    if (this.focusSelectorFor(focusTarget) !== this.pendingFocusSelector) return
+
+    this.pendingFocusCapturedAt = Date.now()
+    this.captureSelectionFor(focusTarget)
+  }
+
+  static captureSelectionFor(target) {
+    if (
+      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+      typeof target.selectionStart === "number" &&
+      typeof target.selectionEnd === "number"
+    ) {
+      this.pendingSelectionStart = target.selectionStart
+      this.pendingSelectionEnd = target.selectionEnd
+      this.pendingSelectionDirection = target.selectionDirection || "none"
+    } else {
+      this.pendingSelectionStart = null
+      this.pendingSelectionEnd = null
+      this.pendingSelectionDirection = "none"
+    }
   }
 
   static clearPendingFocusTarget() {
     this.pendingFocusSelector = ""
     this.pendingFocusCapturedAt = 0
+    this.pendingSelectionStart = null
+    this.pendingSelectionEnd = null
+    this.pendingSelectionDirection = "none"
+  }
+
+  restorePendingSelection(target, focusState) {
+    if (!this.supportsSelectionRange(target)) return false
+
+    const start = Number(focusState?.selectionStart)
+    const end = Number(focusState?.selectionEnd)
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return false
+
+    const valueLength = target.value.length
+    target.setSelectionRange(
+      Math.min(Math.max(start, 0), valueLength),
+      Math.min(Math.max(end, 0), valueLength),
+      focusState.selectionDirection || "none"
+    )
+    return true
   }
 
   clearPendingFocusTarget() {
