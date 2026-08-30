@@ -68,4 +68,99 @@ RSpec.describe "Adding a block to a long Nota", type: :system do
     expect(result.fetch("visible")).to be(true)
     expect(result.fetch("scrollTop")).to be >= scroll_top_before - 2
   end
+
+  it "keeps a clicked text insertion point visible while delayed scroll restoration is pending" do
+    user = User.create!(email: "nota-caret-scroll@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Nota caret scroll", slug: "nota-caret-scroll")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    nota = Page.create!(workspace: workspace, created_by: user, title: "Long caret Nota")
+    blocks = 30.times.map do |index|
+      Block.create!(
+        workspace: workspace,
+        page: nota,
+        created_by: user,
+        block_type: "paragraph",
+        content_json: {
+          type: "doc",
+          content: [ { type: "paragraph", content: [ { type: "text", text: "Long section #{index + 1}" } ] } ]
+        }
+      )
+    end
+    target_block = blocks.fetch(26)
+
+    login_as user, scope: :user
+    visit page_path(workspace_slug: workspace.slug, id: nota.id)
+    restoration_started = page.evaluate_async_script(<<~JAVASCRIPT)
+      const done = arguments[0]
+      const startedAt = Date.now()
+      const check = () => {
+        const documentLayout = document.querySelector("[data-controller~='database-view-state']")
+        const controller = window.Stimulus?.getControllerForElementAndIdentifier(documentLayout, "database-view-state")
+        if (controller) {
+          controller.restoreStoredPosition(document.querySelector(".notae-content-scroll"), {
+            path: window.location.pathname,
+            timestamp: Date.now(),
+            scrollTop: 0,
+            scrollLeft: 0
+          })
+          return done(true)
+        }
+        if (Date.now() - startedAt > 3000) return done(false)
+        window.setTimeout(check, 20)
+      }
+      check()
+    JAVASCRIPT
+    expect(restoration_started).to be(true)
+    sleep 0.4
+    target = find("#block_#{target_block.id} [data-block-editor-target='editor']")
+    page.execute_script("arguments[0].scrollIntoView({ block: 'center' })", target.native)
+    page.execute_script("arguments[0].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))", target.native)
+    pending_restore_count = page.evaluate_script(<<~JAVASCRIPT)
+      (() => {
+        const documentLayout = document.querySelector("[data-controller~='database-view-state']")
+        return window.Stimulus
+          .getControllerForElementAndIdentifier(documentLayout, "database-view-state")
+          .scrollRestoreTimeouts.length
+      })()
+    JAVASCRIPT
+    expect(pending_restore_count).to eq(0)
+    target.click
+    expect(page).to have_css("#block_#{target_block.id} .ProseMirror:focus", wait: 8)
+
+    before = page.evaluate_script(<<~JAVASCRIPT)
+      (() => {
+        const scroller = document.querySelector(".notae-content-scroll")
+        const block = document.querySelector("#block_#{target_block.id}")
+        const blockRect = block.getBoundingClientRect()
+        const scrollerRect = scroller.getBoundingClientRect()
+        return {
+          scrollTop: scroller.scrollTop,
+          visible: blockRect.bottom > scrollerRect.top && blockRect.top < scrollerRect.bottom
+        }
+      })()
+    JAVASCRIPT
+
+    sleep 2
+
+    after = page.evaluate_script(<<~JAVASCRIPT)
+      (() => {
+        const scroller = document.querySelector(".notae-content-scroll")
+        const block = document.querySelector("#block_#{target_block.id}")
+        const blockRect = block.getBoundingClientRect()
+        const scrollerRect = scroller.getBoundingClientRect()
+        return {
+          activeBlockId: document.activeElement?.closest?.("[data-block-id]")?.dataset?.blockId || null,
+          focused: document.activeElement?.classList?.contains("ProseMirror") || false,
+          scrollTop: scroller.scrollTop,
+          visible: blockRect.bottom > scrollerRect.top && blockRect.top < scrollerRect.bottom
+        }
+      })()
+    JAVASCRIPT
+
+    expect(before.fetch("visible")).to be(true)
+    expect(after.fetch("activeBlockId")).to eq(target_block.id.to_s)
+    expect(after.fetch("focused")).to be(true)
+    expect(after.fetch("visible")).to be(true), "expected clicked block to remain visible; before=#{before.inspect}, after=#{after.inspect}"
+    expect((after.fetch("scrollTop") - before.fetch("scrollTop")).abs).to be <= 2
+  end
 end
