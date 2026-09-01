@@ -168,7 +168,8 @@
                         year_daily_events: year_daily_events_param
                       ).merge(project_scope_params)
                     ),
-                    class: "notae-chip-button" %>
+                    class: "notae-chip-button",
+                    data: (@view == "month" ? { turbo_preload: true } : {}) %>
         <span class="notae-kalendarium-date-label" data-kalendarium-focus-target="dateLabel"><%= selected_date_label %></span>
         <%= link_to "→",
                     kalendarium_path(
@@ -181,7 +182,8 @@
                         year_daily_events: year_daily_events_param
                       ).merge(project_scope_params)
                     ),
-                    class: "notae-chip-button" %>
+                    class: "notae-chip-button",
+                    data: (@view == "month" ? { turbo_preload: true } : {}) %>
         <%= link_to "Today",
                     kalendarium_path(
                       kalendarium_base_params.merge(
@@ -231,7 +233,8 @@
                           year_daily_events: year_daily_events_param
                         ).merge(project_scope_params)
                       ),
-                      class: "notae-chip-button" %>
+                      class: "notae-chip-button",
+                      data: (@view == "month" ? { turbo_preload: true } : {}) %>
           <span class="notae-kalendarium-date-label" data-kalendarium-focus-target="dateLabel"><%= selected_date_label %></span>
           <%= link_to "→",
                       kalendarium_path(
@@ -244,7 +247,8 @@
                           year_daily_events: year_daily_events_param
                         ).merge(project_scope_params)
                       ),
-                      class: "notae-chip-button" %>
+                      class: "notae-chip-button",
+                      data: (@view == "month" ? { turbo_preload: true } : {}) %>
           <%= link_to "Today",
                       kalendarium_path(
                         kalendarium_base_params.merge(

@@ -118,6 +118,29 @@ RSpec.describe "Kalendarium", type: :request do
     expect(Membership.find_by!(user: user, workspace: workspace).calendar_preferences["planning_view"]).to eq("wide")
   end
 
+  it "preloads adjacent months without rewriting an unchanged view preference" do
+    user, workspace, = build_stack(suffix: "month-navigation-preload")
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    navigation_links = document.css(".notae-kalendarium-head-top .notae-kalendarium-nav-buttons a")
+    previous_month = navigation_links.find { |link| link.text.strip == "←" }
+    next_month = navigation_links.find { |link| link.text.strip == "→" }
+    expect(previous_month&.[]("href")).to include("date=2026-05-02")
+    expect(next_month&.[]("href")).to include("date=2026-07-02")
+    expect(previous_month&.[]("data-turbo-preload")).to eq("true")
+    expect(next_month&.[]("data-turbo-preload")).to eq("true")
+
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    expect do
+      get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-07-02")
+    end.not_to change { membership.reload.updated_at }
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "KalendariumController#show").fetch(:sql_queries)
+  end
+
   it "keeps wide planning mode after creating an event" do
     user, workspace, calendar = build_stack(suffix: "wide-planning-create")
     sign_in user

@@ -289,6 +289,11 @@ class ApplicationController < ActionController::Base
 
     membership = current_user.memberships.find_by!(workspace_id: @workspace.id)
     preferences = membership.calendar_preferences.deep_dup
+    if preferences[key.to_s] == value
+      @workspace_calendar_preferences = preferences
+      return true
+    end
+
     preferences[key.to_s] = value
     membership.update!(calendar_preferences_json: preferences)
     @workspace_calendar_preferences = preferences
