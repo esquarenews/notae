@@ -1,0 +1,58 @@
+<% content_for :title, "Notification #{@workspace.name}" %>
+
+<section class="notae-workspace-home notae-utility-page">
+  <header class="notae-utility-header">
+    <p class="notae-utility-workspace">
+      <%= link_to @workspace.name, workspace_path(@workspace.slug), class: "notae-utility-workspace-link" %>
+    </p>
+    <h1 class="notae-utility-title">
+      <% if @notification.codex_completion_notification? %>
+        <%= @notification.codex_completion_title %>
+      <% elsif @notification.notification_type == Notification::TYPE_TEST_PUSH %>
+        <%= @notification.metadata["title"].presence || "Notae test notification" %>
+      <% elsif @notification.knowledge_suggestion_notification? %>
+        <%= @notification.metadata["kind"] == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? "Daily workspace brief ready" : "New AI suggestion" %>
+      <% else %>
+        Notification
+      <% end %>
+    </h1>
+    <p class="notae-utility-meta">
+      <%= @notification.created_at.in_time_zone(current_user.time_zone).strftime("%a %-d %b %Y · %-I:%M %p") %>
+    </p>
+    <div class="notae-utility-page-actions">
+      <%= link_to "Notifications",
+                  workspace_notifications_path(workspace_slug: @workspace.slug),
+                  class: "notae-chip-button" %>
+      <%= link_to "Workspace home",
+                  workspace_path(@workspace.slug),
+                  class: "notae-chip-button notae-chip-button-subtle" %>
+    </div>
+  </header>
+
+  <article class="notae-workspace-home-list-item notae-utility-notification-item">
+    <% if @notification.metadata["body"].present? %>
+      <div class="notae-utility-copy"><%= simple_format(h(@notification.metadata["body"])) %></div>
+    <% elsif @notification.knowledge_suggestion_notification? %>
+      <% suggestion = @notification.notifiable if @notification.notifiable.is_a?(KnowledgeSuggestion) %>
+      <% suggestion ||= KnowledgeSuggestion.where(workspace_id: @workspace.id, user_id: current_user.id).find_by(id: @notification.metadata["knowledge_suggestion_id"].to_s.strip) %>
+      <% if suggestion.present? %>
+        <p class="notae-utility-copy"><strong><%= suggestion.title %></strong></p>
+        <p class="notae-utility-copy"><%= suggestion.summary %></p>
+      <% else %>
+        <p class="notae-utility-copy">The original AI suggestion is no longer available.</p>
+      <% end %>
+    <% else %>
+      <p class="notae-utility-copy">No further details were attached to this notification.</p>
+    <% end %>
+
+    <% requested_destination = @notification.metadata["path"].to_s.strip %>
+    <% sanitized_destination = Notifications::InternalPathSanitizer.call(requested_destination, fallback: nil) if requested_destination.present? %>
+    <% if sanitized_destination.present? && sanitized_destination != workspace_path(@workspace.slug) %>
+      <%= link_to "Open destination",
+                  sanitized_destination,
+                  class: "notae-utility-link notae-utility-mini-link" %>
+    <% elsif requested_destination.present? %>
+      <p class="notae-utility-meta">No specific actionable destination was attached to this notification.</p>
+    <% end %>
+  </article>
+</section>

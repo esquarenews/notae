@@ -50,8 +50,8 @@ RSpec.describe "Workspace notification bar", type: :request do
     expect(payload.dig("data", "html")).to include("Notae AI")
     expect(payload.dig("data", "html")).to include("New AI suggestion")
     expect(payload.dig("data", "html")).to include("Follow up with the design team")
-    expect(payload.dig("data", "html")).to include("conversation_id=#{conversation.id}")
-    expect(payload.dig("data", "html")).to include("#ai-conversation-#{conversation.id}")
+    expect(payload.dig("data", "html")).to include(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id))
+    expect(payload.dig("data", "html")).to include("#knowledge-suggestion-#{suggestion.id}")
   end
 
   it "renders codex completion cards in the AI alert stream" do
@@ -100,6 +100,24 @@ RSpec.describe "Workspace notification bar", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.headers["X-Notae-Perf-Action"]).to eq("WorkspaceNotificationBarsController#show")
+    expect(Notae::RequestPerformanceStore).not_to have_received(:record!)
+  end
+
+  it "queues slow production samples instead of writing the cache on the request thread" do
+    user = User.create!(email: "workspace-bar-slow-poll@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Workspace Bar Slow Poll", slug: "workspace-bar-slow-poll", shell_status_bar_mode: "all")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+    stub_const("Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS", 0.0)
+    allow(Notae::RequestPerformanceStore).to receive(:record!)
+    allow(Notae::RecordRequestPerformanceJob).to receive(:perform_later)
+
+    sign_in user
+    get workspace_notification_bar_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(Notae::RecordRequestPerformanceJob).to have_received(:perform_later).once
     expect(Notae::RequestPerformanceStore).not_to have_received(:record!)
   end
 end

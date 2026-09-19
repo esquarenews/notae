@@ -37,7 +37,7 @@ RSpec.describe "Notae AI settings", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("This document only")
     expect(response.body).to include("This workspace only")
-    expect(response.body).to include("Whole account")
+    expect(response.body).to include("Whole app")
   end
 
   it "updates the selected Notae AI loader style for the current user" do

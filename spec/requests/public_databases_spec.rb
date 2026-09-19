@@ -26,6 +26,19 @@ RSpec.describe "Public databases", type: :request do
     expect(share_link.reload.last_viewed_at).to be_present
   end
 
+  it "does not record a shared-grid view when workspace analytics are disabled" do
+    owner = User.create!(email: "public-grid-private-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Private grid analytics", slug: "private-grid-analytics", analytics_enabled: false)
+    Membership.create!(workspace:, user: owner, role: :owner)
+    database = Database.create!(workspace:, name: "Shared without tracking")
+    share_link = DatabaseShareLink.create!(workspace:, database:, created_by: owner)
+
+    get public_database_share_path(token: share_link.token)
+
+    expect(response).to have_http_status(:ok)
+    expect(share_link.reload.last_viewed_at).to be_nil
+  end
+
   it "returns 404 for invalid, expired, or revoked grid tokens" do
     owner = User.create!(email: "public-grid-invalid-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Invalid grid share workspace", slug: "invalid-grid-share-workspace")

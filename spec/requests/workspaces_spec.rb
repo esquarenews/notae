@@ -40,8 +40,62 @@ RSpec.describe "Workspaces", type: :request do
     expect(response.body).to include("Create Workspace")
   end
 
+  it "shows unlimited accounts a direct creation flow without Stripe signup" do
+    user = User.create!(
+      email: "workspace-unlimited-owner@example.com",
+      password: "password123",
+      saas_plan_key: User::SAAS_PLAN_BUSINESS
+    )
+    sign_in user
+
+    get new_workspace_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("included in your unlimited Business account")
+    expect(response.body).to include("Unlimited workspaces")
+    expect(response.body).to include("Create Workspace")
+    expect(response.body).not_to include("Continue to Stripe")
+    expect(response.body).not_to include("7-day Stripe trial")
+  end
+
+  it "creates an active workspace directly for an unlimited account" do
+    user = User.create!(
+      email: "workspace-unlimited-create@example.com",
+      password: "password123",
+      saas_plan_key: User::SAAS_PLAN_BUSINESS
+    )
+    sign_in user
+    expect_any_instance_of(Billing::StripeGateway).not_to receive(:create_checkout_session!)
+
+    expect do
+      post workspaces_path,
+           params: {
+             workspace: {
+               name: "Unlimited Product",
+               slug: "unlimited-product",
+               workspace_color: Workspace::WORKSPACE_COLOR_OPTIONS.first.fetch(:value),
+               plan_key: WorkspaceSubscription::PLAN_STARTER
+             }
+           }
+    end.to change(Workspace, :count).by(1)
+      .and change(WorkspaceSubscription, :count).by(1)
+      .and change(AdminAuditEvent, :count).by(1)
+
+    workspace = Workspace.find_by!(slug: "unlimited-product")
+
+    expect(response).to redirect_to(workspace_path(workspace.slug))
+    expect(Membership.find_by!(workspace: workspace, user: user).role).to eq("owner")
+    expect(workspace.workspace_subscription.plan_key).to eq(WorkspaceSubscription::PLAN_BUSINESS)
+    expect(workspace.workspace_subscription.status).to eq(WorkspaceSubscription::STATUS_ACTIVE)
+    expect(AdminAuditEvent.last.action).to eq("workspace_created_under_account_plan")
+  end
+
   it "lets an authenticated user create a workspace and become owner" do
-    user = User.create!(email: "owner@example.com", password: "password123")
+    user = User.create!(
+      email: "owner@example.com",
+      password: "password123",
+      saas_plan_key: User::SAAS_PLAN_STARTER
+    )
     sign_in user
     stub_stripe_checkout
 
@@ -69,7 +123,11 @@ RSpec.describe "Workspaces", type: :request do
   end
 
   it "derives the workspace slug from the name when slug is omitted" do
-    user = User.create!(email: "workspace-slug-derived@example.com", password: "password123")
+    user = User.create!(
+      email: "workspace-slug-derived@example.com",
+      password: "password123",
+      saas_plan_key: User::SAAS_PLAN_STARTER
+    )
     sign_in user
     stub_stripe_checkout
 

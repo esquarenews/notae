@@ -37,6 +37,7 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("window.Turbo.renderStreamMessage(responseBody)")
     expect(source).to include("window.Turbo.renderStreamMessage(responseBody)\n        this.restoreViewState()")
     expect(source).to include("submitOnEnter")
+    expect(source).to include("this.clearDebounceTimerFor(event.target)")
     expect(source).to include("requestSubmit(submitter)")
     expect(source).to include("autoSubmitPending")
     expect(source).to include("focusOnConnectValue")
@@ -44,6 +45,11 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("focusNextCreatedRow")
     expect(source).to include("nextRowFocusRequested")
     expect(source).to include("createRowFocusRequested")
+    expect(source).to include("isCreateNextRowSubmitter(submitter)")
+    expect(source).to include('form.dataset.preserveScroll = this.isCreateNextRowSubmitter(submitter) ? "false" : "true"')
+    expect(source).to include('submitter.name === "db_row[create_next_row]"')
+    expect(source).to include('submitter.value === "1"')
+    expect(source).to include("window.sessionStorage.removeItem(this.constructor.VIEW_STATE_KEY)")
     expect(source).to include("isCreateRowForm(form)")
     expect(source).to include("notae-db-new-row-trigger-form")
     expect(source).to include("notae-db-row-hover-control-form")
@@ -63,8 +69,39 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("window.sessionStorage")
     expect(source).to include("window.scrollTo")
     expect(source).to include("preventScroll: true")
-    expect(source).to include('form.dataset.preserveScroll = "true"')
     expect(source).to include('form.dataset.turboStream = "true"')
+  end
+
+  it "focuses a newly inserted row once without repeated viewport corrections" do
+    source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
+    focus_method = source[/  focusNextCreatedRow\(attempt = 0, generation = this\.createdRowScrollGeneration\) \{.*?\n  \}/m]
+    enter_method = source[/  submitOnEnter\(event\) \{.*?\n  \}/m]
+
+    expect(focus_method).to include("if (attempt < 20)")
+    expect(focus_method.scan("this.focusNextCreatedRow(attempt + 1, generation)").size).to eq(1)
+    expect(focus_method).to include("input.focus({ preventScroll: true })")
+    expect(focus_method).to include("input.select()")
+    expect(enter_method).not_to include("this.focusNextCreatedRow()")
+  end
+
+  it "locks the grid viewport while replacing and inserting an Enter-created row" do
+    source = Rails.root.join("app/javascript/controllers/auto_submit_controller.js").read
+
+    expect(source).to include("captureCreatedRowScrollState()")
+    expect(source).to include('scrollContainer.classList.add("is-grid-row-creating")')
+    expect(source).to include("this.focusEnterCreatedRowAfterMutation()")
+    expect(source).to include("if (!this.nextRowFocusRequested) return")
+    expect(source).to include("this.nextRowFocusRequested = false")
+    expect(source).to include("this.focusNextCreatedRow()")
+    expect(source).to include("this.restoreCreatedRowScrollPosition()")
+    expect(source).to include("this.releaseCreatedRowScrollLock()")
+    expect(source).to include('classList?.remove("is-grid-row-creating")')
+    expect(source).to include("this.createdRowScrollGeneration += 1")
+    expect(source).to include("generation !== this.createdRowScrollGeneration")
+    expect(source).to include("this.releaseCreatedRowScrollLock(generation)")
+
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+    expect(stylesheet).to include(".notae-content-scroll.is-grid-row-creating {\n  overflow-anchor: none;")
   end
 
   it "restores the next clicked cell instead of stealing focus back to the submitted cell" do
@@ -74,16 +111,27 @@ RSpec.describe "AutoSubmitController JavaScript syntax" do
     expect(source).to include("removeDocumentPointerListener")
     expect(source).to include("activeControllerCount")
     expect(source).to include("documentPointerDownHandler")
+    expect(source).to include("documentPointerUpHandler")
     expect(source).to include("document.addEventListener(\"pointerdown\", this.documentPointerDownHandler, true)")
+    expect(source).to include("document.addEventListener(\"pointerup\", this.documentPointerUpHandler, true)")
     expect(source).to include("document.removeEventListener(\"pointerdown\", this.documentPointerDownHandler, true)")
+    expect(source).to include("document.removeEventListener(\"pointerup\", this.documentPointerUpHandler, true)")
     expect(source).to include("capturePendingFocusTarget(event)")
+    expect(source).to include("capturePendingFocusSelection(event)")
+    expect(source).to include("captureSelectionFor(focusTarget)")
     expect(source).to include("pendingFocusSelector")
     expect(source).to include("pendingFocusCapturedAt")
+    expect(source).to include("pendingSelectionStart")
+    expect(source).to include("pendingSelectionEnd")
+    expect(source).to include('target.closest("[data-scroll-preserve-key]")')
+    expect(source).to include("data-scroll-preserve-key")
     expect(source).to include("this.constructor.pendingFocusSelector")
     expect(source).to include("this.constructor.pendingFocusCapturedAt")
     expect(source).to include("hasPendingConnectFocusTarget")
     expect(source).to include('form[data-auto-submit-focus-on-connect-value="true"]')
     expect(source).to include("preferredFocusSelector(payload)")
+    expect(source).to include("preferredFocusState(payload)")
+    expect(source).to include("restorePendingSelection(target, focusState)")
     expect(source).to include("payload?.pendingFocusSelector && pendingCapturedAt >= submittedAt")
     expect(source).to include("target.closest(\"input, textarea, select, [contenteditable='true']\")")
     expect(source).to include("this.clearPendingFocusTarget()")

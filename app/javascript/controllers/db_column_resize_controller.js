@@ -36,8 +36,12 @@ export default class extends Controller {
     const columnKey = header.dataset.columnKey
     if (!columnKey) return
 
-    const targetColumn = this.findColumnByKey(columnKey)
-    const measuredWidth = (targetColumn || header).getBoundingClientRect().width
+    // A <col> does not have reliable element geometry across browsers. In
+    // Chromium it can report the width of the whole table before its first
+    // inline width is applied, which immediately clamps the dragged column to
+    // MAX_COLUMN_WIDTH. The rendered header cell is the actual drag surface
+    // and gives us a stable starting width.
+    const measuredWidth = header.getBoundingClientRect().width
     this.activeColumnKey = columnKey
     this.startX = event.clientX
     this.startWidth = measuredWidth

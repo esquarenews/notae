@@ -6,9 +6,11 @@ module Kalendarium
     LOCK_TTL = 10.minutes
 
     def perform(connection_id)
+      lock_acquired = false
       connection = KalendariumConnection.find_by(id: connection_id)
       return if connection.blank?
-      return unless acquire_sync_lock(connection.id)
+      lock_acquired = acquire_sync_lock(connection.id)
+      return unless lock_acquired
 
       Kalendarium::ConnectionSyncService.new(connection: connection).call
       Search::QueueKnowledgeSuggestionRefreshJob.perform_later(connection.workspace_id)
@@ -22,7 +24,7 @@ module Kalendarium
       )
       Rails.logger.warn("Kalendarium sync auto-disabled connection=#{connection.id} provider=#{connection.provider}: #{error.class}: #{error.message}")
     ensure
-      release_sync_lock(connection_id)
+      release_sync_lock(connection_id) if lock_acquired
     end
 
     private
@@ -33,7 +35,9 @@ module Kalendarium
 
       message.include?("caldav authentication failed") ||
         message.include?("app-specific password") ||
-        message.include?("google token refresh failed (401)") ||
+        message.match?(/google token refresh failed \((?:400|401)\)/) ||
+        message.include?("token has been expired or revoked") ||
+        message.include?("invalid_grant") ||
         message.include?("oauth client was not found") ||
         message.include?("invalid_client")
     end

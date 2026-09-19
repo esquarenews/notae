@@ -1,7 +1,8 @@
 require "unicode/emoji"
+require "gemoji"
 
 class EmojiCatalog
-  Category = Struct.new(:key, :label, :emojis, :search_terms, keyword_init: true)
+  Category = Struct.new(:key, :label, :emojis, :search_terms, :display_names, keyword_init: true)
 
   GROUP_SEARCH_ALIASES = {
     "Smileys & Emotion" => %w[smiley smileys face faces happy joy laugh laughing love feeling feelings],
@@ -15,10 +16,10 @@ class EmojiCatalog
   }.freeze
 
   SUBGROUP_SEARCH_ALIASES = {
-    "person-activity" => %w[dance dancing dancer ballet walk walking run running standing kneeling haircut massage spa movement],
-    "person-role" => %w[profession professions worker workers career careers doctor nurse student teacher judge farmer chef cook mechanic scientist developer technologist singer artist pilot astronaut firefighter police detective guard builder],
-    "person-sport" => %w[sport sports athlete athletes exercise exercising workout workouts swim swimming bike biking cycling surf surfing golf basketball gymnastics wrestling lifting weights yoga],
-    "person-resting" => %w[rest resting relax relaxing meditation meditate yoga sleeping sleep bed bath],
+    "person-activity" => %w[activity activities movement],
+    "person-role" => %w[profession professions worker workers career careers],
+    "person-sport" => %w[sport sports athlete athletes exercise exercising workout workouts],
+    "person-resting" => %w[rest resting relax relaxing],
     "face-smiling" => %w[smile smiling grin grinning happy happiness laugh laughing],
     "face-affection" => %w[love loving affection heart hearts kiss kissing],
     "face-concerned" => %w[worried concern concerned anxious anxiousness cry crying sad sadness],
@@ -76,15 +77,19 @@ class EmojiCatalog
       Unicode::Emoji.list.each_with_object([]) do |(group_name, subgroup_map), categories|
         emojis = []
         search_terms = {}
+        display_names = {}
 
         subgroup_map.each do |subgroup_name, subgroup_emojis|
           subgroup_emojis.compact.uniq.each do |emoji|
             emojis << emoji
+            metadata = emoji_metadata(emoji)
             search_terms[emoji] ||= build_search_terms_for(
               emoji: emoji,
               group_name: group_name,
-              subgroup_name: subgroup_name
+              subgroup_name: subgroup_name,
+              metadata: metadata
             )
+            display_names[emoji] ||= metadata[:display_name]
           end
         end
 
@@ -95,16 +100,18 @@ class EmojiCatalog
           key: group_name.to_s.parameterize,
           label: group_name,
           emojis: emojis,
-          search_terms: search_terms
+          search_terms: search_terms,
+          display_names: display_names
         )
       end
     end
 
-    def build_search_terms_for(emoji:, group_name:, subgroup_name:)
+    def build_search_terms_for(emoji:, group_name:, subgroup_name:, metadata:)
       terms = []
       terms << emoji
       terms.concat(normalized_label_terms(group_name))
       terms.concat(normalized_label_terms(subgroup_name))
+      terms.concat(metadata[:search_terms])
       terms.concat(GROUP_SEARCH_ALIASES.fetch(group_name.to_s, []))
       terms.concat(SUBGROUP_SEARCH_ALIASES.fetch(subgroup_name.to_s, []))
 
@@ -116,7 +123,23 @@ class EmojiCatalog
         terms.concat(aliases) if emoji.include?(component)
       end
 
-      terms.map { |term| term.to_s.downcase.strip }.reject(&:blank?).uniq.join(" ")
+      terms.flat_map { |term| normalized_label_terms(term) }.reject(&:blank?).uniq.join(" ")
+    end
+
+    def emoji_metadata(emoji)
+      character = Emoji.find_by_unicode(emoji)
+      return { display_name: "Use #{emoji}", search_terms: [] } unless character
+
+      display_name = character.description.to_s.humanize.presence || character.name.to_s.humanize
+      search_terms = [
+        character.name,
+        character.description,
+        character.category,
+        *character.aliases,
+        *character.tags
+      ]
+
+      { display_name: display_name, search_terms: search_terms }
     end
 
     def normalized_label_terms(label)

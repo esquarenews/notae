@@ -107,11 +107,30 @@ module Databases
       def active_timer(workspace:)
         return nil if workspace.blank?
 
-        workspace.databases.active
+        databases = workspace.databases.active
           .where(applied_template_name: TEMPLATE_NAME)
-          .includes(:db_properties, db_rows: :db_cells)
-          .find_each do |database|
-          timer = active_timer_for_database(database)
+          .select(:id, :name)
+          .order(:id)
+          .to_a
+        return nil if databases.empty?
+
+        properties_by_database = DbProperty
+          .where(database_id: databases.map(&:id))
+          .select(:id, :database_id, :name)
+          .to_a
+          .group_by(&:database_id)
+
+        databases.each do |database|
+          properties = properties_by_database.fetch(database.id, [])
+          started_property = property_from(properties, STARTED_AT_PROPERTY)
+          stopped_property = property_from(properties, STOPPED_AT_PROPERTY)
+          next if started_property.blank? || stopped_property.blank?
+
+          timer = active_timer_for_database(
+            database,
+            started_property:,
+            stopped_property:
+          )
           return timer if timer.present?
         end
 
@@ -182,15 +201,32 @@ module Databases
         database.db_properties.ordered.find { |property| normalize_property_name(property.name) == normalize_property_name(name) }
       end
 
-      def active_timer_for_database(database)
-        started_property = property_by_name(database, STARTED_AT_PROPERTY)
-        stopped_property = property_by_name(database, STOPPED_AT_PROPERTY)
-        return nil if started_property.blank? || stopped_property.blank?
+      def active_timer_for_database(database, started_property:, stopped_property:)
+        started_cell_join = DbRow.sanitize_sql_array(
+          [
+            <<~SQL.squish,
+              INNER JOIN db_cells AS active_timer_started_cells
+                ON active_timer_started_cells.db_row_id = db_rows.id
+               AND active_timer_started_cells.db_property_id = ?
+               AND active_timer_started_cells.value_text <> ''
+            SQL
+            started_property.id
+          ]
+        )
+        stopped_row_ids = DbCell
+          .where(db_property_id: stopped_property.id)
+          .where("NULLIF(BTRIM(db_cells.value_text), '') IS NOT NULL")
+          .select(:db_row_id)
 
-        database.db_rows.active.ordered.each do |row|
-          started_at = parse_time(cell_value(row:, property: started_property))
+        candidates = database.db_rows.active
+          .joins(started_cell_join)
+          .where.not(id: stopped_row_ids)
+          .select("db_rows.*, active_timer_started_cells.value_text AS active_timer_started_at")
+          .ordered
+
+        candidates.each do |row|
+          started_at = parse_time(row[:active_timer_started_at])
           next if started_at.blank?
-          next if cell_value(row:, property: stopped_property).to_s.present?
 
           return {
             database: database,
@@ -200,6 +236,11 @@ module Databases
         end
 
         nil
+      end
+
+      def property_from(properties, name)
+        normalized_name = normalize_property_name(name)
+        Array(properties).find { |property| normalize_property_name(property.name) == normalized_name }
       end
 
       def cell_value(row:, property:)

@@ -47,6 +47,14 @@ RSpec.describe Epistularium::DraftSuggestionService do
       suggestion_type: "reply"
     ).call
 
+    expect(Openai::ResponsesClient).to have_received(:generate_text_with_usage).with(
+      hash_including(
+        model: "gpt-5.6-luna",
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-email-draft-v1",
+        prompt_cache_options: { ttl: "30m" }
+      )
+    )
     expect(agent_action.target_system).to eq("email")
     expect(agent_action.draft_type).to eq("email_draft")
     expect(agent_action.payload["subject"]).to eq("Re: Review request")

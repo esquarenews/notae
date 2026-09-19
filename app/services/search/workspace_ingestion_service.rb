@@ -83,14 +83,14 @@ module Search
     end
 
     def embed_missing_chunks!
-      return 0 unless requested_by.openai_api_key_configured?
+      return 0 unless Openai::CredentialResolver.configured?(user: requested_by)
       return 0 unless Search::AiBudgetGuard.within_daily_budget?(user: requested_by, workspace: workspace)
 
       embedded_chunk_count = 0
       missing_embedding_scope.find_in_batches(batch_size: EMBEDDING_BATCH_SIZE) do |batch|
         response = Openai::EmbeddingsClient.embed_many_with_usage(
           texts: batch.map(&:text),
-          api_key: requested_by.openai_api_key,
+          api_key: Openai::CredentialResolver.resolve(user: requested_by),
           model: SearchChunk::EMBEDDING_MODEL
         )
 

@@ -34,8 +34,10 @@ module RequestPerformanceInstrumentation
   def instrument_request_performance
     counters = { queries: 0, sql_duration_ms: 0.0 }
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    request_thread = Thread.current
 
     subscriber = lambda do |_event_name, event_start, event_finish, _event_id, payload|
+      next unless Thread.current.equal?(request_thread)
       next if payload[:cached]
       next if IGNORED_SQL_PAYLOAD_NAMES.include?(payload[:name].to_s)
 
@@ -73,10 +75,7 @@ module RequestPerformanceInstrumentation
       recorded_at: Time.current
     }
     if store_request_performance_sample?(sample)
-      Notae::RequestPerformanceStore.record!(
-        workspace_id: workspace_id,
-        sample: sample
-      )
+      persist_request_performance_sample(workspace_id:, sample:)
     end
 
     Rails.logger.info(
@@ -90,5 +89,19 @@ module RequestPerformanceInstrumentation
 
     sample[:total_ms].to_f >= Notae::RequestPerformanceStore::SLOW_REQUEST_THRESHOLD_MS ||
       Notae::RequestPerformanceStore.budget_status(sample) == :over_budget
+  end
+
+  def persist_request_performance_sample(workspace_id:, sample:)
+    return if workspace_id.blank?
+
+    if Rails.env.production?
+      Notae::RecordRequestPerformanceJob.perform_later(workspace_id, sample)
+    else
+      Notae::RequestPerformanceStore.record!(workspace_id:, sample:)
+    end
+  rescue StandardError => error
+    Rails.logger.warn(
+      "[NOTAE PERF] sample persistence skipped for workspace=#{workspace_id}: #{error.class}: #{error.message}"
+    )
   end
 end

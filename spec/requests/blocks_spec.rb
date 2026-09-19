@@ -31,6 +31,62 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["page_updated_at"]).to be_present
   end
 
+  it "persists whiteboard strokes into the block and renders them after reload" do
+    owner = User.create!(email: "blocks-whiteboard-persist-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Whiteboard persistence", slug: "whiteboard-persistence")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Whiteboard persistence page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "whiteboard",
+      content_json: {
+        type: "whiteboard",
+        version: 1,
+        board: { width: 1600, height: 1000 },
+        strokes: []
+      }
+    )
+    whiteboard_content = {
+      type: "whiteboard",
+      version: 1,
+      board: { width: 1600, height: 1000 },
+      strokes: [
+        {
+          id: "stylus-stroke-1",
+          tool: "pencil",
+          color: "#111827",
+          width: 3,
+          points: [
+            { x: 120, y: 140 },
+            { x: 180, y: 220 },
+            { x: 260, y: 300 }
+          ]
+        }
+      ]
+    }
+    sign_in owner
+
+    patch page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+          params: { block: { content_json: whiteboard_content } },
+          as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(block.reload.content_json.dig("strokes", 0, "id")).to eq("stylus-stroke-1")
+    expect(block.content_json.dig("strokes", 0, "points").length).to eq(3)
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML(response.body)
+    whiteboard = document.at_css(".notae-whiteboard[data-controller='whiteboard']")
+    expect(whiteboard).to be_present
+    rendered_content = JSON.parse(whiteboard["data-whiteboard-initial-json-value"])
+    expect(rendered_content.dig("strokes", 0, "id")).to eq("stylus-stroke-1")
+    expect(rendered_content.dig("strokes", 0, "points").last).to include("x" => 260, "y" => 300)
+  end
+
   it "serves block editor content separately for lazy editor hydration" do
     owner = User.create!(email: "blocks-content-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Block content", slug: "block-content")
@@ -409,6 +465,7 @@ RSpec.describe "Blocks", type: :request do
     expect(response.body).to include("Block created.")
     expect(response.body).to include('turbo-stream action="append" target="notae_doc_tree_root"')
     expect(response.body).to include(%(id="block_#{created_block.id}"))
+    expect(response.body).to include('data-block-editor-autofocus-value="true"')
   end
 
   it "creates a gantt embed block after the reference block for paste-driven embeds" do
@@ -666,16 +723,13 @@ RSpec.describe "Blocks", type: :request do
     get page_path(workspace_slug: workspace.slug, id: page.id)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("dragstart->block-list#handleDragStart")
-    expect(response.body).to include("dragenter->block-list#handleDragEnter")
-    expect(response.body).to include("dragleave->block-list#handleDragLeave")
-    expect(response.body).to include("dragover->block-list#handleDragOver")
-    expect(response.body).to include("drop->block-list#handleDrop")
-    expect(response.body).to include("dragend->block-list#handleDragEnd")
     expect(response.body).to include("pointerdown->block-list#prepareDragStart")
+    expect(response.body).to include("pointermove->block-list#handlePointerMove")
+    expect(response.body).to include("pointerup->block-list#handlePointerEnd")
+    expect(response.body).to include("pointercancel->block-list#handlePointerCancel")
     expect(response.body).to include("class=\"notae-doc-handle\"")
     expect(response.body).to include("title=\"Drag block\"")
-    expect(response.body).to include("draggable=\"true\"")
+    expect(response.body).to include("draggable=\"false\"")
     expect(response.body).to include(panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id))
 
     get panel_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id)
@@ -846,6 +900,7 @@ RSpec.describe "Blocks", type: :request do
     page = Page.create!(workspace: workspace, created_by: owner, title: "Images")
     block = Block.create!(workspace: workspace, page: page, created_by: owner, block_type: "image")
     sign_in owner
+    allow(Search::IndexPageJob).to receive(:perform_later)
 
     Tempfile.create([ "block-upload", ".png" ]) do |file|
       file.write("fake-png-data")
@@ -867,6 +922,7 @@ RSpec.describe "Blocks", type: :request do
     expect(payload["html"]).to include('rel="noopener noreferrer"')
     expect(payload["page_updated_at"]).to be_present
     expect(block.reload.asset).to be_attached
+    expect(Search::IndexPageJob).to have_received(:perform_later).with(page.id)
   end
 
   it "rejects SVG uploads for image blocks" do
@@ -1095,6 +1151,82 @@ RSpec.describe "Blocks", type: :request do
     end.to change(Block, :count).by(1)
     synced_copy = Block.order(:created_at).last
     expect(synced_copy.content_json["notae_synced_source_id"]).to eq(block.id.to_s)
+  end
+
+  it "creates distinct editable cells when a text block is turned into three columns" do
+    owner = User.create!(email: "blocks-three-columns-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Three columns", slug: "three-columns")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Three column page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Keep this text" } ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    post command_page_block_path(workspace_slug: workspace.slug, page_id: page.id, id: block.id),
+         params: { block_command: { command: "turn_into", target: "columns_3" } }
+
+    block.reload
+    expect(block.block_type).to eq("columns_3")
+    expect(block.content_json.fetch("content").length).to eq(3)
+    expect(block.content_json.dig("content", 0, "type")).to eq("columnCell")
+    expect(block.content_json.dig("content", 0, "content", 0, "content", 0, "text")).to eq("Keep this text")
+    expect(block.content_json.fetch("content").drop(1)).to all(
+      eq("type" => "columnCell", "content" => [ { "type" => "paragraph" } ])
+    )
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    document = Nokogiri::HTML(response.body)
+    editor = document.at_css("#block_#{block.id} .notae-doc-editor.is-columns-3")
+    cells = editor.css('.notae-doc-static-content > [data-type="column-cell"]')
+    expect(cells.length).to eq(3)
+    expect(cells.first.text).to eq("Keep this text")
+    expect(editor.at_css(".notae-doc-static-content")["data-column-count"]).to eq("3")
+    expect(editor.at_css(".notae-doc-static-content")["aria-label"]).to include("Click a column")
+  end
+
+  it "visually pads legacy three-column blocks without changing their stored text" do
+    owner = User.create!(email: "blocks-legacy-columns-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Legacy columns", slug: "legacy-columns")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Legacy columns page")
+    block = Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "columns_3",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          {
+            "type" => "paragraph",
+            "content" => [ { "type" => "text", "text" => "Existing column text" } ]
+          }
+        ]
+      }
+    )
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    document = Nokogiri::HTML(response.body)
+    cells = document.css(%(#block_#{block.id} .notae-doc-static-content > [data-type="column-cell"]))
+    expect(cells.length).to eq(3)
+    expect(cells.first.text).to eq("Existing column text")
+    expect(block.reload.content_json.fetch("content").length).to eq(1)
   end
 
   it "toggles applied turn-into styles off when selected again" do

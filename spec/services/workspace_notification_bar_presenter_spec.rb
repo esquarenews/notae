@@ -163,7 +163,7 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.recent_ai_update_present?).to be(true)
     expect(presenter.recent_ai_update_headline).to eq("New AI suggestion")
     expect(presenter.recent_ai_update_detail).to include("Review the launch note")
-    expect(presenter.recent_ai_update_path).to eq("/w/#{workspace.slug}/ai-conversation-history?conversation_id=#{conversation.id}#ai-conversation-#{conversation.id}")
+    expect(presenter.recent_ai_update_path).to eq(Rails.application.routes.url_helpers.knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
     expect(presenter.recent_update_count).to eq(1)
     expect(presenter.recent_update_headline).to eq("1 new workspace update")
   end

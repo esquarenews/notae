@@ -48,16 +48,7 @@ module Public
     end
 
     def log_share_link_view!(ip_address:)
-      ShareLink.transaction do
-        ShareLinkView.create!(
-          workspace: @share_link.workspace,
-          page: @share_link.page,
-          share_link: @share_link,
-          ip_address: ip_address,
-          viewed_at: Time.current
-        )
-        @share_link.update!(last_viewed_at: Time.current)
-      end
+      ShareLinks::LogViewService.call(share_link: @share_link, ip_address: ip_address)
     end
 
     def render_not_found

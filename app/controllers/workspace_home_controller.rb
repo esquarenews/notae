@@ -58,6 +58,7 @@ class WorkspaceHomeController < ApplicationController
 
   def set_workspace
     @workspace = policy_scope(Workspace).find_by!(slug: params[:workspace_slug])
+    Billing::AccountCoveredWorkspaceRecovery.new(user: current_user, workspace: @workspace).call
   end
 
   def greeting_for(time)
@@ -96,7 +97,7 @@ class WorkspaceHomeController < ApplicationController
       return suggestion
     end
 
-    return unless current_user.openai_api_key_configured?
+    return unless Openai::CredentialResolver.configured?(user: current_user)
 
     existing_for_today = policy_scope(KnowledgeSuggestion)
                          .for_workspace(@workspace)
@@ -159,7 +160,7 @@ class WorkspaceHomeController < ApplicationController
       @workspace,
       kind: KnowledgeSuggestion::KIND_PROACTIVE
     )
-    return nil unless current_user.openai_api_key_configured?
+    return nil unless Openai::CredentialResolver.configured?(user: current_user)
     return nil unless should_generate_proactive_knowledge_suggestion?
     return nil if @active_proactive_knowledge_suggestion_pending
     return nil if proactive_knowledge_suggestion_recently_checked?(@workspace)

@@ -1,11 +1,15 @@
 class WorkflowRun < ApplicationRecord
   KIND_CREATE_NOTA = "create_nota".freeze
+  KIND_UPDATE_NOTA = "update_nota".freeze
   KIND_CREATE_TASK = "create_task".freeze
   KIND_CREATE_CALENDAR_EVENT = "create_calendar_event".freeze
+  KIND_CREATE_DATABASE = "create_database".freeze
   KINDS = [
     KIND_CREATE_NOTA,
+    KIND_UPDATE_NOTA,
     KIND_CREATE_TASK,
-    KIND_CREATE_CALENDAR_EVENT
+    KIND_CREATE_CALENDAR_EVENT,
+    KIND_CREATE_DATABASE
   ].freeze
 
   STATUS_QUEUED = "queued".freeze

@@ -236,15 +236,93 @@ RSpec.describe "Notifications", type: :request do
     expect(response.body).to include("New AI suggestion")
     expect(response.body).to include("Escalate invoice delay")
     expect(response.body).to include("Open suggestion")
-    expect(response.body).to include("conversation_id=#{conversation.id}")
-    expect(response.body).to include("#ai-conversation-#{conversation.id}")
+    expect(response.body).to include(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id))
+    expect(response.body).to include("#knowledge-suggestion-#{suggestion.id}")
+    expect(response.body).not_to include("conversation_id=#{conversation.id}")
   end
 
-  it "renders codex notifications with unavailable destinations as workspace links" do
+  it "renders metadata-only knowledge suggestion notifications in the inbox" do
+    user = User.create!(email: "notif-suggestion-metadata@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Suggestion Metadata", slug: "notif-suggestion-metadata")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Escalate invoice delay",
+      summary: "A supplier email now needs a follow-up. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: { "kind" => suggestion.kind, "knowledge_suggestion_id" => suggestion.id }
+    )
+
+    sign_in user
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("New AI suggestion")
+    expect(response.body).to include("Escalate invoice delay")
+    expect(response.body).to include("Open suggestion")
+    expect(response.body).to include(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id))
+  end
+
+  it "renders legacy codex-style suggestion notifications as suggestion links when metadata is available" do
+    user = User.create!(email: "notif-suggestion-legacy@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Suggestion Legacy", slug: "notif-suggestion-legacy")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Escalate invoice delay",
+      summary: "A supplier email now needs a follow-up. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "I've prepared fresh suggestions",
+        "body" => "I've prepared fresh suggestions for this workspace.",
+        "path" => "/w/#{workspace.slug}",
+        "knowledge_suggestion_id" => suggestion.id
+      }
+    )
+
+    sign_in user
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("prepared fresh suggestions for this workspace.")
+    expect(response.body).to include("Open suggestion")
+    expect(response.body).to include(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id))
+    expect(response.body).not_to include("The original destination is not available in Notae.")
+  end
+
+  it "renders codex notifications with unavailable destinations as detail links" do
     user = User.create!(email: "notif-codex-bad-destination@example.com", password: "password123")
     workspace = Workspace.create!(name: "Notif Codex Bad Destination", slug: "notif-codex-bad-destination")
     Membership.create!(workspace: workspace, user: user, role: :owner)
-    Notification.create!(
+    notification = Notification.create!(
       workspace: workspace,
       actor: user,
       recipient: user,
@@ -261,10 +339,61 @@ RSpec.describe "Notifications", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("I finished the Tabulae check.")
-    expect(response.body).to include("The original destination is not available in Notae.")
-    expect(response.body).to include("Open workspace")
-    expect(response.body).to include(workspace_path(workspace.slug))
+    expect(response.body).to include("Open details")
+    expect(response.body).to include(workspace_notification_path(workspace_slug: workspace.slug, id: notification.id))
     expect(response.body).not_to include("/Users/errolschmidt/Documents/tabulae")
+  end
+
+  it "renders codex notifications with workspace-home destinations as detail links" do
+    user = User.create!(email: "notif-codex-home-destination@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Codex Home Destination", slug: "notif-codex-home-destination")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "I've prepared fresh suggestions",
+        "body" => "I've prepared fresh suggestions regarding Bela App.",
+        "path" => "/w/#{workspace.slug}"
+      }
+    )
+
+    sign_in user
+    get workspace_notifications_path(workspace_slug: workspace.slug)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("prepared fresh suggestions regarding Bela App.")
+    expect(response.body).to include("Open details")
+    expect(response.body).to include(workspace_notification_path(workspace_slug: workspace.slug, id: notification.id))
+    expect(response.body).not_to include(">Open destination<")
+  end
+
+  it "shows codex notification details and marks them read" do
+    user = User.create!(email: "notif-codex-details@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Notif Codex Details", slug: "notif-codex-details")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "I've prepared fresh suggestions",
+        "body" => "I've prepared fresh suggestions regarding Bela App.",
+        "path" => "/w/#{workspace.slug}"
+      }
+    )
+
+    sign_in user
+    get workspace_notification_path(workspace_slug: workspace.slug, id: notification.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("prepared fresh suggestions")
+    expect(response.body).to include("prepared fresh suggestions regarding Bela App.")
+    expect(response.body).to include("No specific actionable destination was attached to this notification.")
+    expect(notification.reload.read_at).to be_present
   end
 
   it "renders the daily summary agenda in the inbox" do
