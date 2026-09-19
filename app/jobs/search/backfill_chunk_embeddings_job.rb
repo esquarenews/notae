@@ -6,7 +6,7 @@ module Search
       user = User.find_by(id: user_id)
       workspace = Workspace.find_by(id: workspace_id)
       return if user.blank? || workspace.blank?
-      return unless user.openai_api_key_configured?
+      return unless Openai::CredentialResolver.configured?(user: user)
       return unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
 
       chunks = SearchChunk.where(id: chunk_ids, workspace_id: workspace.id).order(:chunk_index).to_a
@@ -14,7 +14,7 @@ module Search
 
       response = Openai::EmbeddingsClient.embed_many_with_usage(
         texts: chunks.map(&:text),
-        api_key: user.openai_api_key,
+        api_key: Openai::CredentialResolver.resolve(user: user),
         model: SearchChunk::EMBEDDING_MODEL
       )
 

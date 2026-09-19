@@ -17,7 +17,7 @@ RSpec.describe "General settings", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Workspace settings")
     expect(response.body).to include("Workspace name")
-    expect(response.body).to include("Save and display page view analytics")
+    expect(response.body).to include("Save and display usage analytics")
     expect(response.body).to include("Desktop notification bar")
     expect(response.body).to include("Delete workspace")
     expect(response.body).to include("Workspace ID")

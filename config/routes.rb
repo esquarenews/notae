@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   get "/manifest.webmanifest", to: "pwa#manifest", as: :pwa_manifest
   get "/service-worker.js", to: "pwa#service_worker", as: :pwa_service_worker
   resource :pwa_push_subscription, path: "pwa/push-subscription", only: %i[create destroy]
+  post "analytics/activity", to: "analytics_activity_buckets#create", as: :analytics_activity
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
@@ -76,6 +77,9 @@ Rails.application.routes.draw do
     patch "settings/notae-ai", to: "notae_ai_settings#update"
     get "settings/ai-analytics", to: "ai_analytics_settings#show", as: :workspace_ai_analytics_settings
     patch "settings/ai-analytics", to: "ai_analytics_settings#update"
+    get "settings/analytics", to: "analytics_settings#show", as: :workspace_analytics_settings
+    get "settings/analytics/export", to: "analytics_settings#export_pdf", defaults: { format: :pdf }, as: :workspace_analytics_export
+    post "settings/analytics/nota", to: "analytics_settings#create_nota", as: :workspace_analytics_nota
     get "settings/favicon-lab", to: "favicon_settings#show", as: :workspace_favicon_settings
     get "settings/emoji", to: "emoji_settings#show", as: :workspace_emoji_settings
     post "settings/emoji", to: "emoji_settings#create"
@@ -93,6 +97,7 @@ Rails.application.routes.draw do
     patch "settings/kalendarium", to: "kalendarium_settings#update"
     get "settings/epistularium", to: "epistularium_settings#show", as: :workspace_epistularium_settings
     get "notifications", to: "notifications#index", as: :workspace_notifications
+    get "notifications/:id", to: "notifications#show", as: :workspace_notification
     get "notification-bar", to: "workspace_notification_bars#show", as: :workspace_notification_bar
     get "icon-picker", to: "icon_pickers#show", as: :workspace_icon_picker
     get "cover-picker", to: "cover_pickers#show", as: :workspace_cover_picker
@@ -108,7 +113,9 @@ Rails.application.routes.draw do
         patch :speakers
       end
     end
-    resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy]
+    resources :kalendarium_events, path: "kalendarium/events", only: %i[create update destroy] do
+      patch :reschedule, on: :member
+    end
     resources :kalendarium_projects, path: "kalendarium/projects", only: %i[create update destroy] do
       member do
         patch :archive
@@ -139,7 +146,7 @@ Rails.application.routes.draw do
         post :reject
       end
     end
-    resources :knowledge_suggestions, only: [] do
+    resources :knowledge_suggestions, only: %i[show] do
       member do
         post :dismiss
         post :convert_to_task
@@ -267,6 +274,7 @@ Rails.application.routes.draw do
     get "join/:token", to: "workspace_join_links#show", as: :workspace_join_link
     get "ai-assistant/panel", to: "ai_assistant#panel", as: :workspace_ai_assistant_panel
     get "ai-assistant/updates", to: "ai_assistant#updates", as: :workspace_ai_assistant_updates
+    post "ai-assistant/new-chat", to: "ai_assistant#new_chat", as: :workspace_ai_assistant_new_chat
     post "ai-assistant", to: "ai_assistant#create", as: :workspace_ai_assistant
   end
 

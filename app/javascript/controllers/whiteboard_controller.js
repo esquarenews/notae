@@ -19,7 +19,7 @@ export default class extends Controller {
 
   connect() {
     this.canvasContext = this.canvasTarget.getContext("2d")
-    this.state = this.normalizedState(this.initialJsonValue || {})
+    this.state = this.normalizedState(this.element.notaeWhiteboardState || this.initialJsonValue || {})
     this.board = this.state.board
     this.strokes = this.state.strokes
     this.tool = "pencil"
@@ -36,6 +36,7 @@ export default class extends Controller {
     this.pointerDownHandler = (event) => this.handlePointerDown(event)
     this.pointerMoveHandler = (event) => this.handlePointerMove(event)
     this.pointerUpHandler = (event) => this.handlePointerUp(event)
+    this.suppressSelectionHandler = (event) => this.suppressSelection(event)
 
     if (!this.readonlyValue) {
       this.canvasTarget.addEventListener("pointerdown", this.pointerDownHandler)
@@ -43,6 +44,9 @@ export default class extends Controller {
       this.canvasTarget.addEventListener("pointerrawupdate", this.pointerMoveHandler)
       this.canvasTarget.addEventListener("pointerup", this.pointerUpHandler)
       this.canvasTarget.addEventListener("pointercancel", this.pointerUpHandler)
+      this.canvasTarget.addEventListener("contextmenu", this.suppressSelectionHandler)
+      this.canvasTarget.addEventListener("selectstart", this.suppressSelectionHandler)
+      this.canvasTarget.addEventListener("dragstart", this.suppressSelectionHandler)
     }
 
     if ("ResizeObserver" in window) {
@@ -58,6 +62,7 @@ export default class extends Controller {
     this.updateDiameterControls()
     this.updateFullscreenControls()
     this.setStatus(this.readonlyValue ? "Read only" : "Saved")
+    this.persistElementState()
 
     if (this.fullscreenActive()) this.queueCanvasResize()
 
@@ -72,6 +77,9 @@ export default class extends Controller {
     this.canvasTarget.removeEventListener("pointerrawupdate", this.pointerMoveHandler)
     this.canvasTarget.removeEventListener("pointerup", this.pointerUpHandler)
     this.canvasTarget.removeEventListener("pointercancel", this.pointerUpHandler)
+    this.canvasTarget.removeEventListener("contextmenu", this.suppressSelectionHandler)
+    this.canvasTarget.removeEventListener("selectstart", this.suppressSelectionHandler)
+    this.canvasTarget.removeEventListener("dragstart", this.suppressSelectionHandler)
     this.resizeObserver?.disconnect()
     window.removeEventListener("resize", this.resizeHandler)
     window.clearTimeout(this.saveTimer)
@@ -105,6 +113,7 @@ export default class extends Controller {
     if (!this.fullscreenActive()) return
 
     const fullscreenRect = this.element.getBoundingClientRect()
+    this.persistElementState()
     this.restoreInlinePosition()
     this.element.classList.remove("is-fullscreen")
     this.updateFullscreenControls()
@@ -146,6 +155,7 @@ export default class extends Controller {
     if (this.readonlyValue) return
 
     event.preventDefault()
+    this.clearSelection()
     if (!this.fullscreenActive()) {
       return
     }
@@ -392,6 +402,7 @@ export default class extends Controller {
       this.state = this.normalizedState(payload.block?.content_json || content)
       this.strokes = this.state.strokes
       this.board = this.state.board
+      this.persistElementState({ updateAttribute: true })
       this.setStatus("Saved")
     } catch (error) {
       this.setStatus("Could not save")
@@ -520,12 +531,15 @@ export default class extends Controller {
     const returnParent = this.fullscreenPlaceholder?.parentNode || this.element.notaeWhiteboardReturnParent
     if (!returnParent) return
 
+    this.element.notaeWhiteboardPortaling = true
     returnParent.insertBefore(this.element, this.fullscreenPlaceholder || null)
     this.fullscreenPlaceholder?.remove()
     this.fullscreenPlaceholder = null
     delete this.element.notaeWhiteboardPlaceholder
     delete this.element.notaeWhiteboardReturnParent
-    this.element.notaeWhiteboardPortaling = false
+    window.requestAnimationFrame(() => {
+      this.element.notaeWhiteboardPortaling = false
+    })
   }
 
   animateFromRect(fromRect, toRect) {
@@ -596,8 +610,28 @@ export default class extends Controller {
     return pointerEvents
   }
 
+  suppressSelection(event) {
+    event.preventDefault()
+    this.clearSelection()
+  }
+
+  clearSelection() {
+    window.getSelection?.()?.removeAllRanges?.()
+  }
+
   markStrokeChanged() {
     this.strokeRevision += 1
+    this.persistElementState()
+  }
+
+  persistElementState({ updateAttribute = false } = {}) {
+    if (!this.state) return
+
+    const content = this.serializedContent()
+    this.element.notaeWhiteboardState = content
+    if (updateAttribute) {
+      this.element.dataset.whiteboardInitialJsonValue = JSON.stringify(content)
+    }
   }
 
   positiveNumber(value, fallback) {

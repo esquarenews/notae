@@ -53,15 +53,35 @@ module Notifications
     end
 
     def knowledge_suggestion_destination_url
-      suggestion = notification.notifiable if notification.notifiable.is_a?(KnowledgeSuggestion)
+      suggestion = knowledge_suggestion_for_notification
       return if suggestion.blank?
 
       KnowledgeSuggestions::DestinationResolver.new(suggestion: suggestion).call
     end
 
     def codex_completion_destination_url
+      suggestion_destination = knowledge_suggestion_destination_url if notification.metadata["knowledge_suggestion_id"].present?
+      return suggestion_destination if suggestion_destination.present?
+
       path = notification.metadata["path"].to_s.strip
-      Notifications::InternalPathSanitizer.call(path, fallback: workspace_path(notification.workspace.slug))
+      sanitized_path = Notifications::InternalPathSanitizer.call(path, fallback: nil)
+      return notification_detail_url if generic_workspace_destination?(sanitized_path)
+
+      sanitized_path.presence || notification_detail_url
+    end
+
+    def knowledge_suggestion_for_notification
+      if notification.notifiable.is_a?(KnowledgeSuggestion)
+        return notification.notifiable if notification.notifiable.workspace_id == notification.workspace_id &&
+          notification.notifiable.user_id == notification.recipient_id
+      end
+
+      suggestion_id = notification.metadata["knowledge_suggestion_id"].to_s.strip
+      return if suggestion_id.blank?
+
+      KnowledgeSuggestion
+        .where(workspace_id: notification.workspace_id, user_id: notification.recipient_id)
+        .find_by(id: suggestion_id)
     end
 
     def agent_action_destination_url
@@ -88,6 +108,15 @@ module Notifications
 
     def fallback_url
       workspace_notifications_path(workspace_slug: notification.workspace.slug)
+    end
+
+    def notification_detail_url
+      workspace_notification_path(workspace_slug: notification.workspace.slug, id: notification.id)
+    end
+
+    def generic_workspace_destination?(path)
+      normalized_path = path.to_s.split("#", 2).first.to_s.split("?", 2).first
+      normalized_path == workspace_path(notification.workspace.slug)
     end
   end
 end

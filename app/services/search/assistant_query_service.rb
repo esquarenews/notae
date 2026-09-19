@@ -10,7 +10,7 @@ module Search
       [ "Auto", SCOPE_AUTO ],
       [ "This document only", SCOPE_DOCUMENT ],
       [ "This workspace only", SCOPE_WORKSPACE ],
-      [ "Whole account", SCOPE_ACCOUNT ]
+      [ "Whole app", SCOPE_ACCOUNT ]
     ].freeze
 
     INTENT_SEARCH = "search"
@@ -28,8 +28,8 @@ module Search
 
     SUPPORTED_DRAFT_TARGETS = AgentAction::TARGET_SYSTEM_OPTIONS.freeze
     SEARCH_MODEL = "gpt-4o-mini"
-    WRITING_MODEL = "gpt-4.1-mini"
-    GENERAL_MODEL = "gpt-4.1-mini"
+    WRITING_MODEL = "gpt-5.6-luna"
+    GENERAL_MODEL = "gpt-5.6-luna"
     WEB_SEARCH_TOOL_TYPE = "web_search".freeze
     CALENDAR_DIRECT_MODEL = "calendar-direct-v1"
     MAX_CONTEXT_ITEMS = 12
@@ -108,7 +108,7 @@ module Search
 
     def call
       return unavailable(:missing_prompt) if prompt.blank?
-      return unavailable(:missing_api_key) unless user.openai_api_key_configured?
+      return unavailable(:missing_api_key) unless Openai::CredentialResolver.configured?(user: user)
       return unavailable(:budget_exceeded) unless Search::AiBudgetGuard.within_daily_budget?(user: user, workspace: workspace)
       return unavailable(:rate_limited) unless Search::AiRateLimiter.allowed?(user: user, workspace: workspace, operation: "answer_generation")
 
@@ -132,7 +132,7 @@ module Search
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: prompt_for(context_entries, resolved_scope),
-        api_key: user.openai_api_key,
+        api_key: assistant_api_key,
         model: SEARCH_MODEL,
         max_output_tokens: 420
       )
@@ -234,8 +234,11 @@ module Search
           requested_draft: requested_draft,
           context_entries: context_entries
         ),
-        api_key: user.openai_api_key,
+        api_key: assistant_api_key,
         model: WRITING_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-writing-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 720
       )
 
@@ -307,8 +310,11 @@ module Search
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: writing_prompt_for(resolved_scope: resolved_scope, resolved_intent: resolved_intent),
-        api_key: user.openai_api_key,
+        api_key: assistant_api_key,
         model: WRITING_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-writing-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 520
       )
 
@@ -660,8 +666,11 @@ module Search
 
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: general_prompt_for(resolved_scope: resolved_scope),
-        api_key: user.openai_api_key,
+        api_key: assistant_api_key,
         model: GENERAL_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-general-knowledge-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 420
       )
       answer_text = response[:text].to_s.strip
@@ -693,8 +702,11 @@ module Search
     def generate_live_web_response(resolved_scope:, resolved_intent:)
       response = Openai::ResponsesClient.generate_text_with_usage(
         prompt: live_web_prompt_for(resolved_scope: resolved_scope),
-        api_key: user.openai_api_key,
+        api_key: assistant_api_key,
         model: GENERAL_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-general-knowledge-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 420,
         tools: [ web_search_tool ],
         include: [ "web_search_call.action.sources" ]
@@ -1433,6 +1445,10 @@ module Search
     def unavailable(reason)
       @unavailable_reason = reason
       nil
+    end
+
+    def assistant_api_key
+      @assistant_api_key ||= Openai::CredentialResolver.resolve(user: user)
     end
   end
 end

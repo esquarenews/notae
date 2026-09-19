@@ -106,11 +106,12 @@ RSpec.describe Search::WorkspaceSearchService do
     end.not_to raise_error
   end
 
-  it "skips semantic lookup when OpenAI key is not configured" do
+  it "skips semantic lookup when no OpenAI credential is configured" do
     user = User.create!(email: "semantic-no-key@example.com", password: "password123", openai_api_key: nil)
     workspace = Workspace.create!(name: "Semantic No Key", slug: "semantic-no-key")
     Membership.create!(workspace: workspace, user: user, role: :owner)
 
+    allow(Openai::CredentialResolver).to receive(:resolve).with(user: user).and_return(nil)
     expect(Openai::EmbeddingsClient).not_to receive(:embed_with_usage)
     expect(Openai::EmbeddingsClient).not_to receive(:embed_many_with_usage)
 

@@ -96,6 +96,7 @@ export default class extends Controller {
     this.resize()
     this.restart()
     this.updateSoundButton()
+    this.prepareOverlayFont()
   }
 
   disconnect() {
@@ -123,6 +124,18 @@ export default class extends Controller {
     this.integrity = 3
     this.score = 0
     this.startLevel("Collect every fragment.")
+  }
+
+  prepareOverlayFont() {
+    if (typeof document.fonts?.load !== "function") return
+
+    document.fonts.load('800 32px "Notae Sans"')
+      .then(() => {
+        if (!this.element.isConnected || !this.canvasContext) return
+
+        this.draw(performance.now())
+      })
+      .catch(() => {})
   }
 
   startLevel(statusText) {
@@ -794,7 +807,7 @@ export default class extends Controller {
     ctx.fillStyle = this.levelClearing ? "#f8d38a" : "#ffb09d"
     ctx.shadowColor = this.levelClearing ? "rgba(248, 211, 138, 0.72)" : "rgba(217, 106, 86, 0.72)"
     ctx.shadowBlur = 18
-    ctx.font = "800 32px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+    ctx.font = '800 32px "Notae Sans", "Avenir Next", "Segoe UI", sans-serif'
     ctx.fillText(this.levelClearing ? "LEVEL CLEARED" : "SYSTEM STALLED", this.width / 2, this.boardY + this.boardHeight / 2)
     ctx.restore()
   }

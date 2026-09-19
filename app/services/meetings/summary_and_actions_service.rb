@@ -2,7 +2,7 @@ require "json"
 
 module Meetings
   class SummaryAndActionsService
-    MODEL = "gpt-4.1".freeze
+    MODEL = "gpt-5.6-terra".freeze
     MAX_ACTION_ITEMS = 8
     MIN_ACTION_CONFIDENCE = 0.55
     ACTION_VERB_PATTERN = /\b(send|share|draft|prepare|create|update|schedule|book|assign|deliver|review|finalize|publish|follow up|email|call|confirm|submit|build|implement|fix|investigate|coordinate|sync|document|write|approve|plan)\b/i
@@ -21,6 +21,9 @@ module Meetings
         prompt: summary_prompt(transcript),
         api_key: session.created_by.openai_api_key,
         model: MODEL,
+        reasoning: { effort: "medium" },
+        prompt_cache_key: "notae-meeting-summary-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 900
       )
 

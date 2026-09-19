@@ -197,6 +197,7 @@ class User < ApplicationRecord
   has_many :created_database_share_links, class_name: "DatabaseShareLink", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :created_database_shares, class_name: "DatabaseShare", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :page_presences, dependent: :destroy
+  has_many :analytics_activity_buckets, dependent: :destroy
   has_many :created_database_views, class_name: "DatabaseView", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :created_database_templates, class_name: "DatabaseTemplate", foreign_key: :created_by_id, inverse_of: :created_by, dependent: :destroy
   has_many :requested_page_exports, class_name: "PageExport", foreign_key: :requested_by_id, inverse_of: :requested_by, dependent: :destroy

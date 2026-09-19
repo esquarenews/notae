@@ -6,10 +6,11 @@ module Search
     SEMANTIC_EMBEDDING_BATCH_LIMIT = 80
     SEMANTIC_RESULT_LIMIT = 12
 
-    def initialize(user:, workspace:, query:)
+    def initialize(user:, workspace:, query:, semantic: true)
       @user = user
       @workspace = workspace
       @query = query.to_s.strip
+      @semantic = semantic
     end
 
     def call
@@ -22,13 +23,17 @@ module Search
         kalendarium_event_results +
         meeting_session_results +
         epistularium_message_results +
-        semantic_chunk_results
+        (semantic? ? semantic_chunk_results : [])
       )
     end
 
     private
 
     attr_reader :user, :workspace, :query
+
+    def semantic?
+      @semantic
+    end
 
     def page_results
       Pundit.policy_scope!(user, Page)
@@ -144,7 +149,7 @@ module Search
     end
 
     def semantic_chunk_results
-      return [] unless user.openai_api_key_configured?
+      return [] if openai_api_key.blank?
       return [] unless semantic_ai_allowed?
 
       query_embedding = embed_query
@@ -209,7 +214,7 @@ module Search
     def embed_query
       response = Openai::EmbeddingsClient.embed_with_usage(
         text: query,
-        api_key: user.openai_api_key,
+        api_key: openai_api_key,
         model: SearchChunk::EMBEDDING_MODEL
       )
       log_embedding_usage!(
@@ -219,6 +224,12 @@ module Search
       )
 
       response[:embedding]
+    end
+
+    def openai_api_key
+      return @openai_api_key if defined?(@openai_api_key)
+
+      @openai_api_key = Openai::CredentialResolver.resolve(user: user)
     end
 
     def schedule_chunk_embedding_backfill!(chunks)

@@ -1,6 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-const BLOCK_DRAG_MIME = "application/x-notae-block-id"
+const POINTER_DRAG_THRESHOLD_PX = 5
+const EDGE_SCROLL_ZONE_PX = 64
+const EDGE_SCROLL_STEP_PX = 14
 
 export default class extends Controller {
   static targets = ["item"]
@@ -15,77 +17,91 @@ export default class extends Controller {
     this.activeDropItem = null
     this.activeDropPosition = null
     this.pendingDragFlush = null
+    this.pointerDragState = null
   }
 
   disconnect() {
+    this.pointerDragState = null
     this.pendingDragFlush = null
+    this.draggedItem = null
     this.clearDropState()
   }
 
   prepareDragStart(event) {
+    if (!event.isPrimary || event.button !== 0) return
+
     const sourceItem = event.currentTarget.closest("[data-block-id]")
     if (!sourceItem) return
-
-    this.pendingDragFlush = this.requestBlockFlush(sourceItem)
-  }
-
-  handleDragStart(event) {
-    if (!event.dataTransfer) return
-    const sourceItem = event.currentTarget.closest("[data-block-id]")
-    if (!sourceItem) return
-
-    this.draggedItem = sourceItem
-    if (!this.pendingDragFlush) {
-      this.pendingDragFlush = this.requestBlockFlush(sourceItem)
-    }
-    this.element.classList.add("is-drag-active")
-    this.draggedItem.classList.add("is-dragging")
-    event.dataTransfer.effectAllowed = "move"
-    event.dataTransfer.setData(BLOCK_DRAG_MIME, this.draggedItem.dataset.blockId)
-  }
-
-  handleDragOver(event) {
-    if (!event.dataTransfer || !this.draggedItem) return
 
     event.preventDefault()
-    event.dataTransfer.dropEffect = "move"
+    this.pendingDragFlush = this.requestBlockFlush(sourceItem)
+    this.pointerDragState = {
+      pointerId: event.pointerId,
+      originX: event.clientX,
+      originY: event.clientY,
+      handle: event.currentTarget,
+      sourceItem
+    }
 
-    const targetItem = event.currentTarget
-    if (!targetItem || targetItem === this.draggedItem) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  handlePointerMove(event) {
+    const state = this.pointerDragState
+    if (!state || event.pointerId !== state.pointerId) return
+
+    const distance = Math.hypot(event.clientX - state.originX, event.clientY - state.originY)
+    if (!this.draggedItem && distance < POINTER_DRAG_THRESHOLD_PX) return
+
+    event.preventDefault()
+    this.beginPointerDrag(state.sourceItem)
+    this.autoScrollNearEdge(event.clientY)
+
+    const targetItem = this.directSiblingItemAtPoint(event.clientX, event.clientY)
+    if (!targetItem || targetItem === this.draggedItem) {
+      this.clearActiveDropCandidate()
+      return
+    }
 
     this.setDropCandidate(targetItem, this.shouldInsertBefore(event, targetItem) ? "before" : "after")
   }
 
-  handleDragEnter(event) {
-    if (!this.draggedItem) return
-
-    const targetItem = event.currentTarget
-    if (!targetItem || targetItem === this.draggedItem) return
-
-    targetItem.classList.add("is-drop-candidate")
-  }
-
-  handleDragLeave(event) {
-    const targetItem = event.currentTarget
-    if (!targetItem || targetItem === this.activeDropItem) return
-
-    targetItem.classList.remove("is-drop-candidate")
-  }
-
-  async handleDrop(event) {
-    if (!event.dataTransfer) return
+  handlePointerEnd(event) {
+    const state = this.pointerDragState
+    if (!state || event.pointerId !== state.pointerId) return
 
     event.preventDefault()
-    event.stopPropagation()
+    this.releasePointerCapture(state)
+    this.pointerDragState = null
 
-    const draggedId = event.dataTransfer.getData(BLOCK_DRAG_MIME) || this.draggedItem?.dataset.blockId
+    const draggedId = this.draggedItem?.dataset.blockId
     const placement = this.resolveDropPlacement(event, draggedId)
-
     if (!draggedId || !placement) {
       this.handleDragEnd()
       return
     }
 
+    this.persistDrop(draggedId, placement)
+  }
+
+  handlePointerCancel(event) {
+    const state = this.pointerDragState
+    if (!state || event.pointerId !== state.pointerId) return
+
+    this.releasePointerCapture(state)
+    this.pointerDragState = null
+    this.handleDragEnd()
+  }
+
+  beginPointerDrag(sourceItem) {
+    if (this.draggedItem) return
+
+    this.draggedItem = sourceItem
+    this.element.classList.add("is-drag-active")
+    this.draggedItem.classList.add("is-dragging")
+  }
+
+  async persistDrop(draggedId, placement) {
     const url = `/w/${this.workspaceSlugValue}/pages/${this.pageIdValue}/blocks/${draggedId}/reorder`
     const payload = {
       target_parent_id: this.parentIdValue || null,
@@ -131,6 +147,7 @@ export default class extends Controller {
     }
 
     this.pendingDragFlush = null
+    this.pointerDragState = null
     this.clearDropState()
   }
 
@@ -163,7 +180,7 @@ export default class extends Controller {
   }
 
   resolveDropPlacement(event, draggedId) {
-    const dropItem = this.activeDropItem || event.currentTarget
+    const dropItem = this.activeDropItem || this.directSiblingItemAtPoint(event.clientX, event.clientY)
     if (!dropItem || dropItem === this.draggedItem) return null
 
     const dropPosition = this.activeDropPosition || (this.shouldInsertBefore(event, dropItem) ? "before" : "after")
@@ -201,15 +218,47 @@ export default class extends Controller {
     this.activeDropPosition = position
   }
 
+  clearActiveDropCandidate() {
+    if (!this.activeDropItem) return
+
+    this.activeDropItem.classList.remove("is-drop-candidate", "is-drop-candidate-before", "is-drop-candidate-after")
+    this.activeDropItem = null
+    this.activeDropPosition = null
+  }
+
+  directSiblingItemAtPoint(clientX, clientY) {
+    const pointedElement = document.elementFromPoint(clientX, clientY)
+    let candidate = pointedElement?.closest?.("[data-block-id]")
+
+    while (candidate && candidate.parentElement !== this.element) {
+      candidate = candidate.parentElement?.closest?.("[data-block-id]")
+    }
+
+    return candidate?.parentElement === this.element ? candidate : null
+  }
+
+  autoScrollNearEdge(clientY) {
+    const scrollContainer = this.element.closest(".notae-content-scroll")
+    if (!scrollContainer) return
+
+    const rect = scrollContainer.getBoundingClientRect()
+    if (clientY < rect.top + EDGE_SCROLL_ZONE_PX) {
+      scrollContainer.scrollBy({ top: -EDGE_SCROLL_STEP_PX, behavior: "auto" })
+    } else if (clientY > rect.bottom - EDGE_SCROLL_ZONE_PX) {
+      scrollContainer.scrollBy({ top: EDGE_SCROLL_STEP_PX, behavior: "auto" })
+    }
+  }
+
+  releasePointerCapture(state) {
+    if (!state?.handle?.hasPointerCapture?.(state.pointerId)) return
+
+    state.handle.releasePointerCapture(state.pointerId)
+  }
+
   clearDropState() {
     this.element.classList.remove("is-drag-active")
 
-    if (this.activeDropItem) {
-      this.activeDropItem.classList.remove("is-drop-candidate", "is-drop-candidate-before", "is-drop-candidate-after")
-      this.activeDropItem = null
-    }
-
-    this.activeDropPosition = null
+    this.clearActiveDropCandidate()
 
     this.directSiblingItems().forEach((item) => {
       item.classList.remove("is-drop-candidate", "is-drop-candidate-before", "is-drop-candidate-after")

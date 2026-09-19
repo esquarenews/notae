@@ -16,12 +16,13 @@ RSpec.describe "BlockListController JavaScript syntax" do
     skip "node is not available in this environment"
   end
 
-  it "uses a custom drag mime type for block reordering" do
+  it "uses pointer capture for reliable block reordering" do
     source = Rails.root.join("app/javascript/controllers/block_list_controller.js").read
 
-    expect(source).to include('application/x-notae-block-id')
-    expect(source).not_to include('setData("text/plain"')
-    expect(source).to include('getData(BLOCK_DRAG_MIME)')
+    expect(source).to include("event.currentTarget.setPointerCapture(event.pointerId)")
+    expect(source).to include("handlePointerMove(event)")
+    expect(source).to include("document.elementFromPoint(clientX, clientY)")
+    expect(source).to include("POINTER_DRAG_THRESHOLD_PX")
   end
 
   it "flushes pending block saves and waits until drop before moving the DOM" do
@@ -32,5 +33,12 @@ RSpec.describe "BlockListController JavaScript syntax" do
     expect(source).to include("await this.flushDraggedBlockSave()")
     expect(source).to include("resolveDropPlacement(event, draggedId)")
     expect(source).to include("applyDropPlacement(placement)")
+  end
+
+  it "limits pointer drop targets to direct siblings in the active block tree" do
+    source = Rails.root.join("app/javascript/controllers/block_list_controller.js").read
+
+    expect(source).to include("directSiblingItemAtPoint(clientX, clientY)")
+    expect(source).to include("candidate.parentElement !== this.element")
   end
 end

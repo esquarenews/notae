@@ -120,6 +120,23 @@ class Block < ApplicationRecord
     synced_source_block_id.present? && synced_source_block_id.to_s != id.to_s
   end
 
+  def searchable_content
+    parts = [ search_text, block_type ]
+
+    if media_block? || embed_block?
+      parts << "media"
+      parts << embed_url
+    end
+
+    if asset.attached?
+      parts << "attachment"
+      parts << asset.filename.to_s
+      parts << asset.content_type.to_s
+    end
+
+    parts.filter_map { |part| part.to_s.squish.presence }.uniq.join(" ")
+  end
+
   private
 
   def set_workspace_from_page
@@ -166,7 +183,9 @@ class Block < ApplicationRecord
   def search_chunk_reindex_required?
     previous_changes.key?("content_json") ||
       previous_changes.key?("archived_at") ||
-      previous_changes.key?("page_id")
+      previous_changes.key?("page_id") ||
+      previous_changes.key?("block_type") ||
+      previous_changes.key?("embed_url")
   end
 
   def sync_page_links

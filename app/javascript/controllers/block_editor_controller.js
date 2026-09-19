@@ -138,7 +138,8 @@ export default class extends Controller {
     initialJson: String,
     blockType: String,
     blockId: String,
-    touchTextEntry: Boolean
+    touchTextEntry: Boolean,
+    autofocus: Boolean
   }
   static editorModulesPromise = null
   static editorModuleWarmupScheduled = false
@@ -148,6 +149,7 @@ export default class extends Controller {
     this.currentBlockType = this.blockTypeValue || "paragraph"
     this.clientSessionId = this.resolveClientSessionId()
     this.saveTimeout = null
+    this.autofocusTimeout = null
     this.pendingSavePromise = null
     this.hasPendingChanges = false
     this.editingIdleTimeout = null
@@ -165,12 +167,17 @@ export default class extends Controller {
     this.aiInsertHandler = (event) => this.handleAiInsert(event.detail)
     this.flushSaveHandler = (event) => this.handleFlushSaveRequest(event)
     this.constructor.scheduleEditorModuleWarmup()
-    if (this.shouldPrepareTouchTextEntry()) this.hydrate({ focus: false })
+    if (this.autofocusValue) {
+      this.focusNewlyCreatedBlock()
+    } else if (this.shouldPrepareTouchTextEntry()) {
+      this.hydrate({ focus: false })
+    }
   }
 
   disconnect() {
     this.connected = false
     clearTimeout(this.saveTimeout)
+    clearTimeout(this.autofocusTimeout)
     clearTimeout(this.editingIdleTimeout)
     this.hideSlashMenu()
     this.setBlockFocused(false)
@@ -235,6 +242,22 @@ export default class extends Controller {
     return Boolean(window.matchMedia?.(query)?.matches)
   }
 
+  focusNewlyCreatedBlock() {
+    const block = this.element.closest("[data-block-id]")
+    block?.scrollIntoView({ block: "nearest", inline: "nearest" })
+
+    this.hydrate({ focus: false }).then((mounted) => {
+      if (!mounted || !this.connected) return
+
+      this.autofocusTimeout = window.setTimeout(() => {
+        if (!this.connected) return
+
+        this.focusEditor({ immediate: true })
+        block?.scrollIntoView({ block: "nearest", inline: "nearest" })
+      }, 100)
+    })
+  }
+
   hydrate({ focus = false, point = null } = {}) {
     if (this.editor) {
       if (focus) this.focusEditor({ point })
@@ -273,6 +296,7 @@ export default class extends Controller {
         import("@tiptap/extension-task-item")
       ]).then(([core, starterKit, link, taskList, taskItem]) => ({
         Editor: core.Editor,
+        Node: core.Node,
         StarterKit: starterKit.default,
         Link: link.default,
         TaskList: taskList.default,
@@ -340,8 +364,18 @@ export default class extends Controller {
   }
 
   async mountEditor(initialContent) {
-    const { Editor, StarterKit, Link, TaskList, TaskItem } = await this.loadEditorModules()
+    const { Editor, Node, StarterKit, Link, TaskList, TaskItem } = await this.loadEditorModules()
     if (!this.connected || !this.hasEditorTarget) return false
+
+    const ColumnCell = Node.create({
+      name: "columnCell",
+      group: "block",
+      content: "block+",
+      defining: true,
+      isolating: true,
+      parseHTML: () => [{ tag: 'div[data-type="column-cell"]' }],
+      renderHTML: () => ["div", { "data-type": "column-cell" }, 0]
+    })
 
     this.editorTarget.innerHTML = ""
     this.installGlobalHandlers()
@@ -359,7 +393,8 @@ export default class extends Controller {
         TaskList,
         TaskItem.configure({
           nested: true
-        })
+        }),
+        ColumnCell
       ],
       content: initialContent,
       editorProps: {
@@ -459,7 +494,8 @@ export default class extends Controller {
     this.editor.commands.focus("end")
     const editorElement = this.editor.view?.dom
     if (editorElement instanceof HTMLElement && document.activeElement !== editorElement) {
-      editorElement.focus({ preventScroll: true })
+      this.editor.view?.focus?.()
+      if (document.activeElement !== editorElement) editorElement.focus({ preventScroll: true })
       this.editor.commands.focus("end")
     }
   }
@@ -519,7 +555,8 @@ export default class extends Controller {
 
     this.suppressUpdateCycle = true
     this.currentBlockType = block.block_type || this.currentBlockType
-    const content = block.content_json || { type: "doc", content: [{ type: "paragraph" }] }
+    const incomingContent = block.content_json || { type: "doc", content: [{ type: "paragraph" }] }
+    const content = this.normalizeContentForCurrentBlockType(incomingContent)
     this.editor.commands.setContent(content)
     this.hasPendingChanges = false
     this.syncStoredBlockState(content, this.currentBlockType)
@@ -562,6 +599,18 @@ export default class extends Controller {
       }
 
       return false
+    }
+
+    if (
+      event.key === "Tab" &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      this.currentBlockType.startsWith("columns_")
+    ) {
+      event.preventDefault()
+      this.moveColumnSelection(event.shiftKey ? -1 : 1)
+      return true
     }
 
     if (
@@ -806,6 +855,8 @@ export default class extends Controller {
     this.currentBlockType = command.blockType
     if (command.blockType === "todo_list") {
       this.ensureTodoListStructure()
+    } else if (command.blockType.startsWith("columns_")) {
+      this.ensureColumnStructure()
     }
     this.syncBlockTypeFromDocument(this.editor.getJSON())
     this.hideSlashMenu()
@@ -852,6 +903,7 @@ export default class extends Controller {
   }
 
   normalizeContentForCurrentBlockType(content) {
+    if (this.currentBlockType.startsWith("columns_")) return this.normalizeColumnContent(content)
     if (this.currentBlockType !== "todo_list") return content
     if (this.documentContainsTaskList(content)) return content
 
@@ -871,7 +923,55 @@ export default class extends Controller {
     }
   }
 
+  normalizeColumnContent(content) {
+    const columnCount = Number.parseInt(this.currentBlockType.split("_").at(-1), 10)
+    if (!Number.isInteger(columnCount) || columnCount < 2) return content
+
+    let columns = Array.isArray(content?.content) ? [...content.content] : []
+    if (columns.every((node) => node?.type === "blockquote")) {
+      columns = columns.map((node) => ({ ...node, type: "columnCell" }))
+    } else if (!columns.every((node) => node?.type === "columnCell")) {
+      columns = [{
+        type: "columnCell",
+        content: columns.length > 0 ? columns : [{ type: "paragraph" }]
+      }]
+    }
+    while (columns.length < columnCount) {
+      columns.push({ type: "columnCell", content: [{ type: "paragraph" }] })
+    }
+
+    return { ...content, type: "doc", content: columns }
+  }
+
+  ensureColumnStructure() {
+    const normalized = this.normalizeColumnContent(this.editor.getJSON())
+    this.editor.commands.setContent(normalized)
+  }
+
+  moveColumnSelection(delta) {
+    const state = this.editor?.state
+    const doc = state?.doc
+    if (!doc || doc.childCount === 0) return false
+
+    const currentIndex = state.selection.$from.index(0)
+    const targetIndex = currentIndex + delta
+    if (targetIndex < 0 || targetIndex >= doc.childCount) return false
+
+    let targetPosition = 1
+    for (let index = 0; index < targetIndex; index += 1) {
+      targetPosition += doc.child(index).nodeSize
+    }
+
+    const targetNode = doc.child(targetIndex)
+    const selectionPosition = targetNode?.type?.name === "columnCell" ? targetPosition + 1 : targetPosition
+    this.editor.commands.setTextSelection(selectionPosition)
+    this.editor.view?.focus?.()
+    return true
+  }
+
   syncBlockTypeFromDocument(content) {
+    if (this.currentBlockType.startsWith("columns_")) return
+
     if (this.documentContainsTaskList(content)) {
       this.currentBlockType = "todo_list"
       return
@@ -1296,9 +1396,10 @@ export default class extends Controller {
     if (!this.editor) return true
     if (!this.hasPendingChanges) return true
 
+    const normalizedContent = this.normalizeContentForCurrentBlockType(this.editor.getJSON())
     const payload = {
       block: {
-        content_json: this.editor.getJSON(),
+        content_json: normalizedContent,
         block_type: this.currentBlockType
       }
     }
