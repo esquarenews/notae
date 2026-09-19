@@ -15,12 +15,14 @@ const client = new NotaeApiClient({
   token: process.env.NOTAE_API_TOKEN
 });
 
-const gridRowSchema = z.object({
+const apiObject = (shape) => z.object(shape).passthrough();
+
+const gridRowSchema = apiObject({
   id: z.string(),
   workspace_id: z.string().optional(),
   database_id: z.string().optional(),
   linked_page_id: z.string().nullable().optional(),
-  linked_page: z.object({
+  linked_page: apiObject({
     id: z.string(),
     title: z.string()
   }).nullable().optional(),
@@ -30,7 +32,7 @@ const gridRowSchema = z.object({
   data_json: z.record(z.any()).optional(),
   created_at: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
-  cells: z.array(z.object({
+  cells: z.array(apiObject({
     id: z.string(),
     db_property_id: z.string(),
     value_text: z.string().nullable().optional(),
@@ -73,7 +75,7 @@ server.registerTool(
       limit: z.number().int().min(1).max(100).optional()
     },
     outputSchema: {
-      workspaces: z.array(z.object({
+      workspaces: z.array(apiObject({
         id: z.string(),
         name: z.string(),
         slug: z.string(),
@@ -102,7 +104,7 @@ server.registerTool(
       page_kind: z.enum([ "nota", "meeting_note" ]).optional()
     },
     outputSchema: {
-      pages: z.array(z.object({
+      pages: z.array(apiObject({
         id: z.string(),
         title: z.string(),
         permission_mode: z.string(),
@@ -129,12 +131,12 @@ server.registerTool(
       page_id: z.string()
     },
     outputSchema: {
-      page: z.object({
+      page: apiObject({
         id: z.string(),
         title: z.string()
       }),
       markdown: z.string(),
-      attachments: z.array(z.object({
+      attachments: z.array(apiObject({
         filename: z.string(),
         relative_path: z.string()
       }))
@@ -163,11 +165,11 @@ server.registerTool(
       filename: z.string().optional()
     },
     outputSchema: {
-      page: z.object({
+      page: apiObject({
         id: z.string(),
         title: z.string()
       }),
-      imported_blocks: z.array(z.object({
+      imported_blocks: z.array(apiObject({
         id: z.string(),
         block_type: z.string()
       })),
@@ -196,11 +198,11 @@ server.registerTool(
       filename: z.string().optional()
     },
     outputSchema: {
-      page: z.object({
+      page: apiObject({
         id: z.string(),
         title: z.string()
       }),
-      imported_blocks: z.array(z.object({
+      imported_blocks: z.array(apiObject({
         id: z.string(),
         block_type: z.string()
       })),
@@ -226,7 +228,7 @@ server.registerTool(
       q: z.string().optional()
     },
     outputSchema: {
-      task_lists: z.array(z.object({
+      task_lists: z.array(apiObject({
         id: z.string(),
         name: z.string(),
         row_count: z.number().optional()
@@ -307,7 +309,7 @@ server.registerTool(
       workspace_slug: z.string()
     },
     outputSchema: {
-      calendars: z.array(z.object({
+      calendars: z.array(apiObject({
         id: z.string(),
         name: z.string(),
         read_only: z.boolean().optional(),
@@ -343,7 +345,7 @@ server.registerTool(
       reminder_offsets_minutes: z.array(z.number().int().min(0)).optional()
     },
     outputSchema: {
-      event: z.object({
+      event: apiObject({
         id: z.string(),
         calendar_id: z.string(),
         title: z.string(),
@@ -390,7 +392,7 @@ server.registerTool(
       path: z.string().optional()
     },
     outputSchema: {
-      notification: z.object({
+      notification: apiObject({
         id: z.string(),
         workspace_id: z.string(),
         recipient_id: z.string(),
@@ -423,7 +425,7 @@ server.registerTool(
       limit: z.number().int().min(1).max(100).optional()
     },
     outputSchema: {
-      agent_actions: z.array(z.object({
+      agent_actions: z.array(apiObject({
         id: z.string(),
         title: z.string(),
         draft_type: z.string(),
@@ -456,7 +458,7 @@ server.registerTool(
       proposed_by: z.enum([ "manual", "ai_assistant", "automation_agent", "api" ]).optional()
     },
     outputSchema: {
-      agent_action: z.object({
+      agent_action: apiObject({
         id: z.string(),
         title: z.string(),
         status: z.string(),
@@ -487,7 +489,7 @@ server.registerTool(
       destination_calendar_id: z.string().optional()
     },
     outputSchema: {
-      agent_action: z.object({
+      agent_action: apiObject({
         id: z.string(),
         status: z.string(),
         result_json: z.record(z.any()).nullable().optional()

@@ -10,7 +10,7 @@ module Search
       return if workspace.blank?
 
       workspace.users.distinct.find_each do |user|
-        next unless user.openai_api_key_configured?
+        next unless Openai::CredentialResolver.configured?(user: user)
 
         queue_due_generation_for(user: user, workspace: workspace, kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY)
         queue_due_generation_for(user: user, workspace: workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)

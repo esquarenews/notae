@@ -42,8 +42,6 @@ module Databases
     MUTED_TEXT_COLOR = "57534E".freeze
     SURFACE_COLOR = "FCFCFB".freeze
     GRID_COLOR = "D6D3D1".freeze
-    FONT_FILE = Rails.root.join("vendor/fonts/Manrope-wght.ttf").freeze
-
     class << self
       def call(database:, graph_data:)
         new(database:, graph_data:).call
@@ -64,8 +62,7 @@ module Databases
           Title: [ database.name.presence || "Graph", "Graph view" ].join(" - ")
         }
       )
-      register_fonts(pdf)
-      pdf.font(pdf_font_family)
+      pdf.font(Notae::PdfFontFamily.register(pdf))
 
       if graph_data.eligible?
         draw_graph(pdf)
@@ -79,21 +76,6 @@ module Databases
     private
 
     attr_reader :database, :graph_data
-
-    def register_fonts(pdf)
-      return unless FONT_FILE.exist?
-
-      pdf.font_families.update(
-        "Manrope" => {
-          normal: FONT_FILE.to_s,
-          bold: FONT_FILE.to_s
-        }
-      )
-    end
-
-    def pdf_font_family
-      FONT_FILE.exist? ? "Manrope" : "Helvetica"
-    end
 
     def draw_graph(pdf)
       draw_chart_page(pdf, chart_data: graph_data)

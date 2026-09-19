@@ -1,6 +1,8 @@
 <% safe_sources = ai_safe_sources(conversation.sources) %>
 <% draft_action_sources = safe_sources.select { |source| source[:kind].to_s == "Draft action" } %>
-<% evidence_sources = safe_sources.reject { |source| source[:kind].to_s == "Draft action" } %>
+<% completed_action_sources = safe_sources.select { |source| source[:kind].to_s == "Completed action" } %>
+<% web_sources = safe_sources.select { |source| source[:kind].to_s == "Web source" } %>
+<% evidence_sources = safe_sources.reject { |source| %w[Draft\ action Completed\ action Web\ source].include?(source[:kind].to_s) } %>
 
 <div class="notae-ai-thread-entry"
      data-ai-timeline-at="<%= conversation.created_at&.iso8601 %>">
@@ -9,7 +11,7 @@
   </article>
   <article class="notae-ai-message is-assistant">
     <p class="notae-ai-message-label">
-      Notae AI · <%= conversation.scope.to_s.humanize %>
+      Notae AI · <%= conversation.scope.to_s == Search::AssistantQueryService::SCOPE_ACCOUNT ? "Whole app" : conversation.scope.to_s.humanize %>
       <% if conversation.workspace.present? %>
         · <%= conversation.workspace.name %>
       <% end %>
@@ -30,6 +32,28 @@
                       source[:url],
                       class: "notae-chip-button",
                       data: { turbo_frame: "_top" } %>
+        <% end %>
+      </div>
+    <% end %>
+    <% if completed_action_sources.any? %>
+      <div class="notae-ai-action-receipts" aria-label="Completed Notae actions">
+        <% completed_action_sources.each do |source| %>
+          <%= link_to "Done · #{source[:title]}",
+                      source[:url],
+                      class: "notae-chip-button notae-ai-action-receipt",
+                      data: { turbo_frame: "_top" } %>
+        <% end %>
+      </div>
+    <% end %>
+    <% if web_sources.any? %>
+      <div class="notae-ai-web-sources" aria-label="Web sources">
+        <span class="notae-ai-copy">Web sources</span>
+        <% web_sources.first(6).each do |source| %>
+          <%= link_to source[:title],
+                      source[:url],
+                      class: "notae-utility-link",
+                      target: "_blank",
+                      rel: "noopener noreferrer nofollow" %>
         <% end %>
       </div>
     <% end %>

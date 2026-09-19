@@ -78,6 +78,28 @@ RSpec.describe Notifications::DestinationResolver do
     expect(destination).to eq("/w/#{workspace.slug}/library")
   end
 
+  it "routes codex completion notifications with workspace-home destinations to notification details" do
+    workspace = Workspace.create!(name: "Resolver Codex Home Path", slug: "resolver-codex-home-path")
+    user = User.create!(email: "resolver-codex-home-path@example.com", password: "password123")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "I've prepared fresh suggestions",
+        "body" => "I've prepared fresh suggestions regarding Bela App.",
+        "path" => "/w/#{workspace.slug}"
+      }
+    )
+
+    destination = described_class.new(notification: notification).call
+
+    expect(destination).to eq(Rails.application.routes.url_helpers.workspace_notification_path(workspace_slug: workspace.slug, id: notification.id))
+  end
+
   it "falls back when a codex completion notification stored a filesystem path" do
     workspace = Workspace.create!(name: "Resolver Codex Bad Path", slug: "resolver-codex-bad-path")
     user = User.create!(email: "resolver-codex-bad-path@example.com", password: "password123")
@@ -96,7 +118,7 @@ RSpec.describe Notifications::DestinationResolver do
 
     destination = described_class.new(notification: notification).call
 
-    expect(destination).to eq("/w/#{workspace.slug}")
+    expect(destination).to eq(Rails.application.routes.url_helpers.workspace_notification_path(workspace_slug: workspace.slug, id: notification.id))
   end
 
   it "keeps codex completion paths with query strings and anchors when the route is valid" do

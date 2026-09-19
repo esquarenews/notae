@@ -25,6 +25,9 @@ module Epistularium
         prompt: prompt_for_suggestion,
         api_key: user.openai_api_key,
         model: MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-email-draft-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 900
       )
       parsed = parse_json_object(response[:text])

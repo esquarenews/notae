@@ -118,6 +118,29 @@ RSpec.describe "Kalendarium", type: :request do
     expect(Membership.find_by!(user: user, workspace: workspace).calendar_preferences["planning_view"]).to eq("wide")
   end
 
+  it "preloads adjacent months without rewriting an unchanged view preference" do
+    user, workspace, = build_stack(suffix: "month-navigation-preload")
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    navigation_links = document.css(".notae-kalendarium-head-top .notae-kalendarium-nav-buttons a")
+    previous_month = navigation_links.find { |link| link.text.strip == "←" }
+    next_month = navigation_links.find { |link| link.text.strip == "→" }
+    expect(previous_month&.[]("href")).to include("date=2026-05-02")
+    expect(next_month&.[]("href")).to include("date=2026-07-02")
+    expect(previous_month&.[]("data-turbo-preload")).to eq("true")
+    expect(next_month&.[]("data-turbo-preload")).to eq("true")
+
+    membership = Membership.find_by!(user: user, workspace: workspace)
+    expect do
+      get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-07-02")
+    end.not_to change { membership.reload.updated_at }
+    expect(response.headers["X-Notae-Perf-Sql-Queries"].to_i).to be <= Notae::RequestPerformanceStore.budget_for(action: "KalendariumController#show").fetch(:sql_queries)
+  end
+
   it "keeps wide planning mode after creating an event" do
     user, workspace, calendar = build_stack(suffix: "wide-planning-create")
     sign_in user
@@ -199,6 +222,86 @@ RSpec.describe "Kalendarium", type: :request do
     year_day_link = year_document.at_css(".notae-kalendarium-year-day[data-day-date='2026-06-02']")
     expect(year_day_link["data-action"]).to include("click->kalendarium-focus#selectDay")
     expect(year_day_link["data-action"]).to include("dblclick->kalendarium-focus#quickCreateDay")
+  end
+
+  it "renders the mobile month agenda and gesture controls" do
+    user, workspace, calendar = build_stack(suffix: "mobile-month-agenda")
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Mobile planning",
+      starts_at_utc: Time.utc(2026, 6, 2, 9),
+      ends_at_utc: Time.utc(2026, 6, 2, 10)
+    )
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-06-02")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    shell = document.at_css(".notae-kalendarium")
+    grid = document.at_css(".notae-kalendarium-month-grid")
+    agenda = document.at_css("dialog[data-kalendarium-month-target='agenda']")
+    event_card = document.at_css("#kalendarium_event_#{event.id}")
+    expect(shell["data-controller"]).to include("kalendarium-month")
+    expect(grid["data-action"]).to include("touchstart->kalendarium-month#touchStart")
+    expect(grid["data-kalendarium-month-next-url-value"]).to include("date=2026-07-02")
+    expect(agenda).to be_present
+    expect(agenda.text).to include("Mobile planning")
+    expect(agenda.at_css("button[data-action='kalendarium-month#quickAdd']")).to be_present
+    expect(event_card["data-action"]).to include("pointerdown->kalendarium-month#beginLongPress")
+  end
+
+  it "reschedules an event to a new local day while preserving its duration" do
+    user, workspace, calendar = build_stack(suffix: "mobile-month-reschedule", time_zone: "Australia/Melbourne")
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Move me",
+      starts_at_utc: Time.utc(2026, 6, 2, 1, 30),
+      ends_at_utc: Time.utc(2026, 6, 2, 3)
+    )
+    sign_in user
+
+    expect do
+      patch reschedule_kalendarium_event_path(workspace_slug: workspace.slug, id: event.id),
+            params: { target_date: "2026-06-08" },
+            as: :json
+    end.not_to change(KalendariumEvent, :count)
+
+    expect(response).to have_http_status(:ok)
+    event.reload
+    expect(event.starts_at_utc.in_time_zone(user.time_zone).strftime("%Y-%m-%d %H:%M")).to eq("2026-06-08 11:30")
+    expect(event.ends_at_utc - event.starts_at_utc).to eq(90.minutes)
+    expect(response.parsed_body["notice"]).to include("Move me moved")
+  end
+
+  it "requires recurring events to be rescheduled through their edit flow" do
+    user, workspace, calendar = build_stack(suffix: "mobile-month-recurring-reschedule")
+    event = KalendariumEvent.create!(
+      workspace: workspace,
+      kalendarium_calendar: calendar,
+      created_by: user,
+      updated_by: user,
+      title: "Weekly planning",
+      starts_at_utc: Time.utc(2026, 6, 2, 9),
+      ends_at_utc: Time.utc(2026, 6, 2, 10),
+      rrule: "FREQ=WEEKLY"
+    )
+    sign_in user
+
+    expect do
+      patch reschedule_kalendarium_event_path(workspace_slug: workspace.slug, id: event.id),
+            params: { target_date: "2026-06-08" },
+            as: :json
+    end.not_to change { event.reload.starts_at_utc }
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body["error"]).to include("recurring event")
   end
 
   it "shows one all-workspaces calendar connection from another workspace" do
@@ -1001,6 +1104,9 @@ RSpec.describe "Kalendarium", type: :request do
     expect(response.body).to include("notae-kalendarium-month-events")
     expect(response.body).to include("notae-kalendarium-month-overflow-label")
     expect(response.body).to include("+1 more")
+    document = Nokogiri::HTML.parse(response.body)
+    day_cell = document.at_css(".notae-kalendarium-month-cell[data-day-date='2026-03-01']")
+    expect(day_cell.css(".notae-kalendarium-month-events > .notae-kalendarium-event-card").size).to eq(4)
   end
 
   it "renders month view event cards with only title, time, and join link" do
@@ -1025,6 +1131,7 @@ RSpec.describe "Kalendarium", type: :request do
 
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML.parse(response.body)
+    expect(document.at_css(".notae-kalendarium.is-month-view")).to be_present
     month_card = document.at_css(".notae-kalendarium-month-cell .notae-kalendarium-event-card")
     visible_paragraphs = month_card.css("> p").map { |node| node.text.strip }
     visible_links = month_card.css("> .notae-kalendarium-event-links a").map { |node| node.text.strip }
@@ -1325,6 +1432,14 @@ RSpec.describe "Kalendarium", type: :request do
     option_label = option_row.at_css(".notae-kalendarium-project-option-label")
     expect(option_label).to be_present
     expect(option_label.text).to include(project.name)
+    color_form = option_row.at_css("form.notae-kalendarium-project-option-name.is-color-editable")
+    color_input = color_form&.at_css("input[type='color'][name='kalendarium_project[color_hex]']")
+    expect(color_form).to be_present
+    expect(color_form["data-controller"]).to eq("project-color-picker")
+    expect(color_form["data-action"]).to eq("dblclick->project-color-picker#open")
+    expect(color_input).to be_present
+    expect(color_input["value"]).to eq(project.color_hex)
+    expect(color_input["data-action"]).to eq("change->project-color-picker#save")
     show_link = option_row.at_css("a.notae-kalendarium-project-action-link.is-toggle")
     archive_link = option_row.at_css("a[data-turbo-method='patch']")
     delete_link = option_row.at_css("a[data-turbo-method='delete']")
@@ -1359,6 +1474,27 @@ RSpec.describe "Kalendarium", type: :request do
     expect(close_link).to be_present
     expect(close_link["href"]).to include("view=day")
     expect(close_link["href"]).to include("date=2026-03-01")
+  end
+
+  it "offers the same double-click color editor on project management cards" do
+    user, workspace, = build_stack(suffix: "project-card-color-picker")
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch plan",
+      color_hex: "#8B5CF6"
+    )
+    sign_in user
+
+    get kalendarium_path(workspace_slug: workspace.slug, view: "project", date: "2026-03-01")
+
+    expect(response).to have_http_status(:ok)
+    document = Nokogiri::HTML.parse(response.body)
+    color_form = document.at_css(".notae-kalendarium-project-card form.notae-kalendarium-project-card-title.is-color-editable")
+    color_input = color_form&.at_css("input[type='color'][name='kalendarium_project[color_hex]']")
+    expect(color_form["data-action"]).to eq("dblclick->project-color-picker#open")
+    expect(color_input["value"]).to eq(project.color_hex)
+    expect(color_input["aria-label"]).to eq("Choose color for #{project.name}")
   end
 
   it "renders project-calendar events in project view even when legacy rows have no project id" do
@@ -2380,6 +2516,37 @@ RSpec.describe "Kalendarium", type: :request do
     expect(project.kalendarium_calendar.color_hex).to eq("#8B5CF6")
   end
 
+  it "updates a project color, synchronizes its calendar, and returns to the originating calendar view" do
+    user, workspace, = build_stack(suffix: "project-color-update")
+    project_calendar = KalendariumCalendar.create!(
+      workspace: workspace,
+      created_by: user,
+      name: "Launch",
+      color_hex: "#8B5CF6",
+      source_kind: "project"
+    )
+    project = KalendariumProject.create!(
+      workspace: workspace,
+      created_by: user,
+      kalendarium_calendar: project_calendar,
+      name: "Launch",
+      color_hex: "#8B5CF6"
+    )
+    sign_in user
+
+    patch kalendarium_project_path(workspace_slug: workspace.slug, id: project.id), params: {
+      view: "month",
+      date: "2026-03-01",
+      kalendarium_project: { color_hex: "#EF4444" }
+    }
+
+    expect(response).to redirect_to(
+      kalendarium_path(workspace_slug: workspace.slug, view: "month", date: "2026-03-01", project_id: project.id)
+    )
+    expect(project.reload.color_hex).to eq("#EF4444")
+    expect(project_calendar.reload.color_hex).to eq("#EF4444")
+  end
+
   it "archives a project, hides it from active views, and disables its project calendar" do
     user, workspace, calendar = build_stack(suffix: "project-archive")
     sign_in user
@@ -2704,31 +2871,33 @@ RSpec.describe "Kalendarium", type: :request do
   end
 
   it "parses event form times in the user's time zone so weekly recurrence days do not shift" do
-    user, workspace, calendar = build_stack(suffix: "recurrence-user-time-zone", time_zone: "Australia/Melbourne")
-    sign_in user
+    travel_to Time.zone.parse("2026-07-01 09:00:00") do
+      user, workspace, calendar = build_stack(suffix: "recurrence-user-time-zone", time_zone: "Australia/Melbourne")
+      sign_in user
 
-    post kalendarium_events_path(workspace_slug: workspace.slug), params: {
-      view: "week",
-      date: "2026-07-06",
-      kalendarium_event: {
-        kalendarium_calendar_id: calendar.id,
-        title: "Monday evening recurring event",
-        starts_at_local: "2026-07-06T20:00",
-        ends_at_local: "2026-07-06T21:00",
-        rrule: "FREQ=WEEKLY;BYDAY=MO"
+      post kalendarium_events_path(workspace_slug: workspace.slug), params: {
+        view: "week",
+        date: "2026-07-06",
+        kalendarium_event: {
+          kalendarium_calendar_id: calendar.id,
+          title: "Monday evening recurring event",
+          starts_at_local: "2026-07-06T20:00",
+          ends_at_local: "2026-07-06T21:00",
+          rrule: "FREQ=WEEKLY;BYDAY=MO"
+        }
       }
-    }
 
-    event = KalendariumEvent.find_by!(title: "Monday evening recurring event")
-    expect(event.starts_at_utc.in_time_zone(user.time_zone).strftime("%A %H:%M")).to eq("Monday 20:00")
+      event = KalendariumEvent.find_by!(title: "Monday evening recurring event")
+      expect(event.starts_at_utc.in_time_zone(user.time_zone).strftime("%A %H:%M")).to eq("Monday 20:00")
 
-    get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-07-06")
+      get kalendarium_path(workspace_slug: workspace.slug, view: "week", date: "2026-07-06")
 
-    document = Nokogiri::HTML.parse(response.body)
-    monday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-06']")
-    tuesday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-07']")
-    expect(monday_track&.text).to include("Monday evening recurring event")
-    expect(tuesday_track&.text).not_to include("Monday evening recurring event")
+      document = Nokogiri::HTML.parse(response.body)
+      monday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-06']")
+      tuesday_track = document.at_css(".notae-kalendarium-week-day-track[data-day-date='2026-07-07']")
+      expect(monday_track&.text).to include("Monday evening recurring event")
+      expect(tuesday_track&.text).not_to include("Monday evening recurring event")
+    end
   end
 
   it "renders recurring project event occurrences whose original start is outside the visible week" do

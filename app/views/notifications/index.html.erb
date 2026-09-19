@@ -134,13 +134,14 @@
             <% requested_destination = notification.metadata["path"].to_s.strip %>
             <% destination_available = requested_destination.present? && destination == requested_destination %>
             <% suggestion_destination = notification.metadata["knowledge_suggestion_id"].present? && destination.match?(%r{/knowledge[-_]suggestions/}) %>
+            <% details_destination = destination == workspace_notification_path(workspace_slug: @workspace.slug, id: notification.id) %>
             <% if notification.metadata["body"].present? %>
               <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>
             <% end %>
-            <% unless destination_available || suggestion_destination %>
+            <% unless destination_available || suggestion_destination || details_destination %>
               <p class="notae-utility-meta">The original destination is not available in Notae.</p>
             <% end %>
-            <%= link_to(suggestion_destination ? "Open suggestion" : (destination_available ? "Open destination" : "Open workspace"),
+            <%= link_to(suggestion_destination ? "Open suggestion" : (details_destination ? "Open details" : (destination_available ? "Open destination" : "Open workspace")),
                         destination,
                         class: "notae-utility-link notae-utility-mini-link") %>
           <% elsif notification.notification_type == Notification::TYPE_TEST_PUSH %>
@@ -148,13 +149,14 @@
             <% requested_destination = notification.metadata["path"].to_s.strip %>
             <% destination_available = requested_destination.present? && destination == requested_destination %>
             <% suggestion_destination = notification.metadata["knowledge_suggestion_id"].present? && destination.match?(%r{/knowledge[-_]suggestions/}) %>
+            <% details_destination = destination == workspace_notification_path(workspace_slug: @workspace.slug, id: notification.id) %>
             <% if notification.metadata["body"].present? %>
               <p class="notae-utility-copy"><%= notification.metadata["body"] %></p>
             <% end %>
-            <% unless destination_available || suggestion_destination %>
+            <% unless destination_available || suggestion_destination || details_destination %>
               <p class="notae-utility-meta">The original destination is not available in Notae.</p>
             <% end %>
-            <%= link_to(suggestion_destination ? "Open suggestion" : (destination_available ? "Open destination" : "Open workspace"),
+            <%= link_to(suggestion_destination ? "Open suggestion" : (details_destination ? "Open details" : (destination_available ? "Open destination" : "Open workspace")),
                         destination,
                         class: "notae-utility-link notae-utility-mini-link") %>
           <% end %>

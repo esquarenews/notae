@@ -167,8 +167,16 @@ RSpec.describe Search::PersistKnowledgeSuggestionService do
       }
     )
 
-    suggestion = described_class.new(user: user, workspace: workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE).call
+    suggestion = described_class.new(
+      user: user,
+      workspace: workspace,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      service_tier: "flex"
+    ).call
 
+    expect(Openai::ResponsesClient).to have_received(:generate_text_with_usage).with(
+      hash_including(service_tier: "flex")
+    )
     expect(suggestion).to be_present
     expect(suggestion.kind).to eq(KnowledgeSuggestion::KIND_PROACTIVE)
     expect(suggestion.title).to eq("Confirm rollout timing")

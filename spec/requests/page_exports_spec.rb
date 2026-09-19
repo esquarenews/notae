@@ -90,6 +90,37 @@ RSpec.describe "Page exports", type: :request do
     expect(extracted_text).to include("reference.txt")
   end
 
+  it "preserves accented Latin and Cyrillic text in the Notae Sans pdf" do
+    owner = User.create!(email: "page-exports-unicode-pdf-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Unicode PDF", slug: "unicode-pdf")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Résumé проекта")
+    Block.create!(
+      workspace: workspace,
+      page: page,
+      created_by: owner,
+      block_type: "paragraph",
+      content_json: {
+        "type" => "doc",
+        "content" => [
+          { "type" => "heading", "attrs" => { "level" => 2 }, "content" => [ { "type" => "text", "text" => "Crème brûlée" } ] },
+          { "type" => "paragraph", "content" => [ { "type" => "text", "text" => "Привет, мир — café déjà vu." } ] }
+        ]
+      }
+    )
+    sign_in owner
+
+    get export_pdf_page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("NotaeSans")
+
+    extracted_text = extract_pdf_text(response.body).unicode_normalize(:nfc)
+    expect(extracted_text).to include("Résumé проекта")
+    expect(extracted_text).to include("Crème brûlée")
+    expect(extracted_text).to include("Привет, мир — café déjà vu.")
+  end
+
   it "queues a zip export job and expires download links" do
     owner = User.create!(email: "page-exports-zip-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Page export zip", slug: "page-export-zip")

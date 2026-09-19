@@ -1,5 +1,6 @@
-<% autofocus_title = local_assigns.fetch(:autofocus_title, false) %>
 <% highlight_row_id = local_assigns[:highlight_row_id].presence %>
+<% autofocus_title = local_assigns.fetch(:autofocus_title, false) ||
+                     (highlight_row_id.to_s == row.id.to_s && row.title.to_s == "Untitled row") %>
 <% linked_page = row.linked_page %>
 <% row_can_update = local_assigns.fetch(:can_update_rows) { policy(row).update? && !database.locked? } %>
 <% row_can_destroy = local_assigns.fetch(:can_destroy_rows) { policy(row).destroy? && !database.locked? } %>
@@ -91,6 +92,7 @@
                     accept-charset="UTF-8"
                     method="post"
                     class="notae-db-title-form notae-db-title-form-inline"
+                    <% if autofocus_title %>data-controller="select-on-connect"<% end %>
                     data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
                     data-preserve-database-scroll="true">
                 <input type="hidden" name="_method" value="patch" autocomplete="off">
@@ -99,6 +101,7 @@
                        value="<%= row.title %>"
                        class="notae-db-title-input"
                        placeholder="Enter name"
+                       data-select-on-connect-target="input"
                        data-action="input->auto-submit#submitDebounced change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter"
                        data-auto-submit-create-next-row-on-enter="true">
                 <input type="hidden" name="db_row[autosave_title]" value="1" autocomplete="off">
@@ -126,6 +129,7 @@
                   accept-charset="UTF-8"
                   method="post"
                   class="notae-db-title-form notae-db-title-form-inline"
+                  <% if autofocus_title %>data-controller="select-on-connect"<% end %>
                   data-auto-submit-focus-on-connect-value="<%= autofocus_title ? "true" : "false" %>"
                   data-preserve-database-scroll="true">
               <input type="hidden" name="_method" value="patch" autocomplete="off">
@@ -134,6 +138,7 @@
                      value="<%= row.title %>"
                      class="notae-db-title-input"
                      placeholder="Enter name"
+                     data-select-on-connect-target="input"
                      data-action="input->auto-submit#submitDebounced change->auto-submit#submit keydown.enter->auto-submit#submitOnEnter"
                      data-auto-submit-create-next-row-on-enter="true">
               <input type="hidden" name="db_row[autosave_title]" value="1" autocomplete="off">
@@ -260,7 +265,7 @@
                    id="<%= field_id %>"
                    value="<%= db_cell.value_text %>"
                    class="<%= field_classes %>"
-                   data-action="input->auto-submit#submitDebounced <%= cell_autosubmit_attributes[:action] %>"
+                   data-action="<%= cell_autosubmit_attributes[:action] %>"
                    data-auto-submit-url="<%= cell_autosubmit_attributes[:auto_submit_url] %>"
                    data-auto-submit-method="<%= cell_autosubmit_attributes[:auto_submit_method] %>"
                    data-auto-submit-param-name="<%= cell_autosubmit_attributes[:auto_submit_param_name] %>"

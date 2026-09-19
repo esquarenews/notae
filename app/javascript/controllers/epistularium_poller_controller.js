@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 const DEFAULT_POLL_INTERVAL_MS = 15000
+const POLL_INITIAL_DELAY_MS = 5000
 
 export default class extends Controller {
   static targets = ["sections"]
@@ -15,10 +16,15 @@ export default class extends Controller {
     this.currentCursor = this.cursorValue || ""
     this.pendingPaneScrollPositions = null
     this.pendingSelectedMessageId = ""
-    this.intervalId = window.setInterval(() => this.poll(), this.intervalValue)
+    this.pollStartTimer = window.setTimeout(() => {
+      this.pollStartTimer = null
+      this.poll()
+      this.intervalId = window.setInterval(() => this.poll(), this.intervalValue)
+    }, POLL_INITIAL_DELAY_MS)
   }
 
   disconnect() {
+    if (this.pollStartTimer) window.clearTimeout(this.pollStartTimer)
     if (this.intervalId) window.clearInterval(this.intervalId)
   }
 
@@ -31,10 +37,12 @@ export default class extends Controller {
 
   async fetchAndReplace() {
     const endpoint = this.endpointValue || window.location.href
+    const requestUrl = new URL(endpoint, window.location.origin)
+    if (this.currentCursor) requestUrl.searchParams.set("poll_cursor", this.currentCursor)
     this.inFlight = true
 
     try {
-      const response = await window.fetch(endpoint, {
+      const response = await window.fetch(requestUrl.toString(), {
         method: "GET",
         credentials: "same-origin",
         headers: {

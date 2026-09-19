@@ -38,6 +38,14 @@ class AiAssistantController < ApplicationController
     }
   end
 
+  def new_chat
+    authorize @workspace, :show?
+
+    reset_ai_chat_thread!(@workspace)
+    hydrate_ai_rail_panel!(current_page_id: params[:current_page_id])
+    render partial: "shared/app_ai_rail_panel"
+  end
+
   def create
     authorize @workspace, :show?
 
@@ -47,15 +55,7 @@ class AiAssistantController < ApplicationController
     @ai_assistant_current_page_id = assistant_params[:current_page_id].presence
     @ai_assistant_target_block_id = target_block&.id
 
-    service = Search::AssistantQueryService.new(
-      user: current_user,
-      workspace: @workspace,
-      prompt: @ai_assistant_prompt,
-      scope: @ai_assistant_scope,
-      current_page_id: @ai_assistant_current_page_id,
-      intent: @ai_assistant_intent,
-      target_block: target_block
-    )
+    service = assistant_service
     @ai_assistant_response = call_assistant_service(service)
     @ai_assistant_notice = notice_for(@ai_assistant_error_reason || service.unavailable_reason)
     @ai_insert_payload = insert_payload_for(@ai_assistant_response, target_block: target_block)
@@ -85,6 +85,33 @@ class AiAssistantController < ApplicationController
   end
 
   private
+
+  def assistant_service
+    if legacy_explicit_intent?
+      return Search::AssistantQueryService.new(
+        user: current_user,
+        workspace: @workspace,
+        prompt: @ai_assistant_prompt,
+        scope: @ai_assistant_scope,
+        current_page_id: @ai_assistant_current_page_id,
+        intent: @ai_assistant_intent,
+        target_block: target_block
+      )
+    end
+
+    Search::AssistantAgentService.new(
+      user: current_user,
+      workspace: @workspace,
+      prompt: @ai_assistant_prompt,
+      scope: @ai_assistant_scope,
+      current_page_id: @ai_assistant_current_page_id,
+      history: current_ai_chat_history
+    )
+  end
+
+  def legacy_explicit_intent?
+    @ai_assistant_intent.present? && @ai_assistant_intent != Search::AssistantQueryService::INTENT_ASK_AI
+  end
 
   def set_workspace
     @workspace = policy_scope(Workspace).find_by!(slug: params[:workspace_slug])
@@ -148,6 +175,10 @@ class AiAssistantController < ApplicationController
       "Notae AI can draft emails, GitHub comments, task tickets, calendar holds, and Notae notes."
     when :draft_generation_failed, :draft_validation_failed
       "Notae AI could not turn that into a valid draft. Add recipients, references, or timing and retry."
+    when :step_limit
+      "Notae AI reached its safe step limit before it could finish. Try splitting the request into two outcomes."
+    when :empty_response
+      "Notae AI completed no usable result. Please retry."
     else
       nil
     end
@@ -198,6 +229,9 @@ class AiAssistantController < ApplicationController
       answer: answer,
       sources: sources
     }
+    if AiConversation.column_names.include?("thread_id")
+      conversation_attributes[:thread_id] = current_ai_chat_thread_id(@workspace)
+    end
     if AiConversation.column_names.include?("model")
       conversation_attributes[:model] = @ai_assistant_response&.model.presence || "unknown"
     end
@@ -250,9 +284,24 @@ class AiAssistantController < ApplicationController
   def hydrate_ai_rail_panel!(current_page_id:)
     @ai_rail_workspace = @workspace
     @ai_rail_current_page_id = current_page_id.presence
+    @ai_chat_thread_id = current_ai_chat_thread_id(@workspace)
     set_ai_rail_conversations
     set_ai_agent_updates
     set_ai_rail_usage_panel
     set_active_knowledge_suggestion
+  end
+
+
+  def current_ai_chat_history
+    return [] unless AiConversation.column_names.include?("thread_id")
+
+    AiConversation
+      .for_user(current_user)
+      .where(workspace_id: @workspace.id, thread_id: current_ai_chat_thread_id(@workspace))
+      .where(created_at: 1.week.ago..Time.current)
+      .recent_first
+      .limit(Search::AssistantAgentService::HISTORY_LIMIT)
+      .to_a
+      .reverse
   end
 end

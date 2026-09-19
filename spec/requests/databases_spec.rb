@@ -3043,6 +3043,8 @@ RSpec.describe "Databases", type: :request do
     expect(response.body).to include('turbo-stream action="replace" target="database_flash_messages"')
     expect(response.body).to include("Row updated.")
     expect(response.body).to include('data-auto-submit-focus-on-connect-value="true"')
+    expect(response.body).to include('data-controller="select-on-connect"')
+    expect(response.body).to include('data-select-on-connect-target="input"')
     expect(response.body).to include("is-new-row-highlight")
     expect(first_row.reload.title).to eq("Updated first row")
     expect(DbRow.for_database(database).active.ordered.pluck(:id)).to eq([ first_row.id, created_row.id, second_row.id ])
@@ -3163,6 +3165,26 @@ RSpec.describe "Databases", type: :request do
     expect(insert_row_form.at_css("input[name='db_row[title]'][value='Untitled row']")).to be_present
     expect(title_form["data-controller"]).to be_nil
     expect(document.css("[data-controller~='auto-submit']").size).to eq(1)
+  end
+
+  it "only saves grid date cells after the date picker commits a day" do
+    owner = User.create!(email: "database-date-picker-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Date picker grid", slug: "date-picker-grid")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Tasks")
+    due_property = DbProperty.create!(workspace: workspace, database: database, name: "Due", property_type: :date)
+    row = DbRow.create!(workspace: workspace, database: database, title: "Choose a due date")
+    cell = DbCell.create!(workspace: workspace, db_row: row, db_property: due_property, value_text: "2026-08-05")
+    sign_in owner
+
+    get database_path(workspace_slug: workspace.slug, id: database.id)
+
+    expect(response).to have_http_status(:ok)
+    date_input = Nokogiri::HTML(response.body).at_css("#db_cell_#{cell.id}_value_text")
+
+    expect(date_input["type"]).to eq("date")
+    expect(date_input["data-action"]).to eq("change->auto-submit#submit")
+    expect(date_input["data-action"]).not_to include("input->auto-submit#submitDebounced")
   end
 
   it "creates a new row with turbo streams instead of redirecting the full grid for the simple table path" do
@@ -3305,6 +3327,43 @@ RSpec.describe "Databases", type: :request do
     expect(existing_row_node).to be_present
     expect(created_row_node["class"]).to include("is-new-row-highlight")
     expect(existing_row_node["class"]).not_to include("is-new-row-highlight")
+    expect(created_row_node.at_css("form[data-controller~='select-on-connect']")).to be_present
+    expect(created_row_node.at_css("input[data-select-on-connect-target='input']")).to be_present
+  end
+
+  it "selects a newly created untitled row after the sorted-grid redirect fallback" do
+    owner = User.create!(email: "database-row-sorted-focus-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Sorted row focus tables", slug: "sorted-row-focus-tables")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    database = Database.create!(workspace: workspace, name: "Sorted row focus DB")
+    source_row = DbRow.create!(workspace: workspace, database: database, title: "Source row")
+    sign_in owner
+
+    patch database_db_row_path(workspace_slug: workspace.slug, database_id: database.id, id: source_row.id),
+          params: {
+            sort_property_id: DatabaseView::NAME_SORT_KEY,
+            sort_direction: "asc",
+            db_row: { title: "Source row", autosave_title: "1", create_next_row: "1" }
+          },
+          as: :turbo_stream
+
+    created_row = database.db_rows.where.not(id: source_row.id).order(:created_at).last
+    expect(created_row).to be_present
+    expect(response).to redirect_to(
+      database_path(
+        workspace_slug: workspace.slug,
+        id: database.id,
+        anchor: "row_#{created_row.id}",
+        highlight_row_id: created_row.id
+      )
+    )
+
+    follow_redirect!
+
+    created_row_node = Nokogiri::HTML(response.body).at_css("#row_#{created_row.id}")
+    expect(created_row_node).to be_present
+    expect(created_row_node.at_css("form[data-controller~='select-on-connect']")).to be_present
+    expect(created_row_node.at_css("input[data-select-on-connect-target='input']")).to be_present
   end
 
   it "inserts create-next rows without renumbering unaffected rows when position gaps are available" do
