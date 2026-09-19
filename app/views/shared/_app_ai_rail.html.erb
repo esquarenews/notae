@@ -26,7 +26,6 @@
      data-controller="ai-rail"
      <% if ai_rail_workspace_ready %>
        data-ai-rail-agent-updates-path-value="<%= workspace_ai_assistant_updates_path(workspace_slug: ai_rail_workspace_slug) %>"
-       data-ai-rail-workspace-key-value="<%= ai_rail_workspace.id %>"
      <% end %>>
   <button type="button"
           class="notae-ai-floating-toggle"
@@ -48,23 +47,6 @@
           aria-label="Close AI assistant panel"
           hidden></button>
 
-  <section class="notae-ai-agent-toast"
-           data-ai-rail-target="agentToast"
-           hidden
-           aria-live="polite"
-           aria-atomic="true">
-    <button type="button"
-            class="notae-ai-agent-toast-main"
-            data-action="click->ai-rail#openAgentToast">
-      <span class="notae-ai-agent-toast-title">AI Agent</span>
-      <span class="notae-ai-agent-toast-body" data-ai-rail-target="agentToastBody"></span>
-    </button>
-    <button type="button"
-            class="notae-ai-agent-toast-dismiss"
-            data-action="click->ai-rail#dismissAgentToast"
-            aria-label="Dismiss AI agent updates">×</button>
-  </section>
-
   <aside class="notae-ai-rail">
   <button type="button"
           class="notae-ai-rail-reopen"
@@ -78,7 +60,7 @@
   </button>
 
   <div class="notae-ai-head">
-    <span class="notae-ai-head-title">New AI chat</span>
+    <span class="notae-ai-head-title">Notae AI</span>
     <div class="notae-ai-head-controls">
       <% if ai_rail_workspace_ready %>
         <%= select_tag "ai_assistant[scope]",
@@ -89,6 +71,14 @@
       <% else %>
         <span class="notae-ai-kicker">Auto</span>
       <% end %>
+      <% if ai_rail_workspace_ready %>
+        <%= button_to "New chat",
+                      workspace_ai_assistant_new_chat_path(workspace_slug: ai_rail_workspace_slug),
+                      method: :post,
+                      params: { current_page_id: @ai_rail_current_page_id },
+                      class: "notae-chip-button notae-ai-new-chat",
+                      form: { data: { turbo_frame: "ai_rail_panel" } } %>
+      <% end %>
       <button type="button"
               class="notae-ai-rail-toggle"
               data-action="click->ai-rail#toggleRail"
@@ -98,20 +88,7 @@
     </div>
   </div>
 
-  <div class="notae-ai-card">
-    <p class="notae-ai-title">Notae AI assistant</p>
-    <p class="notae-ai-copy">Ask search questions, summary requests, or request reviewable draft actions for email, GitHub, tasks, and calendar holds.</p>
-  </div>
-
-  <section class="notae-ai-thread" data-ai-rail-target="thread">
-    <% ai_timeline_entries.each do |entry| %>
-      <% if entry[:kind] == :conversation %>
-        <%= render "shared/app_ai_conversation", conversation: entry[:conversation] %>
-      <% else %>
-        <%= render "shared/app_ai_agent_update", update: entry[:update] %>
-      <% end %>
-    <% end %>
-
+  <section class="notae-ai-thread" data-ai-rail-target="thread" aria-live="polite" aria-busy="false">
     <% if pending_proactive_knowledge_suggestion && @active_knowledge_suggestion.blank? %>
       <article class="notae-ai-message is-assistant is-pending">
         <p class="notae-ai-message-label">Notae AI</p>
@@ -119,6 +96,25 @@
                    kind: KnowledgeSuggestion::KIND_PROACTIVE,
                    compact: true %>
       </article>
+    <% end %>
+
+    <% if @active_knowledge_suggestion.present? %>
+      <article class="notae-ai-message is-assistant is-suggestion">
+        <p class="notae-ai-message-label">Proactive suggestion</p>
+        <%= render "shared/knowledge_suggestion_card",
+                   suggestion: @active_knowledge_suggestion,
+                   workspace: ai_rail_workspace,
+                   task_databases: Array(@active_knowledge_task_databases),
+                   compact: true %>
+      </article>
+    <% end %>
+
+    <% ai_timeline_entries.each do |entry| %>
+      <% if entry[:kind] == :conversation %>
+        <%= render "shared/app_ai_conversation", conversation: entry[:conversation] %>
+      <% else %>
+        <%= render "shared/app_ai_agent_update", update: entry[:update] %>
+      <% end %>
     <% end %>
 
     <% if ai_timeline_entries.empty? && @ai_assistant_notice.present? %>
@@ -167,7 +163,7 @@
                              ai_rail_target: "promptInput",
                              action: "keydown->ai-rail#submitOnShortcut"
                            },
-                           placeholder: "Ask a question or request a draft action for review." %>
+                           placeholder: "Ask Notae to find, answer, create, or change something…" %>
         <div class="notae-ai-compose-loading" data-ai-rail-target="loading">
           <span class="notae-ai-compose-swirl" aria-hidden="true"></span>
           <%= render "shared/ai_loader_icon",

@@ -24,10 +24,13 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("theme-color")
     expect(response.body).to include("data-controller=\"pwa\"")
     expect(response.body).to include("data-pwa-web-push-public-key-value=")
-    expect(response.body).to include("data-pwa-target=\"pushLiveBanner\"")
-    expect(response.body).to include("data-pwa-target=\"pushLiveBannerTitle\"")
-    expect(response.body).to include("data-pwa-target=\"pushLiveBannerBody\"")
+    expect(response.body).to include("data-pwa-target=\"networkToast\"")
+    expect(response.body).not_to include("data-pwa-target=\"pushLiveBanner\"")
     expect(response.body).not_to include("data-pwa-unread-notification-count-value=")
+    expect(response.body).to include("rel=\"preload\"")
+    expect(response.body).to include("notae-sans-variable")
+    expect(response.body).not_to include("fonts.googleapis.com")
+    expect(response.body).not_to include("fonts.gstatic.com")
   end
 
   it "keeps hidden PWA shell cards hidden until the controller reveals them" do
@@ -36,8 +39,8 @@ RSpec.describe "PWA", type: :request do
     expect(stylesheet).to include(".notae-pwa-offline-banner[hidden],")
     expect(stylesheet).to include(".notae-pwa-install-card[hidden],")
     expect(stylesheet).to include(".notae-pwa-push-card[hidden],")
-    expect(stylesheet).to include(".notae-pwa-live-banner[hidden],")
     expect(stylesheet).to include(".notae-pwa-network-toast[hidden] {")
+    expect(stylesheet).not_to include(".notae-pwa-live-banner")
     expect(stylesheet).to include("display: none !important;")
   end
 
@@ -57,6 +60,7 @@ RSpec.describe "PWA", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.media_type).to eq("application/manifest+json")
+    expect(response.headers["Cache-Control"]).to include("no-cache")
 
     manifest = JSON.parse(response.body)
     icons = manifest.fetch("icons")
@@ -73,6 +77,54 @@ RSpec.describe "PWA", type: :request do
     expect(icons).to include(a_hash_including("src" => "/icon-maskable-512-v5.png", "purpose" => "maskable"))
   end
 
+  it "serves public PWA assets without database work" do
+    sql_queries = []
+    subscriber = lambda do |_name, _start, _finish, _id, payload|
+      next if payload[:cached]
+      next if %w[SCHEMA TRANSACTION CACHE].include?(payload[:name].to_s)
+
+      sql_queries << payload[:sql]
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      get pwa_manifest_path
+      expect(response).to have_http_status(:ok)
+
+      get pwa_service_worker_path
+      expect(response).to have_http_status(:ok)
+    end
+
+    expect(sql_queries).to be_empty
+  end
+
+  it "does not load the signed-in user while serving public PWA assets" do
+    user = User.create!(email: "pwa-public-assets@example.com", password: "password123")
+    sign_in user
+    sql_queries = []
+    manifest_queries = []
+    service_worker_queries = []
+    subscriber = lambda do |_name, _start, _finish, _id, payload|
+      next if payload[:cached]
+      next if %w[SCHEMA TRANSACTION CACHE].include?(payload[:name].to_s)
+
+      sql_queries << payload[:sql]
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      get pwa_manifest_path
+      expect(response).to have_http_status(:ok)
+      manifest_queries = sql_queries.dup
+      sql_queries.clear
+
+      get pwa_service_worker_path
+      expect(response).to have_http_status(:ok)
+      service_worker_queries = sql_queries.dup
+    end
+
+    expect(manifest_queries).to be_empty
+    expect(service_worker_queries).to be_empty
+  end
+
   it "serves a parseable service worker with the offline fallback, private cache clearing, and push hooks" do
     get pwa_service_worker_path
 
@@ -86,12 +138,22 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to match(/const CACHE_VERSION = "pwa-[0-9a-f]{12}"/)
     expect(response.body).not_to include('const CACHE_VERSION = "pwa-v6"')
     expect(response.body).to include("const ACTIVE_CACHES = [SHELL_CACHE, ASSET_CACHE, FONT_CACHE]")
+    expect(response.body).to include("const PRECACHE_FONT_URLS =")
+    expect(response.body).to include("notae-sans-variable")
+    expect(response.body).to include("notae-sans-italic-variable")
+    expect(response.body).to include("fontCache.addAll(PRECACHE_FONT_URLS)")
+    expect(response.body).to include("controllers/index")
+    expect(response.body).not_to include("archive_game_controller")
+    expect(response.body).not_to include("whiteboard_controller")
     expect(response.body).not_to include("const DOCUMENT_CACHE")
     expect(response.body).not_to include("cacheableDocumentResponse")
     expect(response.body).to include("if (!cacheableRequestUrl(url)) return")
     expect(response.body).to include("function cacheableRequestUrl(url)")
     expect(response.body).to include('return url.protocol === "http:" || url.protocol === "https:"')
-    expect(response.body).to include('(url.origin === self.location.origin && /\\.(?:woff2?|ttf|otf)$/i.test(url.pathname))')
+    expect(response.body).to include('return url.origin === self.location.origin && /\\.(?:woff2?|ttf|otf)$/i.test(url.pathname)')
+    expect(response.body).not_to include("fonts.googleapis.com")
+    expect(response.body).not_to include("fonts.gstatic.com")
+    expect(response.body.index("if (isFontRequest(url))")).to be < response.body.index("if (isSameOriginAsset(url))")
     expect(response.body).to include("event.respondWith(networkFirstDocument(request))")
     expect(response.body).to include("async function networkFirstDocument(request)")
     expect(response.body).to include("self.addEventListener(\"push\"")
@@ -99,13 +161,17 @@ RSpec.describe "PWA", type: :request do
     expect(response.body).to include("requireInteraction: Boolean(payload.require_interaction)")
     expect(response.body).to include("type: \"notae:push-received\"")
     expect(response.body).to include("client.postMessage")
-    expect(response.body).to include("const receiptPayload = pushReceiptPayload(payload, { notificationDisplayed, notificationError })")
-    expect(response.body).to include("function pushReceiptPayload(payload, { notificationDisplayed = false, notificationError = \"\" } = {})")
+    expect(response.body).to include("async function hasVisibleWindowClient()")
+    expect(response.body).to include('client.visibilityState === "visible"')
+    expect(response.body).to include("if (notificationSuppressedInForeground)")
+    expect(response.body).to include("const receiptPayload = pushReceiptPayload(payload, { notificationDisplayed, notificationError, notificationSuppressedInForeground })")
+    expect(response.body).to include("function pushReceiptPayload(payload, { notificationDisplayed = false, notificationError = \"\", notificationSuppressedInForeground = false } = {})")
     expect(response.body).to include("notificationType: payload.type || payload.notification_type || null")
     expect(response.body).to include("tag: payload.tag || \"\"")
     expect(response.body).to include("icon: payload.icon || \"/icon-192-v5.png\"")
     expect(response.body).to include("requireInteraction: Boolean(payload.require_interaction)")
     expect(response.body).to include("notificationDisplayed")
+    expect(response.body).to include("notificationSuppressedInForeground")
     expect(response.body).to include("notificationError")
     expect(response.body).to include("} finally {")
     expect(response.body).not_to include("unreadCount")
@@ -135,9 +201,18 @@ RSpec.describe "PWA", type: :request do
   it "routes signed-in notification launches through the server and marks them as read" do
     user = User.create!(email: "pwa-notification-launch@example.com", password: "password123")
     workspace = create_workspace_for(user:, slug: "pwa-notification", name: "PWA Notification")
+    conversation = AiConversation.create!(
+      workspace: workspace,
+      user: user,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUGGESTION,
+      prompt: "Proactive workspace suggestion",
+      answer: "A new AI suggestion is waiting. [1]"
+    )
     suggestion = KnowledgeSuggestion.create!(
       workspace: workspace,
       user: user,
+      ai_conversation: conversation,
       kind: KnowledgeSuggestion::KIND_PROACTIVE,
       status: KnowledgeSuggestion::STATUS_ACTIVE,
       title: "Follow up on the board",
@@ -161,7 +236,61 @@ RSpec.describe "PWA", type: :request do
 
     get pwa_notification_launch_path(id: notification.id)
 
-    expect(response).to redirect_to(workspace_path(workspace.slug, show_home: 1, knowledge_suggestion_id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(response).to redirect_to(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(notification.reload.read_at).to be_present
+  end
+
+  it "routes metadata-only suggestion notification launches to the suggestion page" do
+    user = User.create!(email: "pwa-notification-metadata-launch@example.com", password: "password123")
+    workspace = create_workspace_for(user:, slug: "pwa-notification-metadata", name: "PWA Notification Metadata")
+    suggestion = KnowledgeSuggestion.create!(
+      workspace: workspace,
+      user: user,
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      status: KnowledgeSuggestion::STATUS_ACTIVE,
+      title: "Follow up on the board",
+      summary: "A new AI suggestion is waiting. [1]",
+      insights_json: [],
+      task_suggestions_json: [],
+      related_notes_json: [],
+      sources_json: [],
+      generated_at: Time.current,
+      expires_at: 6.hours.from_now
+    )
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_KNOWLEDGE_SUGGESTION_READY,
+      metadata: { "knowledge_suggestion_id" => suggestion.id }
+    )
+    sign_in user
+
+    get pwa_notification_launch_path(id: notification.id)
+
+    expect(response).to redirect_to(knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id, anchor: "knowledge-suggestion-#{suggestion.id}"))
+    expect(notification.reload.read_at).to be_present
+  end
+
+  it "routes workspace-home codex notification launches to notification details" do
+    user = User.create!(email: "pwa-notification-codex-home@example.com", password: "password123")
+    workspace = create_workspace_for(user:, slug: "pwa-notification-codex-home", name: "PWA Notification Codex Home")
+    notification = Notification.create!(
+      workspace: workspace,
+      actor: user,
+      recipient: user,
+      notification_type: Notification::TYPE_CODEX_REQUEST_COMPLETED,
+      metadata: {
+        "title" => "I've prepared fresh suggestions",
+        "body" => "I've prepared fresh suggestions regarding Bela App.",
+        "path" => "/w/#{workspace.slug}"
+      }
+    )
+    sign_in user
+
+    get pwa_notification_launch_path(id: notification.id)
+
+    expect(response).to redirect_to(workspace_notification_path(workspace_slug: workspace.slug, id: notification.id))
     expect(notification.reload.read_at).to be_present
   end
 

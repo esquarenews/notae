@@ -264,7 +264,10 @@ class WorkspaceNotificationBarPresenter
   end
 
   def data_source_available?(name)
-    ActiveRecord::Base.connection.data_source_exists?(name)
+    @data_source_availability ||= {}
+    return @data_source_availability[name] if @data_source_availability.key?(name)
+
+    @data_source_availability[name] = ActiveRecord::Base.connection.data_source_exists?(name)
   rescue ActiveRecord::StatementInvalid => error
     return false if optional_schema_error?(error)
 

@@ -19,7 +19,13 @@ RSpec.describe "EpistulariumPollerController JavaScript syntax" do
   it "keeps polling cursor comparison and pane scroll restoration" do
     source = Rails.root.join("app/javascript/controllers/epistularium_poller_controller.js").read
 
+    expect(source).to include("const DEFAULT_POLL_INTERVAL_MS = 15000")
+    expect(source).to include("const POLL_INITIAL_DELAY_MS = 5000")
+    expect(source).to include("this.pollStartTimer = window.setTimeout")
+    expect(source).to include("window.clearTimeout(this.pollStartTimer)")
     expect(source).to include("this.currentCursor")
+    expect(source).to include('requestUrl.searchParams.set("poll_cursor", this.currentCursor)')
+    expect(source).to include("window.fetch(requestUrl.toString()")
     expect(source).to include("capturePaneScrollPositions()")
     expect(source).to include("restorePaneScrollPositions")
     expect(source).to include("captureBeforeFrameRequest(event)")

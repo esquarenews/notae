@@ -26,6 +26,7 @@ RSpec.describe "Application JavaScript syntax" do
     expect(source).to include('lazyLoadControllersFrom("controllers", application)')
     expect(source).not_to include("eagerLoadControllersFrom")
     expect(importmap).to include('pin_all_from "app/javascript/controllers", under: "controllers", preload: false')
+    expect(importmap).to include('pin "@rails/actioncable", to: "actioncable.esm.js", preload: false')
     %w[
       @tiptap/core
       @tiptap/starter-kit

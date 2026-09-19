@@ -30,7 +30,7 @@ class KalendariumEventsController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_workspace
-  before_action :set_event, only: %i[update destroy]
+  before_action :set_event, only: %i[update destroy reschedule]
 
   def create
     project_id = effective_event_project_id
@@ -211,6 +211,50 @@ class KalendariumEventsController < ApplicationController
     redirect_to kalendarium_redirect_path, notice: destroy_recurring_series? ? "Recurring events deleted." : "Event deleted."
   end
 
+  def reschedule
+    authorize @event, :update?
+
+    if @event.rrule.present? || @event.metadata_json.to_h["recurring_event_id"].present?
+      render json: { error: "Open event details to reschedule a recurring event." }, status: :unprocessable_entity
+      return
+    end
+
+    target_date = Date.iso8601(params.require(:target_date))
+    starts_local = @event.starts_at_utc.in_time_zone(user_time_zone)
+    duration = @event.ends_at_utc - @event.starts_at_utc
+    shifted_start = user_time_zone.local(
+      target_date.year,
+      target_date.month,
+      target_date.day,
+      starts_local.hour,
+      starts_local.min,
+      starts_local.sec
+    )
+
+    @event.assign_attributes(
+      starts_at_utc: shifted_start.utc,
+      ends_at_utc: (shifted_start + duration).utc,
+      updated_by: current_user
+    )
+
+    if @event.save
+      sync_warning = sync_event_to_provider(@event)
+      render json: {
+        event_id: @event.id,
+        target_date: target_date.iso8601,
+        notice: "#{@event.title} moved to #{target_date.strftime('%-d %B')}",
+        warning: sync_warning
+      }
+    else
+      render json: { error: @event.errors.full_messages.to_sentence }, status: :unprocessable_entity
+    end
+  rescue Date::Error, ActionController::ParameterMissing
+    render json: { error: "Choose a valid date." }, status: :unprocessable_entity
+  rescue StandardError => error
+    Rails.logger.error("Kalendarium event reschedule failed for event=#{@event&.id}: #{error.class}: #{error.message}")
+    render json: { error: "Event could not be moved." }, status: :unprocessable_entity
+  end
+
   private
 
   def set_workspace
@@ -279,10 +323,31 @@ class KalendariumEventsController < ApplicationController
     redirect_params[:tz] = time_zones if time_zones.any?
     redirect_params[:year_daily_events] = "1" if ActiveModel::Type::Boolean.new.cast(params[:year_daily_events])
     redirect_params[:window_start] = params[:window_start].presence if params[:window_start].present?
+    redirect_params[:planning] = "wide" if restore_wide_planning_view?
     redirect_params[:embedded] = "1" if params[:embedded].to_s == "1"
     redirect_params[:widget] = "1" if params[:widget].to_s == "1"
     redirect_params[:task_row_id] = params[:task_row_id].presence if params[:task_row_id].present?
     kalendarium_path(redirect_params)
+  end
+
+  def restore_wide_planning_view?
+    requested = params[:planning].to_s
+    return true if requested == "wide"
+    return false if requested.present?
+
+    stored = workspace_calendar_preference(
+      "planning_view",
+      fallback: planning_view_session[planning_view_workspace_key]
+    ).to_s
+    stored == "wide"
+  end
+
+  def planning_view_session
+    session[:kalendarium_planning_view] ||= {}
+  end
+
+  def planning_view_workspace_key
+    @workspace.id.to_s
   end
 
   def find_event_project(project_id)

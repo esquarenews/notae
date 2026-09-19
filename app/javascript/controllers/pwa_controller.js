@@ -10,7 +10,6 @@ const PUSH_BANNER_MISSED_KEY = "notae-pwa-push-banner-missed-at"
 const PUSH_READINESS_COLLAPSED_KEY = "notae-pwa-push-readiness-collapsed"
 const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 const NETWORK_TOAST_MS = 2600
-const PUSH_LIVE_BANNER_MS = 12000
 
 export default class extends Controller {
   static targets = [
@@ -19,10 +18,6 @@ export default class extends Controller {
     "offlineBanner",
     "networkToast",
     "pushPrompt",
-    "pushLiveBanner",
-    "pushLiveBannerTitle",
-    "pushLiveBannerBody",
-    "pushLiveBannerOpen",
     "pushSettingsToggle",
     "pushSettingsStateLabel",
     "pushSettingsStatus",
@@ -51,7 +46,6 @@ export default class extends Controller {
     this.deferredPrompt = null
     this.devicePushSubscribed = false
     this.networkToastTimeout = null
-    this.pushLiveBannerTimeout = null
     this.pushUiPending = false
     this.pushTestPending = false
     this.pushSettingsFeedbackTone = "neutral"
@@ -90,7 +84,6 @@ export default class extends Controller {
     document.removeEventListener("turbo:load", this.turboLoadHandler)
     navigator.serviceWorker?.removeEventListener?.("message", this.serviceWorkerMessageHandler)
     this.clearNetworkToast()
-    this.clearPushLiveBannerTimeout()
   }
 
   install(event) {
@@ -222,21 +215,9 @@ export default class extends Controller {
       if (!response.ok) throw new Error(payload.current_device_error || payload.error || "Test push could not be sent.")
 
       if (payload.current_device_delivered) {
-        this.setPushSettingsFeedback("Test push was accepted for this browser. It should appear here immediately if desktop notifications are working.", "pending")
-        this.showPushLiveBanner({
-          title: "Test push sent",
-          body: "Notae triggered a live test notification for this browser.",
-          url: window.location.pathname,
-          tone: "success"
-        })
+        this.setPushSettingsFeedback("Test push was accepted for this browser. It will appear in the notification bar while Notae is open.", "pending")
       } else {
         this.setPushSettingsFeedback("Test push was sent to your signed-in devices, but this browser did not confirm delivery.", "error")
-        this.showPushLiveBanner({
-          title: "Desktop push needs review",
-          body: "The test push reached your account, but this browser did not confirm delivery.",
-          url: window.location.pathname,
-          tone: "error"
-        })
       }
 
       this.showNetworkToast(payload.message || "Test push sent.")
@@ -307,14 +288,10 @@ export default class extends Controller {
   }
 
   handleIncomingPushReceipt(payload) {
-    const foregroundBrowserNotificationRequested = payload.notificationType === "test_push"
-      ? this.requestForegroundBrowserNotification(payload)
-      : false
-
     if (payload.notificationType === "test_push") {
       this.markPushTestDelivered()
-      if (foregroundBrowserNotificationRequested) {
-        this.setPushSettingsFeedback("Test push reached this browser. Notae requested a foreground Chrome notification for it.", "pending")
+      if (payload.notificationSuppressedInForeground) {
+        this.setPushSettingsFeedback("Test push reached this browser and was routed to the in-app notification bar.", "success")
       } else if (payload.notificationDisplayed === false) {
         this.setPushSettingsFeedback("Test push reached this browser, but the browser did not present a desktop notification banner.", "error")
       } else {
@@ -323,16 +300,7 @@ export default class extends Controller {
       this.refreshPushUi()
     }
 
-    this.showPushLiveBanner({
-      title: this.normalizedText(payload?.title, "Notae"),
-      body: this.normalizedText(payload?.body, "A live notification reached this app."),
-      url: payload?.url || "/app",
-      tone: payload.notificationType === "test_push"
-        ? (payload.notificationDisplayed === false ? "error" : "success")
-        : "neutral"
-    })
     window.dispatchEvent(new CustomEvent("notae:push-received", { detail: payload }))
-    this.showIncomingPushToast(payload)
   }
 
   normalizePushReceiptPayload(payload) {
@@ -346,86 +314,9 @@ export default class extends Controller {
       icon: this.normalizedText(payload?.icon, "/icon-192-v5.png"),
       requireInteraction: Boolean(payload?.requireInteraction),
       notificationDisplayed: payload?.notificationDisplayed === true ? true : (payload?.notificationDisplayed === false ? false : null),
+      notificationSuppressedInForeground: payload?.notificationSuppressedInForeground === true,
       notificationError: this.normalizedText(payload?.notificationError)
     }
-  }
-
-  requestForegroundBrowserNotification(payload) {
-    if (document.visibilityState !== "visible") return false
-    if (this.pushPermissionState() !== "granted") return false
-    if (!("Notification" in window)) return false
-
-    try {
-      const notification = new Notification(this.normalizedText(payload?.title, "Notae"), {
-        body: this.normalizedText(payload?.body),
-        icon: this.normalizedText(payload?.icon, "/icon-192-v5.png"),
-        tag: this.normalizedText(payload?.tag, `notae-foreground-${payload?.notificationId || Date.now()}`),
-        requireInteraction: Boolean(payload?.requireInteraction)
-      })
-
-      notification.onclick = () => {
-        window.focus?.()
-        window.location.assign(this.normalizedText(payload?.url, "/app"))
-        notification.close?.()
-      }
-
-      window.setTimeout(() => notification.close?.(), PUSH_LIVE_BANNER_MS)
-      return true
-    } catch (_error) {
-      return false
-    }
-  }
-
-  showIncomingPushToast(payload) {
-    const title = this.normalizedText(payload?.title, "Notae")
-    const body = this.normalizedText(payload?.body)
-    this.showNetworkToast(body.length > 0 ? `${title} · ${body}` : title)
-  }
-
-  showPushLiveBanner({ title, body, url, tone = "neutral", dismissAfterMs = PUSH_LIVE_BANNER_MS }) {
-    if (!this.hasPushLiveBannerTarget) return
-
-    if (this.hasPushLiveBannerTitleTarget) {
-      this.pushLiveBannerTitleTarget.textContent = this.normalizedText(title, "Notae")
-    }
-
-    if (this.hasPushLiveBannerBodyTarget) {
-      this.pushLiveBannerBodyTarget.textContent = this.normalizedText(body, "A live notification reached this app.")
-    }
-
-    if (this.hasPushLiveBannerOpenTarget) {
-      const resolvedUrl = this.normalizedText(url, "/app")
-      this.pushLiveBannerOpenTarget.href = resolvedUrl
-      this.pushLiveBannerOpenTarget.hidden = false
-    }
-
-    this.pushLiveBannerTarget.dataset.state = tone
-    this.pushLiveBannerTarget.hidden = false
-    this.clearPushLiveBannerTimeout()
-
-    if (dismissAfterMs > 0) {
-      this.pushLiveBannerTimeout = window.setTimeout(() => this.hidePushLiveBanner(), dismissAfterMs)
-    }
-  }
-
-  dismissPushLiveBanner(event) {
-    event.preventDefault()
-    this.hidePushLiveBanner()
-  }
-
-  hidePushLiveBanner() {
-    if (!this.hasPushLiveBannerTarget) return
-
-    this.pushLiveBannerTarget.hidden = true
-    this.pushLiveBannerTarget.dataset.state = "neutral"
-    this.clearPushLiveBannerTimeout()
-  }
-
-  clearPushLiveBannerTimeout() {
-    if (!this.pushLiveBannerTimeout) return
-
-    window.clearTimeout(this.pushLiveBannerTimeout)
-    this.pushLiveBannerTimeout = null
   }
 
   syncInstallPrompts() {

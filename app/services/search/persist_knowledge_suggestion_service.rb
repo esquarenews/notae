@@ -3,11 +3,12 @@ module Search
     PROACTIVE_INTERVAL = 6.hours
     PROACTIVE_EXPIRY = 6.hours
 
-    def initialize(user:, workspace:, kind:, force: false)
+    def initialize(user:, workspace:, kind:, force: false, service_tier: nil)
       @user = user
       @workspace = workspace
       @kind = kind.to_s
       @force = force
+      @service_tier = service_tier
     end
 
     def call
@@ -19,7 +20,8 @@ module Search
         workspace: workspace,
         mode: suggestion_mode,
         since: proactive_recent_since,
-        previous_report: latest_report
+        previous_report: latest_report,
+        service_tier: service_tier
       ).call
       return nil if response.blank?
 
@@ -56,7 +58,7 @@ module Search
 
     private
 
-    attr_reader :user, :workspace, :kind
+    attr_reader :user, :workspace, :kind, :service_tier
 
     def force?
       @force

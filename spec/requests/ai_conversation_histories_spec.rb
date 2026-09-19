@@ -89,4 +89,30 @@ RSpec.describe "AI conversation histories", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Live web")
   end
+
+  it "anchors entries and includes a targeted older suggestion conversation" do
+    user = User.create!(email: "ai-history-target@example.com", password: "password123")
+    workspace = Workspace.create!(name: "History Target", slug: "history-target")
+    Membership.create!(workspace: workspace, user: user, role: :owner)
+    old_conversation = AiConversation.create!(
+      user: user,
+      workspace: workspace,
+      scope: Search::AssistantQueryService::SCOPE_WORKSPACE,
+      status: AiConversation::STATUS_SUGGESTION,
+      prompt: "Proactive workspace suggestion",
+      answer: "This older alert still needs to be readable. [1]",
+      created_at: 10.days.ago
+    )
+
+    sign_in user
+    get workspace_ai_conversation_history_path(
+      workspace_slug: workspace.slug,
+      conversation_id: old_conversation.id,
+      anchor: "ai-conversation-#{old_conversation.id}"
+    )
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(%(id="ai-conversation-#{old_conversation.id}"))
+    expect(response.body).to include("This older alert still needs to be readable. [1]")
+  end
 end

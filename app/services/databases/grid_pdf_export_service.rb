@@ -7,7 +7,6 @@ module Databases
     PAGE_SIZE = "A4".freeze
     PAGE_LAYOUT = :landscape
     PAGE_MARGIN = 28
-    FONT_FILE = Rails.root.join("vendor/fonts/Manrope-wght.ttf").freeze
     TEXT_COLOR = "292524".freeze
     MUTED_TEXT_COLOR = "57534E".freeze
     BORDER_COLOR = "D6D3D1".freeze
@@ -31,8 +30,7 @@ module Databases
         margin: PAGE_MARGIN,
         info: { Title: database.name.presence || "Grid export" }
       )
-      register_fonts(pdf)
-      pdf.font(pdf_font_family)
+      pdf.font(Notae::PdfFontFamily.register(pdf))
       draw_title(pdf)
       draw_rows(pdf)
 
@@ -42,21 +40,6 @@ module Databases
     private
 
     attr_reader :database, :rows, :date_range
-
-    def register_fonts(pdf)
-      return unless FONT_FILE.exist?
-
-      pdf.font_families.update(
-        "Manrope" => {
-          normal: FONT_FILE.to_s,
-          bold: FONT_FILE.to_s
-        }
-      )
-    end
-
-    def pdf_font_family
-      FONT_FILE.exist? ? "Manrope" : "Helvetica"
-    end
 
     def draw_title(pdf)
       pdf.fill_color TEXT_COLOR

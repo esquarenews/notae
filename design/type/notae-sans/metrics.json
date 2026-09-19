@@ -1,0 +1,421 @@
+{
+  "axis": {
+    "default": 400,
+    "maximum": 900,
+    "minimum": 100,
+    "tag": "wght"
+  },
+  "coverage": {
+    "basic_latin": 95,
+    "cyrillic": 82,
+    "italic_encoded_codepoints": 470,
+    "italic_glyph_count": 747,
+    "italic_missing_from_upright": [],
+    "latin_1_supplement": 87,
+    "latin_extended": 132,
+    "upright_encoded_codepoints": 470,
+    "upright_glyph_count": 534
+  },
+  "design_tuning": {
+    "default_shapes": "double-storey a retained; Onest readability alternates remain available",
+    "italic_angle_degrees": -9.399993896484375,
+    "italic_horizontal_outline_scale_percent": 96.0,
+    "italic_vertical_outline_scale_percent": 98.7,
+    "upright_horizontal_outline_scale_percent": 98.0,
+    "upright_vertical_outline_scale_percent": 101.5,
+    "weight_progression": "calmer 500\u2013850 progression via avar"
+  },
+  "family": "Notae Sans",
+  "files": {
+    "NotaeSans-Italic[wght].ttf": 160112,
+    "NotaeSans-Italic[wght].woff2": 64348,
+    "NotaeSans[wght].ttf": 124768,
+    "NotaeSans[wght].woff2": 58756
+  },
+  "italic_400_average_lowercase_advance": 516.8,
+  "italic_400_glyph_metrics": {
+    "0": {
+      "advance": 605,
+      "box": [
+        61.32835820895522,
+        -10,
+        573.169014084507,
+        728
+      ],
+      "glyph": "zero",
+      "left_side_bearing": 53
+    },
+    "1": {
+      "advance": 391,
+      "box": [
+        83,
+        0,
+        379,
+        718
+      ],
+      "glyph": "one",
+      "left_side_bearing": 83
+    },
+    "H": {
+      "advance": 713,
+      "box": [
+        41,
+        0,
+        701,
+        718
+      ],
+      "glyph": "H",
+      "left_side_bearing": 41
+    },
+    "I": {
+      "advance": 258,
+      "box": [
+        41,
+        0,
+        246,
+        718
+      ],
+      "glyph": "I",
+      "left_side_bearing": 41
+    },
+    "O": {
+      "advance": 734,
+      "box": [
+        65,
+        -10,
+        697,
+        728
+      ],
+      "glyph": "O",
+      "left_side_bearing": 65
+    },
+    "W": {
+      "advance": 946,
+      "box": [
+        97,
+        0,
+        994,
+        718
+      ],
+      "glyph": "W",
+      "left_side_bearing": 97
+    },
+    "a": {
+      "advance": 589,
+      "box": [
+        42.875,
+        -12,
+        558,
+        545
+      ],
+      "glyph": "a",
+      "left_side_bearing": 35
+    },
+    "e": {
+      "advance": 553,
+      "box": [
+        44,
+        -12,
+        497,
+        550
+      ],
+      "glyph": "e",
+      "left_side_bearing": 44
+    },
+    "f": {
+      "advance": 358,
+      "box": [
+        -81,
+        -216,
+        419,
+        752
+      ],
+      "glyph": "f",
+      "left_side_bearing": -81
+    },
+    "g": {
+      "advance": 589,
+      "box": [
+        12,
+        -213,
+        558,
+        545
+      ],
+      "glyph": "g",
+      "left_side_bearing": 12
+    },
+    "l": {
+      "advance": 232,
+      "box": [
+        30,
+        0,
+        230,
+        718
+      ],
+      "glyph": "l",
+      "left_side_bearing": 30
+    },
+    "m": {
+      "advance": 841,
+      "box": [
+        30,
+        0,
+        785.4,
+        548
+      ],
+      "glyph": "m",
+      "left_side_bearing": 30
+    },
+    "n": {
+      "advance": 568,
+      "box": [
+        30,
+        0,
+        509.48148148148147,
+        545
+      ],
+      "glyph": "n",
+      "left_side_bearing": 30
+    },
+    "o": {
+      "advance": 576,
+      "box": [
+        44,
+        -12,
+        531,
+        545
+      ],
+      "glyph": "o",
+      "left_side_bearing": 44
+    },
+    "x": {
+      "advance": 524,
+      "box": [
+        -13,
+        0,
+        528,
+        539
+      ],
+      "glyph": "x",
+      "left_side_bearing": -13
+    }
+  },
+  "named_weights": {
+    "100": "Thin",
+    "200": "ExtraLight",
+    "300": "Light",
+    "400": "Regular",
+    "500": "Medium",
+    "600": "SemiBold",
+    "700": "Bold",
+    "800": "ExtraBold",
+    "900": "Black"
+  },
+  "regular_400_average_lowercase_advance": 517.0,
+  "regular_400_glyph_metrics": {
+    "0": {
+      "advance": 652,
+      "box": [
+        56,
+        -8,
+        597,
+        726
+      ],
+      "glyph": "zero",
+      "left_side_bearing": 56
+    },
+    "1": {
+      "advance": 356,
+      "box": [
+        25,
+        0,
+        251,
+        718
+      ],
+      "glyph": "one",
+      "left_side_bearing": 25
+    },
+    "H": {
+      "advance": 712,
+      "box": [
+        85,
+        0,
+        627,
+        718
+      ],
+      "glyph": "H",
+      "left_side_bearing": 85
+    },
+    "I": {
+      "advance": 256,
+      "box": [
+        85,
+        0,
+        171,
+        718
+      ],
+      "glyph": "I",
+      "left_side_bearing": 85
+    },
+    "O": {
+      "advance": 746,
+      "box": [
+        47,
+        -8,
+        699,
+        726
+      ],
+      "glyph": "O",
+      "left_side_bearing": 47
+    },
+    "W": {
+      "advance": 963,
+      "box": [
+        14,
+        0,
+        950,
+        718
+      ],
+      "glyph": "W",
+      "left_side_bearing": 14
+    },
+    "a": {
+      "advance": 544,
+      "box": [
+        48,
+        -6,
+        480,
+        541
+      ],
+      "glyph": "a",
+      "left_side_bearing": 48
+    },
+    "e": {
+      "advance": 562,
+      "box": [
+        46,
+        -6,
+        516.2758620689655,
+        541
+      ],
+      "glyph": "e",
+      "left_side_bearing": 46
+    },
+    "l": {
+      "advance": 215,
+      "box": [
+        66,
+        0,
+        149,
+        718
+      ],
+      "glyph": "l",
+      "left_side_bearing": 66
+    },
+    "m": {
+      "advance": 803,
+      "box": [
+        66,
+        0,
+        742,
+        541
+      ],
+      "glyph": "m",
+      "left_side_bearing": 66
+    },
+    "n": {
+      "advance": 579,
+      "box": [
+        66,
+        0,
+        516,
+        541
+      ],
+      "glyph": "n",
+      "left_side_bearing": 66
+    },
+    "o": {
+      "advance": 583,
+      "box": [
+        46,
+        -6,
+        537,
+        541
+      ],
+      "glyph": "o",
+      "left_side_bearing": 46
+    },
+    "x": {
+      "advance": 505,
+      "box": [
+        14,
+        0,
+        491,
+        535
+      ],
+      "glyph": "x",
+      "left_side_bearing": 14
+    }
+  },
+  "regular_400_spacing_accents": {
+    "`": {
+      "advance": 360,
+      "box": [
+        80,
+        615,
+        254,
+        758
+      ],
+      "glyph": "grave",
+      "left_side_bearing": 80
+    },
+    "\u00b4": {
+      "advance": 360,
+      "box": [
+        80,
+        621,
+        253,
+        764
+      ],
+      "glyph": "acute",
+      "left_side_bearing": 80
+    },
+    "\u02dc": {
+      "advance": 520,
+      "box": [
+        80,
+        604,
+        407,
+        741
+      ],
+      "glyph": "tilde",
+      "left_side_bearing": 80
+    }
+  },
+  "source": {
+    "italic": {
+      "commit": "353b61b9f4430d5f420d56605a6e7993e0941470",
+      "construction": "genuinely drawn alphabetic italic masters; three rare supplemental codepoints optically adapted for coverage parity",
+      "family": "Inter Italic",
+      "repository": "https://github.com/rsms/inter.git"
+    },
+    "license": "SIL Open Font License 1.1",
+    "upright": {
+      "commit": "f18c06a14512e43a6191849278d6f07fdaf347d6",
+      "family": "Onest",
+      "repository": "https://github.com/simpals/onest.git"
+    }
+  },
+  "status": "production candidate; built for Notae integration",
+  "version": "0.200",
+  "vertical_metrics": {
+    "cap_height": 718,
+    "typo_ascender": 985,
+    "typo_descender": -315,
+    "typo_line_gap": 0,
+    "units_per_em": 1000,
+    "win_ascent": 1212,
+    "win_descent": 334,
+    "x_height": 535
+  }
+}

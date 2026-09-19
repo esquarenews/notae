@@ -34,6 +34,51 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("focusEditor: true")
   end
 
+  it "builds and navigates distinct cells for column sections before using block reparent shortcuts" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    column_navigation_position = source.index('this.currentBlockType.startsWith("columns_")')
+    block_reparent_position = source.index("this.supportsBlockReparentShortcut()")
+
+    expect(source).to include("normalizeColumnContent(content)")
+    expect(source).to include('node?.type === "columnCell"')
+    expect(source).to include('type: "columnCell"')
+    expect(source).to include("while (columns.length < columnCount)")
+    expect(source).to include("ensureColumnStructure()")
+    expect(source).to include("moveColumnSelection(delta)")
+    expect(source).to include("const currentIndex = state.selection.$from.index(0)")
+    expect(source).to include("this.editor.commands.setTextSelection(selectionPosition)")
+    expect(column_navigation_position).to be < block_reparent_position
+    expect(source).to include('name: "columnCell"')
+    expect(source).to include('content: "block+"')
+    expect(source).to include('isolating: true')
+    expect(source).to include('renderHTML: () => ["div", { "data-type": "column-cell" }, 0]')
+    expect(source).to include("const normalizedContent = this.normalizeContentForCurrentBlockType(this.editor.getJSON())")
+    expect(source).to include("content_json: normalizedContent")
+  end
+
+  it "preserves multi-paragraph column content and moves Tab into the next container" do
+    harness_path = Rails.root.join("spec/javascript/block_editor_columns_harness.mjs")
+    stdout, status = Open3.capture2e("node", harness_path.to_s)
+
+    expect(status.success?).to be(true), <<~MESSAGE
+      Expected column sections to normalize and navigate correctly.
+      Output:
+      #{stdout}
+    MESSAGE
+  rescue Errno::ENOENT
+    skip "node is not available in this environment"
+  end
+
+  it "renders column sections as visible grid cells instead of newspaper columns" do
+    stylesheet = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    expect(stylesheet).to include(".notae-doc-editor.is-columns-3 .ProseMirror { grid-template-columns: repeat(3, minmax(0, 1fr)); }")
+    expect(stylesheet).to include("min-height: 6rem;")
+    expect(stylesheet).not_to include('content: "Column " counter(notae-column);')
+    expect(stylesheet).not_to include("column-count: 3;")
+  end
+
   it "flushes pending editor saves before a block reparent happens" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
@@ -59,7 +104,8 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
 
     connect_body = source[/connect\(\) \{(?<body>.*?)\n  \}/m, :body]
-    expect(connect_body).to include("if (this.shouldPrepareTouchTextEntry()) this.hydrate({ focus: false })")
+    expect(connect_body).to include("else if (this.shouldPrepareTouchTextEntry())")
+    expect(connect_body).to include("this.hydrate({ focus: false })")
     expect(connect_body).not_to include("new Editor(")
     expect(source).not_to include("IntersectionObserver")
     expect(source).not_to include("EDITOR_LAZY_ROOT_MARGIN")
@@ -92,7 +138,19 @@ RSpec.describe "BlockEditorController JavaScript syntax" do
     expect(source).to include("focusEditorAtPoint(point)")
     expect(source).to include("view?.posAtCoords?.({ left: point.x, top: point.y })")
     expect(source).to include("this.editor.commands.setTextSelection(position.pos)")
-    expect(source).to include("editorElement.focus({ preventScroll: true })")
+    expect(source).to include("view?.focus?.()")
+    expect(source).to include('editorElement.scrollIntoView({ block: "nearest", inline: "nearest" })')
+  end
+
+  it "hydrates, focuses, and reveals only a newly created block marked for autofocus" do
+    source = Rails.root.join("app/javascript/controllers/block_editor_controller.js").read
+
+    expect(source).to include("autofocus: Boolean")
+    expect(source).to include("if (this.autofocusValue)")
+    expect(source).to include("this.focusNewlyCreatedBlock()")
+    expect(source).to include("this.hydrate({ focus: false }).then((mounted) => {")
+    expect(source).to include("this.focusEditor({ immediate: true })")
+    expect(source).to include('block?.scrollIntoView({ block: "nearest", inline: "nearest" })')
   end
 
   it "focuses prehydrated mobile editors when tapping the block shell" do

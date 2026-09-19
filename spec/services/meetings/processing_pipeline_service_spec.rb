@@ -255,4 +255,21 @@ RSpec.describe Meetings::ProcessingPipelineService do
 
     expect(Search::AiUsageLogger).not_to have_received(:log!)
   end
+
+  it "uses audio duration to estimate transcription cost when token usage is absent" do
+    service = build_service
+    service.instance_variable_set(:@last_transcription_model, "gpt-4o-transcribe-diarize")
+    service.instance_variable_set(:@transcription_duration_seconds, 600.0)
+    allow(Search::AiUsageLogger).to receive(:log!)
+
+    service.send(:log_transcription_usage!, {})
+
+    expect(Search::AiUsageLogger).to have_received(:log!).with(
+      hash_including(
+        model: "gpt-4o-transcribe-diarize",
+        usage: hash_including(audio_minutes: 10.0),
+        metadata: hash_including(audio_minutes: 10.0)
+      )
+    )
+  end
 end

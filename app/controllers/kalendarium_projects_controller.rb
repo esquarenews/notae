@@ -41,9 +41,9 @@ class KalendariumProjectsController < ApplicationController
       if @project.kalendarium_calendar.present?
         @project.kalendarium_calendar.update(name: @project.name, color_hex: @project.color_hex)
       end
-      redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project", project_id: @project.id)), notice: "Project updated."
+      redirect_to kalendarium_path(kalendarium_redirect_params.merge(project_id: @project.id)), notice: "Project updated."
     else
-      redirect_to kalendarium_path(kalendarium_redirect_params.merge(view: "project", project_id: @project.id)), alert: @project.errors.full_messages.to_sentence
+      redirect_to kalendarium_path(kalendarium_redirect_params.merge(project_id: @project.id)), alert: @project.errors.full_messages.to_sentence
     end
   end
 

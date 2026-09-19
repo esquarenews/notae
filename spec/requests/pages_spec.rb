@@ -689,6 +689,43 @@ RSpec.describe "Pages", type: :request do
     expect(workspace_dialog).to be_present
     expect(workspace_dialog.parent).to eq(shell)
     expect(sidebar.at_css("[data-shell-target='workspaceDialog']")).to be_nil
+    expect(workspace_dialog["id"]).to eq("notae_workspace_dialog_#{workspace.slug}")
+    expect(workspace_dialog).to have_attribute("data-turbo-permanent")
+  end
+
+  it "keeps the shared workspace dialog available to both sidebar entry points across same-workspace Turbo navigation" do
+    owner = User.create!(email: "page-workspace-dialog-turbo-owner@example.com", password: "password123")
+    workspace = Workspace.create!(name: "Workspace dialog Turbo", slug: "workspace-dialog-turbo")
+    Membership.create!(workspace: workspace, user: owner, role: :owner)
+    page = Page.create!(workspace: workspace, created_by: owner, title: "Workspace dialog Turbo page")
+    sign_in owner
+
+    get page_path(workspace_slug: workspace.slug, id: page.id)
+
+    expect(response).to have_http_status(:ok)
+    html = Nokogiri::HTML(response.body)
+    create_menu_button = html.at_css(".notae-create-menu-button[data-action='click->shell#openWorkspaceDialog']")
+    workspace_section_button = html.at_css(".notae-sidebar-section-create[data-action='click->shell#openWorkspaceDialog']")
+    workspace_dialog = html.at_css("#notae_workspace_dialog_#{workspace.slug}[data-shell-target='workspaceDialog']")
+
+    expect(create_menu_button&.text.to_s).to include("New Workspace")
+    expect(workspace_section_button).to be_present
+    expect(workspace_dialog).to have_attribute("data-turbo-permanent")
+
+    get workspace_library_path(workspace_slug: workspace.slug),
+        headers: {
+          "X-Turbo-Request-Id" => "workspace-dialog-regression",
+          "HTTP_REFERER" => page_url(workspace_slug: workspace.slug, id: page.id)
+        }
+
+    expect(response).to have_http_status(:ok)
+    turbo_html = Nokogiri::HTML(response.body)
+    dialog_placeholder = turbo_html.at_css("#notae_workspace_dialog_#{workspace.slug}")
+
+    expect(turbo_html.at_css("[data-notae-shell-placeholder='sidebar']")).to be_present
+    expect(dialog_placeholder).to be_present
+    expect(dialog_placeholder).to have_attribute("data-turbo-permanent")
+    expect(dialog_placeholder["data-notae-shell-placeholder"]).to eq("workspace-dialog")
   end
 
   it "keeps the ai rail workspace shell stable and updates page context in layout metadata" do

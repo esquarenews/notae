@@ -13,7 +13,8 @@ module Notae
       "notae_last_page_visits" => LAST_PAGE_VISIT_LIMIT,
       "kalendarium_calendar_selection" => WORKSPACE_SESSION_LIMIT,
       "kalendarium_project_visibility" => WORKSPACE_SESSION_LIMIT,
-      "kalendarium_last_calendar_view" => WORKSPACE_SESSION_LIMIT
+      "kalendarium_last_calendar_view" => WORKSPACE_SESSION_LIMIT,
+      "kalendarium_planning_view" => WORKSPACE_SESSION_LIMIT
     }.freeze
 
     module_function

@@ -18,6 +18,8 @@ class KalendariumController < ApplicationController
     authorize @workspace, :show?
 
     @widget_mode = params[:widget].to_s == "1"
+    persist_planning_view_preference! unless @widget_mode
+    @wide_planning_view = resolve_wide_planning_view unless @widget_mode
     @view = resolve_requested_view(widget_mode: @widget_mode)
     persist_last_calendar_view! unless @widget_mode
     @project_return_view = resolve_project_return_view
@@ -935,6 +937,37 @@ class KalendariumController < ApplicationController
     else
       last_calendar_view_session[last_calendar_view_workspace_key] = @view
     end
+  end
+
+  def persist_planning_view_preference!
+    planning_mode = params[:planning].to_s
+    return unless %w[wide standard].include?(planning_mode)
+
+    if persist_workspace_calendar_preference!("planning_view", planning_mode)
+      clear_session_workspace_preference!(:kalendarium_planning_view, planning_view_workspace_key)
+    else
+      planning_view_session[planning_view_workspace_key] = planning_mode
+    end
+  end
+
+  def resolve_wide_planning_view
+    requested = params[:planning].to_s
+    return true if requested == "wide"
+    return false if requested == "standard"
+
+    stored = workspace_calendar_preference(
+      "planning_view",
+      fallback: planning_view_session[planning_view_workspace_key]
+    ).to_s
+    stored == "wide"
+  end
+
+  def planning_view_session
+    session[:kalendarium_planning_view] ||= {}
+  end
+
+  def planning_view_workspace_key
+    @workspace.id.to_s
   end
 
   def clear_session_workspace_preference!(session_key, workspace_key)

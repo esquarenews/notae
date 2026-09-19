@@ -46,10 +46,15 @@ Add this to [`/Users/errolschmidt/.codex/config.toml`](/Users/errolschmidt/.code
 ```toml
 [mcp_servers.notae]
 command = "/Users/errolschmidt/Documents/notae_app/notae/bin/notae-mcp-server"
+startup_timeout_sec = 120
 env = { NOTAE_BASE_URL = "https://notae.example.com", NOTAE_API_TOKEN = "replace-with-a-real-token" }
 ```
 
 Then restart Codex so it reloads the MCP server list. If Codex started while the sidecar was broken or missing dependencies, the current session will not discover Notae tools until a restart or a fresh session.
+
+The launcher supports macOS GUI sessions whose reduced `PATH` does not include
+Homebrew. It checks `NOTAE_NODE_BINARY`, the current `PATH`,
+`/opt/homebrew/bin/node`, and `/usr/local/bin/node`, in that order.
 
 ## Notae API token
 

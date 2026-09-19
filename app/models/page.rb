@@ -217,7 +217,7 @@ class Page < ApplicationRecord
   end
 
   def search_source_text
-    block_text = blocks.active.ordered.pluck(:search_text).join("\n")
+    block_text = blocks.active.ordered.with_attached_asset.map(&:searchable_content).join("\n")
     [ title, block_text ].join("\n").squish
   end
 

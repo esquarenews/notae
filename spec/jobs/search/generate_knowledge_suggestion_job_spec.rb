@@ -20,7 +20,8 @@ RSpec.describe Search::GenerateKnowledgeSuggestionJob, type: :job do
     expect(Search::PersistKnowledgeSuggestionService).to have_received(:new).with(
       user: user,
       workspace: workspace,
-      kind: KnowledgeSuggestion::KIND_PROACTIVE
+      kind: KnowledgeSuggestion::KIND_PROACTIVE,
+      service_tier: "flex"
     )
     expect(service).to have_received(:call)
     expect(
