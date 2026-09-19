@@ -11,7 +11,25 @@ export default class extends Controller {
 
   connect() {
     this.pendingSubmitState = null
+    this.scrollRestoreGeneration = 0
+    this.scrollRestoreAnimationFrame = null
+    this.scrollRestoreTimeouts = []
+    this.userInteractionHandler = (event) => this.cancelScrollRestoration(event)
+    this.element.addEventListener("pointerdown", this.userInteractionHandler, true)
+    this.element.addEventListener("mousedown", this.userInteractionHandler, true)
+    this.element.addEventListener("keydown", this.userInteractionHandler, true)
+    this.element.addEventListener("touchstart", this.userInteractionHandler, { capture: true, passive: true })
+    this.element.addEventListener("wheel", this.userInteractionHandler, { capture: true, passive: true })
     this.restoreScrollPosition()
+  }
+
+  disconnect() {
+    this.element.removeEventListener("pointerdown", this.userInteractionHandler, true)
+    this.element.removeEventListener("mousedown", this.userInteractionHandler, true)
+    this.element.removeEventListener("keydown", this.userInteractionHandler, true)
+    this.element.removeEventListener("touchstart", this.userInteractionHandler, true)
+    this.element.removeEventListener("wheel", this.userInteractionHandler, true)
+    this.cancelScrollRestoration()
   }
 
   capture(event) {
@@ -129,7 +147,11 @@ export default class extends Controller {
   }
 
   restoreStoredPosition(scrollContainer, state) {
+    this.cancelScrollRestoration()
+    const generation = this.scrollRestoreGeneration
     const apply = () => {
+      if (generation !== this.scrollRestoreGeneration) return
+
       this.applyScrollPosition(scrollContainer, {
         top: Number(state.scrollTop || 0),
         left: Number(state.scrollLeft || 0)
@@ -138,10 +160,18 @@ export default class extends Controller {
     }
 
     apply()
-    window.requestAnimationFrame(() => apply())
-    RESTORE_SCROLL_DELAYS_MS.forEach((delay) => {
-      window.setTimeout(() => apply(), delay)
-    })
+    this.scrollRestoreAnimationFrame = window.requestAnimationFrame(() => apply())
+    this.scrollRestoreTimeouts = RESTORE_SCROLL_DELAYS_MS.map((delay) => window.setTimeout(() => apply(), delay))
+  }
+
+  cancelScrollRestoration(event = null) {
+    this.scrollRestoreGeneration += 1
+    if (this.scrollRestoreAnimationFrame !== null) {
+      window.cancelAnimationFrame(this.scrollRestoreAnimationFrame)
+      this.scrollRestoreAnimationFrame = null
+    }
+    this.scrollRestoreTimeouts.forEach((timeout) => window.clearTimeout(timeout))
+    this.scrollRestoreTimeouts = []
   }
 
   restoreSubmitScrollPosition(state) {

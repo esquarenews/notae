@@ -24,7 +24,7 @@ RSpec.describe "Analytics activity buckets", type: :request do
     end.to change(AnalyticsActivityBucket, :count).by(1)
 
     expect(response).to have_http_status(:no_content)
-    bucket = AnalyticsActivityBucket.last
+    bucket = AnalyticsActivityBucket.find_by!(user:, sample_id: "request-sample-123", segment_index: 0)
     expect(bucket).to have_attributes(user_id: user.id, workspace_id: workspace.id, surface: "nota", duration_seconds: 24)
   end
 

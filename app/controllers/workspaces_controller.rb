@@ -4,24 +4,27 @@ class WorkspacesController < ApplicationController
   def new
     @workspace = Workspace.new
     @selected_plan_key = selected_plan_key
+    @workspace_creation_entitlement = workspace_creation_entitlement
     authorize @workspace
   end
 
   def create
     @workspace = Workspace.new(workspace_params)
-    plan_key = selected_plan_key
+    entitlement = workspace_creation_entitlement
     authorize @workspace
 
     ActiveRecord::Base.transaction do
       @workspace.save!
       Membership.create!(workspace: @workspace, user: current_user, role: :owner)
-      @workspace.create_workspace_subscription!(
-        plan_key: plan_key,
-        status: WorkspaceSubscription::STATUS_INCOMPLETE,
-        billing_provider: WorkspaceSubscription::PROVIDER_STRIPE
-      )
+      @workspace.create_workspace_subscription!(entitlement.subscription_attributes)
+      record_account_covered_workspace_creation!(@workspace, entitlement) unless entitlement.requires_checkout?
     end
-    redirect_to_stripe_checkout!(@workspace)
+
+    if entitlement.requires_checkout?
+      redirect_to_stripe_checkout!(@workspace)
+    else
+      redirect_to workspace_path(@workspace.slug), notice: "Workspace created under your unlimited account."
+    end
   rescue ActiveRecord::RecordInvalid, Billing::StripeGateway::ConfigurationError, Stripe::StripeError => error
     if @workspace.persisted? && !@workspace.users.exists?(current_user.id)
       @workspace.destroy
@@ -30,6 +33,7 @@ class WorkspacesController < ApplicationController
       @workspace.errors.add(:base, error.message.presence || "Workspace could not be created.")
     end
     @selected_plan_key = selected_plan_key
+    @workspace_creation_entitlement = workspace_creation_entitlement
     render :new, status: :unprocessable_entity
   end
 
@@ -42,6 +46,27 @@ class WorkspacesController < ApplicationController
   def selected_plan_key
     requested = params.dig(:workspace, :plan_key).presence || params[:plan].presence || session[:notae_signup_plan].presence
     Billing::PlanCatalog.public_plan_keys.include?(requested.to_s) ? requested.to_s : WorkspaceSubscription::PLAN_STARTER
+  end
+
+  def workspace_creation_entitlement
+    Billing::WorkspaceCreationEntitlement.new(
+      user: current_user,
+      requested_plan_key: selected_plan_key
+    )
+  end
+
+  def record_account_covered_workspace_creation!(workspace, entitlement)
+    AdminAuditEvent.create!(
+      actor: current_user,
+      workspace: workspace,
+      target: workspace.workspace_subscription,
+      action: "workspace_created_under_account_plan",
+      metadata_json: {
+        account_plan_key: current_user.saas_plan_key,
+        workspace_plan_key: entitlement.plan_key,
+        workspace_limit: current_user.workspace_limit_label
+      }
+    )
   end
 
   def redirect_to_stripe_checkout!(workspace)

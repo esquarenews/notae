@@ -23,7 +23,10 @@ module Openai
       text: nil,
       parallel_tool_calls: nil,
       safety_identifier: nil,
-      max_output_tokens: nil
+      max_output_tokens: nil,
+      service_tier: nil,
+      prompt_cache_key: nil,
+      prompt_cache_options: nil
     )
       normalized_api_key = api_key.to_s.strip
       normalized_model = model.to_s.strip
@@ -43,24 +46,53 @@ module Openai
       payload[:parallel_tool_calls] = parallel_tool_calls unless parallel_tool_calls.nil?
       payload[:safety_identifier] = safety_identifier if safety_identifier.present?
       payload[:max_output_tokens] = max_output_tokens unless max_output_tokens.nil?
+      payload[:service_tier] = service_tier if service_tier.present?
+      payload[:prompt_cache_key] = prompt_cache_key if prompt_cache_key.present?
+      payload[:prompt_cache_options] = prompt_cache_options unless prompt_cache_options.nil?
 
       body = request_payload!(payload: payload, api_key: normalized_api_key)
       response_from_body(body)
     end
 
-    def self.generate_text(prompt:, api_key:, model: "gpt-4o-mini", max_output_tokens: 260, tools: nil, include: nil)
+    def self.generate_text(
+      prompt:,
+      api_key:,
+      model: "gpt-4o-mini",
+      max_output_tokens: 260,
+      tools: nil,
+      include: nil,
+      reasoning: nil,
+      service_tier: nil,
+      prompt_cache_key: nil,
+      prompt_cache_options: nil
+    )
       response = generate_text_with_usage(
         prompt: prompt,
         api_key: api_key,
         model: model,
         max_output_tokens: max_output_tokens,
         tools: tools,
-        include: include
+        include: include,
+        reasoning: reasoning,
+        service_tier: service_tier,
+        prompt_cache_key: prompt_cache_key,
+        prompt_cache_options: prompt_cache_options
       )
       response[:text]
     end
 
-    def self.generate_text_with_usage(prompt:, api_key:, model: "gpt-4o-mini", max_output_tokens: 260, tools: nil, include: nil)
+    def self.generate_text_with_usage(
+      prompt:,
+      api_key:,
+      model: "gpt-4o-mini",
+      max_output_tokens: 260,
+      tools: nil,
+      include: nil,
+      reasoning: nil,
+      service_tier: nil,
+      prompt_cache_key: nil,
+      prompt_cache_options: nil
+    )
       normalized_prompt = prompt.to_s.strip
       return { text: "", usage: default_usage, sources: [] } if normalized_prompt.blank?
       raise Error, "Missing OpenAI API key" if api_key.to_s.strip.blank?
@@ -71,17 +103,35 @@ module Openai
         model: model,
         max_output_tokens: max_output_tokens,
         tools: tools,
-        include: include
+        include: include,
+        reasoning: reasoning,
+        service_tier: service_tier,
+        prompt_cache_key: prompt_cache_key,
+        prompt_cache_options: prompt_cache_options
       )
+
+      normalized_usage = usage_from_body(body)
+      normalized_usage[:service_tier] ||= service_tier if service_tier.present?
 
       {
         text: extract_output_text(body),
-        usage: usage_from_body(body),
+        usage: normalized_usage,
         sources: extract_sources(body)
       }
     end
 
-    def self.request_response!(prompt:, api_key:, model:, max_output_tokens:, tools: nil, include: nil)
+    def self.request_response!(
+      prompt:,
+      api_key:,
+      model:,
+      max_output_tokens:,
+      tools: nil,
+      include: nil,
+      reasoning: nil,
+      service_tier: nil,
+      prompt_cache_key: nil,
+      prompt_cache_options: nil
+    )
       payload = {
         model: model,
         input: prompt,
@@ -89,6 +139,10 @@ module Openai
       }
       payload[:tools] = tools if tools.present?
       payload[:include] = include if include.present?
+      payload[:reasoning] = reasoning unless reasoning.nil?
+      payload[:service_tier] = service_tier if service_tier.present?
+      payload[:prompt_cache_key] = prompt_cache_key if prompt_cache_key.present?
+      payload[:prompt_cache_options] = prompt_cache_options unless prompt_cache_options.nil?
 
       request_payload!(payload: payload, api_key: api_key)
     end
@@ -155,12 +209,21 @@ module Openai
       prompt_tokens = usage.fetch("input_tokens", usage.fetch("prompt_tokens", 0)).to_i
       completion_tokens = usage.fetch("output_tokens", usage.fetch("completion_tokens", 0)).to_i
       total_tokens = usage.fetch("total_tokens", prompt_tokens + completion_tokens).to_i
+      input_details = usage.fetch("input_tokens_details", usage.fetch("prompt_tokens_details", {}))
+      cached_prompt_tokens = input_details.fetch("cached_tokens", 0).to_i
+      cache_write_tokens = input_details.fetch("cache_write_tokens", 0).to_i
+      web_search_calls = Array(body["output"]).count { |entry| entry["type"] == "web_search_call" }
 
-      {
+      normalized = {
         prompt_tokens: prompt_tokens,
         completion_tokens: completion_tokens,
         total_tokens: total_tokens
       }
+      normalized[:cached_prompt_tokens] = cached_prompt_tokens if cached_prompt_tokens.positive?
+      normalized[:cache_write_tokens] = cache_write_tokens if cache_write_tokens.positive?
+      normalized[:web_search_calls] = web_search_calls if web_search_calls.positive?
+      normalized[:service_tier] = body["service_tier"].to_s if body["service_tier"].present?
+      normalized
     end
 
     def self.default_usage

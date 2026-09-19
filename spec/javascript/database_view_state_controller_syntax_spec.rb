@@ -39,6 +39,15 @@ RSpec.describe "DatabaseViewStateController JavaScript syntax" do
     expect(source).to include("requestAnimationFrame")
     expect(source).to include("preserveScroll")
     expect(source).to include("scrollContainer()")
+    expect(source).to include("cancelScrollRestoration(event = null)")
+    expect(source).to include('this.element.addEventListener("pointerdown", this.userInteractionHandler, true)')
+    expect(source).to include('this.element.addEventListener("mousedown", this.userInteractionHandler, true)')
+    expect(source).to include('this.element.addEventListener("keydown", this.userInteractionHandler, true)')
+    expect(source).to include('this.element.addEventListener("touchstart", this.userInteractionHandler')
+    expect(source).to include('this.element.addEventListener("wheel", this.userInteractionHandler')
+    expect(source).to include("window.cancelAnimationFrame")
+    expect(source).to include("window.clearTimeout")
+    expect(source).to include("generation !== this.scrollRestoreGeneration")
     expect(source).not_to include('if (contentType.present && !contentType.value.includes("turbo-stream")) return')
   end
 

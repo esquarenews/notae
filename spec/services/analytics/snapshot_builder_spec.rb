@@ -208,6 +208,53 @@ RSpec.describe Analytics::SnapshotBuilder do
     end
   end
 
+  it "binds analytics scope values instead of interpolating them into SQL" do
+    user = User.create!(
+      email: "analytics-query-binds@example.com",
+      password: "password123",
+      time_zone: "Australia/Melbourne"
+    )
+    workspace = Workspace.create!(name: "Bound query analytics", slug: "bound-query-analytics")
+    Membership.create!(user:, workspace:, role: :member)
+    create_activity(
+      user:,
+      workspace:,
+      surface: "nota",
+      at: Time.current.beginning_of_minute,
+      seconds: 10
+    )
+    executed_queries = []
+    connection = ApplicationRecord.connection
+
+    allow(connection).to receive(:exec_query).and_wrap_original do |method, sql, name, binds|
+      executed_queries << { sql:, name:, binds: binds.index_by(&:name) }
+      method.call(sql, name, binds)
+    end
+
+    snapshot = described_class.call(
+      user:,
+      workspaces: [ workspace ],
+      scope: "workspace",
+      date_range: Analytics::DateRange.new(
+        params: { period: "7d" },
+        today: Time.current.in_time_zone(user.time_zone).to_date
+      )
+    )
+
+    expect(snapshot.active_seconds).to eq(10)
+    expect(executed_queries).not_to be_empty
+    expect(executed_queries).to all(satisfy do |query|
+      !query[:sql].include?(user.id) &&
+        !query[:sql].include?(workspace.id) &&
+        query[:binds].fetch("user_id").value_for_database == user.id &&
+        query[:binds].fetch("workspace_id").value_for_database == workspace.id
+    end)
+    daily_query = executed_queries.find { |query| query[:name] == "Analytics daily activity" }
+    expect(daily_query[:sql]).to include("$1", "$7")
+    expect(daily_query[:sql]).not_to include("Australia/Melbourne")
+    expect(daily_query[:binds].fetch("time_zone").value_for_database).to eq("Australia/Melbourne")
+  end
+
   def create_activity(user:, workspace:, surface:, at:, seconds:, offset: 0)
     AnalyticsActivityBucket.create!(
       user: user,

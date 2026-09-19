@@ -85,6 +85,8 @@ module Search
         reasoning: { effort: "none" },
         text: { format: ROUTE_SCHEMA },
         safety_identifier: safety_identifier,
+        prompt_cache_key: "notae-assistant-router-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 120
       )
 

@@ -153,7 +153,8 @@ RSpec.describe "AI Assistant", type: :request do
     )
 
     expect(Openai::ResponsesClient).to receive(:generate_text_with_usage) do |args|
-      expect(args[:model]).to eq("gpt-4.1-mini")
+      expect(args[:model]).to eq("gpt-5.6-luna")
+      expect(args[:reasoning]).to eq(effort: "none")
       {
         text: "A polished launch paragraph for insertion.",
         usage: { prompt_tokens: 65, completion_tokens: 22, total_tokens: 87 }

@@ -28,8 +28,8 @@ module Search
 
     SUPPORTED_DRAFT_TARGETS = AgentAction::TARGET_SYSTEM_OPTIONS.freeze
     SEARCH_MODEL = "gpt-4o-mini"
-    WRITING_MODEL = "gpt-4.1-mini"
-    GENERAL_MODEL = "gpt-4.1-mini"
+    WRITING_MODEL = "gpt-5.6-luna"
+    GENERAL_MODEL = "gpt-5.6-luna"
     WEB_SEARCH_TOOL_TYPE = "web_search".freeze
     CALENDAR_DIRECT_MODEL = "calendar-direct-v1"
     MAX_CONTEXT_ITEMS = 12
@@ -236,6 +236,9 @@ module Search
         ),
         api_key: assistant_api_key,
         model: WRITING_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-writing-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 720
       )
 
@@ -309,6 +312,9 @@ module Search
         prompt: writing_prompt_for(resolved_scope: resolved_scope, resolved_intent: resolved_intent),
         api_key: assistant_api_key,
         model: WRITING_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-writing-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 520
       )
 
@@ -662,6 +668,9 @@ module Search
         prompt: general_prompt_for(resolved_scope: resolved_scope),
         api_key: assistant_api_key,
         model: GENERAL_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-general-knowledge-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 420
       )
       answer_text = response[:text].to_s.strip
@@ -695,6 +704,9 @@ module Search
         prompt: live_web_prompt_for(resolved_scope: resolved_scope),
         api_key: assistant_api_key,
         model: GENERAL_MODEL,
+        reasoning: { effort: "none" },
+        prompt_cache_key: "notae-general-knowledge-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 420,
         tools: [ web_search_tool ],
         include: [ "web_search_call.action.sources" ]

@@ -72,6 +72,7 @@
           <button type="button" class="notae-mobile-overlay" data-action="click->shell#close" aria-label="Close sidebar"></button>
           <% if layout_reuse_workspace_shell %>
             <%= render "shared/app_sidebar_shell_placeholder", workspace_slug: layout_workspace_slug %>
+            <%= render "shared/app_workspace_dialog_shell_placeholder", workspace_slug: layout_workspace_slug %>
           <% else %>
             <%= render "shared/app_sidebar" %>
           <% end %>

@@ -31,6 +31,7 @@
 <% window_start_params = window_start_value.present? ? { window_start: window_start_value } : {} %>
 <% planning_params = wide_planning_view ? { planning: "wide" } : {} %>
 <% kalendarium_controllers = ["kalendarium-focus", "kalendarium-preview"] %>
+<% kalendarium_controllers << "kalendarium-month" if @view == "month" %>
 <% kalendarium_controllers << "kalendarium-task-slot" if @task_schedule_row.present? %>
 <% kalendarium_actions = [
   "kalendarium:quick-create->kalendarium-focus#prepareNewEvent",
@@ -54,7 +55,7 @@
 }.compact %>
 <% kalendarium_base_params = { workspace_slug: @workspace.slug }.merge(embedded_params).merge(widget_params).merge(task_schedule_params).merge(window_start_params).merge(planning_params).merge(database_return_params) %>
 
-<section class="<%= ["notae-kalendarium", ("is-embedded-split" if embedded_split_view), ("is-widget" if widget_view), ("is-planning-wide" if wide_planning_view)].compact.join(" ") %>"
+<section class="<%= ["notae-kalendarium", ("is-month-view" if @view == "month"), ("is-embedded-split" if embedded_split_view), ("is-widget" if widget_view), ("is-planning-wide" if wide_planning_view)].compact.join(" ") %>"
          data-controller="<%= kalendarium_controllers.join(" ") %>"
          data-action="<%= kalendarium_actions.join(" ") %>"
          data-kalendarium-focus-selected-date-value="<%= @selected_date.strftime("%Y-%m-%d") %>"
@@ -83,6 +84,24 @@
                 when "year" then @selected_date + 1.year
                 else @selected_date + 1.month
                 end %>
+  <% previous_month_url = kalendarium_path(
+       kalendarium_base_params.merge(
+         view: "month",
+         date: previous_date,
+         project_id: @selected_project_id,
+         calendar_ids: @selected_calendar_ids,
+         year_daily_events: year_daily_events_param
+       ).merge(project_scope_params)
+     ) if @view == "month" %>
+  <% next_month_url = kalendarium_path(
+       kalendarium_base_params.merge(
+         view: "month",
+         date: next_date,
+         project_id: @selected_project_id,
+         calendar_ids: @selected_calendar_ids,
+         year_daily_events: year_daily_events_param
+       ).merge(project_scope_params)
+     ) if @view == "month" %>
   <% selected_date_label = case @view
                            when "day"
                              @selected_date.strftime("%A, %-d %B %Y")
@@ -149,7 +168,8 @@
                         year_daily_events: year_daily_events_param
                       ).merge(project_scope_params)
                     ),
-                    class: "notae-chip-button" %>
+                    class: "notae-chip-button",
+                    data: (@view == "month" ? { turbo_preload: true } : {}) %>
         <span class="notae-kalendarium-date-label" data-kalendarium-focus-target="dateLabel"><%= selected_date_label %></span>
         <%= link_to "→",
                     kalendarium_path(
@@ -162,7 +182,8 @@
                         year_daily_events: year_daily_events_param
                       ).merge(project_scope_params)
                     ),
-                    class: "notae-chip-button" %>
+                    class: "notae-chip-button",
+                    data: (@view == "month" ? { turbo_preload: true } : {}) %>
         <%= link_to "Today",
                     kalendarium_path(
                       kalendarium_base_params.merge(
@@ -212,7 +233,8 @@
                           year_daily_events: year_daily_events_param
                         ).merge(project_scope_params)
                       ),
-                      class: "notae-chip-button" %>
+                      class: "notae-chip-button",
+                      data: (@view == "month" ? { turbo_preload: true } : {}) %>
           <span class="notae-kalendarium-date-label" data-kalendarium-focus-target="dateLabel"><%= selected_date_label %></span>
           <%= link_to "→",
                       kalendarium_path(
@@ -225,7 +247,8 @@
                           year_daily_events: year_daily_events_param
                         ).merge(project_scope_params)
                       ),
-                      class: "notae-chip-button" %>
+                      class: "notae-chip-button",
+                      data: (@view == "month" ? { turbo_preload: true } : {}) %>
           <%= link_to "Today",
                       kalendarium_path(
                         kalendarium_base_params.merge(
@@ -372,10 +395,28 @@
                 <% @projects.each do |project| %>
                   <% project_visible = visible_project_id_set.include?(project.id.to_s) %>
                   <div class="notae-kalendarium-project-option-row">
-                    <div class="notae-kalendarium-project-option-name">
-                      <span class="notae-kalendarium-dot" style="--kal-color: <%= project.color_hex %>"></span>
+                    <%= form_with model: project,
+                                  url: kalendarium_project_path(project_menu_params.merge(id: project.id)),
+                                  method: :patch,
+                                  class: "notae-kalendarium-project-option-name is-color-editable",
+                                  title: "Double-click to change #{project.name} color",
+                                  data: {
+                                    controller: "project-color-picker",
+                                    action: "dblclick->project-color-picker#open"
+                                  } do |form| %>
+                      <span class="notae-kalendarium-dot"
+                            style="--kal-color: <%= project.color_hex %>"
+                            data-project-color-picker-target="swatch"></span>
                       <span class="notae-kalendarium-project-option-label"><%= project.name %></span>
-                    </div>
+                      <%= form.color_field :color_hex,
+                                           value: project.color_hex,
+                                           class: "notae-kalendarium-project-color-input",
+                                           aria: { label: "Choose color for #{project.name}" },
+                                           data: {
+                                             project_color_picker_target: "input",
+                                             action: "change->project-color-picker#save"
+                                           } %>
+                    <% end %>
                     <div class="notae-kalendarium-project-option-actions">
                       <%= link_to(project_visible ? "Show: On" : "Show: Off",
                                   kalendarium_path(
@@ -870,10 +911,36 @@
             <% @projects.each do |project| %>
               <article class="notae-kalendarium-project-card">
                 <header>
-                  <div class="notae-kalendarium-project-card-title">
-                    <span class="notae-kalendarium-dot" style="--kal-color: <%= project.color_hex %>"></span>
+                  <%= form_with model: project,
+                                url: kalendarium_project_path(
+                                  kalendarium_base_params.merge(
+                                    id: project.id,
+                                    view: @view,
+                                    date: @selected_date,
+                                    project_id: @selected_project_id,
+                                    calendar_ids: @selected_calendar_ids
+                                  ).merge(project_scope_params)
+                                ),
+                                method: :patch,
+                                class: "notae-kalendarium-project-card-title is-color-editable",
+                                title: "Double-click to change #{project.name} color",
+                                data: {
+                                  controller: "project-color-picker",
+                                  action: "dblclick->project-color-picker#open"
+                                } do |form| %>
+                    <span class="notae-kalendarium-dot"
+                          style="--kal-color: <%= project.color_hex %>"
+                          data-project-color-picker-target="swatch"></span>
                     <strong><%= project.name %></strong>
-                  </div>
+                    <%= form.color_field :color_hex,
+                                         value: project.color_hex,
+                                         class: "notae-kalendarium-project-color-input",
+                                         aria: { label: "Choose color for #{project.name}" },
+                                         data: {
+                                           project_color_picker_target: "input",
+                                           action: "change->project-color-picker#save"
+                                         } %>
+                  <% end %>
                   <div class="notae-kalendarium-project-card-actions">
                     <%= button_to "Archive",
                                   archive_kalendarium_project_path(
@@ -967,7 +1034,11 @@
         <% end %>
       <% else %>
         <h2>Month view · <%= @selected_date.strftime("%B %Y") %></h2>
-        <div class="notae-kalendarium-month-grid">
+        <div class="notae-kalendarium-month-grid"
+             data-kalendarium-month-target="grid"
+             data-kalendarium-month-previous-url-value="<%= previous_month_url %>"
+             data-kalendarium-month-next-url-value="<%= next_month_url %>"
+             data-action="touchstart->kalendarium-month#touchStart touchend->kalendarium-month#touchEnd">
           <% @weekday_labels.each do |label| %>
             <div class="notae-kalendarium-month-weekday"><%= label %></div>
           <% end %>
@@ -975,7 +1046,8 @@
             <% day_events = @events_by_day[day] || [] %>
             <section class="<%= ["notae-kalendarium-month-cell", ("is-today" if day == today_local), ("is-selected" if day == @selected_date)].compact.join(" ") %>"
                      data-kalendarium-focus-target="monthCell"
-                     data-action="dblclick->kalendarium-focus#quickCreateDay"
+                     data-kalendarium-month-target="dayCell"
+                     data-action="<%= "click->kalendarium-month#openAgenda " unless widget_view %>dblclick->kalendarium-focus#quickCreateDay"
                      data-day-date="<%= day.strftime("%Y-%m-%d") %>">
               <header>
                 <strong>
@@ -998,11 +1070,14 @@
                               } %>
                 </strong>
                 <% if day_events.size > 3 %>
-                  <span class="notae-kalendarium-month-overflow-label">+<%= day_events.size - 3 %> more</span>
+                  <button type="button"
+                          class="notae-kalendarium-month-overflow-label"
+                          data-action="kalendarium-month#openAgenda"
+                          aria-label="Show all <%= day_events.size %> events on <%= day.strftime('%-d %B') %>">+<%= day_events.size - 3 %> more</button>
                 <% end %>
               </header>
               <div class="notae-kalendarium-month-events">
-                <% day_events.first(3).each do |event| %>
+                <% day_events.each do |event| %>
                   <%= render "kalendarium_event",
                              event: event,
                              workspace: @workspace,
@@ -1015,6 +1090,75 @@
               </div>
             </section>
           <% end %>
+        </div>
+
+        <dialog class="notae-kalendarium-day-agenda" data-kalendarium-month-target="agenda" data-action="click->kalendarium-month#backdropCloseAgenda">
+          <div class="notae-kalendarium-day-agenda-panel">
+            <header class="notae-kalendarium-day-agenda-header">
+              <div>
+                <p class="notae-page-subtle">Day agenda</p>
+                <h3 data-kalendarium-month-target="agendaTitle">Events</h3>
+              </div>
+              <button type="button" class="notae-inline-icon-button" aria-label="Close day agenda" data-action="kalendarium-month#closeAgenda">✕</button>
+            </header>
+            <% @month_days.each do |day| %>
+              <% day_events = @events_by_day[day] || [] %>
+              <section class="notae-kalendarium-day-agenda-content"
+                       data-kalendarium-month-target="dayAgenda"
+                       data-day-date="<%= day.iso8601 %>"
+                       data-day-label="<%= day.strftime('%A, %-d %B %Y') %>"
+                       hidden>
+                <% if day_events.any? %>
+                  <ul class="notae-kalendarium-day-agenda-list">
+                    <% day_events.each do |event| %>
+                      <% event_starts_local = event.starts_at_utc.in_time_zone(current_user.time_zone) %>
+                      <% event_ends_local = event.ends_at_utc.in_time_zone(current_user.time_zone) %>
+                      <% agenda_color = event.kalendarium_project&.color_hex.presence || event.kalendarium_calendar.color_hex %>
+                      <% agenda_dom_id = event.respond_to?(:occurrence_dom_id) ? event.occurrence_dom_id : "kalendarium_event_#{event.id}" %>
+                      <% agenda_metadata = event.metadata_json.to_h %>
+                      <% agenda_recurring = event.rrule.present? || agenda_metadata["recurring_event_id"].present? || (event.uid.present? && event.remote_event_id.to_s.include?("::")) %>
+                      <li style="--kal-color: <%= agenda_color %>"
+                          data-agenda-event-id="<%= event.id %>"
+                          data-agenda-date="<%= day.iso8601 %>">
+                        <button type="button"
+                                class="notae-kalendarium-day-agenda-event"
+                                data-event-dom-id="<%= agenda_dom_id %>"
+                                data-action="kalendarium-month#openEvent">
+                          <strong><%= event.title %></strong>
+                          <span><%= event.all_day? ? "All day" : "#{event_starts_local.strftime('%H:%M')}–#{event_ends_local.strftime('%H:%M')}" %></span>
+                        </button>
+                        <% if agenda_recurring %>
+                          <button type="button"
+                                  class="notae-kalendarium-day-agenda-move"
+                                  data-event-dom-id="<%= agenda_dom_id %>"
+                                  data-action="kalendarium-month#openEvent"
+                                  aria-label="Edit recurring event <%= event.title %>">Edit</button>
+                        <% else %>
+                          <button type="button"
+                                  class="notae-kalendarium-day-agenda-move"
+                                  data-event-id="<%= event.id %>"
+                                  data-event-title="<%= event.title %>"
+                                  data-event-dom-id="<%= agenda_dom_id %>"
+                                  data-source-date="<%= day.iso8601 %>"
+                                  data-action="kalendarium-month#startMove"
+                                  aria-label="Move <%= event.title %> to another day">Move</button>
+                        <% end %>
+                      </li>
+                    <% end %>
+                  </ul>
+                <% else %>
+                  <p class="notae-kalendarium-day-agenda-empty">Nothing scheduled.</p>
+                <% end %>
+                <button type="button" class="notae-chip-button notae-kalendarium-day-agenda-add" data-day-date="<%= day.iso8601 %>" data-action="kalendarium-month#quickAdd">+ Add event</button>
+              </section>
+            <% end %>
+          </div>
+        </dialog>
+
+        <div class="notae-kalendarium-move-toast" data-kalendarium-month-target="toast" hidden role="status" aria-live="polite">
+          <span data-kalendarium-month-target="toastMessage"></span>
+          <button type="button" data-kalendarium-month-target="undoButton" data-action="kalendarium-month#undoMove" hidden>Undo</button>
+          <button type="button" data-action="kalendarium-month#cancelMove">Cancel</button>
         </div>
       <% end %>
 

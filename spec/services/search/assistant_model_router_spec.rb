@@ -39,6 +39,8 @@ RSpec.describe Search::AssistantModelRouter do
         reasoning: { effort: "none" },
         text: { format: described_class::ROUTE_SCHEMA },
         safety_identifier: "user_hash",
+        prompt_cache_key: "notae-assistant-router-v1",
+        prompt_cache_options: { ttl: "30m" },
         max_output_tokens: 120
       )
       expect(arguments.fetch(:instructions)).to include("complete request and supplied context semantically")

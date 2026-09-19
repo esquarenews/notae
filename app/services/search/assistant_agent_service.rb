@@ -70,7 +70,9 @@ module Search
           reasoning: { effort: route.reasoning_effort },
           text: { verbosity: "low" },
           parallel_tool_calls: false,
-          safety_identifier: safety_identifier
+          safety_identifier: safety_identifier,
+          prompt_cache_key: prompt_cache_key,
+          prompt_cache_options: { ttl: "30m" }
         )
 
         usage = add_usage(usage, response[:usage])
@@ -294,8 +296,21 @@ module Search
       Digest::SHA256.hexdigest("#{Rails.application.secret_key_base}:notae-ai:#{user.id}")
     end
 
+    def prompt_cache_key
+      digest = Digest::SHA256.hexdigest("#{user.id}:#{workspace.id}").first(24)
+      "notae-assistant-v1-#{digest}"
+    end
+
     def zero_usage
-      { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+      {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        cached_prompt_tokens: 0,
+        cache_write_tokens: 0,
+        web_search_calls: 0,
+        service_tier: nil
+      }
     end
 
     def add_usage(total, addition)
@@ -303,7 +318,11 @@ module Search
       {
         prompt_tokens: total[:prompt_tokens] + incoming.fetch(:prompt_tokens, 0).to_i,
         completion_tokens: total[:completion_tokens] + incoming.fetch(:completion_tokens, 0).to_i,
-        total_tokens: total[:total_tokens] + incoming.fetch(:total_tokens, 0).to_i
+        total_tokens: total[:total_tokens] + incoming.fetch(:total_tokens, 0).to_i,
+        cached_prompt_tokens: total[:cached_prompt_tokens] + incoming.fetch(:cached_prompt_tokens, 0).to_i,
+        cache_write_tokens: total[:cache_write_tokens] + incoming.fetch(:cache_write_tokens, 0).to_i,
+        web_search_calls: total[:web_search_calls] + incoming.fetch(:web_search_calls, 0).to_i,
+        service_tier: incoming[:service_tier].presence || total[:service_tier]
       }
     end
 
