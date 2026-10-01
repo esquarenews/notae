@@ -67,6 +67,7 @@
       </div>
 
       <div class="notae-auth-submit-zone">
+        <p class="notae-page-subtle">By creating an account, you agree to the <%= link_to "Terms of Use", terms_of_use_path %>. Read our <%= link_to "Privacy Policy", privacy_policy_path %> to learn how we handle your information.</p>
         <%= form.submit "Create account",
                         class: "notae-chip-button notae-auth-submit",
                         data: { auth_submit_target: "submit" } %>

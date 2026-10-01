@@ -1,0 +1,11 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.65; }
+body { margin: 0; background: light-dark(#fafbfe, #161923); color: light-dark(#202735, #e8edf5); }
+header, main, footer { max-width: 800px; margin: auto; padding: 24px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; text-decoration: none; }
+nav, .notae-legal-links { display: flex; gap: 18px; flex-wrap: wrap; }
+a { color: light-dark(#2256b5, #a1c2ff); text-underline-offset: 3px; }
+main { padding-block: 20px 48px; }
+h1 { font-size: clamp(30px, 6vw, 44px); line-height: 1.2; }
+h2 { font-size: 21px; margin-top: 32px; line-height: 1.4; }
+footer { border-top: 1px solid light-dark(#dbe1ec, #394153); }

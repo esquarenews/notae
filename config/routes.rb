@@ -8,6 +8,8 @@ Rails.application.routes.draw do
     sessions: "users/sessions"
   }
   root "home#index"
+  get "privacy", to: "legal#privacy", as: :privacy_policy
+  get "terms", to: "legal#terms", as: :terms_of_use
   get "/app", to: "pwa#launch", as: :pwa_launch
   get "/app/notifications/:id", to: "pwa#notification_launch", as: :pwa_notification_launch
   get "/offline", to: "pwa#offline", as: :pwa_offline
