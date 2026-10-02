@@ -9,6 +9,15 @@ cd /home/esquarenews/apps/notae
 bin/deploy-production
 ```
 
+On hosts that previously ran Epistularium, retire its installed units before the
+first deploy after email removal (the deploy defaults no longer start them):
+
+```bash
+sudo systemctl disable --now notae-epistularium-sync.timer
+sudo systemctl stop notae-epistularium-sync.service
+sudo systemctl reset-failed notae-epistularium-sync.service
+```
+
 The script performs the full deploy sequence:
 
 - takes an exclusive deploy lock
@@ -18,7 +27,7 @@ The script performs the full deploy sequence:
 - stops background workers before migrations
 - runs production migrations through `systemd-run` with `/etc/notae/notae.env`
 - rebuilds production assets
-- restarts the web service, Sidekiq, meeting bot, sync timers, and one-shot sync services when present
+- restarts the web service, Sidekiq, meeting bot, calendar sync timer, and one-shot calendar sync service when present
 - verifies systemd health, `/up`, sign-in HTML, and linked CSS/JS assets
 
 Useful overrides:
@@ -134,7 +143,9 @@ sudo systemd-run --wait --collect --pty \
 On the first deployment after removing Epistularium, disable its retired timer and service:
 
 ```bash
-sudo systemctl disable --now notae-epistularium-sync.timer notae-epistularium-sync.service
+sudo systemctl disable --now notae-epistularium-sync.timer
+sudo systemctl stop notae-epistularium-sync.service
+sudo systemctl reset-failed notae-epistularium-sync.service
 ```
 
 ```bash

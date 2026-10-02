@@ -16,8 +16,8 @@ RUN_OPTIONAL_SYNC="${RUN_OPTIONAL_SYNC:-1}"
 RESTART_TIMERS="${RESTART_TIMERS:-1}"
 REQUIRED_SERVICES="${REQUIRED_SERVICES:-notae}"
 OPTIONAL_SERVICES="${OPTIONAL_SERVICES:-notae-sidekiq notae-meeting-bot-worker}"
-OPTIONAL_TIMERS="${OPTIONAL_TIMERS:-notae-epistularium-sync.timer notae-kalendarium-sync.timer}"
-OPTIONAL_ONESHOTS="${OPTIONAL_ONESHOTS:-notae-epistularium-sync.service notae-kalendarium-sync.service}"
+OPTIONAL_TIMERS="${OPTIONAL_TIMERS:-notae-kalendarium-sync.timer}"
+OPTIONAL_ONESHOTS="${OPTIONAL_ONESHOTS:-notae-kalendarium-sync.service}"
 PRODUCTION_PATH="${PRODUCTION_PATH:-/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 
 log() {
@@ -70,12 +70,12 @@ Environment overrides:
   BRANCH=main
   RUN_TESTS=1                  Run local test suite before restarting services.
   RUN_ASSET_CLOBBER=0          Run assets:precompile without assets:clobber.
-  RUN_OPTIONAL_SYNC=0          Skip one-shot calendar/mail sync starts.
+  RUN_OPTIONAL_SYNC=0          Skip one-shot calendar sync starts.
   RESTART_TIMERS=0             Skip timer restarts.
   REQUIRED_SERVICES="notae"
   OPTIONAL_SERVICES="notae-sidekiq notae-meeting-bot-worker"
-  OPTIONAL_TIMERS="notae-epistularium-sync.timer notae-kalendarium-sync.timer"
-  OPTIONAL_ONESHOTS="notae-epistularium-sync.service notae-kalendarium-sync.service"
+  OPTIONAL_TIMERS="notae-kalendarium-sync.timer"
+  OPTIONAL_ONESHOTS="notae-kalendarium-sync.service"
 
 Examples:
   bin/deploy-production

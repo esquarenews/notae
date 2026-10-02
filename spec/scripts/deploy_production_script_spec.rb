@@ -24,6 +24,23 @@ RSpec.describe "bin/deploy-production" do
     expect(stdout).to include("ENV_FILE=/etc/notae/notae.env")
     expect(stdout).to include("RUN_TESTS=1")
     expect(stdout).to include("RESTART_TIMERS=0")
+    expect(stdout).to include('OPTIONAL_TIMERS="notae-kalendarium-sync.timer"')
+    expect(stdout).to include('OPTIONAL_ONESHOTS="notae-kalendarium-sync.service"')
+    expect(stdout).not_to include("epistularium", "calendar/mail")
+  end
+
+  it "only schedules calendar sync units by default after retiring email" do
+    source = script_path.read.sub(/^main "\$@"\s*\z/, "")
+    stdout, status = Open3.capture2e(
+      { "OPTIONAL_TIMERS" => nil, "OPTIONAL_ONESHOTS" => nil },
+      "bash", "-c", source + "\n" + 'printf "%s\\n" "$OPTIONAL_TIMERS" "$OPTIONAL_ONESHOTS"'
+    )
+
+    expect(status.success?).to be(true), stdout
+    expect(stdout.lines.map(&:strip)).to eq([
+      "notae-kalendarium-sync.timer",
+      "notae-kalendarium-sync.service"
+    ])
   end
 
   it "checks systemd unit existence through LoadState resolution" do
