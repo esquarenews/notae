@@ -22,7 +22,6 @@ module WorkspaceExports
         add_page_exports(zip)
         add_database_exports(zip)
         add_kalendarium_exports(zip)
-        add_epistularium_exports(zip)
       end.string
     end
 
@@ -44,7 +43,6 @@ module WorkspaceExports
           - Page attachments
           - Databases as CSV
           - Kalendarium events as CSV
-          - Epistularium messages visible to the requester as CSV
       MARKDOWN
     end
 
@@ -112,56 +110,6 @@ module WorkspaceExports
       add_string_entry(zip, "kalendarium/events.csv", csv)
     end
 
-    def add_epistularium_exports(zip)
-      csv = CSV.generate(headers: true) do |table|
-        table << [
-          "Account",
-          "Mailbox",
-          "Provider message ID",
-          "Subject",
-          "From name",
-          "From email",
-          "To",
-          "Cc",
-          "Bcc",
-          "Reply-to",
-          "Sent at (UTC)",
-          "Received at (UTC)",
-          "Unread",
-          "Snippet",
-          "Body text",
-          "Body html",
-          "Attachment metadata",
-          "Metadata"
-        ]
-
-        epistularium_messages.each do |message|
-          table << [
-            message.epistularium_account.label,
-            message.mailbox,
-            message.provider_message_id,
-            message.subject,
-            message.from_name.to_s,
-            message.from_email.to_s,
-            recipients_text(message.to_recipients_json),
-            recipients_text(message.cc_recipients_json),
-            recipients_text(message.bcc_recipients_json),
-            recipients_text(message.reply_to_recipients_json),
-            message.sent_at&.iso8601,
-            message.received_at&.iso8601,
-            message.unread? ? "yes" : "no",
-            message.snippet.to_s,
-            message.body_text.to_s,
-            message.body_html.to_s,
-            JSON.generate(message.attachment_metadata_json),
-            JSON.generate(message.metadata_json)
-          ]
-        end
-      end
-
-      add_string_entry(zip, "epistularium/messages.csv", csv)
-    end
-
     def add_string_entry(zip, path, contents)
       zip.put_next_entry(path)
       zip.write(contents.to_s)
@@ -174,14 +122,6 @@ module WorkspaceExports
 
     def safe_slug(value, fallback:)
       value.to_s.parameterize.presence || fallback
-    end
-
-    def recipients_text(values)
-      Array(values).filter_map do |recipient|
-        next unless recipient.is_a?(Hash)
-
-        [ recipient["name"].to_s.strip.presence, recipient["email"].to_s.strip.presence ].compact.join(" ").strip.presence
-      end.join(", ")
     end
 
     def pages
@@ -201,13 +141,5 @@ module WorkspaceExports
         .to_a
     end
 
-    def epistularium_messages
-      @epistularium_messages ||= EpistulariumMessagePolicy::Scope.new(user, EpistulariumMessage)
-        .resolve
-        .for_workspace(workspace)
-        .includes(:epistularium_account)
-        .recent_first
-        .to_a
-    end
   end
 end

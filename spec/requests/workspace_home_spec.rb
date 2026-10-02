@@ -264,12 +264,11 @@ RSpec.describe "Workspace home", type: :request do
       expect(payload.dig("data", "active_timesheet_timer")).to be_nil
       expect(payload_document.text).to include("Client review")
       expect(payload_document.text).to include("Starts in 10 min")
-      expect(payload_document.text).to include("1 email just came in")
+      expect(payload_document.text).not_to include("1 email just came in")
       expect(payload_document.text).to include("1 new workspace update")
       expect(payload_document.text).not_to include("Unread inbox messages")
-      expect(payload_document.css(".notae-shell-status-bar-control").count).to eq(6)
+      expect(payload_document.css(".notae-shell-status-bar-control").count).to eq(4)
       expect(links).to include([ a_string_including("Client review"), kalendarium_path(workspace_slug: workspace.slug) ])
-      expect(links).to include([ a_string_including("1 email just came in"), workspace_epistularium_path(workspace_slug: workspace.slug) ])
       expect(links).to include([ a_string_including("1 new workspace update"), workspace_notifications_path(workspace_slug: workspace.slug) ])
     end
   end
@@ -462,7 +461,7 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Library")
   end
 
-  it "renders the daily brief on the home page and routes proactive suggestions through the ai rail and home page card" do
+  it "renders the daily brief without surfacing legacy proactive suggestions" do
     user = User.create!(email: "home-knowledge-owner@example.com", password: "password123")
     workspace = Workspace.create!(name: "Knowledge home", slug: "knowledge-home")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -506,10 +505,9 @@ RSpec.describe "Workspace home", type: :request do
     expect(response.body).to include("Next brief")
     expect(response.body).to include("Review the critical blockers before noon. [1]")
     expect(response.body).to include("Important updates")
-    expect(response.body).to include("AI suggestion")
     expect(response.body).to include("Agent draft actions")
     expect(response.body).to include("knowledge-suggestion-")
-    expect(response.body).to include("Escalate the approval gap this afternoon. [1]")
+    expect(response.body).not_to include("Escalate the approval gap this afternoon. [1]")
     expect(response.body).to include("Choose tasks grid")
     expect(response.body).to include("Create Nota")
     expect(response.body).to include("Open Kalendārium")
@@ -519,11 +517,11 @@ RSpec.describe "Workspace home", type: :request do
     get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Update available from Agent")
-    expect(response.body).to include("Open full window")
+    expect(response.body).not_to include("Proactive suggestion")
+    expect(response.body).not_to include("Escalate the approval gap this afternoon. [1]")
   end
 
-  it "renders the clicked proactive suggestion when opened from a notification" do
+  it "does not render a legacy proactive suggestion when opened from an old notification" do
     user = User.create!(email: "home-clicked-suggestion@example.com", password: "password123")
     workspace = Workspace.create!(name: "Clicked Knowledge", slug: "clicked-knowledge")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -562,9 +560,9 @@ RSpec.describe "Workspace home", type: :request do
     get workspace_path(workspace.slug, show_home: 1, knowledge_suggestion_id: clicked_suggestion.id, anchor: "knowledge-suggestion-#{clicked_suggestion.id}")
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Clicked suggestion detail")
-    expect(response.body).to include("This is the exact suggestion opened from the notification. [1]")
-    expect(response.body).to include("Act on clicked suggestion")
+    expect(response.body).not_to include("Clicked suggestion detail")
+    expect(response.body).not_to include("This is the exact suggestion opened from the notification. [1]")
+    expect(response.body).not_to include("Act on clicked suggestion")
     expect(response.body).not_to include("Newest suggestion")
   end
 
@@ -673,7 +671,7 @@ RSpec.describe "Workspace home", type: :request do
     )
   end
 
-  it "throttles proactive suggestion generation across quick page switches by queueing background work once" do
+  it "does not queue or render proactive suggestions across page switches" do
     user = User.create!(email: "home-knowledge-throttle@example.com", password: "password123", openai_api_key: "sk-test")
     workspace = Workspace.create!(name: "Knowledge throttle", slug: "knowledge-throttle")
     Membership.create!(workspace: workspace, user: user, role: :owner)
@@ -687,13 +685,9 @@ RSpec.describe "Workspace home", type: :request do
     sign_in user
 
     travel_to(Time.utc(2026, 3, 21, 10, 0, 0)) do
-      expect do
-        get workspace_path(workspace.slug)
-      end.to have_enqueued_job(Search::GenerateKnowledgeSuggestionJob)
-        .with(user.id, workspace.id, KnowledgeSuggestion::KIND_PROACTIVE)
-        .on_queue("default")
+      get workspace_path(workspace.slug)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Preparing AI suggestion")
+      expect(response.body).not_to include("Preparing AI suggestion")
 
       get workspace_library_path(workspace_slug: workspace.slug)
       expect(response).to have_http_status(:ok)
@@ -701,14 +695,14 @@ RSpec.describe "Workspace home", type: :request do
 
       get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Preparing AI suggestion")
+      expect(response.body).not_to include("Preparing AI suggestion")
     end
 
     proactive_jobs = enqueued_jobs.select do |job|
       job[:job] == Search::GenerateKnowledgeSuggestionJob &&
         Array(job[:args]).last == KnowledgeSuggestion::KIND_PROACTIVE
     end
-    expect(proactive_jobs.size).to eq(1)
+    expect(proactive_jobs).to be_empty
   end
 
   it "skips knowledge suggestion generation for workspaces without indexed context" do

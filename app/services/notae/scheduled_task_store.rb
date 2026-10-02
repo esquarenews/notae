@@ -2,12 +2,6 @@ module Notae
   class ScheduledTaskStore
     MEMORY_STORE_MUTEX = Mutex.new
     TASK_DEFINITIONS = {
-      "epistularium:sync_due" => {
-        label: "Epistularium sync timer",
-        cadence_label: "Every 10 minutes",
-        expected_interval_seconds: 10.minutes.to_i,
-        stale_after_seconds: 15.minutes.to_i
-      },
       "kalendarium:sync_due" => {
         label: "Kalendarium sync dispatcher",
         cadence_label: "Every 10 minutes",

@@ -9,7 +9,7 @@ RSpec.describe "Knowledge suggestions", type: :request do
     sign_in user
   end
 
-  def create_suggestion(kind: KnowledgeSuggestion::KIND_PROACTIVE, status: KnowledgeSuggestion::STATUS_ACTIVE)
+  def create_suggestion(kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY, status: KnowledgeSuggestion::STATUS_ACTIVE)
     KnowledgeSuggestion.create!(
       workspace: workspace,
       user: user,
@@ -36,7 +36,7 @@ RSpec.describe "Knowledge suggestions", type: :request do
     get knowledge_suggestion_path(workspace_slug: workspace.slug, id: suggestion.id)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Suggested next step")
+    expect(response.body).to include("Daily workspace brief")
     expect(response.body).to include("A suggestion grounded in sources. [1]")
     expect(response.body).to include("Triage outstanding blockers")
     expect(response.body).to include("Notifications")
@@ -60,7 +60,7 @@ RSpec.describe "Knowledge suggestions", type: :request do
 
     page = workspace.pages.order(:created_at).last
     expect(response).to redirect_to(page_path(workspace_slug: workspace.slug, id: page.id))
-    expect(page.title).to eq("Suggested next step notes")
+    expect(page.title).to eq("Daily workspace brief notes")
     expect(page.blocks).not_to be_empty
     expect(suggestion.reload.status).to eq(KnowledgeSuggestion::STATUS_CONVERTED)
   end
@@ -84,8 +84,7 @@ RSpec.describe "Knowledge suggestions", type: :request do
 
   it "refreshes a suggestion through the persistence service" do
     suggestion = create_suggestion
-    persisted = create_suggestion(status: KnowledgeSuggestion::STATUS_ACTIVE)
-    service = instance_double(Search::PersistKnowledgeSuggestionService, call: persisted)
+    service = instance_double(Search::PersistKnowledgeSuggestionService, call: suggestion)
 
     expect(Search::PersistKnowledgeSuggestionService).to receive(:new)
       .with(user: user, workspace: workspace, kind: suggestion.kind, force: true)

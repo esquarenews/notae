@@ -33,10 +33,7 @@ puts "dead=#{Sidekiq::DeadSet.new.size}"
 RUBY'
 ```
 
-Current queues that matter operationally:
-
-- `default`
-- `epistularium_backfill`
+The operational queue is `default`.
 
 ## 3. Restart cleanly
 
@@ -72,12 +69,11 @@ redis-cli -u redis://127.0.0.1:6379/0 ping
 Filter logs by job name:
 
 ```bash
-journalctl -u notae-sidekiq -n 300 --no-pager -o cat | rg 'Epistularium|Kalendarium|WebPush|Search::|Agent'
+journalctl -u notae-sidekiq -n 300 --no-pager -o cat | rg 'Kalendarium|WebPush|Search::|Agent'
 ```
 
 Useful job classes:
 
-- `Epistularium::SyncConnectionJob`
 - `Kalendarium::SyncConnectionJob`
 - `Kalendarium::SyncCalendarJob`
 - `WebPush::DeliverNotificationJob`

@@ -8,8 +8,6 @@ These runbooks are written for the current production layout used in Notae:
 - Rails service: `notae`
 - Sidekiq service: `notae-sidekiq`
 - meeting bot worker: `notae-meeting-bot-worker`
-- Epistularium timer: `notae-epistularium-sync.timer`
-- Epistularium oneshot service: `notae-epistularium-sync.service`
 - Kalendarium timer: `notae-kalendarium-sync.timer`
 - Kalendarium oneshot service: `notae-kalendarium-sync.service`
 
@@ -19,18 +17,18 @@ If production differs, adjust the paths and service names before running command
 
 - [Deploy and restart](./deploy_and_restart.md)
 - [Sidekiq failure](./sidekiq_failure.md)
-- [Email sync failure](./email_sync_failure.md)
 - [Push notification failure](./push_notification_failure.md)
 - [MCP token setup](./mcp_token_setup.md)
 - [Calendar provider sync failure](./calendar_provider_sync_failure.md)
+- [Google Calendar OAuth production setup](./google_calendar_oauth_production.md)
 - [Backup and restore](./backup_and_restore.md)
 
 ## Common checks
 
 ```bash
 sudo systemctl status notae notae-sidekiq notae-meeting-bot-worker --no-pager
-sudo systemctl status notae-epistularium-sync.timer notae-kalendarium-sync.timer --no-pager
-systemctl list-timers --all | rg 'epistularium|kalendarium'
+sudo systemctl status notae-kalendarium-sync.timer --no-pager
+systemctl list-timers --all | rg 'kalendarium'
 redis-cli ping
 ```
 

@@ -52,7 +52,7 @@ class KnowledgeSuggestionsController < ApplicationController
   end
 
   def set_knowledge_suggestion
-    @knowledge_suggestion = policy_scope(KnowledgeSuggestion).for_workspace(@workspace).find(params[:id])
+    @knowledge_suggestion = policy_scope(KnowledgeSuggestion).for_workspace(@workspace).daily_summaries.find(params[:id])
   end
 
   def task_conversion_params

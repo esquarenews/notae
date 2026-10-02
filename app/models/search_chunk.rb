@@ -50,7 +50,6 @@ class SearchChunk < ApplicationRecord
     ]
     associations << :kalendarium_event if reference_column_available?(:kalendarium_event_id)
     associations << :meeting_session if reference_column_available?(:meeting_session_id)
-    associations << { epistularium_message: :epistularium_account } if reference_column_available?(:epistularium_message_id)
     associations
   end
 
@@ -61,7 +60,6 @@ class SearchChunk < ApplicationRecord
     ]
     scopes << base.where(kalendarium_event_id: event_ids) if reference_column_available?(:kalendarium_event_id)
     scopes << base.where(meeting_session_id: meeting_ids) if reference_column_available?(:meeting_session_id)
-    scopes << base.where(epistularium_message_id: message_ids) if reference_column_available?(:epistularium_message_id) && message_ids.present?
 
     scopes.reduce { |combined, relation| combined.or(relation) } || base.none
   end
@@ -102,7 +100,6 @@ class SearchChunk < ApplicationRecord
       when SOURCE_DB_ROW then db_row
       when SOURCE_KALENDARIUM_EVENT then kalendarium_event
       when SOURCE_MEETING_SESSION then meeting_session
-      when SOURCE_EPISTULARIUM_MESSAGE then epistularium_message
       end
     return if record.blank? || !record.respond_to?(:search_source_text)
 

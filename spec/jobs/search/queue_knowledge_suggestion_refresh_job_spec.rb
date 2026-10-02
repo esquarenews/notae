@@ -8,7 +8,7 @@ RSpec.describe Search::QueueKnowledgeSuggestionRefreshJob, type: :job do
     clear_enqueued_jobs
   end
 
-  it "queues daily and proactive generation for workspace members with API keys" do
+  it "queues only the daily brief for workspace members with API keys" do
     workspace = Workspace.create!(name: "Knowledge refresh", slug: "knowledge-refresh")
     melbourne_user = User.create!(
       email: "knowledge-refresh-melbourne@example.com",
@@ -36,7 +36,7 @@ RSpec.describe Search::QueueKnowledgeSuggestionRefreshJob, type: :job do
         args: [ melbourne_user.id, workspace.id, KnowledgeSuggestion::KIND_DAILY_SUMMARY ]
       )
     )
-    expect(enqueued_jobs).to include(
+    expect(enqueued_jobs).not_to include(
       a_hash_including(
         job: Search::GenerateKnowledgeSuggestionJob,
         args: [ melbourne_user.id, workspace.id, KnowledgeSuggestion::KIND_PROACTIVE ]

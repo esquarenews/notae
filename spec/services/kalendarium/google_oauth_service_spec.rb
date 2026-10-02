@@ -36,7 +36,10 @@ RSpec.describe Kalendarium::GoogleOauthService do
     expect(query["response_type"]).to eq([ "code" ])
     expect(query["access_type"]).to eq([ "offline" ])
     expect(query["state"]).to eq([ "signed-state-token" ])
-    expect(query["scope"].first).to include("/auth/calendar")
+    expect(query["scope"].first.split).to contain_exactly(
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/calendar.calendarlist.readonly"
+    )
   end
 
   it "exchanges code for tokens" do

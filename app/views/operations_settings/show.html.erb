@@ -11,7 +11,6 @@
 <% session_authentication = @dashboard.fetch(:session_authentication) %>
 <% api_token_activity = @dashboard.fetch(:api_token_activity) %>
 <% integration_health = @dashboard.fetch(:integration_health) %>
-<% epistularium = @dashboard.fetch(:epistularium_accounts) %>
 <% kalendarium = @dashboard.fetch(:kalendarium_connections) %>
 <% push_delivery = @dashboard.fetch(:push_delivery) %>
 <% meeting_capture = @dashboard.fetch(:meeting_capture) %>
@@ -406,68 +405,6 @@
           </article>
         <% end %>
       </div>
-    </section>
-
-    <section class="notae-settings-section">
-      <h2>Email sync</h2>
-      <p class="notae-pref-description">Fresh-mail cadence, backfill state, and queue health for Epistularium accounts in this workspace.</p>
-
-      <div class="notae-operations-grid">
-        <article class="notae-operations-card">
-          <p class="notae-operations-card-label">Accounts</p>
-          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :total) %></p>
-        </article>
-        <article class="notae-operations-card">
-          <p class="notae-operations-card-label">Connected</p>
-          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :connected) %></p>
-        </article>
-        <article class="notae-operations-card">
-          <p class="notae-operations-card-label">Attention needed</p>
-          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :attention_needed) %></p>
-        </article>
-        <article class="notae-operations-card">
-          <p class="notae-operations-card-label">Active syncs</p>
-          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :active_or_queued) %></p>
-        </article>
-        <article class="notae-operations-card">
-          <p class="notae-operations-card-label">Stalled</p>
-          <p class="notae-operations-card-value"><%= epistularium.dig(:counts, :stalled) %></p>
-        </article>
-      </div>
-
-      <% if epistularium[:items].any? %>
-        <div class="notae-operations-list">
-          <% epistularium[:items].each do |account| %>
-            <article class="notae-operations-item">
-              <div class="notae-operations-item-copy">
-                <p class="notae-operations-item-title"><%= account[:label] %></p>
-                <p class="notae-operations-item-subtitle"><%= account[:provider].to_s.humanize %> · <%= account[:enabled] ? "Enabled" : "Disabled" %> · status <%= account[:status] %></p>
-                <p class="notae-operations-item-meta">
-                  <span>Fresh mail <%= format_relative_time.call(account[:last_fresh_sync_at]) %></span>
-                  <span>Backfill batch <%= format_relative_time.call(account[:last_backfill_sync_at], "Not yet") %></span>
-                  <% if account[:last_error].present? %>
-                    <span>Last error: <%= account[:last_error] %></span>
-                  <% end %>
-                </p>
-              </div>
-
-              <div class="notae-operations-pills">
-                <span class="notae-operations-pill <%= account[:status] == "connected" ? "is-ok" : "is-error" %>"><%= account[:status] %></span>
-                <span class="notae-operations-pill <%= account[:backfill_pending] ? "is-warn" : "is-ok" %>"><%= account[:backfill_pending] ? "Backfill in progress" : "Backfill complete" %></span>
-                <% if account[:sync_active] %>
-                  <span class="notae-operations-pill is-ok">Sync active</span>
-                <% elsif account[:sync_stalled] %>
-                  <span class="notae-operations-pill is-error">Queue stalled</span>
-                <% elsif account[:fresh_sync_due] %>
-                  <span class="notae-operations-pill is-warn">Fresh mail overdue</span>
-                <% end %>
-              </div>
-            </article>
-          <% end %>
-        </div>
-      <% else %>
-        <p class="notae-page-subtle">No Epistularium accounts are configured for this workspace yet.</p>
-      <% end %>
     </section>
 
     <section class="notae-settings-section">

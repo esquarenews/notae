@@ -54,11 +54,6 @@ RSpec.describe Notae::RequestPerformanceStore do
       sql_ms: 180.0,
       sql_queries: 40
     )
-    expect(described_class.budget_for(action: "EpistulariumController#show")).to include(
-      total_ms: 850.0,
-      sql_ms: 240.0,
-      sql_queries: 55
-    )
     expect(described_class.budget_for(action: "NotificationsController#index")).to include(
       total_ms: 500.0,
       sql_ms: 140.0,

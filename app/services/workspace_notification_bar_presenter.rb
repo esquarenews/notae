@@ -100,39 +100,6 @@ class WorkspaceNotificationBarPresenter
     "event:#{event.id}:#{event.starts_at_utc.to_i}"
   end
 
-  def recent_email_count
-    return 0 unless show_alerts?
-    return 0 unless data_source_available?("epistularium_messages")
-
-    @recent_email_count ||= recent_email_scope.count
-  end
-
-  def recent_email_present?
-    recent_email_count.positive?
-  end
-
-  def recent_email_headline
-    return "" unless recent_email_present?
-
-    recent_email_count == 1 ? "1 email just came in" : "#{recent_email_count} emails came in recently"
-  end
-
-  def recent_email_detail
-    latest_message = recent_email_latest_message
-    return "" if latest_message.blank?
-
-    sender = [ latest_message.from_name.to_s.strip.presence, latest_message.from_email.to_s.strip.presence ].compact.join(" ").strip.presence
-    subject = latest_message.display_subject
-    [ sender.presence, subject.presence ].compact.join(" · ")
-  end
-
-  def recent_email_alert_key
-    latest_message = recent_email_latest_message
-    return "" if latest_message.blank?
-
-    "mail:#{latest_message.id}:#{recent_email_count}"
-  end
-
   def recent_ai_update_count
     return 0 unless show_alerts?
     return 0 unless data_source_available?("notifications")
@@ -242,7 +209,7 @@ class WorkspaceNotificationBarPresenter
   end
 
   def has_alerts?
-    event_alert.present? || recent_ai_update_present? || recent_email_present? || recent_update_present?
+    event_alert.present? || recent_ai_update_present? || recent_update_present?
   end
 
   private
@@ -287,15 +254,6 @@ class WorkspaceNotificationBarPresenter
       (text.include?("relation") && text.include?("does not exist"))
   end
 
-  def recent_email_latest_message
-    return nil unless recent_email_present?
-
-    @recent_email_latest_message ||= recent_email_scope
-      .select(:id, :subject, :from_name, :from_email, :received_at, :created_at)
-      .order(Arel.sql("COALESCE(epistularium_messages.received_at, epistularium_messages.created_at) DESC"))
-      .first
-  end
-
   def recent_update_latest_notification
     return nil unless recent_update_present?
 
@@ -320,14 +278,6 @@ class WorkspaceNotificationBarPresenter
 
     @recent_ai_update_payloads ||= {}
     @recent_ai_update_payloads[latest_notification.id] ||= WebPush::NotificationPayloadBuilder.new(notification: latest_notification).call
-  end
-
-  def recent_email_scope
-    workspace
-      .epistularium_messages
-      .for_mailbox("inbox")
-      .where(unread: true)
-      .where("COALESCE(epistularium_messages.received_at, epistularium_messages.created_at) >= ?", recent_cutoff)
   end
 
   def recent_update_scope

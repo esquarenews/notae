@@ -6,7 +6,10 @@ module Kalendarium
   class GoogleOauthService
     AUTHORIZATION_ENDPOINT = URI("https://accounts.google.com/o/oauth2/v2/auth")
     TOKEN_ENDPOINT = URI("https://oauth2.googleapis.com/token")
-    CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar".freeze
+    CALENDAR_SCOPES = [
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/calendar.calendarlist.readonly"
+    ].freeze
     REQUEST_OPEN_TIMEOUT_SECONDS = 10
     REQUEST_TIMEOUT_SECONDS = 30
 
@@ -29,7 +32,7 @@ module Kalendarium
         client_id: client_id,
         redirect_uri: redirect_uri.to_s,
         response_type: "code",
-        scope: CALENDAR_SCOPE,
+        scope: CALENDAR_SCOPES.join(" "),
         access_type: "offline",
         prompt: "consent",
         include_granted_scopes: "true",

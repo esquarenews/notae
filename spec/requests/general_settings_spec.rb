@@ -240,31 +240,6 @@ RSpec.describe "General settings", type: :request do
       metadata_json: { "meeting_join_url" => "https://example.com/join/movie-night" }
     )
 
-    account = EpistulariumAccount.create!(
-      workspace:,
-      owner: workspace,
-      created_by: user,
-      provider: "imap",
-      label: "Shared inbox",
-      provider_username: "backup@example.com",
-      provider_password: "password123",
-      settings_json: { "imap_host" => "imap.example.com", "imap_port" => 993 }
-    )
-    EpistulariumMessage.create!(
-      workspace:,
-      epistularium_account: account,
-      provider_message_id: "message-1",
-      mailbox: "inbox",
-      subject: "Quarterly update",
-      from_name: "Sender",
-      from_email: "sender@example.com",
-      to_recipients_json: [ { "email" => "backup@example.com", "name" => "Backup" } ],
-      received_at: Time.utc(2026, 4, 19, 23, 15),
-      unread: true,
-      snippet: "Important mail",
-      body_text: "Important mail body"
-    )
-
     expect do
       post workspace_backup_exports_path(workspace_slug: workspace.slug),
            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
@@ -305,8 +280,7 @@ RSpec.describe "General settings", type: :request do
     expect(entries.fetch(database_entry)).to include("Active row")
     expect(entries.fetch(database_entry)).to include("Archived row")
     expect(entries.fetch("kalendarium/events.csv")).to include("Movie night")
-    expect(entries.fetch("epistularium/messages.csv")).to include("Quarterly update")
-    expect(entries.fetch("epistularium/messages.csv")).to include("Important mail body")
+    expect(entries.keys).not_to include("epistularium/messages.csv")
   end
 
   it "prevents non-admin members from creating or downloading workspace exports" do

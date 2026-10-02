@@ -821,7 +821,6 @@ module Search
       row_ids = accessible_rows_scope.select(:id)
       event_ids = accessible_kalendarium_events_scope.select(:id)
       meeting_ids = accessible_meeting_sessions_scope.select(:id)
-      message_ids = accessible_epistularium_messages_scope.select(:id)
       base = SearchChunk.where(workspace_id: workspace_ids)
 
       SearchChunk.accessible_scope_from(
@@ -830,7 +829,7 @@ module Search
         row_ids: row_ids,
         event_ids: event_ids,
         meeting_ids: meeting_ids,
-        message_ids: message_ids
+        message_ids: nil
       )
     end
 
@@ -848,12 +847,6 @@ module Search
 
     def accessible_meeting_sessions_scope
       Pundit.policy_scope!(user, MeetingSession)
-    end
-
-    def accessible_epistularium_messages_scope
-      return EpistulariumMessage.none unless ActiveRecord::Base.connection.data_source_exists?("epistularium_messages")
-
-      Pundit.policy_scope!(user, EpistulariumMessage)
     end
 
     def context_entry_candidate_for_chunk(chunk)
@@ -898,18 +891,6 @@ module Search
           url: Rails.application.routes.url_helpers.workspace_meetings_path(
             workspace_slug: chunk.workspace.slug,
             anchor: "meeting_session_#{session.id}"
-          )
-        }
-      elsif SearchChunk.reference_column_available?(:epistularium_message_id) && chunk.epistularium_message.present?
-        message = chunk.epistularium_message
-        {
-          kind: "Email",
-          title: message.display_subject,
-          excerpt: chunk.text,
-          workspace_name: chunk.workspace.name,
-          url: Rails.application.routes.url_helpers.workspace_epistularium_message_path(
-            workspace_slug: chunk.workspace.slug,
-            id: message.id
           )
         }
       end
@@ -966,7 +947,6 @@ module Search
       entries.concat(live_db_row_context_entries(resolved_scope: resolved_scope))
       entries.concat(live_kalendarium_event_context_entries(resolved_scope: resolved_scope))
       entries.concat(live_meeting_session_context_entries(resolved_scope: resolved_scope))
-      entries.concat(live_epistularium_message_context_entries(resolved_scope: resolved_scope))
       entries
     end
 
@@ -1096,33 +1076,6 @@ module Search
       return scope if resolved_scope == SCOPE_ACCOUNT
 
       scope.where(workspace_id: workspace.id)
-    end
-
-    def scoped_epistularium_messages_for(resolved_scope)
-      scope = accessible_epistularium_messages_scope
-      return scope if resolved_scope == SCOPE_ACCOUNT
-
-      scope.where(workspace_id: workspace.id)
-    end
-
-    def live_epistularium_message_context_entries(resolved_scope:)
-      scoped_epistularium_messages_for(resolved_scope)
-        .search_full_text(query_terms.join(" "))
-        .distinct(false)
-        .limit(4)
-        .preload(:workspace, :epistularium_account)
-        .map do |message|
-          {
-            kind: "Email",
-            title: message.display_subject,
-            excerpt: relevant_excerpt(message.search_source_text),
-            workspace_name: message.workspace.name,
-            url: Rails.application.routes.url_helpers.workspace_epistularium_message_path(
-              workspace_slug: message.workspace.slug,
-              id: message.id
-            )
-          }
-        end
     end
 
     def relevant_excerpt(text, max_words: 80)

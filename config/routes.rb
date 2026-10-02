@@ -8,6 +8,8 @@ Rails.application.routes.draw do
     sessions: "users/sessions"
   }
   root "home#index"
+  get "privacy", to: "legal#privacy", as: :privacy_policy
+  get "terms", to: "legal#terms", as: :terms_of_use
   get "/app", to: "pwa#launch", as: :pwa_launch
   get "/app/notifications/:id", to: "pwa#notification_launch", as: :pwa_notification_launch
   get "/offline", to: "pwa#offline", as: :pwa_offline
@@ -56,7 +58,6 @@ Rails.application.routes.draw do
     get "trash", to: "trash#show", as: :workspace_trash
     get "_archive", to: "archive_game#show", as: :workspace_archive_game
     get "_nota_maze", to: "nota_maze_game#show", as: :workspace_nota_maze_game
-    get "epistularium", to: "epistularium#show", as: :workspace_epistularium
     get "settings/general", to: "general_settings#show", as: :workspace_general_settings
     patch "settings/general", to: "general_settings#update"
     delete "settings/general", to: "general_settings#destroy"
@@ -95,7 +96,6 @@ Rails.application.routes.draw do
     post "settings/subscription/cancel", to: "subscription_settings#cancel", as: :workspace_subscription_cancel
     get "settings/kalendarium", to: "kalendarium_settings#show", as: :workspace_kalendarium_settings
     patch "settings/kalendarium", to: "kalendarium_settings#update"
-    get "settings/epistularium", to: "epistularium_settings#show", as: :workspace_epistularium_settings
     get "notifications", to: "notifications#index", as: :workspace_notifications
     get "notifications/:id", to: "notifications#show", as: :workspace_notification
     get "notification-bar", to: "workspace_notification_bars#show", as: :workspace_notification_bar
@@ -133,13 +133,6 @@ Rails.application.routes.draw do
       end
     end
     resources :kalendarium_calendars, path: "kalendarium/calendars", only: %i[update]
-    post "epistularium/accounts", to: "epistularium_accounts#create", as: :epistularium_accounts
-    patch "epistularium/accounts/:id", to: "epistularium_accounts#update", as: :epistularium_account
-    delete "epistularium/accounts/:id", to: "epistularium_accounts#destroy"
-    post "epistularium/accounts/:id/sync", to: "epistularium_accounts#sync", as: :sync_epistularium_account
-    get "epistularium/accounts/google/authorize", to: "epistularium_accounts#google_authorize", as: :google_authorize_epistularium_accounts
-    get "epistularium/messages/:id", to: "epistularium_messages#show", as: :workspace_epistularium_message
-    post "epistularium/messages/:id/suggest", to: "epistularium_messages#suggest", as: :suggest_workspace_epistularium_message
     resources :kalendarium_write_proposals, path: "kalendarium/write_proposals", only: %i[create] do
       member do
         post :confirm
@@ -342,7 +335,6 @@ Rails.application.routes.draw do
   get "s/:token", to: "public/pages#show", as: :public_share
   get "g/:token", to: "public/databases#show", as: :public_database_share
   get "kalendarium/google/callback", to: "kalendarium_connections#google_callback", as: :kalendarium_google_callback
-  get "epistularium/google/callback", to: "epistularium_accounts#google_callback", as: :epistularium_google_callback
 
   namespace :internal do
     resources :meeting_bot_runs, only: [] do

@@ -15,14 +15,14 @@ RSpec.describe Notae::ScheduledTaskStore do
     reference_time = Time.zone.parse("2026-04-19 09:00:00")
 
     travel_to(reference_time) do
-      result = described_class.track!("epistularium:sync_due") { :ok }
+      result = described_class.track!("kalendarium:sync_due") { :ok }
 
       expect(result).to eq(:ok)
 
-      snapshot = described_class.fetch(task_name: "epistularium:sync_due", reference_time:)
+      snapshot = described_class.fetch(task_name: "kalendarium:sync_due", reference_time:)
 
       expect(snapshot).to include(
-        label: "Epistularium sync timer",
+        label: "Kalendarium sync dispatcher",
         cadence_label: "Every 10 minutes",
         status: :healthy,
         consecutive_failures: 0
@@ -39,12 +39,12 @@ RSpec.describe Notae::ScheduledTaskStore do
     reference_time = started_at + 20.minutes
 
     described_class.record_succeeded!(
-      task_name: "epistularium:sync_due",
+      task_name: "kalendarium:sync_due",
       started_at:,
       finished_at:
     )
 
-    snapshot = described_class.fetch(task_name: "epistularium:sync_due", reference_time:)
+    snapshot = described_class.fetch(task_name: "kalendarium:sync_due", reference_time:)
 
     expect(snapshot[:status]).to eq(:drifted)
     expect(snapshot[:last_succeeded_at]).to eq(finished_at)

@@ -2,23 +2,6 @@ class EpistulariumMessage < ApplicationRecord
   include PgSearch::Model
 
   MAILBOXES = %w[inbox sent].freeze
-  SEARCH_REINDEX_CHANGE_KEYS = %w[
-    subject
-    from_name
-    from_email
-    to_recipients_json
-    cc_recipients_json
-    bcc_recipients_json
-    reply_to_recipients_json
-    sent_at
-    received_at
-    unread
-    body_text
-    body_html
-    snippet
-    thread_key
-  ].freeze
-
   belongs_to :workspace
   belongs_to :epistularium_account, touch: true
 
@@ -49,8 +32,6 @@ class EpistulariumMessage < ApplicationRecord
   end
 
   before_validation :normalize_message_fields
-  after_commit :enqueue_search_chunk_reindex, on: %i[create update], if: :search_chunk_reindex_required?
-  after_commit :remove_search_chunks, on: :destroy
 
   def display_subject
     subject.to_s.strip.presence || "(no subject)"
@@ -122,22 +103,4 @@ class EpistulariumMessage < ApplicationRecord
     end.join(", ")
   end
 
-  def search_chunk_reindex_required?
-    return true if previous_changes.key?("id")
-
-    (previous_changes.keys & SEARCH_REINDEX_CHANGE_KEYS).any?
-  end
-
-  def enqueue_search_chunk_reindex
-    Search::IndexEpistulariumMessageJob.perform_later(id)
-  rescue StandardError => error
-    raise unless Queueing::JobEnqueueSafety.queue_unavailable?(error)
-
-    Rails.logger.warn("Search index queue unavailable for epistularium_message=#{id}: #{error.class}: #{error.message}")
-    Search::ChunkIndexingService.index_epistularium_message!(epistularium_message: self)
-  end
-
-  def remove_search_chunks
-    Search::ChunkIndexingService.delete_source!(source_type: SearchChunk::SOURCE_EPISTULARIUM_MESSAGE, source_id: id)
-  end
 end

@@ -10,8 +10,6 @@ class ApplicationController < ActionController::Base
   AI_AGENT_UPDATE_LIMIT = 8
   AI_AGENT_TRIGGER_SOURCES = %w[ai_assistant automation_agent].freeze
   AI_AGENT_PROPOSED_BY = %w[ai_assistant automation_agent].freeze
-  AI_SUGGESTION_KINDS = [ KnowledgeSuggestion::KIND_PROACTIVE ].freeze
-  PROACTIVE_KNOWLEDGE_SUGGESTION_CHECK_INTERVAL = 10.minutes
   LAST_PAGE_VISIT_SESSION_LIMIT = 6
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
@@ -204,40 +202,6 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  def set_active_knowledge_suggestion
-    return unless user_signed_in?
-    return if @ai_rail_workspace.blank?
-    return unless data_source_available?("knowledge_suggestions")
-
-    @active_knowledge_suggestion = with_optional_schema_fallback(default: nil, feature: "knowledge suggestions") do
-      current_active_suggestion_for(@ai_rail_workspace)
-    end
-
-    if @active_knowledge_suggestion.present?
-      @active_knowledge_task_databases = knowledge_task_databases_for(@ai_rail_workspace)
-      clear_knowledge_suggestion_generation_pending!(@ai_rail_workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
-      @pending_proactive_knowledge_suggestion = false
-      return
-    end
-
-    @pending_proactive_knowledge_suggestion = knowledge_suggestion_generation_pending?(
-      @ai_rail_workspace,
-      kind: KnowledgeSuggestion::KIND_PROACTIVE
-    )
-
-    return unless should_generate_proactive_knowledge_suggestion?
-    return if @pending_proactive_knowledge_suggestion
-    return if proactive_knowledge_suggestion_recently_checked?(@ai_rail_workspace)
-    return unless knowledge_suggestion_generation_context_available?(
-      @ai_rail_workspace,
-      kind: KnowledgeSuggestion::KIND_PROACTIVE
-    )
-
-    mark_proactive_knowledge_suggestion_checked!(@ai_rail_workspace)
-    @pending_proactive_knowledge_suggestion =
-      queue_knowledge_suggestion_generation!(@ai_rail_workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
-  end
-
   def recent_ai_conversations_for(user:, window: 1.week, limit: nil)
     return AiConversation.none unless data_source_available?("ai_conversations")
 
@@ -355,20 +319,6 @@ class ApplicationController < ActionController::Base
       )
     end
 
-    if data_source_available?("knowledge_suggestions")
-      suggestion_scope = policy_scope(KnowledgeSuggestion)
-                         .for_workspace(workspace)
-                         .active
-                         .where(kind: AI_SUGGESTION_KINDS)
-      suggestion_scope = suggestion_scope.where("updated_at > ?", since) if since.present?
-      updates.concat(
-        suggestion_scope
-          .recent_first
-          .limit(limit)
-          .map { |suggestion| ai_agent_update_for_knowledge_suggestion(suggestion) }
-      )
-    end
-
     updates.sort_by { |entry| -entry.fetch(:updated_at).to_i }.first(limit)
   end
 
@@ -477,36 +427,6 @@ class ApplicationController < ActionController::Base
     }
   end
 
-  def ai_agent_update_for_knowledge_suggestion(suggestion)
-    task_titles = Array(suggestion.task_suggestions_json).filter_map { |item| item["title"].to_s.strip.presence }.first(3)
-    preview_lines = [
-      "Suggestion: #{suggestion.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY ? 'Daily workspace brief' : 'Suggested next step'}",
-      ("Summary: #{suggestion.summary}" if suggestion.summary.present?),
-      *task_titles.map { |title| "Task: #{title}" }
-    ].compact
-    updated_at = suggestion.updated_at || suggestion.generated_at || suggestion.created_at || Time.current
-
-    {
-      id: "knowledge_suggestion:#{suggestion.id}",
-      title: suggestion.title,
-      preview: preview_lines.join("\n"),
-      url: KnowledgeSuggestions::DestinationResolver.new(suggestion: suggestion).call,
-      action_label: "Open full window",
-      kind_label: "Suggestion",
-      updated_at: updated_at,
-      updated_at_iso8601: updated_at.iso8601
-    }
-  end
-
-  def current_active_suggestion_for(workspace)
-    policy_scope(KnowledgeSuggestion)
-      .for_workspace(workspace)
-      .active
-      .proactive
-      .recent_first
-      .first
-  end
-
   def knowledge_task_databases_for(workspace)
     policy_scope(Database)
       .for_workspace(workspace)
@@ -515,48 +435,6 @@ class ApplicationController < ActionController::Base
       .order(updated_at: :desc)
       .limit(24)
       .to_a
-  end
-
-  def should_generate_proactive_knowledge_suggestion?
-    return false unless Openai::CredentialResolver.configured?(user: current_user)
-
-    current_hour = Time.zone.now.hour
-    return false unless current_hour >= 9 && current_hour < 18
-    true
-  end
-
-  def proactive_knowledge_suggestion_recently_checked?(workspace)
-    checked_at = proactive_knowledge_suggestion_checked_at(workspace)
-    checked_at.present? && checked_at > PROACTIVE_KNOWLEDGE_SUGGESTION_CHECK_INTERVAL.ago
-  end
-
-  def proactive_knowledge_suggestion_checked_at(workspace)
-    return nil if workspace.blank? || current_user.blank?
-
-    value = Rails.cache.read(proactive_knowledge_suggestion_check_cache_key(workspace)).to_s.strip
-    value = proactive_knowledge_suggestion_check_session_value_for(workspace) if value.blank?
-    return nil if value.blank?
-
-    Time.iso8601(value)
-  rescue ArgumentError
-    Rails.cache.delete(proactive_knowledge_suggestion_check_cache_key(workspace))
-    clear_proactive_knowledge_suggestion_checked_in_session!(workspace)
-    nil
-  end
-
-  def mark_proactive_knowledge_suggestion_checked!(workspace, at: Time.current)
-    return if workspace.blank? || current_user.blank?
-
-    Rails.cache.write(
-      proactive_knowledge_suggestion_check_cache_key(workspace),
-      at.iso8601,
-      expires_in: PROACTIVE_KNOWLEDGE_SUGGESTION_CHECK_INTERVAL
-    )
-    record_proactive_knowledge_suggestion_checked_in_session!(workspace, at.iso8601)
-  end
-
-  def proactive_knowledge_suggestion_check_cache_key(workspace)
-    "knowledge_suggestion_proactive_check:#{current_user.id}:#{workspace.id}"
   end
 
   def knowledge_suggestion_generation_pending?(workspace, kind:)
@@ -646,29 +524,6 @@ class ApplicationController < ActionController::Base
     store.delete(workspace_key)
     store[workspace_key] = page.id.to_s
     session["notae_last_page_visits"] = store.to_a.last(LAST_PAGE_VISIT_SESSION_LIMIT).to_h
-  end
-
-  def proactive_knowledge_suggestion_check_session_value_for(workspace)
-    record = session[:notae_recent_proactive_knowledge_check]
-    return "" unless record.is_a?(Hash)
-    return "" unless record["workspace_id"].to_s == workspace.id.to_s
-
-    record["checked_at"].to_s
-  end
-
-  def record_proactive_knowledge_suggestion_checked_in_session!(workspace, value)
-    session[:notae_recent_proactive_knowledge_check] = {
-      "workspace_id" => workspace.id.to_s,
-      "checked_at" => value.to_s
-    }
-  end
-
-  def clear_proactive_knowledge_suggestion_checked_in_session!(workspace)
-    record = session[:notae_recent_proactive_knowledge_check]
-    return unless record.is_a?(Hash)
-    return unless workspace.blank? || record["workspace_id"].to_s == workspace.id.to_s
-
-    session.delete(:notae_recent_proactive_knowledge_check)
   end
 
   def knowledge_suggestion_generation_pending_in_session?(workspace, kind:)

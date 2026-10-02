@@ -92,7 +92,7 @@
       <div class="notae-home-card-head">
         <div class="notae-workspace-home-section-copy">
           <h2>Important updates</h2>
-          <p class="notae-page-subtle">Review AI suggestions, draft actions, and jump back into planning from here.</p>
+          <p class="notae-page-subtle">Review draft actions and jump back into planning from here.</p>
         </div>
         <div class="notae-utility-page-actions">
           <%= link_to "Create Nota", "#{workspace_path(@workspace.slug)}#workspace-home-create-nota", class: "notae-chip-button" %>
@@ -102,29 +102,6 @@
         </div>
       </div>
       <div class="notae-workspace-home-update-stack">
-        <% if @active_proactive_knowledge_suggestion.present? %>
-          <div class="notae-workspace-home-update-block" id="knowledge-suggestion-<%= @active_proactive_knowledge_suggestion.id %>">
-            <div class="notae-workspace-home-update-head">
-              <h3>AI suggestion</h3>
-              <span class="notae-page-subtle">Actionable now</span>
-            </div>
-            <%= render "shared/knowledge_suggestion_card",
-                       suggestion: @active_proactive_knowledge_suggestion,
-                       workspace: @workspace,
-                       task_databases: @knowledge_task_databases %>
-          </div>
-        <% elsif @active_proactive_knowledge_suggestion_pending %>
-          <div class="notae-workspace-home-update-block">
-            <div class="notae-workspace-home-update-head">
-              <h3>AI suggestion</h3>
-              <span class="notae-page-subtle">Refreshing</span>
-            </div>
-            <%= render "shared/knowledge_suggestion_pending_card",
-                       kind: KnowledgeSuggestion::KIND_PROACTIVE,
-                       compact: true %>
-          </div>
-        <% end %>
-
         <div class="notae-workspace-home-update-block">
           <div class="notae-workspace-home-update-head">
             <h3>Agent draft actions</h3>

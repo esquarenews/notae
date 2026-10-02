@@ -29,7 +29,7 @@ module TenantLimits
         storage_mb: storage_megabytes,
         ai_requests_this_month: workspace.ai_usage_logs.where(created_at: Time.current.beginning_of_month..Time.current).count,
         ai_cost_usd_this_month: workspace.ai_usage_logs.where(created_at: Time.current.beginning_of_month..Time.current).sum(:estimated_cost_usd).to_f.round(4),
-        integrations: workspace.kalendarium_connections.count + workspace.epistularium_accounts.count,
+        integrations: workspace.kalendarium_connections.count,
         exports_this_month: workspace.workspace_exports.where(created_at: Time.current.beginning_of_month..Time.current).count +
           workspace.page_exports.where(created_at: Time.current.beginning_of_month..Time.current).count
       }

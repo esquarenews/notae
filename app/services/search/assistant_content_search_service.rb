@@ -237,7 +237,6 @@ module Search
       row_ids = Pundit.policy_scope!(user, DbRow).active.where(workspace_id: scoped_workspace_ids)
       event_ids = Pundit.policy_scope!(user, KalendariumEvent).where(workspace_id: scoped_workspace_ids)
       meeting_ids = Pundit.policy_scope!(user, MeetingSession).where(workspace_id: scoped_workspace_ids)
-      message_ids = accessible_epistularium_messages.where(workspace_id: scoped_workspace_ids)
 
       if document_scope?
         page_ids = page_ids.where(id: document_page.id)
@@ -248,7 +247,6 @@ module Search
         end
         event_ids = event_ids.none
         meeting_ids = meeting_ids.none
-        message_ids = message_ids.none
       end
 
       base = SearchChunk.where(workspace_id: scoped_workspace_ids)
@@ -258,14 +256,8 @@ module Search
         row_ids: row_ids.select(:id),
         event_ids: event_ids.select(:id),
         meeting_ids: meeting_ids.select(:id),
-        message_ids: message_ids.select(:id)
+        message_ids: nil
       )
-    end
-
-    def accessible_epistularium_messages
-      return EpistulariumMessage.none unless ActiveRecord::Base.connection.data_source_exists?("epistularium_messages")
-
-      Pundit.policy_scope!(user, EpistulariumMessage)
     end
 
     def schedule_missing_chunk_embeddings!
@@ -381,14 +373,6 @@ module Search
             workspace_slug: target_workspace.slug,
             anchor: "meeting_session_#{session.id}"
           ),
-          score: 44
-        }
-      elsif SearchChunk.reference_column_available?(:epistularium_message_id) && chunk.epistularium_message.present?
-        message = chunk.epistularium_message
-        {
-          kind: "Email",
-          title: message.display_subject,
-          url: routes.workspace_epistularium_message_path(workspace_slug: target_workspace.slug, id: message.id),
           score: 44
         }
       end
@@ -531,7 +515,6 @@ module Search
       when "Row", "Grid tab row" then "db_row"
       when "Kalendarium event" then "kalendarium_event"
       when "Meeting session" then "meeting_session"
-      when "Email" then "epistularium_message"
       else kind.to_s.parameterize(separator: "_")
       end
     end

@@ -126,7 +126,7 @@ function isTopLevelDocumentRequest(request, url) {
   if (path === "/app" || path === OFFLINE_FALLBACK_URL) return true
   if (!path.startsWith("/w/")) return false
 
-  return /^\/w\/[^/]+(?:\/(?:search|library|kalendarium|epistularium|meetings|settings(?:\/[^/]+)?))?$/.test(path)
+  return /^\/w\/[^/]+(?:\/(?:search|library|kalendarium|meetings|settings(?:\/[^/]+)?))?$/.test(path)
 }
 
 function isSameOriginAsset(url) {

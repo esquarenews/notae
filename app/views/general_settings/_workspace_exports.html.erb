@@ -2,7 +2,7 @@
   <div class="notae-pref-row">
     <div class="notae-pref-copy">
       <p class="notae-pref-label">Backup my data</p>
-      <p class="notae-pref-description">Download a workspace backup as a zip containing Markdown exports for pages, CSV exports for grids, Kalendarium events, and visible Epistularium mail.</p>
+      <p class="notae-pref-description">Download a workspace backup as a zip containing Markdown exports for pages and CSV exports for grids and Kalendarium events.</p>
     </div>
     <% if can_export %>
       <%= form_with url: workspace_backup_exports_path(workspace_slug: workspace.slug),

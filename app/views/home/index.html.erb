@@ -52,7 +52,7 @@
         <p class="notae-public-kicker">Workspace operating system</p>
         <h1>The command center for knowledge &amp; work</h1>
         <p>
-          Notae brings documents, databases, meetings, calendar planning, mail, and accountable AI into one workspace.
+          Notae brings documents, databases, meetings, calendar planning, and accountable AI into one workspace.
           Capture what happened, decide what matters, and move the next action forward without spreading work across apps.
         </p>
         <div class="notae-public-actions">
@@ -63,7 +63,6 @@
           <span>Notes</span>
           <span>Grids</span>
           <span>Calendar</span>
-          <span>Mail</span>
           <span>Meetings</span>
           <span>AI agents</span>
         </div>
@@ -88,7 +87,6 @@
           <span>Notarum</span>
           <span>Grids</span>
           <span>Kalendārium</span>
-          <span>Epistularium</span>
           <span>Meetings</span>
         </aside>
         <div class="notae-public-product-main">
@@ -127,7 +125,7 @@
       <article>
         <span>01</span>
         <h2>Built for work that changes shape</h2>
-        <p>Notes become tables. Meetings become action lists. Mail becomes context. Notae keeps the thread intact as work moves.</p>
+        <p>Notes become tables. Meetings become action lists. Notae keeps the thread intact as work moves.</p>
       </article>
       <article>
         <span>02</span>
@@ -137,7 +135,7 @@
       <article>
         <span>03</span>
         <h2>Designed for operational speed</h2>
-        <p>One place for the team’s documents, calendars, inboxes, meetings, decisions, and handoffs.</p>
+        <p>One place for the team’s documents, calendars, meetings, decisions, and handoffs.</p>
       </article>
     </section>
 
@@ -179,8 +177,8 @@
         <article>
           <div class="notae-public-capability-copy">
             <span>3.0 Coordinate</span>
-            <h3>Calendar, mail, and meetings share the same context.</h3>
-            <p>Kalendārium, Epistularium, and Meetings bring scheduling, messages, transcripts, and summaries into the workspace.</p>
+            <h3>Calendar and meetings share the same context.</h3>
+            <p>Kalendārium and Meetings bring scheduling, transcripts, and summaries into the workspace.</p>
           </div>
           <div class="notae-public-timeline">
             <span>09:30 Customer call</span>
@@ -194,7 +192,7 @@
           <div class="notae-public-capability-copy">
             <span>4.0 Automate</span>
             <h3>Let AI handle the repeatable work, with limits.</h3>
-            <p>Use AI chat, proactive summaries, meeting intelligence, search, and agentic actions while keeping spend and requests visible.</p>
+            <p>Use AI chat, meeting intelligence, search, and agentic actions while keeping spend and requests visible.</p>
           </div>
           <div class="notae-public-ai-card">
             <strong>AI actions</strong>
@@ -260,5 +258,8 @@
         <%= link_to "Sign in", new_user_session_path, class: "notae-public-button notae-public-button-secondary" %>
       </div>
     </section>
+    <footer class="notae-public-section">
+      <%= render "shared/legal_links" %>
+    </footer>
   </section>
 <% end %>

@@ -118,10 +118,6 @@ module Search
       row_ids = Pundit.policy_scope!(user, DbRow).for_workspace(workspace).active.select(:id)
       event_ids = Pundit.policy_scope!(user, KalendariumEvent).for_workspace(workspace).select(:id)
       meeting_ids = Pundit.policy_scope!(user, MeetingSession).for_workspace(workspace).select(:id)
-      message_ids =
-        if ActiveRecord::Base.connection.data_source_exists?("epistularium_messages")
-          Pundit.policy_scope!(user, EpistulariumMessage).for_workspace(workspace).select(:id)
-        end
       base = SearchChunk.for_workspace(workspace)
 
       SearchChunk.accessible_scope_from(
@@ -130,7 +126,7 @@ module Search
         row_ids: row_ids,
         event_ids: event_ids,
         meeting_ids: meeting_ids,
-        message_ids: message_ids
+        message_ids: nil
       )
     end
 

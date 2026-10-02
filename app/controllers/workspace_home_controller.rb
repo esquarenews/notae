@@ -42,7 +42,6 @@ class WorkspaceHomeController < ApplicationController
     @target_knowledge_suggestion = resolve_target_knowledge_suggestion
     @display_daily_knowledge_suggestion = @target_knowledge_suggestion if @target_knowledge_suggestion&.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY
     @show_latest_daily_knowledge_suggestion = false if @target_knowledge_suggestion&.kind == KnowledgeSuggestion::KIND_DAILY_SUMMARY
-    @active_proactive_knowledge_suggestion = @target_knowledge_suggestion&.kind == KnowledgeSuggestion::KIND_PROACTIVE ? @target_knowledge_suggestion : resolve_active_proactive_knowledge_suggestion
     @knowledge_task_databases = knowledge_task_databases_for_home
     @pending_agent_actions = resolve_pending_agent_actions
     @can_invite = policy(Invitation.new(workspace: @workspace)).create?
@@ -146,35 +145,6 @@ class WorkspaceHomeController < ApplicationController
     scope.where.not(id: @daily_knowledge_suggestion.id).first
   end
 
-  def resolve_active_proactive_knowledge_suggestion
-    return unless data_source_available?("knowledge_suggestions")
-
-    suggestion = current_active_suggestion_for(@workspace)
-    if suggestion.present?
-      clear_knowledge_suggestion_generation_pending!(@workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
-      @active_proactive_knowledge_suggestion_pending = false
-      return suggestion
-    end
-
-    @active_proactive_knowledge_suggestion_pending = knowledge_suggestion_generation_pending?(
-      @workspace,
-      kind: KnowledgeSuggestion::KIND_PROACTIVE
-    )
-    return nil unless Openai::CredentialResolver.configured?(user: current_user)
-    return nil unless should_generate_proactive_knowledge_suggestion?
-    return nil if @active_proactive_knowledge_suggestion_pending
-    return nil if proactive_knowledge_suggestion_recently_checked?(@workspace)
-    return nil unless knowledge_suggestion_generation_context_available?(
-      @workspace,
-      kind: KnowledgeSuggestion::KIND_PROACTIVE
-    )
-
-    mark_proactive_knowledge_suggestion_checked!(@workspace)
-    @active_proactive_knowledge_suggestion_pending =
-      queue_knowledge_suggestion_generation!(@workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
-    nil
-  end
-
   def resolve_target_knowledge_suggestion
     suggestion_id = params[:knowledge_suggestion_id].to_s.strip
     return nil if suggestion_id.blank?
@@ -211,7 +181,7 @@ class WorkspaceHomeController < ApplicationController
   end
 
   def knowledge_task_databases_for_home
-    return [] if @display_daily_knowledge_suggestion.blank? && @active_proactive_knowledge_suggestion.blank?
+    return [] if @display_daily_knowledge_suggestion.blank?
 
     knowledge_task_databases_for(@workspace)
   end

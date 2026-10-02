@@ -48,11 +48,6 @@ module Notae
         sql_ms: 180.0,
         sql_queries: 40
       },
-      "EpistulariumController#show" => {
-        total_ms: 850.0,
-        sql_ms: 240.0,
-        sql_queries: 55
-      },
       "NotificationsController#index" => {
         total_ms: 500.0,
         sql_ms: 140.0,

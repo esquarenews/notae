@@ -160,7 +160,7 @@ RSpec.describe "AI Assistant agent", type: :request do
     expect(AiConversation.where(prompt: "Old thread prompt")).to exist
   end
 
-  it "keeps proactive suggestions actionable inside the rail" do
+  it "keeps legacy proactive suggestions out of the rail" do
     KnowledgeSuggestion.create!(
       workspace: workspace,
       user: user,
@@ -178,10 +178,8 @@ RSpec.describe "AI Assistant agent", type: :request do
     get workspace_ai_assistant_panel_path(workspace_slug: workspace.slug, current_page_id: page.id)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Proactive suggestion")
-    expect(response.body).to include("Prepare the release note")
-    expect(response.body).to include("Create Nota")
-    expect(response.body).to include("Refresh")
-    expect(response.body).to include("Dismiss")
+    expect(response.body).not_to include("Proactive suggestion")
+    expect(response.body).not_to include("Prepare the release note")
+    expect(response.body).to include("Ask Notae to find, answer, create, or change something")
   end
 end

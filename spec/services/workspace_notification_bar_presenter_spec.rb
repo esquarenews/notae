@@ -33,33 +33,6 @@ RSpec.describe WorkspaceNotificationBarPresenter do
       ends_at_utc: 40.minutes.from_now
     )
 
-    account = EpistulariumAccount.create!(
-      workspace: workspace,
-      owner: user,
-      created_by: user,
-      provider: "gmail",
-      label: "Inbox",
-      access_token: "token"
-    )
-    EpistulariumMessage.create!(
-      workspace: workspace,
-      epistularium_account: account,
-      provider_message_id: "msg-1",
-      mailbox: "inbox",
-      unread: true,
-      subject: "New message",
-      received_at: 2.minutes.ago
-    )
-    EpistulariumMessage.create!(
-      workspace: workspace,
-      epistularium_account: account,
-      provider_message_id: "msg-old",
-      mailbox: "inbox",
-      unread: true,
-      subject: "Old unread message",
-      received_at: 3.days.ago
-    )
-
     Notification.create!(
       workspace: workspace,
       recipient: user,
@@ -86,9 +59,6 @@ RSpec.describe WorkspaceNotificationBarPresenter do
     expect(presenter.calendar_widget_date).to eq("2026-04-11")
     expect(presenter.event_alert&.title).to eq("Stand-up")
     expect(presenter.event_timing_label).to eq("Starts in 10 min")
-    expect(presenter.recent_email_count).to eq(1)
-    expect(presenter.recent_email_headline).to eq("1 email just came in")
-    expect(presenter.recent_email_detail).to include("New message")
     expect(presenter.recent_update_count).to eq(1)
     expect(presenter.recent_update_headline).to eq("1 new workspace update")
     expect(presenter.has_alerts?).to be(true)

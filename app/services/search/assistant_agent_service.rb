@@ -167,7 +167,7 @@ module Search
         - After a write, use the tool result as the source of truth and report what actually changed. Do not claim success for an error or queued retry.
         - If a harmless detail is omitted, choose a sensible default and mention it. Ask a question only when the missing choice would materially change or risk the result.
         - Do not perform destructive deletion or an external write; explain that boundary if requested.
-        - Lead with the outcome. Keep the answer compact, include material caveats, and add one genuinely useful proactive next suggestion when appropriate. Do not turn the suggestion into another approval step.
+        - Lead with the outcome. Keep the answer compact and include material caveats.
       PROMPT
     end
 

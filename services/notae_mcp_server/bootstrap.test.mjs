@@ -11,7 +11,9 @@ test("hasInstalledDependencies returns true when all required packages are prese
     return path.endsWith("@modelcontextprotocol/sdk/package.json") || path.endsWith("zod/package.json");
   };
 
-  assert.equal(hasInstalledDependencies({ serviceDir, exists }), true);
+  const probe = () => ({ status: 0 });
+
+  assert.equal(hasInstalledDependencies({ serviceDir, exists, probe }), true);
   assert.deepEqual(seenPaths, [
     "/tmp/notae-mcp/node_modules/@modelcontextprotocol/sdk/package.json",
     "/tmp/notae-mcp/node_modules/zod/package.json"
@@ -28,13 +30,14 @@ test("ensureSidecarDependencies installs packages when node_modules is missing",
     return false;
   };
   const calls = [];
+  const probe = () => ({ status: installed ? 0 : 1 });
   const run = (command, args, options) => {
     calls.push({ command, args, options });
     installed = true;
     return { status: 0 };
   };
 
-  ensureSidecarDependencies({ serviceDir, exists, run });
+  ensureSidecarDependencies({ serviceDir, exists, run, probe });
 
   assert.deepEqual(calls, [
     {
@@ -55,6 +58,25 @@ test("ensureSidecarDependencies raises when installation does not materialize pa
 
   assert.throws(
     () => ensureSidecarDependencies({ serviceDir, exists, run }),
-    /still missing after installation/
+    /still missing or invalid after installation/
   );
+});
+
+test("ensureSidecarDependencies reinstalls packages when present dependencies cannot load", () => {
+  const serviceDir = "/tmp/notae-mcp";
+  let repaired = false;
+  const exists = () => true;
+  const probe = () => ({ status: repaired ? 0 : 1 });
+  const calls = [];
+  const run = (command, args, options) => {
+    calls.push({ command, args, options });
+    repaired = true;
+    return { status: 0 };
+  };
+
+  ensureSidecarDependencies({ serviceDir, exists, run, probe });
+
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].command, /(?:^|\/)npm$/);
+  assert.deepEqual(calls[0].args, [ "ci", "--omit=dev", "--no-audit", "--no-fund" ]);
 });

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= yield :title %> — Notae</title>
+    <%= stylesheet_link_tag "legal" %>
+    <link rel="icon" href="/icon-v5.png" type="image/png">
+  </head>
+  <body>
+    <header>
+      <%= link_to root_path, class: "brand" do %>
+        <img src="/icon-v5.png" alt="" width="40" height="40"> Notae
+      <% end %>
+      <nav aria-label="Legal navigation">
+        <%= link_to "Privacy Policy", privacy_policy_path %>
+        <%= link_to "Terms of Use", terms_of_use_path %>
+        <%= link_to "Sign in", new_user_session_path %>
+      </nav>
+    </header>
+    <main><%= yield %></main>
+    <footer><%= render "shared/legal_links" %></footer>
+  </body>
+</html>

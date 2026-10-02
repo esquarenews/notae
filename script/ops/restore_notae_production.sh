@@ -73,7 +73,6 @@ start_services() {
 
   echo "Starting application services"
   sudo systemctl start "${SYSTEMD_SERVICES[@]}"
-  sudo systemctl start notae-epistularium-sync.timer || true
 }
 
 pg_admin_command() {
@@ -147,5 +146,4 @@ echo
 echo "Restore complete from ${BACKUP_DIR}"
 echo "Next checks:"
 echo "  sudo systemctl status notae notae-sidekiq notae-meeting-bot-worker --no-pager"
-echo "  sudo systemctl status notae-epistularium-sync.timer --no-pager"
 echo "  redis-cli ping"

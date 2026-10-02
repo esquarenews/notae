@@ -591,22 +591,14 @@ RSpec.describe "AI Assistant", type: :request do
     expect(response.headers["X-Notae-Perf-Action"]).to eq("AiAssistantController#updates")
 
     payload = JSON.parse(response.body)
-    expect(payload.dig("data", "count")).to eq(2)
-    expect(payload.dig("data", "latest_at")).to eq(proactive_suggestion.reload.updated_at.iso8601)
+    expect(payload.dig("data", "count")).to eq(1)
+    expect(payload.dig("data", "latest_at")).to eq(fresh_workflow_run.reload.updated_at.iso8601)
 
     html = payload.dig("data", "html")
     expect(html).to include("Update available from Agent")
     expect(html).to include("Roadmap follow-up task")
     expect(html).to include("Workflow: Create task")
-    expect(html).to include("Escalate approval gap")
-    expect(html).to include("Suggestion: Suggested next step")
-    expect(html).to include(
-      knowledge_suggestion_path(
-        workspace_slug: workspace.slug,
-        id: proactive_suggestion.id,
-        anchor: "knowledge-suggestion-#{proactive_suggestion.id}"
-      )
-    )
+    expect(html).not_to include("Escalate approval gap")
     expect(html).not_to include("conversation_id=#{suggestion_conversation.id}")
     expect(html).to include("Open full window")
     expect(html).to include(workflow_run_path(workspace_slug: workspace.slug, id: fresh_workflow_run.id))

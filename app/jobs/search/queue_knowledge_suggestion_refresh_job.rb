@@ -3,7 +3,6 @@ module Search
     queue_as :default
 
     DAILY_BRIEF_WINDOW_HOUR = 7
-    PROACTIVE_BUSINESS_HOURS = 9...18
 
     def perform(workspace_id)
       workspace = Workspace.find_by(id: workspace_id)
@@ -13,7 +12,6 @@ module Search
         next unless Openai::CredentialResolver.configured?(user: user)
 
         queue_due_generation_for(user: user, workspace: workspace, kind: KnowledgeSuggestion::KIND_DAILY_SUMMARY)
-        queue_due_generation_for(user: user, workspace: workspace, kind: KnowledgeSuggestion::KIND_PROACTIVE)
       end
     end
 
@@ -36,8 +34,6 @@ module Search
       case kind.to_s
       when KnowledgeSuggestion::KIND_DAILY_SUMMARY
         daily_summary_due?(user: user, workspace: workspace)
-      when KnowledgeSuggestion::KIND_PROACTIVE
-        proactive_due?(user: user, workspace: workspace)
       else
         false
       end
@@ -50,16 +46,6 @@ module Search
         .for_workspace(workspace)
         .daily_summaries
         .where(generated_for_date: current_local_date(user))
-        .none?
-    end
-
-    def proactive_due?(user:, workspace:)
-      return false unless PROACTIVE_BUSINESS_HOURS.cover?(user_local_time(user).hour)
-
-      KnowledgeSuggestion.for_user(user)
-        .for_workspace(workspace)
-        .active
-        .proactive
         .none?
     end
 

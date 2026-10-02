@@ -58,36 +58,6 @@
   </article>
 <% end %>
 
-<% if presenter.recent_email_present? %>
-  <article class="notae-shell-status-bar-item"
-           data-notification-bar-target="alert"
-           data-notification-bar-alert-key="<%= presenter.recent_email_alert_key %>">
-    <div class="notae-shell-status-bar-item-top">
-      <span class="notae-shell-status-bar-item-kind">Mail</span>
-      <div class="notae-shell-status-bar-item-controls">
-        <button type="button"
-                class="notae-shell-status-bar-control"
-                aria-label="Snooze this alert for one hour"
-                title="Snooze for one hour"
-                data-action="notification-bar#snoozeAlert">
-          <%= notae_icon_svg(:clock, css_class: "notae-shell-status-bar-control-icon") %>
-        </button>
-        <button type="button"
-                class="notae-shell-status-bar-control"
-                aria-label="Dismiss this alert"
-                title="Dismiss"
-                data-action="notification-bar#dismissAlert">
-          <%= notae_icon_svg(:close_small, css_class: "notae-shell-status-bar-control-icon") %>
-        </button>
-      </div>
-    </div>
-    <%= link_to workspace_epistularium_path(workspace_slug: workspace.slug), class: "notae-shell-status-bar-link" do %>
-      <strong><%= presenter.recent_email_headline %></strong>
-      <span><%= presenter.recent_email_detail %></span>
-    <% end %>
-  </article>
-<% end %>
-
 <% if presenter.recent_update_present? %>
   <article class="notae-shell-status-bar-item"
            data-notification-bar-target="alert"

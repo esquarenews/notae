@@ -288,7 +288,6 @@ class AiAssistantController < ApplicationController
     set_ai_rail_conversations
     set_ai_agent_updates
     set_ai_rail_usage_panel
-    set_active_knowledge_suggestion
   end
 
 

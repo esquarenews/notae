@@ -1,18 +1,4 @@
 module ApplicationHelper
-  EPISTULARIUM_ACCOUNT_ACCENTS = %w[
-    #2563eb
-    #0d9488
-    #c2410c
-    #7c3aed
-    #be185d
-    #0891b2
-    #65a30d
-    #b45309
-    #4f46e5
-    #0f766e
-    #dc2626
-    #1d4ed8
-  ].freeze
   NOTAE_PWA_LIGHT_THEME_COLOR = "#fcfcfb".freeze
   NOTAE_PWA_DARK_THEME_COLOR = "#171a1d".freeze
   NOTAE_PWA_BACKGROUND_COLOR = "#f5f5f4".freeze
@@ -182,7 +168,6 @@ module ApplicationHelper
     return "grid" if controller_name.in?(%w[databases db_rows db_cells db_properties database_views database_comments])
     return "ai" if controller_name.in?(%w[ai_assistant ai_conversation_histories knowledge_suggestions agent_actions workflow_runs])
     return "calendar" if controller_name.start_with?("kalendarium")
-    return "mail" if controller_name.start_with?("epistularium")
     return "meetings" if controller_name.in?(%w[meetings meeting_sessions meeting_extension_tokens])
     return "search" if controller_name.in?(%w[searches libraries])
     return "settings" if controller_name.end_with?("settings") || controller_name.in?(%w[preferences account_settings notification_settings subscription_settings])
@@ -366,8 +351,6 @@ module ApplicationHelper
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="5.2" stroke="currentColor" stroke-width="1.2"/><path d="M8 5.1v3.2l2 1.3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       when :close_small
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="m4.2 4.2 7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>'
-      when :epistularium
-        '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.2 4.2h11.6v7.6H2.2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="m2.7 4.8 5.3 4 5.3-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       when :ai_history
         '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3.2h10v7.3H7.3L4 13V10.5H3V3.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5.4 6.2h5.2M5.4 8.1h3.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>'
       when :suggestion
@@ -398,26 +381,6 @@ module ApplicationHelper
     return groups if recent_assets.empty?
 
     groups + [ { key: "recent", label: "Recent", presets: recent_assets, kind: :recent } ]
-  end
-
-  def epistularium_account_indicator_style(account)
-    accent = epistularium_account_accent(account)
-    "--notae-epistularium-accent: #{accent}"
-  end
-
-  def epistularium_account_accent(account)
-    configured_color = account.account_color.to_s
-    return configured_color if configured_color.match?(EpistulariumAccount::ACCOUNT_COLOR_PATTERN)
-
-    seed = [
-      account.id,
-      account.provider,
-      account.label,
-      account.provider_username
-    ].join(":")
-    checksum = seed.each_byte.with_index.sum { |byte, index| byte * (index + 1) }
-
-    EPISTULARIUM_ACCOUNT_ACCENTS[checksum % EPISTULARIUM_ACCOUNT_ACCENTS.length]
   end
 
   def page_cover_preset_group_index(cover_preset_key)

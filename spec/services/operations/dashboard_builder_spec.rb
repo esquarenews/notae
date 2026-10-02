@@ -25,8 +25,7 @@ RSpec.describe Operations::DashboardBuilder do
       user, workspace = build_workspace_stack(suffix: "full")
 
       queue_doubles = {
-        "default" => instance_double(Sidekiq::Queue, size: 3, latency: 12.4),
-        "epistularium_backfill" => instance_double(Sidekiq::Queue, size: 6, latency: 48.1)
+        "default" => instance_double(Sidekiq::Queue, size: 3, latency: 12.4)
       }
       allow(Sidekiq::Queue).to receive(:new) { |name| queue_doubles.fetch(name) }
       allow(Sidekiq::RetrySet).to receive(:new).and_return(instance_double(Sidekiq::RetrySet, size: 2))
@@ -43,23 +42,6 @@ RSpec.describe Operations::DashboardBuilder do
             "beat" => reference_time.to_f
           }
         ]
-      )
-
-      EpistulariumAccount.create!(
-        workspace: workspace,
-        owner: user,
-        created_by: user,
-        provider: "amazon_workmail",
-        label: "Ops mailbox",
-        provider_username: "ops@example.com",
-        provider_password: "workmail-password",
-        status: "connected",
-        settings_json: {
-          "imap_host" => "imap.mail.ap-southeast-2.awsapps.com",
-          "last_fresh_sync_at" => 8.minutes.ago(reference_time).iso8601,
-          "last_backfill_sync_at" => 2.hours.ago(reference_time).iso8601,
-          "sync_started_at" => 2.minutes.ago(reference_time).iso8601
-        }
       )
 
       connection = KalendariumConnection.create!(
@@ -160,7 +142,7 @@ RSpec.describe Operations::DashboardBuilder do
       )
 
       Notae::ScheduledTaskStore.record_succeeded!(
-        task_name: "epistularium:sync_due",
+        task_name: "kalendarium:sync_due",
         started_at: 6.minutes.ago(reference_time),
         finished_at: 6.minutes.ago(reference_time) + 0.3.seconds
       )
@@ -181,13 +163,13 @@ RSpec.describe Operations::DashboardBuilder do
       expect(snapshot.dig(:scheduled_tasks, :counts, :total)).to eq(Notae::ScheduledTaskStore::TASK_DEFINITIONS.size)
       expect(snapshot.dig(:scheduled_tasks, :counts, :attention_needed)).to eq(1)
       expect(snapshot.dig(:scheduled_tasks, :items)).to include(
-        hash_including(task_name: "epistularium:sync_due", status: :healthy),
+        hash_including(task_name: "kalendarium:sync_due", status: :healthy),
         hash_including(task_name: "kalendarium:dispatch_reminders", status: :failed, last_error: "redis unavailable")
       )
 
       expect(snapshot.dig(:integration_health, :counts)).to include(
-        total: 3,
-        healthy: 1,
+        total: 2,
+        healthy: 0,
         attention_needed: 2,
         missing: 0
       )
@@ -247,15 +229,6 @@ RSpec.describe Operations::DashboardBuilder do
         event_type: "allowed",
         request_method: "POST",
         http_status: 201
-      )
-
-      expect(snapshot.dig(:epistularium_accounts, :counts, :total)).to eq(1)
-      expect(snapshot.dig(:epistularium_accounts, :counts, :active_or_queued)).to eq(1)
-      expect(snapshot.dig(:epistularium_accounts, :items).first).to include(
-        label: "Ops mailbox",
-        provider: "amazon_workmail",
-        sync_active: true,
-        backfill_pending: true
       )
 
       expect(snapshot.dig(:kalendarium_connections, :counts, :attention_needed)).to eq(1)

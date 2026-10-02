@@ -11,8 +11,7 @@ RSpec.describe "Operations settings", type: :request do
       background_jobs: {
         available: true,
         queues: [
-          { name: "default", size: 2, latency: 3.1 },
-          { name: "epistularium_backfill", size: 1, latency: 12.5 }
+          { name: "default", size: 2, latency: 3.1 }
         ],
         retry_count: 0,
         scheduled_count: 1,
@@ -34,8 +33,8 @@ RSpec.describe "Operations settings", type: :request do
         latest_success_at: 4.minutes.ago,
         items: [
           {
-            task_name: "epistularium:sync_due",
-            label: "Epistularium sync timer",
+            task_name: "kalendarium:sync_due",
+            label: "Kalendarium sync dispatcher",
             cadence_label: "Every 10 minutes",
             status: :healthy,
             last_started_at: 4.minutes.ago,
@@ -76,16 +75,6 @@ RSpec.describe "Operations settings", type: :request do
           missing: 1
         },
         providers: [
-          {
-            key: :epistularium,
-            label: "Email sync",
-            status: :healthy,
-            connection_count: 1,
-            attention_count: 0,
-            capability_summary: "Read mailbox import only",
-            writable_target_count: 0,
-            latest_activity_at: 5.minutes.ago
-          },
           {
             key: :kalendarium,
             label: "Calendar sync",
@@ -239,7 +228,7 @@ RSpec.describe "Operations settings", type: :request do
     expect(response.body).to include("Integration health")
     expect(response.body).to include("Read sync with selective write-back")
     expect(response.body).to include("Writable calendars")
-    expect(response.body).to include("Epistularium sync timer")
+    expect(response.body).to include("Kalendarium sync dispatcher")
     expect(response.body).to include("Kalendarium reminder dispatch")
     expect(response.body).to include("Recent request performance")
     expect(response.body).to include("Budget breaches")
@@ -248,7 +237,7 @@ RSpec.describe "Operations settings", type: :request do
     expect(response.body).to include("API token activity")
     expect(response.body).to include("Scoped MCP token")
     expect(response.body).to include("WorkspaceHomeController#show")
-    expect(response.body).to include("Email sync")
+    expect(response.body).not_to include("Email sync")
     expect(response.body).to include("Calendar connections")
     expect(response.body).to include("Push delivery")
     expect(response.body).to include("Meeting capture")

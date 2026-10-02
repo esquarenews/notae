@@ -2,7 +2,7 @@ require "sidekiq/api"
 
 module Operations
   class DashboardBuilder
-    QUEUE_NAMES = %w[default epistularium_backfill].freeze
+    QUEUE_NAMES = %w[default].freeze
     PUSH_DEVICE_LIMIT = 5
     SESSION_EVENT_LIMIT = 10
 
@@ -13,7 +13,6 @@ module Operations
     end
 
     def call
-      epistularium = epistularium_accounts_snapshot
       kalendarium = kalendarium_connections_snapshot
       push_delivery = push_delivery_snapshot
 
@@ -23,12 +22,7 @@ module Operations
         request_performance: request_performance_snapshot,
         session_authentication: session_authentication_snapshot,
         api_token_activity: api_token_activity_snapshot,
-        integration_health: integration_health_snapshot(
-          epistularium:,
-          kalendarium:,
-          push_delivery:
-        ),
-        epistularium_accounts: epistularium,
+        integration_health: integration_health_snapshot(kalendarium:, push_delivery:),
         kalendarium_connections: kalendarium,
         push_delivery:,
         meeting_capture: meeting_capture_snapshot
@@ -93,42 +87,6 @@ module Operations
       {
         available: false,
         error: "#{error.class}: #{error.message}"
-      }
-    end
-
-    def epistularium_accounts_snapshot
-      accounts = EpistulariumAccount
-        .for_workspace(workspace)
-        .order(Arel.sql("LOWER(label) ASC"), created_at: :asc)
-        .to_a
-
-      items = accounts.map do |account|
-        {
-          id: account.id,
-          label: account.label,
-          provider: account.provider,
-          enabled: account.enabled?,
-          status: account.status,
-          last_fresh_sync_at: account.last_fresh_sync_at,
-          last_backfill_sync_at: account.last_backfill_sync_at,
-          last_synced_at: account.last_synced_at,
-          backfill_pending: account.full_backfill_pending?,
-          sync_active: account.sync_active?,
-          sync_stalled: account.sync_queue_stalled?(stale_after: EpistulariumAccount::DEFAULT_SYNC_ACTIVITY_TIMEOUT),
-          fresh_sync_due: account.fresh_sync_due?(at: reference_time),
-          last_error: account.last_error.to_s.strip.presence
-        }
-      end
-
-      {
-        counts: {
-          total: accounts.size,
-          connected: items.count { |item| item[:status] == "connected" },
-          attention_needed: items.count { |item| item[:status] == "sync_error" || item[:last_error].present? },
-          active_or_queued: items.count { |item| item[:sync_active] },
-          stalled: items.count { |item| item[:sync_stalled] }
-        },
-        items: items
       }
     end
 
@@ -262,21 +220,8 @@ module Operations
       }
     end
 
-    def integration_health_snapshot(epistularium:, kalendarium:, push_delivery:)
+    def integration_health_snapshot(kalendarium:, push_delivery:)
       providers = [
-        {
-          key: :epistularium,
-          label: "Email sync",
-          status: provider_status(
-            total: epistularium.dig(:counts, :total),
-            attention: epistularium.dig(:counts, :attention_needed)
-          ),
-          connection_count: epistularium.dig(:counts, :total),
-          attention_count: epistularium.dig(:counts, :attention_needed),
-          capability_summary: "Read mailbox import only",
-          writable_target_count: 0,
-          latest_activity_at: epistularium[:items].map { |item| item[:last_fresh_sync_at] || item[:last_synced_at] }.compact.max
-        },
         {
           key: :kalendarium,
           label: "Calendar sync",
