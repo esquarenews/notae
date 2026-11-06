@@ -156,5 +156,4 @@ RSpec.describe Search::ChunkIndexingService do
     expect(chunk.metadata_json.dig("entities", "names")).to include("Errol")
     expect(chunk.hash_verification_succeeds?).to eq(true)
   end
-
 end

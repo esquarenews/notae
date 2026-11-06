@@ -140,6 +140,5 @@ module WorkspaceExports
         .order(:starts_at_utc, :created_at)
         .to_a
     end
-
   end
 end
