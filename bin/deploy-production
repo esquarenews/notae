@@ -6,6 +6,8 @@ APP_ROOT="${APP_ROOT:-/home/esquarenews/apps/notae}"
 APP_USER="${APP_USER:-esquarenews}"
 APP_GROUP="${APP_GROUP:-$APP_USER}"
 ENV_FILE="${ENV_FILE:-/etc/notae/notae.env}"
+RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-/etc/notae/ruby-3.4.12.env}"
+BUNDLE_BIN="${BUNDLE_BIN:-}"
 REMOTE="${REMOTE:-origin}"
 BRANCH="${BRANCH:-main}"
 APP_URL="${APP_URL:-https://notae.esquarenews.tech}"
@@ -18,7 +20,8 @@ REQUIRED_SERVICES="${REQUIRED_SERVICES:-notae}"
 OPTIONAL_SERVICES="${OPTIONAL_SERVICES:-notae-sidekiq notae-meeting-bot-worker}"
 OPTIONAL_TIMERS="${OPTIONAL_TIMERS:-notae-kalendarium-sync.timer}"
 OPTIONAL_ONESHOTS="${OPTIONAL_ONESHOTS:-notae-kalendarium-sync.service}"
-PRODUCTION_PATH="${PRODUCTION_PATH:-/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
+PRODUCTION_PATH="${PRODUCTION_PATH:-}"
+CHECK_ONLY=0
 
 log() {
   printf '[deploy] %s\n' "$*"
@@ -59,12 +62,17 @@ usage() {
 Deploy Notae to production.
 
 Run on the production host. Defaults match the current notae systemd deployment.
+Run as APP_USER; the script uses sudo for privileged service commands.
+Use --check for runtime, lock, checkout, service and HTTP checks without deploying.
 
 Environment overrides:
   APP_ROOT=/home/esquarenews/apps/notae
   APP_USER=esquarenews
   APP_GROUP=esquarenews
   ENV_FILE=/etc/notae/notae.env
+  RUNTIME_ENV_FILE=/etc/notae/ruby-3.4.12.env
+  BUNDLE_BIN                   Defaults to bundle on the runtime file's PATH.
+  PRODUCTION_PATH              Defaults to PATH from the runtime file.
   APP_URL=https://notae.esquarenews.tech
   REMOTE=origin
   BRANCH=main
@@ -78,18 +86,56 @@ Environment overrides:
   OPTIONAL_ONESHOTS="notae-kalendarium-sync.service"
 
 Examples:
+  bin/deploy-production --check
   bin/deploy-production
   APP_URL=https://notae.example.com RUN_TESTS=1 bin/deploy-production
 USAGE
 }
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  --check) CHECK_ONLY=1 ;;
+  "") ;;
+  *) usage >&2; exit 2 ;;
+esac
+[[ $# -le 1 ]] || { usage >&2; exit 2; }
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
+}
+
+load_runtime_environment() {
+  [[ -r "$RUNTIME_ENV_FILE" ]] || die "Runtime env file is not readable: $RUNTIME_ENV_FILE"
+  # This root-managed file contains shell-compatible KEY=value runtime settings.
+  set -a
+  source "$RUNTIME_ENV_FILE"
+  set +a
+  PRODUCTION_PATH="${PRODUCTION_PATH:-$PATH}"
+  export PATH="$PRODUCTION_PATH"
+  export BUNDLE_GEMFILE="$APP_ROOT/Gemfile"
+  BUNDLE_BIN="${BUNDLE_BIN:-$(command -v bundle || true)}"
+  [[ "$BUNDLE_BIN" == /* && -x "$BUNDLE_BIN" ]] || die "Runtime bundle executable is unavailable: $BUNDLE_BIN"
+}
+
+acquire_deploy_lock() {
+  [[ ! -L "$LOCK_FILE" ]] || die "Refusing a symlink deploy lock: $LOCK_FILE"
+  if [[ -e "$LOCK_FILE" ]]; then
+    [[ -f "$LOCK_FILE" && -O "$LOCK_FILE" && -w "$LOCK_FILE" ]] || die "Deploy lock must be a writable regular file owned by $APP_USER: $LOCK_FILE. Inspect ownership; do not delete an active lock."
+  fi
+  exec 9>>"$LOCK_FILE"
+  flock -n 9 || die "Another deploy is already running; lock file: $LOCK_FILE"
+}
+
+verify_runtime_services() {
+  local service environment_files exec_start
+  split_words "$REQUIRED_SERVICES"
+  for service in "${WORDS[@]}"; do
+    unit_exists "$service" || die "Required systemd service is missing: $service"
+    environment_files="$(systemctl show "$service" -p EnvironmentFiles --value)"
+    exec_start="$(systemctl show "$service" -p ExecStart --value)"
+    [[ "$environment_files" == *"$RUNTIME_ENV_FILE"* ]] || die "$service does not load runtime env file $RUNTIME_ENV_FILE"
+    [[ "$exec_start" == *"$BUNDLE_BIN"* ]] || die "$service uses a different bundle executable than $BUNDLE_BIN"
+  done
 }
 
 split_words() {
@@ -117,17 +163,19 @@ active_or_oneshot_ok() {
 
 sudo_systemd_run() {
   local description="$1"
-  local command="$2"
+  shift
 
   log "$description"
-  sudo systemd-run --wait --collect --pty \
+  sudo systemd-run --wait --collect --pipe \
     -p "User=$APP_USER" \
     -p "Group=$APP_GROUP" \
     -p "WorkingDirectory=$APP_ROOT" \
     -p "EnvironmentFile=$ENV_FILE" \
+    -p "EnvironmentFile=$RUNTIME_ENV_FILE" \
     -p "Environment=RAILS_ENV=production" \
+    -p "Environment=BUNDLE_GEMFILE=$APP_ROOT/Gemfile" \
     -p "Environment=PATH=$PRODUCTION_PATH" \
-    /usr/bin/bash -lc "$command"
+    "$BUNDLE_BIN" "$@"
 }
 
 rollback_hint() {
@@ -154,8 +202,10 @@ on_error() {
 trap on_error ERR
 
 main() {
+  [[ "$(id -un)" == "$APP_USER" ]] || die "Run this script as $APP_USER; it uses sudo for privileged service commands."
+  load_runtime_environment
   require_command git
-  require_command bundle
+  require_command flock
   require_command sudo
   require_command systemctl
   require_command curl
@@ -164,8 +214,7 @@ main() {
   [[ -d "$APP_ROOT/.git" ]] || die "APP_ROOT is not a git checkout: $APP_ROOT"
   [[ -f "$ENV_FILE" ]] || die "Production env file not found: $ENV_FILE"
 
-  exec 9>"$LOCK_FILE"
-  flock -n 9 || die "Another deploy is already running; lock file: $LOCK_FILE"
+  acquire_deploy_lock
 
   cd "$APP_ROOT"
 
@@ -174,6 +223,19 @@ main() {
   [[ "$git_root" == "$APP_ROOT" ]] || die "APP_ROOT does not match git root: $git_root"
 
   [[ -z "$(git status --porcelain)" ]] || die_dirty_worktree
+  verify_runtime_services
+
+  if [[ "$CHECK_ONLY" == "1" ]]; then
+    log "Checking configured runtime and installed bundle"
+    "$BUNDLE_BIN" --version
+    BUNDLE_FROZEN=true "$BUNDLE_BIN" check
+    "$BUNDLE_BIN" exec ruby -rrails -e 'puts RUBY_DESCRIPTION; puts "Rails #{Rails.version}"'
+    verify_release
+    log "Deployment checks passed; no fetch, install, migration, asset build or restart was performed."
+    return
+  fi
+
+  sudo -v
 
   PREVIOUS_REVISION="$(git rev-parse HEAD)"
   log "Starting deploy from $PREVIOUS_REVISION"
@@ -192,18 +254,19 @@ main() {
   log "Deploying revision $new_revision"
 
   log "Installing gems"
-  bundle config set deployment true
+  "$BUNDLE_BIN" config set deployment true
   if [[ "$RUN_TESTS" == "1" ]]; then
-    bundle config unset without || true
+    export BUNDLE_WITHOUT=""
+    "$BUNDLE_BIN" config unset without || true
   else
-    bundle config set without "development test"
+    "$BUNDLE_BIN" config set without "development test"
   fi
-  bundle install
+  "$BUNDLE_BIN" install
 
   if [[ "$RUN_TESTS" == "1" ]]; then
     log "Running test suite"
-    RAILS_ENV=test bundle exec rails db:prepare
-    bundle exec rspec
+    RAILS_ENV=test "$BUNDLE_BIN" exec rails db:prepare
+    RAILS_ENV=test "$BUNDLE_BIN" exec rspec
   else
     log "Skipping test suite; set RUN_TESTS=1 to enable."
   fi
@@ -218,12 +281,12 @@ main() {
     fi
   done
 
-  sudo_systemd_run "Running database migrations" "bundle exec rails db:migrate"
+  sudo_systemd_run "Running database migrations" exec rails db:migrate
 
   if [[ "$RUN_ASSET_CLOBBER" == "1" ]]; then
-    sudo_systemd_run "Rebuilding assets from a clean manifest" "bundle exec rails assets:clobber assets:precompile"
+    sudo_systemd_run "Rebuilding assets from a clean manifest" exec rails assets:clobber assets:precompile
   else
-    sudo_systemd_run "Precompiling assets" "bundle exec rails assets:precompile"
+    sudo_systemd_run "Precompiling assets" exec rails assets:precompile
   fi
 
   split_words "$REQUIRED_SERVICES"
@@ -265,11 +328,16 @@ main() {
     done
   fi
 
+  verify_release
+  log "Deployment complete: $PREVIOUS_REVISION -> $new_revision"
+}
+
+verify_release() {
   log "Verifying required services"
   split_words "$REQUIRED_SERVICES"
   for service in "${WORDS[@]}"; do
     active_or_oneshot_ok "$service" || die "Service is not healthy: $service"
-    sudo systemctl status "$service" --no-pager --lines=20
+    systemctl show "$service" -p ActiveState -p Result -p MainPID -p NRestarts --no-pager
   done
 
   log "Checking app health endpoint"
@@ -281,14 +349,16 @@ main() {
   grep -Eq '/assets/application.*\.(css|js)' <<<"$signin_html" || die "Sign-in page does not reference compiled application assets."
 
   log "Checking referenced CSS and JS assets"
-  mapfile -t assets < <(grep -Eo '/assets/[^"]+\.(css|js)' <<<"$signin_html" | sort -u)
+  local asset
+  local -a assets=()
+  while IFS= read -r asset; do
+    assets+=("$asset")
+  done < <(grep -Eo '/assets/[^"]+\.(css|js)' <<<"$signin_html" | sort -u)
   [[ "${#assets[@]}" -gt 0 ]] || die "No CSS/JS assets found on sign-in page."
   for asset in "${assets[@]}"; do
     curl --fail --silent --show-error --max-time 15 -o /dev/null "$APP_URL$asset"
     log "Asset ok: $asset"
   done
-
-  log "Deployment complete: $PREVIOUS_REVISION -> $new_revision"
 }
 
 main "$@"
