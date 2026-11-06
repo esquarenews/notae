@@ -102,5 +102,4 @@ class EpistulariumMessage < ApplicationRecord
       [ recipient["name"].to_s.strip.presence, recipient["email"].to_s.strip.presence ].compact.join(" ").strip.presence
     end.join(", ")
   end
-
 end

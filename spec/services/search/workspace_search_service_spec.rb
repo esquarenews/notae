@@ -177,5 +177,4 @@ RSpec.describe Search::WorkspaceSearchService do
     expect(results.map(&:kind)).to include("Meeting session")
     expect(results.map(&:title)).to include("Weekly sync")
   end
-
 end
