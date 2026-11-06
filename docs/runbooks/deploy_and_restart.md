@@ -6,8 +6,41 @@ Use this on the production host to deploy `main` cleanly.
 
 ```bash
 cd /home/esquarenews/apps/notae
+bin/deploy-production --check
 bin/deploy-production
 ```
+
+Run these as `esquarenews`. The deploy script requests sudo authentication before
+fetching or changing the release, then uses sudo for systemd operations.
+
+`--check` validates the deploy lock, clean checkout, installed bundle, service
+runtime configuration, health endpoint, sign-in page and referenced assets. It
+does not fetch code, install gems, migrate databases, build assets or restart
+services, and does not require sudo authentication.
+
+### Production Ruby environment
+
+The native services use Ruby 3.4.12 with YJIT from `/opt/notae/ruby-3.4.12` and
+the bundle at `/var/www/notae/shared/bundle-ruby-3.4.12`. The login shell can select
+a different Ruby or an unconfigured mise Bundler shim.
+
+The script loads the root-managed, shell-compatible runtime settings in
+`/etc/notae/ruby-3.4.12.env` before resolving Bundler. It uses that exact executable
+for installs and tests. Migration and asset jobs load both `/etc/notae/notae.env`
+and the runtime file through systemd and invoke Bundler directly. A login shell
+cannot reset their runtime PATH. The application secrets file stays unreadable
+to the ordinary deployment shell.
+
+For a future runtime change, update the service drop-ins and pass the matching
+`RUNTIME_ENV_FILE`. `BUNDLE_BIN` and `PRODUCTION_PATH` can also be overridden.
+The preflight rejects a required service whose runtime file or Bundler executable
+differs from the deployment configuration.
+
+The shared lock must remain owned and writable by `esquarenews`. The script
+rejects direct execution as another user and refuses symlink locks. If an older
+root-run helper left a root-owned lock, have an administrator repair its existing
+ownership. Keep the lock inode in place; deleting an active lock can allow two
+deployments to run concurrently.
 
 On hosts that previously ran Epistularium, retire its installed units before the
 first deploy after email removal (the deploy defaults no longer start them):
@@ -25,7 +58,7 @@ The script performs the full deploy sequence:
 - fetches and fast-forwards `main`
 - installs production gems
 - stops background workers before migrations
-- runs production migrations through `systemd-run` with `/etc/notae/notae.env`
+- runs production migrations through `systemd-run` with both application and runtime environment files
 - rebuilds production assets
 - restarts the web service, Sidekiq, meeting bot, calendar sync timer, and one-shot calendar sync service when present
 - verifies systemd health, `/up`, sign-in HTML, and linked CSS/JS assets
@@ -112,15 +145,18 @@ git pull --ff-only origin main
 ## 2. Install gems and run migrations
 
 ```bash
-bundle install
+set -a
+source /etc/notae/ruby-3.4.12.env
+set +a
+/opt/notae/ruby-3.4.12/bin/bundle _4.0.3_ install
 sudo systemd-run --wait --collect --pty \
   -p User=esquarenews \
   -p Group=esquarenews \
   -p WorkingDirectory=/home/esquarenews/apps/notae \
   -p EnvironmentFile=/etc/notae/notae.env \
+  -p EnvironmentFile=/etc/notae/ruby-3.4.12.env \
   -p Environment=RAILS_ENV=production \
-  -p Environment=PATH=/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  /usr/bin/bash -lc 'bundle exec rails db:migrate'
+  /opt/notae/ruby-3.4.12/bin/bundle _4.0.3_ exec rails db:migrate
 ```
 
 If a migration is not intended, stop here and review before continuing.
@@ -133,9 +169,9 @@ sudo systemd-run --wait --collect --pty \
   -p Group=esquarenews \
   -p WorkingDirectory=/home/esquarenews/apps/notae \
   -p EnvironmentFile=/etc/notae/notae.env \
+  -p EnvironmentFile=/etc/notae/ruby-3.4.12.env \
   -p Environment=RAILS_ENV=production \
-  -p Environment=PATH=/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  /usr/bin/bash -lc 'bundle exec rails assets:clobber assets:precompile'
+  /opt/notae/ruby-3.4.12/bin/bundle _4.0.3_ exec rails assets:clobber assets:precompile
 ```
 
 ## 4. Restart application services
@@ -225,8 +261,8 @@ sudo systemd-run --wait --collect --pty \
   -p Group=esquarenews \
   -p WorkingDirectory=/home/esquarenews/apps/notae \
   -p EnvironmentFile=/etc/notae/notae.env \
+  -p EnvironmentFile=/etc/notae/ruby-3.4.12.env \
   -p Environment=RAILS_ENV=production \
-  -p Environment=PATH=/home/esquarenews/.local/share/gem/ruby/3.4.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-  /usr/bin/bash -lc 'bundle exec rails assets:clobber assets:precompile'
+  /opt/notae/ruby-3.4.12/bin/bundle _4.0.3_ exec rails assets:clobber assets:precompile
 sudo systemctl restart notae
 ```
