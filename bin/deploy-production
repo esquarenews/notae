@@ -6,7 +6,7 @@ APP_ROOT="${APP_ROOT:-/home/esquarenews/apps/notae}"
 APP_USER="${APP_USER:-esquarenews}"
 APP_GROUP="${APP_GROUP:-$APP_USER}"
 ENV_FILE="${ENV_FILE:-/etc/notae/notae.env}"
-RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-/etc/notae/ruby-3.4.12.env}"
+RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-/etc/notae/ruby-4.0.10.env}"
 BUNDLE_BIN="${BUNDLE_BIN:-}"
 REMOTE="${REMOTE:-origin}"
 BRANCH="${BRANCH:-main}"
@@ -70,7 +70,7 @@ Environment overrides:
   APP_USER=esquarenews
   APP_GROUP=esquarenews
   ENV_FILE=/etc/notae/notae.env
-  RUNTIME_ENV_FILE=/etc/notae/ruby-3.4.12.env
+  RUNTIME_ENV_FILE=/etc/notae/ruby-4.0.10.env
   BUNDLE_BIN                   Defaults to bundle on the runtime file's PATH.
   PRODUCTION_PATH              Defaults to PATH from the runtime file.
   APP_URL=https://notae.esquarenews.tech
