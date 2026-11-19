@@ -29,7 +29,7 @@ RSpec.describe "bin/deploy-production" do
     expect(status.success?).to be(true)
     expect(stdout).to include("APP_ROOT=/home/esquarenews/apps/notae")
     expect(stdout).to include("ENV_FILE=/etc/notae/notae.env")
-    expect(stdout).to include("RUNTIME_ENV_FILE=/etc/notae/ruby-3.4.12.env")
+    expect(stdout).to include("RUNTIME_ENV_FILE=/etc/notae/ruby-4.0.10.env")
     expect(stdout).to include("--check")
     expect(stdout).to include("RUN_TESTS=1")
     expect(stdout).to include("RESTART_TIMERS=0")

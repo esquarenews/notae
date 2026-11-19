@@ -20,12 +20,19 @@ services, and does not require sudo authentication.
 
 ### Production Ruby environment
 
-The native services use Ruby 3.4.12 with YJIT from `/opt/notae/ruby-3.4.12` and
-the bundle at `/var/www/notae/shared/bundle-ruby-3.4.12`. The login shell can select
+Development, CI and Docker use Ruby 4.0.10. This release includes the Regexp and
+String security fixes in the
+[18 November 2026 advisory](https://www.ruby-lang.org/en/news/2026/11/18/multiple-vulnerabilities-in-regexp-and-string/).
+The `.ruby-version`, Dockerfile and deployment default are checked together by
+`spec/scripts/ruby_version_spec.rb`.
+
+The native services use Ruby 4.0.10 with YJIT from
+`/home/esquarenews/.local/share/mise/installs/ruby/4.0.10` and
+the isolated bundle at `/var/www/notae/shared/bundle-ruby-4.0.10`. The login shell can select
 a different Ruby or an unconfigured mise Bundler shim.
 
 The script loads the root-managed, shell-compatible runtime settings in
-`/etc/notae/ruby-3.4.12.env` before resolving Bundler. It uses that exact executable
+`/etc/notae/ruby-4.0.10.env` before resolving Bundler. It uses that exact executable
 for installs and tests. Migration and asset jobs load both `/etc/notae/notae.env`
 and the runtime file through systemd and invoke Bundler directly. A login shell
 cannot reset their runtime PATH. The application secrets file stays unreadable
@@ -35,6 +42,12 @@ For a future runtime change, update the service drop-ins and pass the matching
 `RUNTIME_ENV_FILE`. `BUNDLE_BIN` and `PRODUCTION_PATH` can also be overridden.
 The preflight rejects a required service whose runtime file or Bundler executable
 differs from the deployment configuration.
+
+Before a runtime cutover, back up the service drop-ins and current revision,
+prepare the new version's frozen bundle, and verify Rails, PostgreSQL, Redis and
+YJIT using the production environment. Preserve the previous runtime, bundle and
+environment file for rollback. After restart, check each process's actual Ruby
+executable as well as service health, calendar sync, sign-in and public assets.
 
 The shared lock must remain owned and writable by `esquarenews`. The script
 rejects direct execution as another user and refuses symlink locks. If an older
